@@ -1,0 +1,39 @@
+.recent-invoices {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+  
+.recent-invoices h3 {
+    font-size: 18px;
+    margin-bottom: 10px;
+}
+  
+.recent-invoices .invoice {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding: 10px;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    transition: background-color 0.3s;
+}
+
+.recent-invoices .invoice:hover {
+    background-color: #f0f0f0;
+}
+
+.recent-invoices .invoice span {
+    font-size: 20px;
+}
+
+.recent-invoices .invoice div {
+    flex: 1;
+    margin-left: 10px;
+}
+
+.recent-invoices .invoice strong {
+    color: #333;
+}

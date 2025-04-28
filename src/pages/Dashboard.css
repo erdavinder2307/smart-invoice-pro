@@ -1,0 +1,28 @@
+.dashboard-page {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    background-color: #f4f6f8;
+}
+
+.dashboard-content {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
+    background-color: #f9f9f9;
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+}
+
+.dashboard-main {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.dashboard-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}

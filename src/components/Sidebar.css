@@ -1,0 +1,44 @@
+.sidebar {
+    width: 250px;
+    background-color: #a5c8ff;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #ddd;
+}
+  
+.sidebar h2 {
+    font-size: 1.4rem;
+    font-weight: bold;
+    margin-bottom: 30px;
+}
+  
+.sidebar button {
+    background: white;
+    border: none;
+    padding: 12px 16px;
+    margin-bottom: 10px;
+    text-align: left;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.sidebar button:hover {
+    background-color: #e0e7ff;
+    color: #0057e7;
+}
+  
+.sidebar button.active {
+    background-color: #0057e7;
+    color: white;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+  
+.sidebar .signout {
+    margin-top: auto;
+    background-color: white;
+    font-weight: bold;
+}

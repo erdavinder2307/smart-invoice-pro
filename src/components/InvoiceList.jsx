@@ -133,6 +133,26 @@ const InvoiceList = () => {
     setLoading(false);
   };
 
+  const handleDownloadPDF = async (invoice) => {
+    try {
+      const response = await axios.post(
+        "http://127.0.0.1:5000/api/generate-invoice-pdf",
+        { invoice },
+        { responseType: "blob" }
+      );
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${invoice.invoice_number || 'invoice'}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError("Failed to download PDF");
+    }
+  };
+
   return (
     <>
       <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -188,6 +208,15 @@ const InvoiceList = () => {
                               onClick={() => handleEdit(inv)}
                             >
                               Edit
+                            </Button>
+                            <Button
+                              variant="outlined"
+                              color="success"
+                              size="small"
+                              sx={{ mr: 1, fontWeight: 500 }}
+                              onClick={() => handleDownloadPDF(inv)}
+                            >
+                              Download PDF
                             </Button>
                             <Button
                               variant="outlined"

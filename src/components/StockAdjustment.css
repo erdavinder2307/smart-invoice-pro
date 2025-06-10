@@ -1,0 +1,115 @@
+/* Stock Adjustment Component Styles */
+
+.stock-adjustment-root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f5f6fa;
+}
+
+.stock-adjustment-main {
+  display: flex;
+  flex: 1;
+}
+
+.stock-adjustment-content {
+  flex: 1;
+  background: #f5f6fa;
+  min-height: calc(100vh - 128px);
+  padding: 24px;
+}
+
+.stock-adjustment-card {
+  width: 100%;
+  margin: 0 auto 32px auto;
+  padding: 40px 32px 32px 32px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 4px 24px 0 rgba(60,72,100,0.08);
+  position: relative;
+  overflow-x: auto;
+}
+
+.stock-adjustment-title {
+  font-weight: 700;
+  margin-bottom: 18px;
+  color: #1976d2;
+  letter-spacing: 0.5px;
+}
+
+.stock-adjustment-form {
+  margin-top: 8px;
+}
+
+.stock-adjustment-field {
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.stock-adjustment-actions {
+  display: flex;
+  gap: 18px;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+
+.stock-adjustment-btn {
+  min-width: 140px;
+  font-weight: 600;
+  font-size: 1rem;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.stock-adjustment-btn-primary {
+  background: linear-gradient(90deg, #1976d2 60%, #42a5f5 100%);
+  color: #fff;
+}
+
+.stock-adjustment-btn-cancel {
+  border-color: #bdbdbd;
+  color: #616161;
+}
+
+.stock-adjustment-alert {
+  margin-bottom: 18px;
+}
+
+.stock-adjustment-ledger-table {
+  width: 100%;
+  min-width: 400px;
+  border-collapse: collapse;
+}
+
+.stock-adjustment-ledger-table th,
+.stock-adjustment-ledger-table td {
+  padding: 8px 12px;
+  font-size: 1rem;
+  text-align: left;
+}
+
+.stock-adjustment-ledger-table th {
+  font-weight: 600;
+  background: #f5f6fa;
+}
+
+@media (max-width: 900px) {
+  .stock-adjustment-card {
+    padding: 18px 6px 18px 6px;
+  }
+  .stock-adjustment-title {
+    font-size: 1.2rem;
+  }
+  .stock-adjustment-actions {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+  .stock-adjustment-content {
+    padding: 8px;
+  }
+}
+
+.stock-adjustment-info {
+ width: 90%;
+}

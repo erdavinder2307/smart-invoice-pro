@@ -113,7 +113,7 @@ const ProductList = () => {
                       <TableCell>{p.price}</TableCell>
                       <TableCell>{p.unit}</TableCell>
                       <TableCell>{p.tax_rate}</TableCell>
-                      <TableCell>{typeof p.stock === 'number' ? p.stock : '-'}</TableCell>
+                      <TableCell>{typeof p.stock === 'number' ? p.stock : (typeof p.opening_stock === 'number' && typeof p.sold === 'number' ? (p.opening_stock - p.sold) : '-')}</TableCell>
                       <TableCell align="center">
                         <IconButton color="primary" onClick={() => handleEdit(p)} title="Edit">
                           <EditIcon />

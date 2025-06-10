@@ -1,0 +1,203 @@
+/* Modern card look for the invoice form */
+.invoice-form-paper {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px 0 rgba(60,72,100,0.10);
+  padding: 2.5rem 2rem 2rem 2rem;
+  margin-bottom: 2rem;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Section header */
+.invoice-form-title {
+  font-weight: 700;
+  color: #1976d2;
+  margin-bottom: 1.5rem;
+  letter-spacing: 0.5px;
+}
+
+/* Form fields spacing */
+.invoice-form-field {
+  margin-bottom: 1.2rem !important;
+}
+
+/* Action buttons area */
+.invoice-form-actions {
+  display: flex;
+  gap: 1.2rem;
+  justify-content: flex-end;
+  margin-top: 2rem;
+  border-top: 1px solid #e0e0e0;
+  padding-top: 1.5rem;
+  background: transparent;
+}
+
+/* Responsive tweaks */
+@media (max-width: 600px) {
+  .invoice-form-paper {
+    padding: 1.2rem 0.5rem;
+  }
+  .invoice-form-actions {
+    flex-direction: column;
+    gap: 0.8rem;
+    align-items: stretch;
+  }
+}
+
+/* Highlight read-only fields */
+.invoice-form-readonly input[readonly] {
+  background: #f5f6fa;
+  color: #888;
+}
+
+/* Error alert spacing */
+.invoice-form-error {
+  margin-bottom: 1.2rem;
+}
+
+/* Modern, clean, and responsive styles for AddEditInvoice component */
+
+.add-edit-invoice-card {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto 32px auto;
+  padding: 40px 32px 32px 32px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 4px 24px 0 rgba(60,72,100,0.08);
+  position: relative;
+}
+
+.add-edit-invoice-card-fullwidth {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  box-sizing: border-box;
+}
+
+.add-edit-invoice-title {
+  font-weight: 700;
+  margin-bottom: 18px;
+  color: #1976d2;
+  letter-spacing: 0.5px;
+}
+
+.add-edit-invoice-divider {
+  margin-bottom: 24px;
+}
+
+.add-edit-invoice-form {
+  margin-top: 8px;
+}
+
+.add-edit-invoice-form .MuiGrid-container {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ensure all form fields are always 50% width on desktop, 100% on mobile */
+.add-edit-invoice-form .MuiGrid-item {
+  width: 100%;
+  box-sizing: border-box;
+  padding-top: 12px !important;
+  padding-bottom: 12px !important;
+}
+
+@media (min-width: 600px) {
+  .add-edit-invoice-form .MuiGrid-item {
+    width: 50%;
+  }
+}
+
+/* Remove extra margin from last row if needed */
+.add-edit-invoice-form .MuiGrid-item:last-child {
+  margin-bottom: 0;
+}
+
+.add-edit-invoice-form .MuiTextField-root,
+.add-edit-invoice-form .MuiFormControl-root {
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.add-edit-invoice-actions {
+  display: flex;
+  gap: 18px;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+
+@media (max-width: 600px) {
+  .add-edit-invoice-card {
+    padding: 18px 6px 18px 6px;
+  }
+  .add-edit-invoice-title {
+    font-size: 1.2rem;
+  }
+  .add-edit-invoice-actions {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+  .add-edit-invoice-content {
+    padding: 8px;
+  }
+}
+
+.add-edit-invoice-btn {
+  min-width: 140px;
+  font-weight: 600;
+  font-size: 1rem;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.add-edit-invoice-btn-primary {
+  background: linear-gradient(90deg, #1976d2 60%, #42a5f5 100%);
+  color: #fff;
+}
+
+.add-edit-invoice-btn-cancel {
+  border-color: #bdbdbd;
+  color: #616161;
+}
+
+.add-edit-invoice-alert {
+  margin-bottom: 18px;
+}
+
+.add-edit-invoice-checkbox {
+  margin-top: 8px;
+}
+
+.add-edit-invoice-checkbox-label {
+  margin-top: 8px;
+}
+
+.add-edit-invoice-root {
+  min-height: 100vh;
+  background: #f5f6fa;
+  display: flex;
+  flex-direction: column;
+}
+
+.add-edit-invoice-main {
+  display: flex;
+  flex: 1;
+}
+
+.add-edit-invoice-content {
+  flex: 1;
+  background: #f5f6fa;
+  min-height: calc(100vh - 128px);
+  padding: 24px;
+}
+
+.invoice-form-row {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+}

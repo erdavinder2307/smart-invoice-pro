@@ -17,6 +17,7 @@ import {
 import Header from "./common/Header/Header";
 import Footer from "./common/Header/Footer/Footer";
 import Sidebar from "./Sidebar";
+import './StockAdjustment.css';
 
 const adjustmentTypes = [
   { value: "IN", label: "Stock In" },
@@ -84,20 +85,21 @@ const StockAdjustment = () => {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <Box className="stock-adjustment-root">
       <Header />
-      <Box sx={{ display: 'flex', flex: 1 }}>
+      <Box className="stock-adjustment-main">
         <Sidebar />
-        <Box sx={{ flex: 1, bgcolor: '#f5f6fa', minHeight: 'calc(100vh - 128px)', p: 3 }}>
-          <Paper elevation={3} sx={{ width: '100%', mx: 0, p: 4, mb: 4, borderRadius: 3, overflowX: 'auto' }}>
-            <Typography variant="h5" fontWeight={700} mb={2} color="primary.main">
+        <Box className="stock-adjustment-content">
+          <Paper elevation={3} className="stock-adjustment-card">
+            <Typography variant="h5" className="stock-adjustment-title">
               Stock Adjustment
             </Typography>
-            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-            {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
-            <Box component="form" onSubmit={handleSubmit} autoComplete="off">
-              <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
+            {error && <Alert severity="error" className="stock-adjustment-alert">{error}</Alert>}
+            {success && <Alert severity="success" className="stock-adjustment-alert">{success}</Alert>}
+            <Box component="form" onSubmit={handleSubmit} autoComplete="off" className="stock-adjustment-form">
+              <Grid container spacing={2} className="stock-adjustment-grid">
+                {/* Form Fields Row */}
+                <Grid item xs={12} md={6} className="stock-adjustment-field">
                   <FormControl fullWidth margin="normal" required>
                     <InputLabel>Product</InputLabel>
                     <Select
@@ -110,7 +112,7 @@ const StockAdjustment = () => {
                         <MenuItem key={p.id} value={p.id}>
                           {p.name}
                           {typeof p.stock === 'number' && (
-                            <span style={{ color: '#888', fontSize: 13, marginLeft: 8 }}>
+                            <span className="stock-adjustment-product-stock">
                               (Stock: {p.stock})
                             </span>
                           )}
@@ -119,7 +121,7 @@ const StockAdjustment = () => {
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12} md={6} className="stock-adjustment-field">
                   <FormControl fullWidth margin="normal" required>
                     <InputLabel>Adjustment Type</InputLabel>
                     <Select
@@ -134,7 +136,7 @@ const StockAdjustment = () => {
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} md={4} className="stock-adjustment-field">
                   <TextField
                     label="Quantity"
                     name="quantity"
@@ -147,7 +149,7 @@ const StockAdjustment = () => {
                     required
                   />
                 </Grid>
-                <Grid item xs={12} md={8}>
+                <Grid item xs={12} md={8} className="stock-adjustment-field">
                   <TextField
                     label="Reason / Source"
                     name="reason"
@@ -158,57 +160,61 @@ const StockAdjustment = () => {
                     required
                   />
                 </Grid>
-                <Grid item xs={12}>
+                 <Grid item xs={12} className="stock-adjustment-actions">
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    color="primary"
+                    disabled={loading}
+                    className="stock-adjustment-button"
+                    startIcon={loading && <CircularProgress size={18} color="inherit" />}
+                  >
+                    Adjust Stock
+                  </Button>
+                </Grid>
+                {/* Stock Info and Ledger */}
+      
+                {/* Actions Row */}
+               
+              </Grid>
+                        <Grid item xs={12} className="stock-adjustment-info">
                   {selectedProduct && (
                     <>
-                      <Typography variant="subtitle1" sx={{ mt: 1 }}>
+                      <Typography variant="subtitle1" className="stock-adjustment-stock-label">
                         Current Stock: <b>{currentStock !== null ? currentStock : "-"}</b>
                       </Typography>
                       {ledger.length > 0 && (
-                        <Box sx={{ mt: 2 }}>
-                          <Typography variant="subtitle2" sx={{ mb: 1 }}>Stock Ledger</Typography>
-                          <Paper variant="outlined" sx={{ overflowX: 'auto' }}>
-                            <Box component="table" sx={{ width: '100%', minWidth: 400 }}>
-                              <Box component="thead">
-                                <Box component="tr">
-                                  <Box component="th" sx={{ p: 1, fontWeight: 600 }}>Date</Box>
-                                  <Box component="th" sx={{ p: 1, fontWeight: 600 }}>Type</Box>
-                                  <Box component="th" sx={{ p: 1, fontWeight: 600 }}>Qty</Box>
-                                  <Box component="th" sx={{ p: 1, fontWeight: 600 }}>Reason/Source</Box>
-                                  <Box component="th" sx={{ p: 1, fontWeight: 600 }}>Balance</Box>
-                                </Box>
-                              </Box>
-                              <Box component="tbody">
+                        <Box className="stock-adjustment-ledger-wrapper">
+                          <Typography variant="subtitle2" className="stock-adjustment-ledger-title">Stock Ledger</Typography>
+                          <Paper variant="outlined" className="stock-adjustment-ledger-card">
+                            <table className="stock-adjustment-ledger-table">
+                              <thead>
+                                <tr>
+                                  <th>Date</th>
+                                  <th>Type</th>
+                                  <th>Qty</th>
+                                  <th>Reason/Source</th>
+                                  <th>Balance</th>
+                                </tr>
+                              </thead>
+                              <tbody>
                                 {ledger.map((entry, i) => (
-                                  <Box component="tr" key={i}>
-                                    <Box component="td" sx={{ p: 1 }}>{entry.date || '-'}</Box>
-                                    <Box component="td" sx={{ p: 1 }}>{entry.type}</Box>
-                                    <Box component="td" sx={{ p: 1 }}>{entry.quantity}</Box>
-                                    <Box component="td" sx={{ p: 1 }}>{entry.reason}</Box>
-                                    <Box component="td" sx={{ p: 1 }}>{entry.balance}</Box>
-                                  </Box>
+                                  <tr key={i}>
+                                    <td>{entry.date || '-'}</td>
+                                    <td>{entry.type}</td>
+                                    <td>{entry.quantity}</td>
+                                    <td>{entry.reason}</td>
+                                    <td>{entry.balance}</td>
+                                  </tr>
                                 ))}
-                              </Box>
-                            </Box>
+                              </tbody>
+                            </table>
                           </Paper>
                         </Box>
                       )}
                     </>
                   )}
                 </Grid>
-                <Grid item xs={12} display="flex" gap={2} justifyContent="flex-end" mt={2}>
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    color="primary"
-                    disabled={loading}
-                    sx={{ minWidth: 140 }}
-                    startIcon={loading && <CircularProgress size={18} color="inherit" />}
-                  >
-                    Adjust Stock
-                  </Button>
-                </Grid>
-              </Grid>
             </Box>
           </Paper>
         </Box>

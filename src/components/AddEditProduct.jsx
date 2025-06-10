@@ -19,6 +19,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import Header from "./common/Header/Header";
 import Footer from "./common/Header/Footer/Footer";
 import Sidebar from "./Sidebar";
+import './AddEditProduct.css';
 
 const categoryOptions = ["Electronics", "Grocery", "Clothing", "Stationery", "Other"];
 const unitOptions = ["pcs", "kg", "litre", "box", "pack"];
@@ -110,45 +111,98 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <Box className="add-edit-product-root">
       <Header />
-      <Box sx={{ display: 'flex', flex: 1 }}>
+      <Box className="add-edit-product-main">
         <Sidebar />
-        <Box sx={{ flex: 1, bgcolor: '#f5f6fa', minHeight: 'calc(100vh - 128px)', p: 3 }}>
-          <Paper elevation={3} sx={{ width: '100%', mx: 0, p: 4, mb: 4, borderRadius: 3, overflowX: 'auto' }}>
-            <Typography variant="h5" fontWeight={700} mb={2} color="primary.main">
+        <Box className="add-edit-product-content">
+          <Paper elevation={3} className="add-edit-product-card">
+            <Typography variant="h5" className="add-edit-product-title">
               {productId ? "Edit" : "Add"} Product
             </Typography>
-            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-            <Box component="form" onSubmit={handleSubmit} autoComplete="off">
-              <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    label="Name"
-                    name="name"
-                    value={form.name}
-                    onChange={handleChange}
-                    fullWidth
-                    margin="normal"
-                    required
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <FormControl fullWidth margin="normal" required>
-                    <InputLabel>Category</InputLabel>
-                    <Select
-                      label="Category"
-                      name="category"
-                      value={form.category}
+            {error && <Alert severity="error" className="add-edit-product-alert">{error}</Alert>}
+            <Box component="form" onSubmit={handleSubmit} autoComplete="off" className="add-edit-product-form">
+              <Grid container spacing={3} className="add-edit-product-grid">
+                <Grid item xs={12} sm={6}>
+                  <div className="invoice-form-row">
+                    <TextField
+                      label="Name"
+                      name="name"
+                      value={form.name}
                       onChange={handleChange}
-                    >
-                      {categoryOptions.map((c) => (
-                        <MenuItem key={c} value={c}>{c}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                      fullWidth
+                      margin="normal"
+                      required
+                      className="add-edit-product-field"
+                    />
+                    <FormControl fullWidth margin="normal" required className="add-edit-product-field">
+                      <InputLabel>Category</InputLabel>
+                      <Select
+                        label="Category"
+                        name="category"
+                        value={form.category}
+                        onChange={handleChange}
+                      >
+                        {categoryOptions.map((c) => (
+                          <MenuItem key={c} value={c}>{c}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </div>
+                  <div className="invoice-form-row">
+                    <TextField
+                      label="Price"
+                      name="price"
+                      type="number"
+                      value={form.price}
+                      onChange={handleChange}
+                      fullWidth
+                      margin="normal"
+                      inputProps={{ min: 0, step: 0.01 }}
+                      required
+                      className="add-edit-product-field"
+                    />
+                    <FormControl fullWidth margin="normal" required className="add-edit-product-field">
+                      <InputLabel>Unit</InputLabel>
+                      <Select
+                        label="Unit"
+                        name="unit"
+                        value={form.unit}
+                        onChange={handleChange}
+                      >
+                        {unitOptions.map((u) => (
+                          <MenuItem key={u} value={u}>{u}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </div>
+                  <div className="invoice-form-row">
+                    <TextField
+                      label="Tax Rate (%)"
+                      name="tax_rate"
+                      type="number"
+                      value={form.tax_rate}
+                      onChange={handleChange}
+                      fullWidth
+                      margin="normal"
+                      inputProps={{ min: 0, step: 0.01 }}
+                      required
+                      className="add-edit-product-field"
+                    />
+                    {productId && (
+                      <TextField
+                        label="Available Qty"
+                        name="stock"
+                        value={typeof form.stock === 'number' ? form.stock : '-'}
+                        fullWidth
+                        margin="normal"
+                        InputProps={{ readOnly: true }}
+                        className="add-edit-product-field"
+                      />
+                    )}
+                  </div>
                 </Grid>
-                <Grid item xs={12}>
+                <Grid item xs={12} sm={6}>
                   <TextField
                     label="Description"
                     name="description"
@@ -157,82 +211,32 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
                     fullWidth
                     margin="normal"
                     multiline
-                    minRows={2}
+                    minRows={6}
+                    className="add-edit-product-field"
                   />
                 </Grid>
-                <Grid item xs={12} md={4}>
-                  <TextField
-                    label="Price"
-                    name="price"
-                    type="number"
-                    value={form.price}
-                    onChange={handleChange}
-                    fullWidth
-                    margin="normal"
-                    inputProps={{ min: 0, step: 0.01 }}
-                    required
-                  />
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <FormControl fullWidth margin="normal" required>
-                    <InputLabel>Unit</InputLabel>
-                    <Select
-                      label="Unit"
-                      name="unit"
-                      value={form.unit}
-                      onChange={handleChange}
+                <Grid item xs={12}>
+                  <Box className="add-edit-product-actions">
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      color="primary"
+                      disabled={loading}
+                      className="add-edit-product-btn add-edit-product-btn-primary"
+                      startIcon={loading && <CircularProgress size={18} color="inherit" />}
                     >
-                      {unitOptions.map((u) => (
-                        <MenuItem key={u} value={u}>{u}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <TextField
-                    label="Tax Rate (%)"
-                    name="tax_rate"
-                    type="number"
-                    value={form.tax_rate}
-                    onChange={handleChange}
-                    fullWidth
-                    margin="normal"
-                    inputProps={{ min: 0, step: 0.01 }}
-                    required
-                  />
-                </Grid>
-                {productId && (
-                  <Grid item xs={12} md={4}>
-                    <TextField
-                      label="Available Qty"
-                      name="stock"
-                      value={typeof form.stock === 'number' ? form.stock : '-'}
-                      fullWidth
-                      margin="normal"
-                      InputProps={{ readOnly: true }}
-                    />
-                  </Grid>
-                )}
-                <Grid item xs={12} display="flex" gap={2} justifyContent="flex-end" mt={2}>
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    color="primary"
-                    disabled={loading}
-                    sx={{ minWidth: 140, mr: 2 }}
-                    startIcon={loading && <CircularProgress size={18} color="inherit" />}
-                  >
-                    {productId ? "Update" : "Add"} Product
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outlined"
-                    color="secondary"
-                    onClick={() => { if (onCancel) onCancel(); navigate("/products"); }}
-                    sx={{ minWidth: 120 }}
-                  >
-                    Cancel
-                  </Button>
+                      {productId ? "Update" : "Add"} Product
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outlined"
+                      color="secondary"
+                      onClick={() => { if (onCancel) onCancel(); navigate("/products"); }}
+                      className="add-edit-product-btn add-edit-product-btn-cancel"
+                    >
+                      Cancel
+                    </Button>
+                  </Box>
                 </Grid>
               </Grid>
             </Box>

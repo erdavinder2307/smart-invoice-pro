@@ -3,7 +3,6 @@ import { getProducts, deleteProduct } from "../services/productService";
 import Header from "./common/Header/Header";
 import Footer from "./common/Header/Footer/Footer";
 import Sidebar from "./Sidebar";
-import axios from "axios";
 import {
   Box,
   Button,

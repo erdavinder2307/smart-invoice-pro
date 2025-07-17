@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
   getInvoices,
-  createInvoice,
-  updateInvoice,
   deleteInvoice,
 } from "../services/invoiceService";
 import "./InvoiceList.css";
@@ -12,19 +10,6 @@ import Sidebar from "./Sidebar";
 import axios from "axios";
 import { Box, Button, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, CircularProgress, Alert } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-
-const statusOptions = [
-  "Draft",
-  "Issued",
-  "Paid",
-  "Overdue",
-  "Cancelled",
-];
-const invoiceTypeOptions = [
-  "Tax Invoice",
-  "Proforma",
-  "Credit Note",
-];
 
 const initialForm = {
   invoice_number: "",
@@ -52,11 +37,8 @@ const InvoiceList = () => {
   const [invoices, setInvoices] = useState([]);
   const [form, setForm] = useState(initialForm);
   const [customers, setCustomers] = useState([]);
-  const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [showAddEdit, setShowAddEdit] = useState(false);
-  const [editInvoiceId, setEditInvoiceId] = useState(null);
   const navigate = useNavigate();
 
   const fetchInvoices = async () => {
@@ -86,32 +68,6 @@ const InvoiceList = () => {
     setForm(f => ({ ...f, total_tax, total_amount, balance_due }));
     // eslint-disable-next-line
   }, [form.subtotal, form.cgst_amount, form.sgst_amount, form.igst_amount, form.amount_paid]);
-
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      if (editingId) {
-        await updateInvoice(editingId, form);
-      } else {
-        await createInvoice(form);
-      }
-      setForm(initialForm);
-      setEditingId(null);
-      fetchInvoices();
-    } catch (err) {
-      setError("Failed to save invoice");
-    }
-    setLoading(false);
-  };
 
   const handleEdit = (invoice) => {
     navigate(`/invoices/edit/${invoice.id}`);

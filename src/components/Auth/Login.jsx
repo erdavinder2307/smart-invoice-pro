@@ -61,7 +61,9 @@ const LoginPage = () => {
                 <input type="checkbox" />
                 Remember Me
               </label>
-              <a href="#">Forgot Password</a>
+              <button type="button" className="link-button" onClick={() => console.log('Forgot password clicked')}>
+                Forgot Password
+              </button>
             </div>
             <button type="submit" className="btn-signin">
               Sign in

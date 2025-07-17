@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { createApiUrl } from "../config/api";
 import {
   Box,
   Button,
@@ -37,7 +38,7 @@ const StockAdjustment = () => {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    axios.get("http://127.0.0.1:5000/api/products")
+    axios.get(createApiUrl("/api/products"))
       .then(res => {
         // If stock is available in product object, use it
         setProducts(res.data.map(p => ({ ...p, stock: p.stock ?? null })));
@@ -47,10 +48,10 @@ const StockAdjustment = () => {
 
   useEffect(() => {
     if (selectedProduct) {
-      axios.get(`http://127.0.0.1:5000/api/stock/${selectedProduct}`)
+      axios.get(createApiUrl(`/api/stock/${selectedProduct}`))
         .then(res => setCurrentStock(res.data.stock || 0))
         .catch(() => setCurrentStock(null));
-      axios.get(`http://127.0.0.1:5000/api/stock/ledger/${selectedProduct}`)
+      axios.get(createApiUrl(`/api/stock/ledger/${selectedProduct}`))
         .then(res => setLedger(res.data || []))
         .catch(() => setLedger([]));
     } else {
@@ -70,7 +71,7 @@ const StockAdjustment = () => {
     setLoading(true);
     try {
       const endpoint = type === "IN" ? "/stock/add" : "/stock/reduce";
-      await axios.post(`http://127.0.0.1:5000/api${endpoint}`, {
+      await axios.post(createApiUrl(`/api${endpoint}`), {
         product_id: selectedProduct,
         quantity: Number(quantity),
         reason,

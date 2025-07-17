@@ -3,6 +3,7 @@ import {
   getInvoices,
   deleteInvoice,
 } from "../services/invoiceService";
+import { createApiUrl } from "../config/api";
 import "./InvoiceList.css";
 import Header from "./common/Header/Header";
 import Footer from "./common/Header/Footer/Footer";
@@ -55,9 +56,9 @@ const InvoiceList = () => {
   useEffect(() => {
     fetchInvoices();
     // Fetch customers for dropdown
-    axios.get("http://127.0.0.1:5000/api/customers").then(res => setCustomers(res.data)).catch(() => setCustomers([]));
+    axios.get(createApiUrl("/api/customers")).then(res => setCustomers(res.data)).catch(() => setCustomers([]));
     // Optionally, fetch next invoice number
-    axios.get("http://127.0.0.1:5000/api/invoices/next-number").then(res => setForm(f => ({ ...f, invoice_number: res.data.invoice_number }))).catch(() => {});
+    axios.get(createApiUrl("/api/invoices/next-number")).then(res => setForm(f => ({ ...f, invoice_number: res.data.invoice_number }))).catch(() => {});
   }, []);
 
   // Calculate fields
@@ -92,7 +93,7 @@ const InvoiceList = () => {
   const handleDownloadPDF = async (invoice) => {
     try {
       const response = await axios.post(
-        "http://127.0.0.1:5000/api/generate-invoice-pdf",
+        createApiUrl("/api/generate-invoice-pdf"),
         { invoice },
         { responseType: "blob" }
       );

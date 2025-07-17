@@ -22,6 +22,7 @@ import {
   LineController
 } from 'chart.js';
 import axios from "axios";
+import { createApiUrl } from "../config/api";
 import ProductStockSummary from "../components/ProductStockSummary";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, PointElement, LineElement, LineController);
@@ -42,17 +43,17 @@ const DashboardPage = () => {
 
   useEffect(() => {
     setSummaryLoading(true);
-    axios.get("http://127.0.0.1:5000/api/dashboard/summary")
+    axios.get(createApiUrl("/api/dashboard/summary"))
       .then(res => setSummary(res.data))
       .catch(() => setSummaryError("Failed to load summary"))
       .finally(() => setSummaryLoading(false));
     setLowStockLoading(true);
-    axios.get("http://127.0.0.1:5000/api/dashboard/low-stock")
+    axios.get(createApiUrl("/api/dashboard/low-stock"))
       .then(res => setLowStock(res.data))
       .catch(() => setLowStockError("Failed to load low stock items"))
       .finally(() => setLowStockLoading(false));
     setRevenueLoading(true);
-    axios.get("http://127.0.0.1:5000/api/dashboard/monthly-revenue")
+    axios.get(createApiUrl("/api/dashboard/monthly-revenue"))
       .then(res => setRevenue(res.data))
       .catch(() => setRevenueError("Failed to load revenue chart"))
       .finally(() => setRevenueLoading(false));

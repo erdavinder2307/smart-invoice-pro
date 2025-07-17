@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { createInvoice, updateInvoice } from "../services/invoiceService";
+import { createApiUrl } from "../config/api";
 import {
   Box,
   Button,
@@ -96,17 +97,17 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
   };
 
   useEffect(() => {
-    axios.get("http://127.0.0.1:5000/api/customers").then(res => {
+    axios.get(createApiUrl("/api/customers")).then(res => {
       setCustomers(res.data);
       if (!invoiceId) {
         // Always show random dummy data for testing/debugging, but preserve next invoice number logic
-        axios.get("http://127.0.0.1:5000/api/invoices/next-number").then(nextRes => {
+        axios.get(createApiUrl("/api/invoices/next-number")).then(nextRes => {
           setForm({ ...getRandomInvoice(res.data), invoice_number: nextRes.data.next_invoice_number });
         }).catch(() => {
           setForm(getRandomInvoice(res.data));
         });
       } else {
-        axios.get(`http://127.0.0.1:5000/api/invoices/${invoiceId}`).then(res2 => setForm(res2.data));
+        axios.get(createApiUrl(`/api/invoices/${invoiceId}`)).then(res2 => setForm(res2.data));
       }
     });
   }, [invoiceId]);

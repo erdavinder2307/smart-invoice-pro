@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { createApiUrl } from "../config/api";
 import {
   Box,
   Paper,
@@ -22,7 +23,7 @@ const ProductStockSummary = () => {
 
   useEffect(() => {
     setLoading(true);
-    axios.get("http://127.0.0.1:5000/api/products/stock-summary")
+    axios.get(createApiUrl("/api/products/stock-summary"))
       .then(res => setProducts(res.data))
       .catch(() => setError("Failed to fetch product stock summary"))
       .finally(() => setLoading(false));

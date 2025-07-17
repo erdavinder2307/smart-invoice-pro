@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { createApiUrl } from "../config/api";
 import Header from "./common/Header/Header";
 import Footer from "./common/Header/Footer/Footer";
 import Sidebar from "./Sidebar";
@@ -27,7 +28,7 @@ const CustomerList = () => {
   const fetchCustomers = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("http://127.0.0.1:5000/api/customers");
+      const res = await axios.get(createApiUrl("/api/customers"));
       setCustomers(res.data);
     } catch {
       setCustomers([]);
@@ -95,9 +96,9 @@ const CustomerList = () => {
     setLoading(true);
     try {
       if (editingId) {
-        await axios.put(`http://127.0.0.1:5000/api/customers/${editingId}`, form);
+        await axios.put(createApiUrl(`/api/customers/${editingId}`), form);
       } else {
-        await axios.post("http://127.0.0.1:5000/api/customers", form);
+        await axios.post(createApiUrl("/api/customers"), form);
       }
       fetchCustomers();
       closeModal();
@@ -110,7 +111,7 @@ const CustomerList = () => {
   const handleDelete = async (id) => {
     setLoading(true);
     try {
-      await axios.delete(`http://127.0.0.1:5000/api/customers/${id}`);
+      await axios.delete(createApiUrl(`/api/customers/${id}`));
       fetchCustomers();
       setConfirmDeleteId(null);
     } catch {

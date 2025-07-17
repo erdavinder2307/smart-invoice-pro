@@ -1,6 +1,7 @@
 import axios from 'axios';
+import { createApiUrl } from '../config/api';
 
-const API_URL = 'http://127.0.0.1:5000/api/products';
+const API_URL = createApiUrl('/api/products');
 
 export const getProducts = async () => {
   const response = await axios.get(API_URL);

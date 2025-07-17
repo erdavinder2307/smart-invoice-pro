@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { createProduct, updateProduct } from "../services/productService";
+import { createApiUrl } from "../config/api";
 import {
   Box,
   Button,
@@ -68,7 +69,7 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
 
   useEffect(() => {
     if (productId) {
-      axios.get(`http://127.0.0.1:5000/api/products/${productId}`)
+      axios.get(createApiUrl(`/api/products/${productId}`))
         .then(res => setForm(res.data))
         .catch(() => setError("Failed to fetch product details"));
     } else {

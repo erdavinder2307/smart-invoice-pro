@@ -1,0 +1,35 @@
+.weekly-stats {
+    background-color: #f0f9ff;
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+    margin-bottom: 24px;
+}
+
+.weekly-stats h4 {
+    font-size: 18px;
+    margin-bottom: 12px;
+    color: #333;
+}
+
+.weekly-stats .bar-chart {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+}
+
+.weekly-stats .bar {
+    flex: 1;
+    background: linear-gradient(180deg, #4facfe, #00f2fe);
+    border-radius: 6px;
+    position: relative;
+}
+
+.weekly-stats .bar span {
+    position: absolute;
+    bottom: -20px;
+    font-size: 12px;
+    color: #666;
+    text-align: center;
+    width: 100%;
+}

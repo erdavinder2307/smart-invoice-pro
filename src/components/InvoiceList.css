@@ -1,0 +1,92 @@
+/* Basic styling for InvoiceList component */
+.invoice-list-container {
+  background: #fff;
+  padding: 32px;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  margin-bottom: 32px;
+}
+.invoice-list-container h2 {
+  margin-bottom: 20px;
+  color: #0057e7;
+}
+.invoice-form {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.invoice-form input,
+.invoice-form select {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 15px;
+}
+.invoice-form button {
+  background: #0057e7;
+  color: #fff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.invoice-form button:hover {
+  background: #003fa3;
+}
+.invoice-form button.delete-btn {
+  background: #e74c3c;
+}
+.invoice-form button.delete-btn:hover {
+  background: #c0392b;
+}
+.invoice-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+.invoice-table th, .invoice-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+}
+.invoice-table th {
+  background: #f0f9ff;
+  color: #333;
+}
+.invoice-table tr:last-child td {
+  border-bottom: none;
+}
+.invoice-table button {
+  margin-right: 8px;
+  padding: 4px 12px;
+  border-radius: 4px;
+  border: none;
+  background: #e0e7ff;
+  color: #0057e7;
+  cursor: pointer;
+  font-size: 14px;
+}
+.invoice-table button.delete-btn {
+  background: #ffe0e0;
+  color: #e74c3c;
+}
+.error {
+  color: #e74c3c;
+  margin-bottom: 10px;
+}
+@media (max-width: 700px) {
+  .invoice-list-container {
+    padding: 12px;
+  }
+  .invoice-form {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .invoice-table th, .invoice-table td {
+    padding: 6px 4px;
+    font-size: 13px;
+  }
+}

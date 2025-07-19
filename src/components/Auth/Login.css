@@ -119,6 +119,49 @@
     margin: 0.5rem 0;
 }
 
+.success-message {
+    color: green;
+    font-size: 0.9rem;
+    margin: 0.5rem 0;
+}
+
+.password-requirements {
+    margin: 0.5rem 0;
+    padding: 0.75rem;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+}
+
+.requirements-title {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #495057;
+}
+
+.requirements-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.requirements-list li {
+    font-size: 0.8rem;
+    margin: 0.25rem 0;
+    padding: 0.1rem 0;
+    transition: color 0.2s ease;
+}
+
+.requirements-list li.valid {
+    color: #28a745;
+    font-weight: 500;
+}
+
+.requirements-list li.invalid {
+    color: #dc3545;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .login-container {

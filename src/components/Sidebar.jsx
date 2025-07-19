@@ -16,6 +16,7 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import SyncAltIcon from "@mui/icons-material/SyncAlt";
 import "./Sidebar.css";
+import authService from "../services/authService";
 
 const navItems = [
   { text: "Home", icon: <HomeIcon />, path: "/dashboard" },
@@ -81,6 +82,10 @@ const Sidebar = () => {
           startIcon={<LogoutIcon />}
           sx={{ mt: 2 }}
           className="signout"
+          onClick={() => {
+            authService.logout();
+            navigate('/');
+          }}
         >
           Sign out
         </Button>

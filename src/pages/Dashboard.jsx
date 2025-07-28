@@ -302,7 +302,9 @@ const DashboardPage = () => {
                         <TrendingUp sx={{ fontSize: 20 }} />
                       </Box>
                       <Typography variant="h3" fontWeight={700} gutterBottom>
-                        ₹2.4M
+                        {summaryLoading ? <CircularProgress size={24} color="inherit" /> : 
+                         summaryError ? '-' : 
+                         summary?.total_revenue ?? '-'}
                       </Typography>
                       <Typography variant="body2" sx={{ opacity: 0.9 }}>
                         Total Revenue

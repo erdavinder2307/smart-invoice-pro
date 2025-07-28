@@ -282,7 +282,8 @@ const StockAdjustment = () => {
       setError(err.response?.data?.message || "Failed to adjust stock");
     }
     setLoading(false);
-  };  return (
+  };  
+  return (
     <Box className="stock-adjustment-root">
       <Header />
       <Box className="stock-adjustment-main">

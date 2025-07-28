@@ -96,9 +96,9 @@ const LoginPage = () => {
       if (isSignup) {
         // Validate password strength
         if (!isPasswordValid()) {
-          setError("Password does not meet the required criteria.");
-          setLoading(false);
-          return;
+        setError("Password does not meet the required criteria.");
+        setLoading(false);
+        return;
         }
         
         // Validate password confirmation

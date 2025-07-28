@@ -103,9 +103,9 @@ const LoginPage = () => {
         
         // Validate password confirmation
         if (credentials.password !== credentials.confirmPassword) {
-          setError("Passwords do not match.");
-          setLoading(false);
-          return;
+            setError("Passwords do not match.");
+            setLoading(false);
+            return;
         }
         
         // Only send username and password to the API

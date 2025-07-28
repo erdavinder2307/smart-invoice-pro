@@ -75,6 +75,12 @@
   margin-bottom: 18px;
 }
 
+.invoice-form-row {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+}
+
 .stock-adjustment-ledger-table {
   width: 100%;
   min-width: 400px;
@@ -108,8 +114,19 @@
   .stock-adjustment-content {
     padding: 8px;
   }
+  .invoice-form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
 }
 
 .stock-adjustment-info {
  width: 90%;
+}
+
+.add-edit-product-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
 }

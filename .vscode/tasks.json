@@ -1,0 +1,41 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "npm",
+      "script": "start",
+      "group": "build",
+      "label": "npm: start",
+      "detail": "react-scripts start",
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "webpack",
+        "severity": "info",
+        "fileLocation": "absolute",
+        "pattern": {
+          "regexp": "ERROR in (.*)",
+          "file": 1
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*webpack.*(compile|compiling).*",
+          "endsPattern": ".*webpack.*compiled.*"
+        }
+      }
+    },
+    {
+      "type": "npm",
+      "script": "build",
+      "group": "build",
+      "label": "npm: build",
+      "detail": "react-scripts build"
+    },
+    {
+      "type": "npm",
+      "script": "test",
+      "group": "test",
+      "label": "npm: test",
+      "detail": "react-scripts test"
+    }
+  ]
+}

@@ -1,190 +1,246 @@
+/* Modern Login Component Styles */
 .login-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Animated background elements */
+.login-container::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+  background-size: 50px 50px;
+  animation: float 20s infinite linear;
+  z-index: 0;
+}
+
+@keyframes float {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  100% { transform: translate(-50px, -50px) rotate(360deg); }
+}
+
+/* Custom button hover effects */
+.MuiButton-root.login-primary-btn {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.MuiButton-root.login-primary-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s;
+}
+
+.MuiButton-root.login-primary-btn:hover::before {
+  left: 100%;
+}
+
+/* Form animation */
+.login-form-container {
+  animation: slideInUp 0.6s ease-out;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Left panel animation */
+.login-left-panel {
+  animation: slideInLeft 0.8s ease-out;
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Input focus effects */
+.MuiTextField-root .MuiOutlinedInput-root {
+  transition: all 0.3s ease;
+}
+
+.MuiTextField-root .MuiOutlinedInput-root:hover {
+  box-shadow: 0 4px 8px rgba(0, 87, 231, 0.1);
+}
+
+.MuiTextField-root .MuiOutlinedInput-root.Mui-focused {
+  box-shadow: 0 4px 12px rgba(0, 87, 231, 0.2);
+}
+
+/* Card hover effect */
+.login-card {
+  transition: all 0.3s ease;
+}
+
+.login-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Alert animations */
+.MuiAlert-root {
+  animation: slideInDown 0.3s ease-out;
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive improvements */
+@media (max-width: 960px) {
+  .login-container {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 600px) {
+  .login-form-container {
+    padding: 16px;
+  }
+  
+  .MuiTypography-h4 {
+    font-size: 1.75rem;
+  }
+  
+  .MuiTypography-h3 {
+    font-size: 2rem;
+  }
+}
+
+/* Loading state */
+.loading-overlay {
+  position: relative;
+}
+
+.loading-overlay::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
   display: flex;
-  height: 83vh; /* Ensures the container takes up the full viewport height */
-  font-family: Arial, sans-serif;
-  overflow: hidden; /* Prevents scrolling if content overflows */
-}
-  .login-left {
-    flex: 1;
-    position: relative;
-    background-color: white;
-    overflow: hidden;
-  }
-  
-  .blue-shape {
-    position: absolute;
-    width: 600px;
-    height: 600px;
-    background-color: #0057e7;
-    border-radius: 50%;
-    top: -100px;
-    left: -200px;
-    z-index: 1;
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
-  }
-  
-  .left-image {
-    position: absolute;
-    bottom: 0;
-    right: 20px;
-    max-width: 400px;
-    z-index: 2;
-    width: 80%;
-    border-radius: 50%; /* Optional: for circular image */
-    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
-  }
-  
-  .login-right {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #e0ebff;
-  }
-  
-  .login-box {
-    background: white;
-    padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
-    min-width: 300px;
-  }
-  
-  .login-box h2 {
-    margin-bottom: 1rem;
-    color: #0057e7;
-  }
-  
-  .login-box input {
-    display: block;
-    width: 100%;
-    padding: 0.6rem;
-    margin: 0.5rem 0;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-  }
-  
-  .login-options {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.9rem;
-    margin-bottom: 1rem;
-  }
-  
-  .login-options a {
-    text-decoration: none;
-    color: #0057e7;
-  }
-  
-  .btn-signin,
-  .btn-create {
-    display: block;
-    width: 100%;
-    padding: 0.6rem;
-    margin: 0.4rem 0;
-    border: none;
-    border-radius: 4px;
-    font-weight: bold;
-    cursor: pointer;
-  }
-  
-  .btn-signin {
-    background-color: #00c851;
-    color: white;
-  }
-  
-  .btn-create {
-    background-color: #007bff;
-    color: white;
-  }
-  
-  .or {
-    text-align: center;
-    font-size: 0.9rem;
-    margin: 0.4rem 0;
-    color: #666;
-  }
-
-.circle-mask {
-    border-radius: 50%;
-    overflow: hidden;
-    width: 300px; /* Adjust size as needed */
-    height: 300px; /* Adjust size as needed */
-    object-fit: cover;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
 }
 
-.error-message {
-    color: red;
-    font-size: 0.9rem;
-    margin: 0.5rem 0;
+/* Professional gradients for different states */
+.success-gradient {
+  background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%);
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-    .login-container {
-        flex-direction: column;
-        height: auto;
-    }
-
-    .login-left, .login-right {
-        flex: none;
-        width: 100%;
-    }
-
-    .blue-shape {
-        width: 300px;
-        height: 300px;
-        top: -50px;
-        left: -100px;
-    }
-
-    .left-image {
-        position: relative;
-        top: 0;
-        left: 0;
-        margin: 20px auto;
-        width: 150px;
-        height: 150px;
-    }
-
-    .login-box {
-        width: 90%;
-        margin: 20px auto;
-    }
+.error-gradient {
+  background: linear-gradient(135deg, #f44336 0%, #ef5350 100%);
 }
 
-@media (max-width: 480px) {
-    .blue-shape {
-        display: none; /* Hide the blue shape on smaller screens */
-    }
-
-    .login-box {
-        padding: 1.5rem;
-    }
-
-    .login-box h2 {
-        font-size: 1.5rem;
-    }
-
-    .login-box input {
-        padding: 0.5rem;
-    }
-
-    .btn-signin, .btn-create {
-        padding: 0.5rem;
-    }
+.info-gradient {
+  background: linear-gradient(135deg, #2196f3 0%, #42a5f5 100%);
 }
 
-.link-button {
-  background: none;
-  border: none;
-  color: #007bff;
-  text-decoration: underline;
-  cursor: pointer;
-  font-size: inherit;
-  padding: 0;
+/* Feature icons animation */
+.feature-icon {
+  animation: pulse 2s infinite;
 }
 
-.link-button:hover {
-  color: #0056b3;
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* Password strength indicator */
+.password-strength-weak {
+  color: #f44336;
+}
+
+.password-strength-medium {
+  color: #ff9800;
+}
+
+.password-strength-strong {
+  color: #4caf50;
+}
+
+/* Modern scrollbar for password requirements */
+.password-requirements-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.password-requirements-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.password-requirements-list::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.password-requirements-list::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Accessibility improvements */
+.MuiButton-root:focus-visible {
+  outline: 2px solid #0057e7;
+  outline-offset: 2px;
+}
+
+.MuiTextField-root .MuiInputBase-root:focus-within {
+  outline: none;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .login-container {
+    background: #000;
+    color: #fff;
+  }
+  
+  .MuiPaper-root {
+    border: 2px solid #fff;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

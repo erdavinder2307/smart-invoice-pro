@@ -79,62 +79,67 @@ const Sidebar = () => {
       {/* Navigation Menu */}
       <Box sx={{ flex: 1, py: 2 }}>
         <List sx={{ px: 2 }}>
-          {navItems.map((item) => (
-            <ListItem key={item.text} disablePadding sx={{ mb: 1 }}>
-              <ListItemButton
-                selected={location.pathname === item.path}
-                onClick={() => navigate(item.path)}
-                sx={{
-                  borderRadius: 2,
-                  py: 1.5,
-                  px: 2,
-                  color: location.pathname === item.path ? 'white' : 'rgba(255,255,255,0.8)',
-                  background: location.pathname === item.path 
-                    ? 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' 
-                    : 'transparent',
-                  '&:hover': {
-                    background: location.pathname === item.path 
-                      ? 'linear-gradient(135deg, #2563eb 0%, #1e40af 100%)'
-                      : 'rgba(255,255,255,0.1)',
-                    color: 'white',
-                    transform: 'translateX(4px)'
-                  },
-                  '&.Mui-selected': {
-                    backgroundColor: 'transparent',
-                  },
-                  transition: 'all 0.2s ease',
-                  position: 'relative',
-                  overflow: 'hidden'
-                }}
-              >
-                <ListItemIcon 
-                  sx={{ 
-                    color: 'inherit',
-                    minWidth: 40
+          {navItems.map((item) => {
+            const isSelected = location.pathname === item.path;
+            const primaryTypographyProps = {
+              fontWeight: isSelected ? 600 : 500,
+              fontSize: '0.95rem'
+            };
+
+            return (
+              <ListItem key={item.text} disablePadding sx={{ mb: 1 }}>
+                <ListItemButton
+                  selected={isSelected}
+                  onClick={() => navigate(item.path)}
+                  sx={{
+                    borderRadius: 2,
+                    py: 1.5,
+                    px: 2,
+                    color: isSelected ? 'white' : 'rgba(255,255,255,0.8)',
+                    background: isSelected 
+                      ? 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' 
+                      : 'transparent',
+                    '&:hover': {
+                      background: isSelected 
+                        ? 'linear-gradient(135deg, #2563eb 0%, #1e40af 100%)'
+                        : 'rgba(255,255,255,0.1)',
+                      color: 'white',
+                      transform: 'translateX(4px)'
+                    },
+                    '&.Mui-selected': {
+                      backgroundColor: 'transparent',
+                    },
+                    transition: 'all 0.2s ease',
+                    position: 'relative',
+                    overflow: 'hidden'
                   }}
                 >
-                  {item.badge ? (
-                    <Badge 
-                      badgeContent={item.badge} 
-                      color={item.badge === 'new' ? 'success' : 'error'}
-                      variant={item.badge === 'new' ? 'dot' : 'standard'}
-                    >
-                      {item.icon}
-                    </Badge>
-                  ) : (
-                    item.icon
-                  )}
-                </ListItemIcon>
-                <ListItemText 
-                  primary={item.text} 
-                  primaryTypographyProps={React.useMemo(() => ({
-                    fontWeight: location.pathname === item.path ? 600 : 500,
-                    fontSize: '0.95rem'
-                  }), [location.pathname, item.path])}
-                />
-              </ListItemButton>
-            </ListItem>
-          ))}
+                  <ListItemIcon 
+                    sx={{ 
+                      color: 'inherit',
+                      minWidth: 40
+                    }}
+                  >
+                    {item.badge ? (
+                      <Badge 
+                        badgeContent={item.badge} 
+                        color={item.badge === 'new' ? 'success' : 'error'}
+                        variant={item.badge === 'new' ? 'dot' : 'standard'}
+                      >
+                        {item.icon}
+                      </Badge>
+                    ) : (
+                      item.icon
+                    )}
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary={item.text} 
+                    primaryTypographyProps={primaryTypographyProps}
+                  />
+                </ListItemButton>
+              </ListItem>
+            );
+          })}
         </List>
       </Box>
 

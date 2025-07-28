@@ -127,10 +127,10 @@ const Sidebar = () => {
                 </ListItemIcon>
                 <ListItemText 
                   primary={item.text} 
-                  primaryTypographyProps={{ 
+                  primaryTypographyProps={React.useMemo(() => ({
                     fontWeight: location.pathname === item.path ? 600 : 500,
                     fontSize: '0.95rem'
-                  }}
+                  }), [location.pathname, item.path])}
                 />
               </ListItemButton>
             </ListItem>

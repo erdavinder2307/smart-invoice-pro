@@ -8,6 +8,9 @@ import CustomerList from './components/CustomerList';
 import ProductList from './components/ProductList';
 import AddEditProduct from './components/AddEditProduct';
 import StockAdjustment from './components/StockAdjustment';
+import CustomerLogin from './components/CustomerLogin';
+import CustomerDashboard from './pages/CustomerDashboard';
+import CustomerInvoiceDetail from './pages/CustomerInvoiceDetail';
 
 const AppRoutes = () => {
   return (
@@ -20,6 +23,9 @@ const AppRoutes = () => {
         <Route path="/invoices/add" element={<AddEditInvoice />} />
         <Route path="/invoices/edit/:id" element={<AddEditInvoice />} />
         <Route path="/customers" element={<CustomerList />} />
+        <Route path="/customer/login" element={<CustomerLogin />} />
+        <Route path="/customer/dashboard" element={<CustomerDashboard />} />
+        <Route path="/customer/invoices/:id" element={<CustomerInvoiceDetail />} />
         <Route path="/products" element={<ProductList />} />
         <Route path="/products/add" element={<AddEditProduct />} />
         <Route path="/products/edit/:id" element={<AddEditProduct />} />

@@ -468,6 +468,31 @@ const LoginPage = () => {
                           </Typography>
                         </Divider>
 
+                        {/* Customer Portal Link */}
+                        <Button
+                          fullWidth
+                          variant="outlined"
+                          size="large"
+                          onClick={() => navigate('/customer/login')}
+                          sx={{ 
+                            py: 1.5,
+                            mb: 2,
+                            borderRadius: 2,
+                            fontSize: '1rem',
+                            fontWeight: 600,
+                            textTransform: 'none',
+                            borderColor: 'secondary.main',
+                            color: 'secondary.main',
+                            '&:hover': {
+                              bgcolor: 'secondary.main',
+                              color: 'white',
+                              borderColor: 'secondary.main'
+                            }
+                          }}
+                        >
+                          Customer Portal Login
+                        </Button>
+
                         {/* Toggle Sign up / Sign in */}
                         <Button
                           fullWidth

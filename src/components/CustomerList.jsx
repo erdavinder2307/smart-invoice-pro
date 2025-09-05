@@ -44,6 +44,7 @@ import PhoneIcon from '@mui/icons-material/Phone';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import PeopleIcon from '@mui/icons-material/People';
+import LockIcon from '@mui/icons-material/Lock';
 
 const initialForm = {
   name: "",
@@ -51,6 +52,7 @@ const initialForm = {
   phone: "",
   address: "",
   gst_number: "",
+  password: "",
 };
 
 const CustomerList = () => {
@@ -97,13 +99,18 @@ const CustomerList = () => {
       email: emails[idx] + Math.floor(Math.random()*1000) + "@example.com",
       phone: "9" + Math.floor(100000000 + Math.random()*900000000),
       address: `${Math.floor(Math.random()*100)+1}, ${streets[idx]}, ${cities[idx]}`,
-      gst_number: gst[Math.floor(Math.random()*gst.length)]
+      gst_number: gst[Math.floor(Math.random()*gst.length)],
+      password: "" // Empty password field for new customers
     };
   };
 
   const openModal = (customer = null) => {
     if (customer) {
-      setForm(customer);
+      // When editing, copy all fields except password (we don't show existing password)
+      setForm({
+        ...customer,
+        password: "" // Clear password field for editing
+      });
       setEditingId(customer.id);
     } else {
       setForm(getRandomCustomer());
@@ -140,10 +147,18 @@ const CustomerList = () => {
     if (err) return setError(err);
     setLoading(true);
     try {
+      // Prepare form data, only include password if it's provided
+      const formData = { ...form };
+      
+      // For edit mode, only include password if it's not empty
+      if (editingId && !formData.password) {
+        delete formData.password;
+      }
+      
       if (editingId) {
-        await axios.put(createApiUrl(`/api/customers/${editingId}`), form);
+        await axios.put(createApiUrl(`/api/customers/${editingId}`), formData);
       } else {
-        await axios.post(createApiUrl("/api/customers"), form);
+        await axios.post(createApiUrl("/api/customers"), formData);
       }
       fetchCustomers();
       closeModal();
@@ -715,6 +730,33 @@ const CustomerList = () => {
                       }
                     }
                   }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Login Password"
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  fullWidth
+                  type="password"
+                  placeholder={editingId ? "Leave blank to keep current password" : "Set login password for customer"}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <LockIcon color="action" />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      '&.Mui-focused': {
+                        boxShadow: '0 0 0 3px rgba(102,126,234,0.1)'
+                      }
+                    }
+                  }}
+                  helperText={editingId ? "Leave blank to keep existing password" : "Password for customer portal access"}
                 />
               </Grid>
               <Grid item xs={12}>

@@ -11,12 +11,21 @@ import StockAdjustment from './components/StockAdjustment';
 import CustomerLogin from './components/CustomerLogin';
 import CustomerDashboard from './pages/CustomerDashboard';
 import CustomerInvoiceDetail from './pages/CustomerInvoiceDetail';
+import Home from './pages/Home';
+import About from './pages/About';
+import Features from './pages/Features';
+import Contact from './pages/Contact';
+import ThemeExample from './components/ThemeExample';
 
 const AppRoutes = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Login />} />
+        <Route path="/" element={<Home />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/features" element={<Features />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/theme-example" element={<ThemeExample />} />
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/invoices" element={<InvoiceList />} />

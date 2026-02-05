@@ -14,6 +14,7 @@ import IconButton from "@mui/material/IconButton";
 import Avatar from "@mui/material/Avatar";
 import Chip from "@mui/material/Chip";
 import LinearProgress from "@mui/material/LinearProgress";
+import { useTheme } from "@mui/material/styles";
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -48,6 +49,7 @@ import "./Dashboard.css";
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend, PointElement, LineElement, LineController);
 
 const DashboardPage = () => {
+  const theme = useTheme();
   // Summary
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
@@ -86,7 +88,7 @@ const DashboardPage = () => {
       {
         label: 'Monthly Revenue',
         data: revenue.values,
-        backgroundColor: '#1976d2',
+        backgroundColor: theme.palette.primary.main,
         borderRadius: 6,
       },
     ],
@@ -104,34 +106,35 @@ const DashboardPage = () => {
   };
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "#f8fafc" }}>
+    <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "grey.50" }}>
       <Sidebar />
       <Box component="main" sx={{ flex: 1, width: 0, display: 'flex', flexDirection: 'column' }}>
         {/* Modern Dashboard Header */}
         <Box sx={{ 
           bgcolor: 'white', 
-          borderBottom: '1px solid #e5e7eb',
-          px: { xs: 2, md: 4 }, 
-          py: 2,
+          borderBottom: '1px solid',
+          borderColor: 'grey.300',
+          px: { xs: 1.5, md: 2.5 }, 
+          py: 1.5,
           boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
         }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
             <Box>
-              <Typography variant="h4" fontWeight={700} color="text.primary" gutterBottom>
+              <Typography variant="h4" fontWeight={700} color="text.primary" gutterBottom sx={{ mb: 0.5 }}>
                 Dashboard Overview
               </Typography>
               <Typography variant="body1" color="text.secondary">
                 Welcome back! Here's what's happening with your business today.
               </Typography>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <IconButton size="large" sx={{ bgcolor: '#f3f4f6', '&:hover': { bgcolor: '#e5e7eb' } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <IconButton size="medium" sx={{ bgcolor: 'grey.100', '&:hover': { bgcolor: 'grey.200' } }}>
                 <Notifications />
               </IconButton>
               <Avatar 
                 src="https://i.pravatar.cc/40" 
                 alt="user avatar" 
-                sx={{ width: 48, height: 48, border: '2px solid #e5e7eb' }} 
+                sx={{ width: 40, height: 40, border: '2px solid', borderColor: 'grey.300' }} 
               />
             </Box>
           </Box>
@@ -139,49 +142,114 @@ const DashboardPage = () => {
         </Box>
 
         {/* Dashboard Content */}
-        <Box sx={{ flex: 1, p: { xs: 2, md: 4 }, bgcolor: "#f8fafc", overflowY: "auto" }}>
-          <Grid container spacing={3}>
+        <Box sx={{ flex: 1, p: { xs: 1.5, md: 2.5 }, bgcolor: "grey.50", overflowY: "auto" }}>
+          <Grid container spacing={2}>
             {/* Key Metrics Cards */}
             <Grid item xs={12}>
-              <Grid container spacing={3}>
+              <Grid container spacing={2}>
                 <Grid item xs={12} sm={6} md={3}>
                   <Card 
                     elevation={0} 
                     sx={{ 
-                      border: '1px solid #e5e7eb',
-                      borderRadius: 3,
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      border: '1px solid',
+                      borderColor: 'grey.200',
+                      borderRadius: 4,
+                      background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
                       color: 'white',
                       position: 'relative',
                       overflow: 'hidden',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: `0 12px 24px ${theme.palette.primary.main}30`,
+                        '& .metric-icon': {
+                          transform: 'scale(1.1)'
+                        }
+                      },
                       '&::before': {
                         content: '""',
                         position: 'absolute',
                         top: 0,
                         right: 0,
-                        width: '100px',
-                        height: '100px',
-                        background: 'rgba(255,255,255,0.1)',
+                        width: '120px',
+                        height: '120px',
+                        background: 'rgba(255,255,255,0.08)',
                         borderRadius: '50%',
-                        transform: 'translate(30px, -30px)'
+                        transform: 'translate(40px, -40px)'
+                      },
+                      '&::after': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        right: 0,
+                        width: '80px',
+                        height: '80px',
+                        background: 'rgba(255,255,255,0.06)',
+                        borderRadius: '50%',
+                        transform: 'translate(20px, -20px)'
                       }
                     }}
                   >
-                    <CardContent sx={{ position: 'relative', zIndex: 1 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                        <People sx={{ fontSize: 32 }} />
-                        <TrendingUp sx={{ fontSize: 20 }} />
+                    <CardContent sx={{ position: 'relative', zIndex: 2, p: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                        <Box 
+                          className="metric-icon"
+                          sx={{ 
+                            p: 1, 
+                            borderRadius: 2, 
+                            bgcolor: 'rgba(255,255,255,0.15)',
+                            transition: 'transform 0.3s ease'
+                          }}
+                        >
+                          <People sx={{ fontSize: 24, color: 'white' }} />
+                        </Box>
+                        <Box sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          bgcolor: 'rgba(255,255,255,0.2)', 
+                          borderRadius: 2, 
+                          px: 0.8, 
+                          py: 0.3 
+                        }}>
+                          <TrendingUp sx={{ fontSize: 14, color: 'white', mr: 0.3 }} />
+                          <Typography variant="caption" sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>
+                            +12%
+                          </Typography>
+                        </Box>
                       </Box>
-                      <Typography variant="h3" fontWeight={700} gutterBottom>
-                        {summaryLoading ? <CircularProgress size={24} color="inherit" /> : 
+                      <Typography 
+                        variant="h4" 
+                        fontWeight={800} 
+                        gutterBottom 
+                        sx={{ 
+                          color: 'white',
+                          textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                          lineHeight: 1.1,
+                          mb: 0.5
+                        }}
+                      >
+                        {summaryLoading ? <CircularProgress size={20} color="inherit" /> : 
                          summaryError ? '-' : 
                          summary?.total_customers ?? '-'}
                       </Typography>
-                      <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          color: 'rgba(255,255,255,0.9)',
+                          fontWeight: 600,
+                          mb: 0.3
+                        }}
+                      >
                         Total Customers
                       </Typography>
-                      <Typography variant="caption" sx={{ opacity: 0.7 }}>
-                        +12% from last month
+                      <Typography 
+                        variant="caption" 
+                        sx={{ 
+                          color: 'rgba(255,255,255,0.8)',
+                          fontSize: '0.7rem'
+                        }}
+                      >
+                        from last month
                       </Typography>
                     </CardContent>
                   </Card>
@@ -191,40 +259,105 @@ const DashboardPage = () => {
                   <Card 
                     elevation={0} 
                     sx={{ 
-                      border: '1px solid #e5e7eb',
-                      borderRadius: 3,
-                      background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                      border: '1px solid',
+                      borderColor: 'grey.200',
+                      borderRadius: 4,
+                      background: `linear-gradient(135deg, ${theme.palette.secondary.main} 0%, ${theme.palette.secondary.dark} 100%)`,
                       color: 'white',
                       position: 'relative',
                       overflow: 'hidden',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: `0 12px 24px ${theme.palette.secondary.main}30`,
+                        '& .metric-icon': {
+                          transform: 'scale(1.1)'
+                        }
+                      },
                       '&::before': {
                         content: '""',
                         position: 'absolute',
                         top: 0,
                         right: 0,
-                        width: '100px',
-                        height: '100px',
-                        background: 'rgba(255,255,255,0.1)',
+                        width: '120px',
+                        height: '120px',
+                        background: 'rgba(255,255,255,0.08)',
                         borderRadius: '50%',
-                        transform: 'translate(30px, -30px)'
+                        transform: 'translate(40px, -40px)'
+                      },
+                      '&::after': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        right: 0,
+                        width: '80px',
+                        height: '80px',
+                        background: 'rgba(255,255,255,0.06)',
+                        borderRadius: '50%',
+                        transform: 'translate(20px, -20px)'
                       }
                     }}
                   >
-                    <CardContent sx={{ position: 'relative', zIndex: 1 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                        <Inventory sx={{ fontSize: 32 }} />
-                        <TrendingUp sx={{ fontSize: 20 }} />
+                    <CardContent sx={{ position: 'relative', zIndex: 2, p: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                        <Box 
+                          className="metric-icon"
+                          sx={{ 
+                            p: 1, 
+                            borderRadius: 2, 
+                            bgcolor: 'rgba(255,255,255,0.15)',
+                            transition: 'transform 0.3s ease'
+                          }}
+                        >
+                          <Inventory sx={{ fontSize: 24, color: 'white' }} />
+                        </Box>
+                        <Box sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          bgcolor: 'rgba(255,255,255,0.2)', 
+                          borderRadius: 2, 
+                          px: 0.8, 
+                          py: 0.3 
+                        }}>
+                          <TrendingUp sx={{ fontSize: 14, color: 'white', mr: 0.3 }} />
+                          <Typography variant="caption" sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>
+                            +8%
+                          </Typography>
+                        </Box>
                       </Box>
-                      <Typography variant="h3" fontWeight={700} gutterBottom>
-                        {summaryLoading ? <CircularProgress size={24} color="inherit" /> : 
+                      <Typography 
+                        variant="h4" 
+                        fontWeight={800} 
+                        gutterBottom 
+                        sx={{ 
+                          color: 'white',
+                          textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                          lineHeight: 1.1,
+                          mb: 0.5
+                        }}
+                      >
+                        {summaryLoading ? <CircularProgress size={20} color="inherit" /> : 
                          summaryError ? '-' : 
                          summary?.total_products ?? '-'}
                       </Typography>
-                      <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          color: 'rgba(255,255,255,0.9)',
+                          fontWeight: 600,
+                          mb: 0.3
+                        }}
+                      >
                         Total Products
                       </Typography>
-                      <Typography variant="caption" sx={{ opacity: 0.7 }}>
-                        +8% from last month
+                      <Typography 
+                        variant="caption" 
+                        sx={{ 
+                          color: 'rgba(255,255,255,0.8)',
+                          fontSize: '0.7rem'
+                        }}
+                      >
+                        from last month
                       </Typography>
                     </CardContent>
                   </Card>
@@ -234,40 +367,105 @@ const DashboardPage = () => {
                   <Card 
                     elevation={0} 
                     sx={{ 
-                      border: '1px solid #e5e7eb',
-                      borderRadius: 3,
-                      background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                      border: '1px solid',
+                      borderColor: 'grey.200',
+                      borderRadius: 4,
+                      background: `linear-gradient(135deg, ${theme.palette.info.main} 0%, ${theme.palette.info.dark} 100%)`,
                       color: 'white',
                       position: 'relative',
                       overflow: 'hidden',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: `0 12px 24px ${theme.palette.info.main}30`,
+                        '& .metric-icon': {
+                          transform: 'scale(1.1)'
+                        }
+                      },
                       '&::before': {
                         content: '""',
                         position: 'absolute',
                         top: 0,
                         right: 0,
-                        width: '100px',
-                        height: '100px',
-                        background: 'rgba(255,255,255,0.1)',
+                        width: '120px',
+                        height: '120px',
+                        background: 'rgba(255,255,255,0.08)',
                         borderRadius: '50%',
-                        transform: 'translate(30px, -30px)'
+                        transform: 'translate(40px, -40px)'
+                      },
+                      '&::after': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        right: 0,
+                        width: '80px',
+                        height: '80px',
+                        background: 'rgba(255,255,255,0.06)',
+                        borderRadius: '50%',
+                        transform: 'translate(20px, -20px)'
                       }
                     }}
                   >
-                    <CardContent sx={{ position: 'relative', zIndex: 1 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                        <Receipt sx={{ fontSize: 32 }} />
-                        <TrendingUp sx={{ fontSize: 20 }} />
+                    <CardContent sx={{ position: 'relative', zIndex: 2, p: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                        <Box 
+                          className="metric-icon"
+                          sx={{ 
+                            p: 1, 
+                            borderRadius: 2, 
+                            bgcolor: 'rgba(255,255,255,0.15)',
+                            transition: 'transform 0.3s ease'
+                          }}
+                        >
+                          <Receipt sx={{ fontSize: 24, color: 'white' }} />
+                        </Box>
+                        <Box sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          bgcolor: 'rgba(255,255,255,0.2)', 
+                          borderRadius: 2, 
+                          px: 0.8, 
+                          py: 0.3 
+                        }}>
+                          <TrendingUp sx={{ fontSize: 14, color: 'white', mr: 0.3 }} />
+                          <Typography variant="caption" sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>
+                            +15%
+                          </Typography>
+                        </Box>
                       </Box>
-                      <Typography variant="h3" fontWeight={700} gutterBottom>
-                        {summaryLoading ? <CircularProgress size={24} color="inherit" /> : 
+                      <Typography 
+                        variant="h4" 
+                        fontWeight={800} 
+                        gutterBottom 
+                        sx={{ 
+                          color: 'white',
+                          textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                          lineHeight: 1.1,
+                          mb: 0.5
+                        }}
+                      >
+                        {summaryLoading ? <CircularProgress size={20} color="inherit" /> : 
                          summaryError ? '-' : 
                          summary?.total_invoices ?? '-'}
                       </Typography>
-                      <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          color: 'rgba(255,255,255,0.9)',
+                          fontWeight: 600,
+                          mb: 0.3
+                        }}
+                      >
                         Total Invoices
                       </Typography>
-                      <Typography variant="caption" sx={{ opacity: 0.7 }}>
-                        +15% from last month
+                      <Typography 
+                        variant="caption" 
+                        sx={{ 
+                          color: 'rgba(255,255,255,0.8)',
+                          fontSize: '0.7rem'
+                        }}
+                      >
+                        from last month
                       </Typography>
                     </CardContent>
                   </Card>
@@ -277,40 +475,105 @@ const DashboardPage = () => {
                   <Card 
                     elevation={0} 
                     sx={{ 
-                      border: '1px solid #e5e7eb',
-                      borderRadius: 3,
-                      background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+                      border: '1px solid',
+                      borderColor: 'grey.200',
+                      borderRadius: 4,
+                      background: `linear-gradient(135deg, ${theme.palette.success.main} 0%, ${theme.palette.success.dark} 100%)`,
                       color: 'white',
                       position: 'relative',
                       overflow: 'hidden',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: `0 12px 24px ${theme.palette.success.main}30`,
+                        '& .metric-icon': {
+                          transform: 'scale(1.1)'
+                        }
+                      },
                       '&::before': {
                         content: '""',
                         position: 'absolute',
                         top: 0,
                         right: 0,
-                        width: '100px',
-                        height: '100px',
-                        background: 'rgba(255,255,255,0.1)',
+                        width: '120px',
+                        height: '120px',
+                        background: 'rgba(255,255,255,0.08)',
                         borderRadius: '50%',
-                        transform: 'translate(30px, -30px)'
+                        transform: 'translate(40px, -40px)'
+                      },
+                      '&::after': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        right: 0,
+                        width: '80px',
+                        height: '80px',
+                        background: 'rgba(255,255,255,0.06)',
+                        borderRadius: '50%',
+                        transform: 'translate(20px, -20px)'
                       }
                     }}
                   >
-                    <CardContent sx={{ position: 'relative', zIndex: 1 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                        <AttachMoney sx={{ fontSize: 32 }} />
-                        <TrendingUp sx={{ fontSize: 20 }} />
+                    <CardContent sx={{ position: 'relative', zIndex: 2, p: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                        <Box 
+                          className="metric-icon"
+                          sx={{ 
+                            p: 1, 
+                            borderRadius: 2, 
+                            bgcolor: 'rgba(255,255,255,0.15)',
+                            transition: 'transform 0.3s ease'
+                          }}
+                        >
+                          <AttachMoney sx={{ fontSize: 24, color: 'white' }} />
+                        </Box>
+                        <Box sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          bgcolor: 'rgba(255,255,255,0.2)', 
+                          borderRadius: 2, 
+                          px: 0.8, 
+                          py: 0.3 
+                        }}>
+                          <TrendingUp sx={{ fontSize: 14, color: 'white', mr: 0.3 }} />
+                          <Typography variant="caption" sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>
+                            +18%
+                          </Typography>
+                        </Box>
                       </Box>
-                      <Typography variant="h3" fontWeight={700} gutterBottom>
-                        {summaryLoading ? <CircularProgress size={24} color="inherit" /> : 
+                      <Typography 
+                        variant="h4" 
+                        fontWeight={800} 
+                        gutterBottom 
+                        sx={{ 
+                          color: 'white',
+                          textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                          lineHeight: 1.1,
+                          mb: 0.5
+                        }}
+                      >
+                        {summaryLoading ? <CircularProgress size={20} color="inherit" /> : 
                          summaryError ? '-' : 
                          summary?.total_revenue ?? '-'}
                       </Typography>
-                      <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          color: 'rgba(255,255,255,0.9)',
+                          fontWeight: 600,
+                          mb: 0.3
+                        }}
+                      >
                         Total Revenue
                       </Typography>
-                      <Typography variant="caption" sx={{ opacity: 0.7 }}>
-                        +18% from last month
+                      <Typography 
+                        variant="caption" 
+                        sx={{ 
+                          color: 'rgba(255,255,255,0.8)',
+                          fontSize: '0.7rem'
+                        }}
+                      >
+                        from last month
                       </Typography>
                     </CardContent>
                   </Card>
@@ -323,14 +586,15 @@ const DashboardPage = () => {
               <Paper 
                 elevation={0} 
                 sx={{ 
-                  p: 3, 
+                  p: 2.5, 
                   borderRadius: 3, 
-                  border: '1px solid #e5e7eb',
-                  minHeight: 400,
+                  border: '1px solid',
+                  borderColor: 'grey.300',
+                  minHeight: 350,
                   background: 'white'
                 }}
               >
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                   <Box>
                     <Typography variant="h6" fontWeight={600} color="text.primary" gutterBottom>
                       Revenue Analytics
@@ -347,18 +611,18 @@ const DashboardPage = () => {
                   </Box>
                 </Box>
                 {revenueLoading ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 250 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 200 }}>
                     <CircularProgress size={40} />
                   </Box>
                 ) : revenueError ? (
                   <Alert severity="error" sx={{ mb: 2 }}>{revenueError}</Alert>
                 ) : (
                   revenueChartData ? (
-                    <Box sx={{ height: 300 }}>
+                    <Box sx={{ height: 250 }}>
                       <Bar data={revenueChartData} options={revenueChartOptions} />
                     </Box>
                   ) : (
-                    <Typography color="text.secondary" align="center" sx={{ py: 8 }}>
+                    <Typography color="text.secondary" align="center" sx={{ py: 6 }}>
                       No revenue data available
                     </Typography>
                   )
@@ -368,32 +632,34 @@ const DashboardPage = () => {
 
             {/* Right Sidebar - Quick Actions & Alerts */}
             <Grid item xs={12} md={4}>
-              <Grid container spacing={3}>
+              <Grid container spacing={2}>
                 {/* Quick Actions */}
                 <Grid item xs={12}>
                   <Paper 
                     elevation={0} 
                     sx={{ 
-                      p: 3, 
+                      p: 2.5, 
                       borderRadius: 3, 
-                      border: '1px solid #e5e7eb',
+                      border: '1px solid',
+                      borderColor: 'grey.300',
                       background: 'white'
                     }}
                   >
-                    <Typography variant="h6" fontWeight={600} gutterBottom>
+                    <Typography variant="h6" fontWeight={600} gutterBottom sx={{ mb: 1.5 }}>
                       Quick Actions
                     </Typography>
-                    <Grid container spacing={2}>
+                    <Grid container spacing={1.5}>
                       <Grid item xs={6}>
                         <Button
                           fullWidth
                           variant="outlined"
                           startIcon={<Add />}
                           sx={{ 
-                            py: 1.5,
+                            py: 1.2,
                             borderRadius: 2,
                             textTransform: 'none',
-                            fontWeight: 600
+                            fontWeight: 600,
+                            fontSize: '0.85rem'
                           }}
                         >
                           New Invoice
@@ -405,10 +671,11 @@ const DashboardPage = () => {
                           variant="outlined"
                           startIcon={<Add />}
                           sx={{ 
-                            py: 1.5,
+                            py: 1.2,
                             borderRadius: 2,
                             textTransform: 'none',
-                            fontWeight: 600
+                            fontWeight: 600,
+                            fontSize: '0.85rem'
                           }}
                         >
                           Add Customer
@@ -420,10 +687,11 @@ const DashboardPage = () => {
                           variant="outlined"
                           startIcon={<Add />}
                           sx={{ 
-                            py: 1.5,
+                            py: 1.2,
                             borderRadius: 2,
                             textTransform: 'none',
-                            fontWeight: 600
+                            fontWeight: 600,
+                            fontSize: '0.85rem'
                           }}
                         >
                           Add Product
@@ -434,11 +702,12 @@ const DashboardPage = () => {
                           fullWidth
                           variant="contained"
                           sx={{ 
-                            py: 1.5,
+                            py: 1.2,
                             borderRadius: 2,
                             textTransform: 'none',
                             fontWeight: 600,
-                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                            fontSize: '0.85rem',
+                            background: `linear-gradient(135deg, primary.main 0%, primary.dark 100%)`
                           }}
                         >
                           View Reports
@@ -453,15 +722,16 @@ const DashboardPage = () => {
                   <Paper 
                     elevation={0} 
                     sx={{ 
-                      p: 3, 
+                      p: 2.5, 
                       borderRadius: 3, 
-                      border: '1px solid #fecaca',
-                      background: '#fef2f2'
+                      border: '1px solid',
+                      borderColor: 'error.light',
+                      background: 'error.lighter'
                     }}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      <Warning sx={{ color: '#dc2626', mr: 1 }} />
-                      <Typography variant="h6" fontWeight={600} color="#dc2626">
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+                      <Warning sx={{ color: 'error.main', mr: 1 }} />
+                      <Typography variant="h6" fontWeight={600} color="error.main">
                         Stock Alerts
                       </Typography>
                     </Box>
@@ -483,8 +753,9 @@ const DashboardPage = () => {
                                 display: 'flex', 
                                 justifyContent: 'space-between', 
                                 alignItems: 'center',
-                                py: 1,
-                                borderBottom: idx < lowStock.slice(0, 3).length - 1 ? '1px solid #fecaca' : 'none'
+                                py: 0.8,
+                                borderBottom: idx < lowStock.slice(0, 3).length - 1 ? '1px solid' : 'none',
+                                borderColor: 'error.light'
                               }}
                             >
                               <Box>
@@ -504,7 +775,7 @@ const DashboardPage = () => {
                             </Box>
                           ))}
                           {lowStock.length > 3 && (
-                            <Button size="small" sx={{ mt: 1 }}>
+                            <Button size="small" sx={{ mt: 0.5 }}>
                               View All ({lowStock.length - 3} more)
                             </Button>
                           )}

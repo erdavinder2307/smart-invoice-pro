@@ -1,4 +1,4 @@
-/* Modern Sidebar Enhancements */
+/* Modern Sidebar Enhancements with Theme Integration */
 .MuiDrawer-paper {
   backdrop-filter: blur(10px);
 }
@@ -16,7 +16,7 @@
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
   transition: left 0.5s;
 }
 
@@ -24,7 +24,7 @@
   left: 100%;
 }
 
-/* Badge animations */
+/* Badge animations with theme colors */
 .MuiBadge-badge {
   animation: pulse 2s infinite;
 }
@@ -48,7 +48,7 @@
   }
 }
 
-/* Enhanced button hover effects */
+/* Enhanced button hover effects with theme awareness */
 .sidebar-logout-button {
   position: relative;
   overflow: hidden;
@@ -61,7 +61,7 @@
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.2), transparent);
+  background: linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.15), transparent);
   transition: left 0.3s;
 }
 
@@ -74,13 +74,13 @@
   backdrop-filter: blur(5px);
 }
 
-/* Sidebar brand logo animation */
+/* Sidebar brand logo animation with theme colors */
 @keyframes logoGlow {
   0%, 100% {
-    filter: drop-shadow(0 0 5px rgba(96, 165, 250, 0.5));
+    filter: drop-shadow(0 0 5px rgba(25, 118, 210, 0.5));
   }
   50% {
-    filter: drop-shadow(0 0 10px rgba(96, 165, 250, 0.8));
+    filter: drop-shadow(0 0 10px rgba(25, 118, 210, 0.8));
   }
 }
 
@@ -88,7 +88,7 @@
   animation: logoGlow 3s ease-in-out infinite;
 }
 
-/* Navigation item selection indicator */
+/* Navigation item selection indicator with theme colors */
 .nav-item-selected {
   position: relative;
 }
@@ -101,52 +101,67 @@
   transform: translateY(-50%);
   width: 4px;
   height: 60%;
-  background: linear-gradient(180deg, #60a5fa, #3b82f6);
+  background: linear-gradient(180deg, #1976d2, #1565c0);
   border-radius: 2px;
 }
 
-/* Legacy styles (if needed for backward compatibility) */
+/* Legacy styles (maintained for backward compatibility with theme improvements) */
 .sidebar {
     width: 250px;
-    background-color: #a5c8ff;
+    background: linear-gradient(180deg, #424242 0%, #616161 100%);
     padding: 20px;
     display: flex;
     flex-direction: column;
-    border-right: 1px solid #ddd;
+    border-right: 1px solid #757575;
+    color: white;
 }
   
 .sidebar h2 {
     font-size: 1.4rem;
     font-weight: bold;
     margin-bottom: 30px;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
 }
   
 .sidebar button {
-    background: white;
-    border: none;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
     padding: 12px 16px;
     margin-bottom: 10px;
     text-align: left;
     font-weight: bold;
     border-radius: 8px;
     cursor: pointer;
-    transition: background-color 0.3s, color 0.3s;
+    transition: all 0.3s ease;
+    color: rgba(255,255,255,0.9);
 }
 
 .sidebar button:hover {
-    background-color: #e0e7ff;
-    color: #0057e7;
+    background: rgba(25, 118, 210, 0.2);
+    color: white;
+    border-color: rgba(25, 118, 210, 0.5);
+    transform: translateX(4px);
 }
   
 .sidebar button.active {
-    background-color: #0057e7;
+    background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
     color: white;
     font-weight: bold;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
+    border-color: transparent;
 }
   
 .sidebar .signout {
     margin-top: auto;
-    background-color: white;
+    background: rgba(244, 67, 54, 0.1);
     font-weight: bold;
+    border-color: rgba(244, 67, 54, 0.3);
+    color: rgba(255,255,255,0.9);
+}
+
+.sidebar .signout:hover {
+    background: rgba(244, 67, 54, 0.2);
+    border-color: rgba(244, 67, 54, 0.5);
+    color: #ffcdd2;
 }

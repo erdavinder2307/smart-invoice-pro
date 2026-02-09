@@ -4,6 +4,7 @@ import InputBase from "@mui/material/InputBase";
 import IconButton from "@mui/material/IconButton";
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
+import { useTheme } from "@mui/material/styles";
 import {
   Search,
   FilterList,
@@ -12,6 +13,7 @@ import {
 } from "@mui/icons-material";
 
 const DashboardHeader = () => {
+  const theme = useTheme();
   const currentDate = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -28,8 +30,9 @@ const DashboardHeader = () => {
         justifyContent: "space-between",
         p: 2,
         borderRadius: 3,
-        border: '1px solid #e5e7eb',
-        bgcolor: "#f8fafc",
+        border: '1px solid',
+        borderColor: 'grey.300',
+        bgcolor: "grey.50",
         gap: 2
       }}
     >
@@ -44,7 +47,7 @@ const DashboardHeader = () => {
         <Search sx={{ 
           position: 'absolute', 
           left: 16, 
-          color: '#6b7280',
+          color: 'text.secondary',
           zIndex: 1
         }} />
         <InputBase
@@ -57,13 +60,14 @@ const DashboardHeader = () => {
             borderRadius: 3,
             bgcolor: "white",
             fontSize: 16,
-            border: '1px solid #d1d5db',
+            border: '1px solid',
+            borderColor: 'grey.300',
             '&:hover': {
-              borderColor: '#9ca3af'
+              borderColor: 'grey.400'
             },
             '&:focus-within': {
-              borderColor: '#3b82f6',
-              boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.1)'
+              borderColor: 'primary.main',
+              boxShadow: `0 0 0 3px ${theme.palette.primary.main}20`
             }
           }}
           inputProps={{ 'aria-label': 'search invoices, customers, products' }}
@@ -80,7 +84,7 @@ const DashboardHeader = () => {
           size="medium"
           sx={{
             bgcolor: 'white',
-            borderColor: '#d1d5db',
+            borderColor: 'grey.300',
             '& .MuiChip-label': {
               fontSize: '0.875rem',
               fontWeight: 500
@@ -93,11 +97,12 @@ const DashboardHeader = () => {
           size="large" 
           sx={{ 
             bgcolor: 'white',
-            border: '1px solid #d1d5db',
+            border: '1px solid',
+            borderColor: 'grey.300',
             borderRadius: 2,
             '&:hover': { 
-              bgcolor: '#f3f4f6',
-              borderColor: '#9ca3af'
+              bgcolor: 'grey.100',
+              borderColor: 'grey.400'
             }
           }}
         >
@@ -109,11 +114,12 @@ const DashboardHeader = () => {
           size="large" 
           sx={{ 
             bgcolor: 'white',
-            border: '1px solid #d1d5db',
+            border: '1px solid',
+            borderColor: 'grey.300',
             borderRadius: 2,
             '&:hover': { 
-              bgcolor: '#f3f4f6',
-              borderColor: '#9ca3af'
+              bgcolor: 'grey.100',
+              borderColor: 'grey.400'
             }
           }}
         >

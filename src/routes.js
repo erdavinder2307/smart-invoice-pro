@@ -8,22 +8,39 @@ import CustomerList from './components/CustomerList';
 import ProductList from './components/ProductList';
 import AddEditProduct from './components/AddEditProduct';
 import StockAdjustment from './components/StockAdjustment';
+import CustomerLogin from './components/CustomerLogin';
+import CustomerDashboard from './pages/CustomerDashboard';
+import CustomerInvoiceDetail from './pages/CustomerInvoiceDetail';
+import Home from './pages/Home';
+import About from './pages/About';
+import Features from './pages/Features';
+import Contact from './pages/Contact';
+import ThemeExample from './components/ThemeExample';
+import BankAccounts from './pages/BankAccounts';
 
 const AppRoutes = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Login />} />
+        <Route path="/" element={<Home />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/features" element={<Features />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/theme-example" element={<ThemeExample />} />
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/invoices" element={<InvoiceList />} />
         <Route path="/invoices/add" element={<AddEditInvoice />} />
         <Route path="/invoices/edit/:id" element={<AddEditInvoice />} />
         <Route path="/customers" element={<CustomerList />} />
+        <Route path="/customer/login" element={<CustomerLogin />} />
+        <Route path="/customer/dashboard" element={<CustomerDashboard />} />
+        <Route path="/customer/invoices/:id" element={<CustomerInvoiceDetail />} />
         <Route path="/products" element={<ProductList />} />
         <Route path="/products/add" element={<AddEditProduct />} />
         <Route path="/products/edit/:id" element={<AddEditProduct />} />
         <Route path="/stock-adjustment" element={<StockAdjustment />} />
+        <Route path="/bank-accounts" element={<BankAccounts />} />
       </Routes>
     </Router>
   );

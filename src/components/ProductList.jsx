@@ -62,30 +62,30 @@ const ProductList = () => {
   const navigate = useNavigate();
 
   const filteredProducts = products.filter(product => {
-    const matchesSearch = 
+    const matchesSearch =
       product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.category?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesCategory = categoryFilter === "All" || product.category === categoryFilter;
-    
+
     return matchesSearch && matchesCategory;
   });
 
   const categories = [...new Set(products.map(p => p.category).filter(Boolean))];
 
   const getStockStatus = (stock, openingStock, sold) => {
-    const availableQty = typeof stock === 'number' ? stock : 
+    const availableQty = typeof stock === 'number' ? stock :
       (typeof openingStock === 'number' && typeof sold === 'number' ? (openingStock - sold) : 0);
-    
+
     if (availableQty <= 0) return { status: 'Out of Stock', color: 'error', icon: <WarningIcon fontSize="small" /> };
     if (availableQty <= 10) return { status: 'Low Stock', color: 'warning', icon: <WarningIcon fontSize="small" /> };
     return { status: 'In Stock', color: 'success', icon: <CheckCircleIcon fontSize="small" /> };
   };
 
   const getAvailableQuantity = (product) => {
-    return typeof product.stock === 'number' ? product.stock : 
-      (typeof product.opening_stock === 'number' && typeof product.sold === 'number' ? 
+    return typeof product.stock === 'number' ? product.stock :
+      (typeof product.opening_stock === 'number' && typeof product.sold === 'number' ?
         (product.opening_stock - product.sold) : 0);
   };
 
@@ -139,10 +139,10 @@ const ProductList = () => {
       <Header />
       <Box sx={{ display: 'flex', flex: 1 }}>
         <Sidebar />
-        <Box sx={{ 
-          flex: 1, 
+        <Box sx={{
+          flex: 1,
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          minHeight: 'calc(100vh - 128px)', 
+          minHeight: 'calc(100vh - 128px)',
           p: 3,
           position: 'relative',
           '&::before': {
@@ -159,7 +159,7 @@ const ProductList = () => {
           {/* Stats Cards */}
           <Grid container spacing={3} sx={{ mb: 4, position: 'relative', zIndex: 1 }}>
             <Grid item xs={12} sm={6} md={3}>
-              <Card sx={{ 
+              <Card sx={{
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 color: 'white',
                 borderRadius: 3,
@@ -170,7 +170,7 @@ const ProductList = () => {
                   boxShadow: '0 12px 40px rgba(102,126,234,0.4)'
                 }
               }}>
-                <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', py: 3 }}>
                   <InventoryIcon sx={{ fontSize: 40, mb: 2, opacity: 0.9 }} />
                   <Typography variant="h4" fontWeight={700} gutterBottom>
                     {products.length}
@@ -182,7 +182,7 @@ const ProductList = () => {
               </Card>
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
-              <Card sx={{ 
+              <Card sx={{
                 background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
                 color: 'white',
                 borderRadius: 3,
@@ -193,7 +193,7 @@ const ProductList = () => {
                   boxShadow: '0 12px 40px rgba(67,233,123,0.4)'
                 }
               }}>
-                <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', py: 3 }}>
                   <CheckCircleIcon sx={{ fontSize: 40, mb: 2, opacity: 0.9 }} />
                   <Typography variant="h4" fontWeight={700} gutterBottom>
                     {products.filter(p => {
@@ -208,7 +208,7 @@ const ProductList = () => {
               </Card>
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
-              <Card sx={{ 
+              <Card sx={{
                 background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
                 color: 'white',
                 borderRadius: 3,
@@ -219,7 +219,7 @@ const ProductList = () => {
                   boxShadow: '0 12px 40px rgba(240,147,251,0.4)'
                 }
               }}>
-                <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', py: 3 }}>
                   <WarningIcon sx={{ fontSize: 40, mb: 2, opacity: 0.9 }} />
                   <Typography variant="h4" fontWeight={700} gutterBottom>
                     {products.filter(p => {
@@ -234,7 +234,7 @@ const ProductList = () => {
               </Card>
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
-              <Card sx={{ 
+              <Card sx={{
                 background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
                 color: 'white',
                 borderRadius: 3,
@@ -245,7 +245,7 @@ const ProductList = () => {
                   boxShadow: '0 12px 40px rgba(79,172,254,0.4)'
                 }
               }}>
-                <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', py: 3 }}>
                   <CategoryIcon sx={{ fontSize: 40, mb: 2, opacity: 0.9 }} />
                   <Typography variant="h4" fontWeight={700} gutterBottom>
                     {categories.length}
@@ -259,8 +259,8 @@ const ProductList = () => {
           </Grid>
 
           {/* Main Content Card */}
-          <Card elevation={0} sx={{ 
-            borderRadius: 4, 
+          <Card elevation={0} sx={{
+            borderRadius: 4,
             overflow: 'visible',
             background: 'rgba(255,255,255,0.95)',
             backdropFilter: 'blur(20px)',
@@ -273,7 +273,7 @@ const ProductList = () => {
               {/* Header Section */}
               <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
                 <Box display="flex" alignItems="center" gap={2}>
-                  <Avatar sx={{ 
+                  <Avatar sx={{
                     bgcolor: 'primary.main',
                     width: 56,
                     height: 56,
@@ -295,7 +295,7 @@ const ProductList = () => {
                   size="large"
                   startIcon={<AddIcon />}
                   onClick={handleAdd}
-                  sx={{ 
+                  sx={{
                     borderRadius: 3,
                     px: 3,
                     py: 1.5,
@@ -388,10 +388,10 @@ const ProductList = () => {
 
               {error && (
                 <Fade in={!!error}>
-                  <Alert 
-                    severity="error" 
-                    sx={{ 
-                      mb: 3, 
+                  <Alert
+                    severity="error"
+                    sx={{
+                      mb: 3,
                       borderRadius: 2,
                       '& .MuiAlert-icon': { fontSize: 24 }
                     }}
@@ -402,7 +402,7 @@ const ProductList = () => {
               )}
 
               {/* Modern Table */}
-              <TableContainer sx={{ 
+              <TableContainer sx={{
                 borderRadius: 3,
                 overflow: 'hidden',
                 border: '1px solid',
@@ -411,7 +411,7 @@ const ProductList = () => {
               }}>
                 <Table>
                   <TableHead>
-                    <TableRow sx={{ 
+                    <TableRow sx={{
                       bgcolor: 'grey.50',
                       '& .MuiTableCell-head': {
                         fontWeight: 700,
@@ -455,7 +455,7 @@ const ProductList = () => {
                       filteredProducts.map((product, index) => {
                         const availableQty = getAvailableQuantity(product);
                         const stockInfo = getStockStatus(product.stock, product.opening_stock, product.sold);
-                        
+
                         return (
                           <Fade in={true} timeout={300 + index * 100} key={product.id}>
                             <TableRow sx={{
@@ -473,7 +473,7 @@ const ProductList = () => {
                             }}>
                               <TableCell>
                                 <Box display="flex" alignItems="center" gap={2}>
-                                  <Avatar sx={{ 
+                                  <Avatar sx={{
                                     bgcolor: 'primary.50',
                                     color: 'primary.main',
                                     width: 40,
@@ -487,7 +487,7 @@ const ProductList = () => {
                                     <Typography variant="subtitle1" fontWeight={600} color="text.primary">
                                       {product.name}
                                     </Typography>
-                                    <Typography variant="body2" color="text.secondary" sx={{ 
+                                    <Typography variant="body2" color="text.secondary" sx={{
                                       maxWidth: 200,
                                       overflow: 'hidden',
                                       textOverflow: 'ellipsis',
@@ -547,7 +547,7 @@ const ProductList = () => {
                               </TableCell>
                               <TableCell align="center">
                                 <Tooltip title="More Actions">
-                                  <IconButton 
+                                  <IconButton
                                     size="small"
                                     onClick={(e) => handleActionMenuOpen(e, product)}
                                     sx={{
@@ -589,7 +589,7 @@ const ProductList = () => {
             }
           }}
         >
-          <MenuItem 
+          <MenuItem
             onClick={() => {
               handleEdit(selectedProduct);
               handleActionMenuClose();
@@ -601,7 +601,7 @@ const ProductList = () => {
             </ListItemIcon>
             <ListItemText primary="Edit Product" />
           </MenuItem>
-          <MenuItem 
+          <MenuItem
             onClick={() => {
               setConfirmDeleteId(selectedProduct.id);
               handleActionMenuClose();
@@ -616,9 +616,9 @@ const ProductList = () => {
         </Menu>
 
         {/* Delete Confirmation Dialog */}
-        <Dialog 
-          open={!!confirmDeleteId} 
-          onClose={() => setConfirmDeleteId(null)} 
+        <Dialog
+          open={!!confirmDeleteId}
+          onClose={() => setConfirmDeleteId(null)}
           maxWidth="sm"
           fullWidth
           PaperProps={{
@@ -628,7 +628,7 @@ const ProductList = () => {
             }
           }}
         >
-          <DialogTitle sx={{ 
+          <DialogTitle sx={{
             pb: 2,
             display: 'flex',
             alignItems: 'center',
@@ -656,7 +656,7 @@ const ProductList = () => {
             <Button
               onClick={() => setConfirmDeleteId(null)}
               variant="outlined"
-              sx={{ 
+              sx={{
                 borderRadius: 2,
                 textTransform: 'none',
                 fontWeight: 600
@@ -669,7 +669,7 @@ const ProductList = () => {
               variant="contained"
               color="error"
               disabled={loading}
-              sx={{ 
+              sx={{
                 borderRadius: 2,
                 textTransform: 'none',
                 fontWeight: 600

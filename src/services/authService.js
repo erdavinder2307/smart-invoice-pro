@@ -5,8 +5,12 @@ const API_URL = createApiUrl('/api');
 
 const login = async (credentials) => {
   const response = await axios.post(`${API_URL}/auth/login`, credentials);
-  const token = response.data.token;
+  const { token, user } = response.data;
+
+  // Store both token and user information
   localStorage.setItem('token', token);
+  localStorage.setItem('user', JSON.stringify(user));
+
   axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
   return token;
 };
@@ -26,6 +30,7 @@ const logout = async () => {
     console.error('Logout error:', error);
   }
   localStorage.removeItem('token');
+  localStorage.removeItem('user');
   delete axios.defaults.headers.common['Authorization'];
 };
 

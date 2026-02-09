@@ -4,24 +4,24 @@ import { createApiUrl } from "../config/api";
 import Header from "./common/Header/Header";
 import Footer from "./common/Header/Footer/Footer";
 import Sidebar from "./Sidebar";
-import { 
-  Box, 
-  Button, 
-  Typography, 
-  Paper, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
-  CircularProgress, 
-  Alert, 
-  TextField, 
-  Dialog, 
-  DialogTitle, 
-  DialogContent, 
-  DialogActions, 
+import {
+  Box,
+  Button,
+  Typography,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  CircularProgress,
+  Alert,
+  TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   IconButton,
   Chip,
   Avatar,
@@ -44,6 +44,7 @@ import PhoneIcon from '@mui/icons-material/Phone';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import PeopleIcon from '@mui/icons-material/People';
+import LockIcon from '@mui/icons-material/Lock';
 
 const initialForm = {
   name: "",
@@ -51,6 +52,7 @@ const initialForm = {
   phone: "",
   address: "",
   gst_number: "",
+  password: "",
 };
 
 const CustomerList = () => {
@@ -94,16 +96,21 @@ const CustomerList = () => {
     const idx = Math.floor(Math.random() * names.length);
     return {
       name: names[idx],
-      email: emails[idx] + Math.floor(Math.random()*1000) + "@example.com",
-      phone: "9" + Math.floor(100000000 + Math.random()*900000000),
-      address: `${Math.floor(Math.random()*100)+1}, ${streets[idx]}, ${cities[idx]}`,
-      gst_number: gst[Math.floor(Math.random()*gst.length)]
+      email: emails[idx] + Math.floor(Math.random() * 1000) + "@example.com",
+      phone: "9" + Math.floor(100000000 + Math.random() * 900000000),
+      address: `${Math.floor(Math.random() * 100) + 1}, ${streets[idx]}, ${cities[idx]}`,
+      gst_number: gst[Math.floor(Math.random() * gst.length)],
+      password: "" // Empty password field for new customers
     };
   };
 
   const openModal = (customer = null) => {
     if (customer) {
-      setForm(customer);
+      // When editing, copy all fields except password (we don't show existing password)
+      setForm({
+        ...customer,
+        password: "" // Clear password field for editing
+      });
       setEditingId(customer.id);
     } else {
       setForm(getRandomCustomer());
@@ -140,10 +147,18 @@ const CustomerList = () => {
     if (err) return setError(err);
     setLoading(true);
     try {
+      // Prepare form data, only include password if it's provided
+      const formData = { ...form };
+
+      // For edit mode, only include password if it's not empty
+      if (editingId && !formData.password) {
+        delete formData.password;
+      }
+
       if (editingId) {
-        await axios.put(createApiUrl(`/api/customers/${editingId}`), form);
+        await axios.put(createApiUrl(`/api/customers/${editingId}`), formData);
       } else {
-        await axios.post(createApiUrl("/api/customers"), form);
+        await axios.post(createApiUrl("/api/customers"), formData);
       }
       fetchCustomers();
       closeModal();
@@ -170,10 +185,10 @@ const CustomerList = () => {
       <Header />
       <Box sx={{ display: 'flex', flex: 1 }}>
         <Sidebar />
-        <Box sx={{ 
-          flex: 1, 
+        <Box sx={{
+          flex: 1,
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          minHeight: 'calc(100vh - 128px)', 
+          minHeight: 'calc(100vh - 128px)',
           p: 3,
           position: 'relative',
           '&::before': {
@@ -190,7 +205,7 @@ const CustomerList = () => {
           {/* Stats Cards */}
           <Grid container spacing={3} sx={{ mb: 4, position: 'relative', zIndex: 1 }}>
             <Grid item xs={12} sm={6} md={3}>
-              <Card sx={{ 
+              <Card sx={{
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 color: 'white',
                 borderRadius: 3,
@@ -201,7 +216,7 @@ const CustomerList = () => {
                   boxShadow: '0 12px 40px rgba(102,126,234,0.4)'
                 }
               }}>
-                <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', py: 3 }}>
                   <PeopleIcon sx={{ fontSize: 40, mb: 2, opacity: 0.9 }} />
                   <Typography variant="h4" fontWeight={700} gutterBottom>
                     {customers.length}
@@ -213,7 +228,7 @@ const CustomerList = () => {
               </Card>
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
-              <Card sx={{ 
+              <Card sx={{
                 background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
                 color: 'white',
                 borderRadius: 3,
@@ -224,7 +239,7 @@ const CustomerList = () => {
                   boxShadow: '0 12px 40px rgba(240,147,251,0.4)'
                 }
               }}>
-                <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', py: 3 }}>
                   <BusinessIcon sx={{ fontSize: 40, mb: 2, opacity: 0.9 }} />
                   <Typography variant="h4" fontWeight={700} gutterBottom>
                     {customers.filter(c => c.gst_number).length}
@@ -236,7 +251,7 @@ const CustomerList = () => {
               </Card>
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
-              <Card sx={{ 
+              <Card sx={{
                 background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
                 color: 'white',
                 borderRadius: 3,
@@ -247,7 +262,7 @@ const CustomerList = () => {
                   boxShadow: '0 12px 40px rgba(79,172,254,0.4)'
                 }
               }}>
-                <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', py: 3 }}>
                   <EmailIcon sx={{ fontSize: 40, mb: 2, opacity: 0.9 }} />
                   <Typography variant="h4" fontWeight={700} gutterBottom>
                     {customers.filter(c => c.email).length}
@@ -259,7 +274,7 @@ const CustomerList = () => {
               </Card>
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
-              <Card sx={{ 
+              <Card sx={{
                 background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
                 color: 'white',
                 borderRadius: 3,
@@ -270,7 +285,7 @@ const CustomerList = () => {
                   boxShadow: '0 12px 40px rgba(67,233,123,0.4)'
                 }
               }}>
-                <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', py: 3 }}>
                   <PhoneIcon sx={{ fontSize: 40, mb: 2, opacity: 0.9 }} />
                   <Typography variant="h4" fontWeight={700} gutterBottom>
                     {customers.filter(c => c.phone).length}
@@ -284,8 +299,8 @@ const CustomerList = () => {
           </Grid>
 
           {/* Main Content Card */}
-          <Card elevation={0} sx={{ 
-            borderRadius: 4, 
+          <Card elevation={0} sx={{
+            borderRadius: 4,
             overflow: 'visible',
             background: 'rgba(255,255,255,0.95)',
             backdropFilter: 'blur(20px)',
@@ -298,7 +313,7 @@ const CustomerList = () => {
               {/* Header Section */}
               <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
                 <Box display="flex" alignItems="center" gap={2}>
-                  <Avatar sx={{ 
+                  <Avatar sx={{
                     bgcolor: 'primary.main',
                     width: 56,
                     height: 56,
@@ -320,7 +335,7 @@ const CustomerList = () => {
                   size="large"
                   startIcon={<PersonAddIcon />}
                   onClick={() => openModal()}
-                  sx={{ 
+                  sx={{
                     borderRadius: 3,
                     px: 3,
                     py: 1.5,
@@ -373,10 +388,10 @@ const CustomerList = () => {
 
               {error && (
                 <Fade in={!!error}>
-                  <Alert 
-                    severity="error" 
-                    sx={{ 
-                      mb: 3, 
+                  <Alert
+                    severity="error"
+                    sx={{
+                      mb: 3,
                       borderRadius: 2,
                       '& .MuiAlert-icon': { fontSize: 24 }
                     }}
@@ -387,7 +402,7 @@ const CustomerList = () => {
               )}
 
               {/* Modern Table */}
-              <TableContainer sx={{ 
+              <TableContainer sx={{
                 borderRadius: 3,
                 overflow: 'hidden',
                 border: '1px solid',
@@ -396,7 +411,7 @@ const CustomerList = () => {
               }}>
                 <Table>
                   <TableHead>
-                    <TableRow sx={{ 
+                    <TableRow sx={{
                       bgcolor: 'grey.50',
                       '& .MuiTableCell-head': {
                         fontWeight: 700,
@@ -454,7 +469,7 @@ const CustomerList = () => {
                           }}>
                             <TableCell>
                               <Box display="flex" alignItems="center" gap={2}>
-                                <Avatar sx={{ 
+                                <Avatar sx={{
                                   bgcolor: 'primary.main',
                                   width: 40,
                                   height: 40,
@@ -526,7 +541,7 @@ const CustomerList = () => {
                             <TableCell align="center">
                               <Box display="flex" justifyContent="center" gap={1}>
                                 <Tooltip title="Edit Customer">
-                                  <IconButton 
+                                  <IconButton
                                     size="small"
                                     onClick={() => openModal(customer)}
                                     sx={{
@@ -543,7 +558,7 @@ const CustomerList = () => {
                                   </IconButton>
                                 </Tooltip>
                                 <Tooltip title="Delete Customer">
-                                  <IconButton 
+                                  <IconButton
                                     size="small"
                                     onClick={() => setConfirmDeleteId(customer.id)}
                                     sx={{
@@ -573,10 +588,10 @@ const CustomerList = () => {
         </Box>
 
         {/* Modern Add/Edit Dialog */}
-        <Dialog 
-          open={showModal} 
-          onClose={closeModal} 
-          maxWidth="md" 
+        <Dialog
+          open={showModal}
+          onClose={closeModal}
+          maxWidth="md"
           fullWidth
           TransitionComponent={Slide}
           TransitionProps={{ direction: "up" }}
@@ -589,8 +604,8 @@ const CustomerList = () => {
             }
           }}
         >
-          <DialogTitle sx={{ 
-            pb: 2, 
+          <DialogTitle sx={{
+            pb: 2,
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             color: 'white',
             mb: 3
@@ -717,6 +732,33 @@ const CustomerList = () => {
                   }}
                 />
               </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Login Password"
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  fullWidth
+                  type="password"
+                  placeholder={editingId ? "Leave blank to keep current password" : "Set login password for customer"}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <LockIcon color="action" />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      '&.Mui-focused': {
+                        boxShadow: '0 0 0 3px rgba(102,126,234,0.1)'
+                      }
+                    }
+                  }}
+                  helperText={editingId ? "Leave blank to keep existing password" : "Password for customer portal access"}
+                />
+              </Grid>
               <Grid item xs={12}>
                 <TextField
                   label="Address"
@@ -751,7 +793,7 @@ const CustomerList = () => {
               onClick={closeModal}
               variant="outlined"
               size="large"
-              sx={{ 
+              sx={{
                 borderRadius: 2,
                 px: 3,
                 textTransform: 'none',
@@ -765,7 +807,7 @@ const CustomerList = () => {
               variant="contained"
               size="large"
               disabled={loading}
-              sx={{ 
+              sx={{
                 borderRadius: 2,
                 px: 4,
                 textTransform: 'none',
@@ -786,9 +828,9 @@ const CustomerList = () => {
         </Dialog>
 
         {/* Modern Delete Confirmation Dialog */}
-        <Dialog 
-          open={!!confirmDeleteId} 
-          onClose={() => setConfirmDeleteId(null)} 
+        <Dialog
+          open={!!confirmDeleteId}
+          onClose={() => setConfirmDeleteId(null)}
           maxWidth="sm"
           fullWidth
           PaperProps={{
@@ -798,7 +840,7 @@ const CustomerList = () => {
             }
           }}
         >
-          <DialogTitle sx={{ 
+          <DialogTitle sx={{
             pb: 2,
             display: 'flex',
             alignItems: 'center',
@@ -826,7 +868,7 @@ const CustomerList = () => {
             <Button
               onClick={() => setConfirmDeleteId(null)}
               variant="outlined"
-              sx={{ 
+              sx={{
                 borderRadius: 2,
                 textTransform: 'none',
                 fontWeight: 600
@@ -839,7 +881,7 @@ const CustomerList = () => {
               variant="contained"
               color="error"
               disabled={loading}
-              sx={{ 
+              sx={{
                 borderRadius: 2,
                 textTransform: 'none',
                 fontWeight: 600

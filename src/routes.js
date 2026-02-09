@@ -16,6 +16,7 @@ import About from './pages/About';
 import Features from './pages/Features';
 import Contact from './pages/Contact';
 import ThemeExample from './components/ThemeExample';
+import BankAccounts from './pages/BankAccounts';
 
 const AppRoutes = () => {
   return (
@@ -39,6 +40,7 @@ const AppRoutes = () => {
         <Route path="/products/add" element={<AddEditProduct />} />
         <Route path="/products/edit/:id" element={<AddEditProduct />} />
         <Route path="/stock-adjustment" element={<StockAdjustment />} />
+        <Route path="/bank-accounts" element={<BankAccounts />} />
       </Routes>
     </Router>
   );

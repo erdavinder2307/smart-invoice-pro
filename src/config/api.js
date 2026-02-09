@@ -1,6 +1,6 @@
 // API configuration
 const API_CONFIG = {
-  BASE_URL: process.env.REACT_APP_API_BASE_URL || 'http://127.0.0.1:5000',
+  BASE_URL: process.env.REACT_APP_API_BASE_URL || 'http://127.0.0.1:5001',
   ENDPOINTS: {
     CUSTOMERS: '/api/customers',
     CUSTOMER_LOGIN: '/api/customer/login',
@@ -30,11 +30,11 @@ export const getCustomerInvoices = async (token) => {
       'Authorization': `Bearer ${token}`
     }
   });
-  
+
   if (!response.ok) {
     throw new Error('Failed to fetch customer invoices');
   }
-  
+
   return await response.json();
 };
 

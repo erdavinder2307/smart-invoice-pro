@@ -28,9 +28,11 @@ import {
   AutoAwesome,
   ExpandMore,
   CheckCircle,
-  TrendingUp
+  TrendingUp,
+  ArrowForward
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import Header from '../components/Layout/Header';
 import Footer from '../components/Layout/Footer';
 
@@ -42,6 +44,34 @@ const Features = () => {
 
   const handleFaqChange = (panel) => (event, isExpanded) => {
     setExpandedFaq(isExpanded ? panel : false);
+  };
+
+  const fadeInUp = {
+    hidden: { opacity: 0, y: 30 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.6, ease: "easeOut" }
+    }
+  };
+
+  const staggerContainer = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.15
+      }
+    }
+  };
+
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.5 }
+    }
   };
 
   const features = [
@@ -132,319 +162,398 @@ const Features = () => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Header />
-      
+
       {/* Hero Section */}
       <Box
         sx={{
-          background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+          background: 'linear-gradient(135deg, #0a0e27 0%, #1e3a8a 50%, #0f172a 100%)',
           color: 'white',
           py: { xs: 8, md: 12 }
         }}
       >
         <Container maxWidth="lg">
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography
-              variant={isMobile ? 'h3' : 'h2'}
-              sx={{
-                fontWeight: 700,
-                mb: 3,
-                lineHeight: 1.2,
-                color: 'white'
-              }}
-            >
-              Powerful Features for Smarter Business
-            </Typography>
-            <Typography
-              variant="h6"
-              sx={{
-                mb: 4,
-                color: 'grey.100',
-                maxWidth: 800,
-                mx: 'auto',
-                lineHeight: 1.6
-              }}
-            >
-              Discover how Smart Invoice Pro can transform your business operations 
-              with cutting-edge features designed for modern entrepreneurs
-            </Typography>
-            <Button
-              variant="contained"
-              size="large"
-              onClick={() => navigate('/login')}
-              sx={{
-                bgcolor: 'white',
-                color: 'primary.main',
-                px: 4,
-                py: 1.5,
-                fontSize: '1.1rem',
-                fontWeight: 600,
-                '&:hover': {
-                  bgcolor: 'grey.50',
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 8px 25px rgba(0,0,0,0.2)'
-                },
-                transition: 'all 0.3s ease'
-              }}
-            >
-              Try All Features Now
-            </Button>
-          </Box>
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainer}
+          >
+            <Box sx={{ textAlign: 'center' }}>
+              <motion.div variants={fadeInUp}>
+                <Typography
+                  variant={isMobile ? 'h3' : 'h2'}
+                  sx={{
+                    fontWeight: 700,
+                    mb: 3,
+                    lineHeight: 1.2,
+                    color: 'white'
+                  }}
+                >
+                  Powerful Features for Smarter Business
+                </Typography>
+              </motion.div>
+              <motion.div variants={fadeInUp}>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    mb: 4,
+                    color: 'grey.100',
+                    maxWidth: 800,
+                    mx: 'auto',
+                    lineHeight: 1.6,
+                    opacity: 0.95
+                  }}
+                >
+                  Discover how Smart Invoice Pro can transform your business operations
+                  with cutting-edge features designed for modern entrepreneurs
+                </Typography>
+              </motion.div>
+              <motion.div variants={fadeInUp}>
+                <Button
+                  component={motion.button}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  variant="contained"
+                  size="large"
+                  onClick={() => navigate('/login')}
+                  sx={{
+                    bgcolor: 'white',
+                    color: 'primary.main',
+                    px: 4,
+                    py: 1.5,
+                    fontSize: '1.1rem',
+                    fontWeight: 600,
+                    '&:hover': {
+                      bgcolor: 'grey.50',
+                      boxShadow: '0 8px 25px rgba(0,0,0,0.2)'
+                    },
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  Try All Features Now
+                </Button>
+              </motion.div>
+            </Box>
+          </motion.div>
         </Container>
       </Box>
 
       {/* Main Features Section */}
-      <Container maxWidth="lg" sx={{ py: 8 }}>
-        <Grid container spacing={4}>
-          {features.map((feature, index) => (
-            <Grid item xs={12} md={6} key={index}>
-              <Card
-                sx={{
-                  height: '100%',
-                  p: 3,
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    transform: 'translateY(-8px)',
-                    boxShadow: '0 16px 40px rgba(0,0,0,0.1)'
-                  }
-                }}
-              >
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 3 }}>
-                    <Box sx={{ mr: 3, mt: 1 }}>
-                      {feature.icon}
-                    </Box>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="h5" sx={{ fontWeight: 600, mb: 2, color: 'text.primary' }}>
-                        {feature.title}
-                      </Typography>
-                      <Typography variant="body1" sx={{ color: 'text.secondary', mb: 3, lineHeight: 1.6 }}>
-                        {feature.description}
-                      </Typography>
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                        {feature.highlights.map((highlight, idx) => (
-                          <Chip
-                            key={idx}
-                            label={highlight}
-                            size="small"
-                            sx={{
-                              bgcolor: 'primary.light',
-                              color: 'primary.dark',
-                              fontWeight: 500
-                            }}
-                          />
-                        ))}
-                      </Box>
-                    </Box>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-      </Container>
-
-      {/* Additional Features */}
-      <Box sx={{ bgcolor: 'grey.50', py: 8 }}>
-        <Container maxWidth="lg">
-          <Box sx={{ textAlign: 'center', mb: 6 }}>
-            <Typography variant="h4" sx={{ fontWeight: 700, mb: 2, color: 'text.primary' }}>
-              And Much More...
-            </Typography>
-            <Typography variant="h6" sx={{ color: 'text.secondary' }}>
-              Built with modern technology stack for optimal performance
-            </Typography>
-          </Box>
-          
+      <Container maxWidth="lg" sx={{ py: 12 }}>
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={staggerContainer}
+        >
           <Grid container spacing={4}>
-            {additionalFeatures.map((feature, index) => (
-              <Grid item xs={12} sm={6} md={3} key={index}>
-                <Card
-                  sx={{
-                    height: '100%',
-                    textAlign: 'center',
-                    p: 3,
-                    transition: 'all 0.3s ease',
-                    '&:hover': {
-                      transform: 'translateY(-4px)',
-                      boxShadow: '0 8px 25px rgba(0,0,0,0.1)'
-                    }
-                  }}
-                >
-                  <CardContent>
-                    <Box sx={{ mb: 2 }}>
-                      {feature.icon}
-                    </Box>
-                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: 'text.primary' }}>
-                      {feature.title}
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                      {feature.description}
-                    </Typography>
-                  </CardContent>
-                </Card>
+            {features.map((feature, index) => (
+              <Grid item xs={12} md={6} key={index}>
+                <motion.div variants={cardVariants}>
+                  <Card
+                    component={motion.div}
+                    whileHover={{ y: -8, boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}
+                    sx={{
+                      height: '100%',
+                      p: 3,
+                      borderRadius: 4,
+                      transition: 'box-shadow 0.3s ease'
+                    }}
+                  >
+                    <CardContent>
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 3 }}>
+                        <Box sx={{ mr: 3, mt: 1 }}>
+                          {feature.icon}
+                        </Box>
+                        <Box sx={{ flex: 1 }}>
+                          <Typography variant="h5" sx={{ fontWeight: 600, mb: 2, color: 'text.primary' }}>
+                            {feature.title}
+                          </Typography>
+                          <Typography variant="body1" sx={{ color: 'text.secondary', mb: 3, lineHeight: 1.6 }}>
+                            {feature.description}
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                            {feature.highlights.map((highlight, idx) => (
+                              <Chip
+                                key={idx}
+                                label={highlight}
+                                size="small"
+                                sx={{
+                                  bgcolor: 'primary.light',
+                                  color: 'primary.dark',
+                                  fontWeight: 500,
+                                  borderRadius: 2
+                                }}
+                              />
+                            ))}
+                          </Box>
+                        </Box>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               </Grid>
             ))}
           </Grid>
+        </motion.div>
+      </Container>
+
+      {/* Additional Features */}
+      <Box sx={{ bgcolor: 'grey.50', py: 12 }}>
+        <Container maxWidth="lg">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={staggerContainer}
+          >
+            <Box sx={{ textAlign: 'center', mb: 8 }}>
+              <motion.div variants={fadeInUp}>
+                <Typography variant="h4" sx={{ fontWeight: 700, mb: 2, color: 'text.primary' }}>
+                  And Much More...
+                </Typography>
+                <Typography variant="h6" sx={{ color: 'text.secondary', opacity: 0.8 }}>
+                  Built with modern technology stack for optimal performance
+                </Typography>
+              </motion.div>
+            </Box>
+
+            <Grid container spacing={4}>
+              {additionalFeatures.map((feature, index) => (
+                <Grid item xs={12} sm={6} md={3} key={index}>
+                  <motion.div variants={fadeInUp}>
+                    <Card
+                      component={motion.div}
+                      whileHover={{ y: -6, boxShadow: '0 12px 30px rgba(0,0,0,0.1)' }}
+                      sx={{
+                        height: '100%',
+                        textAlign: 'center',
+                        p: 3,
+                        borderRadius: 3
+                      }}
+                    >
+                      <CardContent>
+                        <Box sx={{ mb: 2 }}>
+                          {feature.icon}
+                        </Box>
+                        <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: 'text.primary' }}>
+                          {feature.title}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                          {feature.description}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                </Grid>
+              ))}
+            </Grid>
+          </motion.div>
         </Container>
       </Box>
 
       {/* Benefits Section */}
-      <Container maxWidth="lg" sx={{ py: 8 }}>
-        <Paper
-          elevation={4}
-          sx={{
-            p: 6,
-            borderRadius: 4,
-            background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-            color: 'white',
-            textAlign: 'center'
-          }}
+      <Container maxWidth="lg" sx={{ py: 12 }}>
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={fadeInUp}
         >
-          <Typography variant="h4" sx={{ fontWeight: 700, mb: 4, color: 'white' }}>
-            Why Businesses Choose Smart Invoice Pro
-          </Typography>
-          <Grid container spacing={4}>
-            <Grid item xs={12} md={4}>
-              <TrendingUp sx={{ fontSize: 60, mb: 2, color: 'white' }} />
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 1, color: 'white' }}>
-                Increase Efficiency
-              </Typography>
-              <Typography variant="body1" sx={{ color: 'grey.100' }}>
-                Save 10+ hours per week on administrative tasks
-              </Typography>
+          <Paper
+            elevation={4}
+            sx={{
+              p: { xs: 6, md: 8 },
+              borderRadius: 6,
+              background: 'linear-gradient(135deg, #0a0e27 0%, #1e3a8a 50%, #0f172a 100%)',
+              color: 'white',
+              textAlign: 'center',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Decorative Background */}
+            <Box sx={{ position: 'absolute', top: -100, left: -50, width: 300, height: 300, borderRadius: '50%', background: 'rgba(255,255,255,0.03)' }} />
+            <Box sx={{ position: 'absolute', bottom: -50, right: -50, width: 250, height: 250, borderRadius: '50%', background: 'rgba(255,255,255,0.03)' }} />
+
+            <Typography variant="h4" sx={{ fontWeight: 700, mb: 6, color: 'white', position: 'relative', zIndex: 1 }}>
+              Why Businesses Choose Smart Invoice Pro
+            </Typography>
+            <Grid container spacing={6} sx={{ position: 'relative', zIndex: 1 }}>
+              <Grid item xs={12} md={4}>
+                <motion.div whileHover={{ scale: 1.05 }} transition={{ type: "spring", stiffness: 300 }}>
+                  <TrendingUp sx={{ fontSize: 60, mb: 2, color: 'white', opacity: 0.9 }} />
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 1, color: 'white' }}>
+                    Increase Efficiency
+                  </Typography>
+                  <Typography variant="body1" sx={{ color: 'grey.300' }}>
+                    Save 10+ hours per week on administrative tasks
+                  </Typography>
+                </motion.div>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <motion.div whileHover={{ scale: 1.05 }} transition={{ type: "spring", stiffness: 300 }}>
+                  <CheckCircle sx={{ fontSize: 60, mb: 2, color: 'white', opacity: 0.9 }} />
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 1, color: 'white' }}>
+                    Reduce Errors
+                  </Typography>
+                  <Typography variant="body1" sx={{ color: 'grey.300' }}>
+                    Automated calculations eliminate human errors
+                  </Typography>
+                </motion.div>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <motion.div whileHover={{ scale: 1.05 }} transition={{ type: "spring", stiffness: 300 }}>
+                  <Analytics sx={{ fontSize: 60, mb: 2, color: 'white', opacity: 0.9 }} />
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 1, color: 'white' }}>
+                    Better Insights
+                  </Typography>
+                  <Typography variant="body1" sx={{ color: 'grey.300' }}>
+                    Make data-driven decisions with real-time analytics
+                  </Typography>
+                </motion.div>
+              </Grid>
             </Grid>
-            <Grid item xs={12} md={4}>
-              <CheckCircle sx={{ fontSize: 60, mb: 2, color: 'white' }} />
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 1, color: 'white' }}>
-                Reduce Errors
-              </Typography>
-              <Typography variant="body1" sx={{ color: 'grey.100' }}>
-                Automated calculations eliminate human errors
-              </Typography>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <Analytics sx={{ fontSize: 60, mb: 2, color: 'white' }} />
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 1, color: 'white' }}>
-                Better Insights
-              </Typography>
-              <Typography variant="body1" sx={{ color: 'grey.100' }}>
-                Make data-driven decisions with real-time analytics
-              </Typography>
-            </Grid>
-          </Grid>
-        </Paper>
+          </Paper>
+        </motion.div>
       </Container>
 
       {/* FAQ Section */}
-      <Box sx={{ bgcolor: 'grey.50', py: 8 }}>
+      <Box sx={{ bgcolor: 'grey.50', py: 12 }}>
         <Container maxWidth="lg">
-          <Box sx={{ textAlign: 'center', mb: 6 }}>
-            <Typography variant="h4" sx={{ fontWeight: 700, mb: 2, color: 'text.primary' }}>
-              Frequently Asked Questions
-            </Typography>
-            <Typography variant="h6" sx={{ color: 'text.secondary' }}>
-              Got questions? We've got answers
-            </Typography>
-          </Box>
-          
-          <Box sx={{ maxWidth: 800, mx: 'auto' }}>
-            {faqs.map((faq, index) => (
-              <Accordion
-                key={index}
-                expanded={expandedFaq === `panel${index}`}
-                onChange={handleFaqChange(`panel${index}`)}
-                sx={{
-                  mb: 2,
-                  borderRadius: 2,
-                  '&:before': { display: 'none' },
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                }}
-              >
-                <AccordionSummary
-                  expandIcon={<ExpandMore />}
-                  sx={{
-                    bgcolor: 'white',
-                    borderRadius: 2,
-                    '&.Mui-expanded': {
-                      borderBottomLeftRadius: 0,
-                      borderBottomRightRadius: 0
-                    }
-                  }}
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={staggerContainer}
+          >
+            <Box sx={{ textAlign: 'center', mb: 8 }}>
+              <motion.div variants={fadeInUp}>
+                <Typography variant="h4" sx={{ fontWeight: 700, mb: 2, color: 'text.primary' }}>
+                  Frequently Asked Questions
+                </Typography>
+                <Typography variant="h6" sx={{ color: 'text.secondary' }}>
+                  Got questions? We've got answers
+                </Typography>
+              </motion.div>
+            </Box>
+
+            <Box sx={{ maxWidth: 800, mx: 'auto' }}>
+              {faqs.map((faq, index) => (
+                <motion.div
+                  key={index}
+                  variants={fadeInUp}
                 >
-                  <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                    {faq.question}
-                  </Typography>
-                </AccordionSummary>
-                <AccordionDetails
-                  sx={{
-                    bgcolor: 'grey.50',
-                    borderBottomLeftRadius: 8,
-                    borderBottomRightRadius: 8
-                  }}
-                >
-                  <Typography variant="body1" sx={{ lineHeight: 1.6, color: 'text.primary' }}>
-                    {faq.answer}
-                  </Typography>
-                </AccordionDetails>
-              </Accordion>
-            ))}
-          </Box>
+                  <Accordion
+                    expanded={expandedFaq === `panel${index}`}
+                    onChange={handleFaqChange(`panel${index}`)}
+                    disableGutters
+                    sx={{
+                      mb: 2,
+                      borderRadius: 3,
+                      '&:before': { display: 'none' },
+                      boxShadow: expandedFaq === `panel${index}` ? '0 8px 20px rgba(0,0,0,0.05)' : 'none',
+                      border: '1px solid',
+                      borderColor: 'grey.200',
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    <AccordionSummary
+                      expandIcon={<ExpandMore />}
+                      sx={{
+                        bgcolor: 'white',
+                        borderRadius: 3,
+                        py: 1,
+                        '&.Mui-expanded': {
+                          borderBottomLeftRadius: 0,
+                          borderBottomRightRadius: 0,
+                          borderBottom: '1px solid',
+                          borderColor: 'grey.100'
+                        }
+                      }}
+                    >
+                      <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary', fontSize: '1.1rem' }}>
+                        {faq.question}
+                      </Typography>
+                    </AccordionSummary>
+                    <AccordionDetails
+                      sx={{
+                        bgcolor: 'white',
+                        borderBottomLeftRadius: 12,
+                        borderBottomRightRadius: 12,
+                        p: 3
+                      }}
+                    >
+                      <Typography variant="body1" sx={{ lineHeight: 1.7, color: 'text.secondary' }}>
+                        {faq.answer}
+                      </Typography>
+                    </AccordionDetails>
+                  </Accordion>
+                </motion.div>
+              ))}
+            </Box>
+          </motion.div>
         </Container>
       </Box>
 
       {/* CTA Section */}
-      <Container maxWidth="lg" sx={{ py: 8 }}>
-        <Box sx={{ textAlign: 'center' }}>
-          <Typography variant="h4" sx={{ fontWeight: 700, mb: 3, color: 'text.primary' }}>
-            Ready to Experience These Features?
-          </Typography>
-          <Typography variant="h6" sx={{ mb: 4, color: 'text.secondary' }}>
-            Join thousands of businesses already using Smart Invoice Pro
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Button
-              variant="contained"
-              size="large"
-              onClick={() => navigate('/login')}
-              sx={{
-                bgcolor: 'primary.main',
-                px: 4,
-                py: 1.5,
-                fontSize: '1.1rem',
-                fontWeight: 600,
-                '&:hover': {
-                  bgcolor: 'primary.dark',
-                  transform: 'translateY(-2px)',
-                  boxShadow: `0 8px 25px ${theme.palette.primary.main}40`
-                },
-                transition: 'all 0.3s ease'
-              }}
-            >
-              Get Started Free
-            </Button>
-            <Button
-              variant="outlined"
-              size="large"
-              onClick={() => navigate('/contact')}
-              sx={{
-                borderColor: 'primary.main',
-                color: 'primary.main',
-                px: 4,
-                py: 1.5,
-                fontSize: '1.1rem',
-                fontWeight: 600,
-                '&:hover': {
-                  borderColor: 'primary.dark',
-                  bgcolor: 'primary.light',
-                  transform: 'translateY(-2px)'
-                },
-                transition: 'all 0.3s ease'
-              }}
-            >
-              Contact Sales
-            </Button>
+      <Container maxWidth="lg" sx={{ py: 12 }}>
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={fadeInUp}
+        >
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography variant="h4" sx={{ fontWeight: 700, mb: 3, color: 'text.primary' }}>
+              Ready to Experience These Features?
+            </Typography>
+            <Typography variant="h6" sx={{ mb: 6, color: 'text.secondary', maxWidth: 600, mx: 'auto' }}>
+              Join thousands of businesses already using Smart Invoice Pro to streamline their financial operations.
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Button
+                component={motion.button}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                variant="contained"
+                size="large"
+                endIcon={<ArrowForward />}
+                onClick={() => navigate('/login')}
+                sx={{
+                  bgcolor: 'primary.main',
+                  px: 5,
+                  py: 1.5,
+                  fontSize: '1.1rem',
+                  fontWeight: 600,
+                  borderRadius: 2,
+                  textTransform: 'none'
+                }}
+              >
+                Get Started Free
+              </Button>
+              <Button
+                component={motion.button}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                variant="outlined"
+                size="large"
+                onClick={() => navigate('/contact')}
+                sx={{
+                  borderColor: 'primary.main',
+                  color: 'primary.main',
+                  px: 5,
+                  py: 1.5,
+                  fontSize: '1.1rem',
+                  fontWeight: 600,
+                  borderRadius: 2,
+                  textTransform: 'none'
+                }}
+              >
+                Contact Sales
+              </Button>
+            </Box>
           </Box>
-        </Box>
+        </motion.div>
       </Container>
 
       <Footer />

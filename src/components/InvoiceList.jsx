@@ -9,18 +9,18 @@ import Header from "./common/Header/Header";
 import Footer from "./common/Header/Footer/Footer";
 import Sidebar from "./Sidebar";
 import axios from "axios";
-import { 
-  Box, 
-  Button, 
-  Typography, 
-  Paper, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
-  CircularProgress, 
+import {
+  Box,
+  Button,
+  Typography,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  CircularProgress,
   Alert,
   Chip,
   Avatar,
@@ -98,14 +98,14 @@ const InvoiceList = () => {
   const filteredInvoices = invoices.filter(invoice => {
     const customer = customers.find(c => c.id === invoice.customer_id);
     const customerName = customer ? customer.name : '';
-    
-    const matchesSearch = 
+
+    const matchesSearch =
       invoice.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       invoice.invoice_type?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesStatus = statusFilter === "All" || invoice.status === statusFilter;
-    
+
     return matchesSearch && matchesStatus;
   });
 
@@ -144,7 +144,7 @@ const InvoiceList = () => {
     // Fetch customers for dropdown
     axios.get(createApiUrl("/api/customers")).then(res => setCustomers(res.data)).catch(() => setCustomers([]));
     // Optionally, fetch next invoice number
-    axios.get(createApiUrl("/api/invoices/next-number")).then(res => setForm(f => ({ ...f, invoice_number: res.data.invoice_number }))).catch(() => {});
+    axios.get(createApiUrl("/api/invoices/next-number")).then(res => setForm(f => ({ ...f, invoice_number: res.data.invoice_number }))).catch(() => { });
   }, []);
 
   // Calculate fields
@@ -212,10 +212,10 @@ const InvoiceList = () => {
         <Header />
         <Box sx={{ display: 'flex', flex: 1 }}>
           <Sidebar />
-          <Box sx={{ 
-            flex: 1, 
+          <Box sx={{
+            flex: 1,
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            minHeight: 'calc(100vh - 128px)', 
+            minHeight: 'calc(100vh - 128px)',
             p: 3,
             position: 'relative',
             '&::before': {
@@ -232,7 +232,7 @@ const InvoiceList = () => {
             {/* Stats Cards */}
             <Grid container spacing={3} sx={{ mb: 4, position: 'relative', zIndex: 1 }}>
               <Grid item xs={12} sm={6} md={3}>
-                <Card sx={{ 
+                <Card sx={{
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   color: 'white',
                   borderRadius: 3,
@@ -243,7 +243,7 @@ const InvoiceList = () => {
                     boxShadow: '0 12px 40px rgba(102,126,234,0.4)'
                   }
                 }}>
-                  <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                  <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', py: 3 }}>
                     <ReceiptIcon sx={{ fontSize: 40, mb: 2, opacity: 0.9 }} />
                     <Typography variant="h4" fontWeight={700} gutterBottom>
                       {invoices.length}
@@ -255,7 +255,7 @@ const InvoiceList = () => {
                 </Card>
               </Grid>
               <Grid item xs={12} sm={6} md={3}>
-                <Card sx={{ 
+                <Card sx={{
                   background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
                   color: 'white',
                   borderRadius: 3,
@@ -266,7 +266,7 @@ const InvoiceList = () => {
                     boxShadow: '0 12px 40px rgba(67,233,123,0.4)'
                   }
                 }}>
-                  <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                  <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', py: 3 }}>
                     <CheckCircleIcon sx={{ fontSize: 40, mb: 2, opacity: 0.9 }} />
                     <Typography variant="h4" fontWeight={700} gutterBottom>
                       {invoices.filter(inv => inv.status?.toLowerCase() === 'paid').length}
@@ -278,7 +278,7 @@ const InvoiceList = () => {
                 </Card>
               </Grid>
               <Grid item xs={12} sm={6} md={3}>
-                <Card sx={{ 
+                <Card sx={{
                   background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
                   color: 'white',
                   borderRadius: 3,
@@ -289,7 +289,7 @@ const InvoiceList = () => {
                     boxShadow: '0 12px 40px rgba(240,147,251,0.4)'
                   }
                 }}>
-                  <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                  <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', py: 3 }}>
                     <PendingIcon sx={{ fontSize: 40, mb: 2, opacity: 0.9 }} />
                     <Typography variant="h4" fontWeight={700} gutterBottom>
                       {invoices.filter(inv => inv.status?.toLowerCase() === 'pending').length}
@@ -301,7 +301,7 @@ const InvoiceList = () => {
                 </Card>
               </Grid>
               <Grid item xs={12} sm={6} md={3}>
-                <Card sx={{ 
+                <Card sx={{
                   background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
                   color: 'white',
                   borderRadius: 3,
@@ -312,7 +312,7 @@ const InvoiceList = () => {
                     boxShadow: '0 12px 40px rgba(79,172,254,0.4)'
                   }
                 }}>
-                  <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                  <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', py: 3 }}>
                     <AttachMoneyIcon sx={{ fontSize: 40, mb: 2, opacity: 0.9 }} />
                     <Typography variant="h4" fontWeight={700} gutterBottom>
                       ₹{invoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0).toLocaleString()}
@@ -326,8 +326,8 @@ const InvoiceList = () => {
             </Grid>
 
             {/* Main Content Card */}
-            <Card elevation={0} sx={{ 
-              borderRadius: 4, 
+            <Card elevation={0} sx={{
+              borderRadius: 4,
               overflow: 'visible',
               background: 'rgba(255,255,255,0.95)',
               backdropFilter: 'blur(20px)',
@@ -340,7 +340,7 @@ const InvoiceList = () => {
                 {/* Header Section */}
                 <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
                   <Box display="flex" alignItems="center" gap={2}>
-                    <Avatar sx={{ 
+                    <Avatar sx={{
                       bgcolor: 'primary.main',
                       width: 56,
                       height: 56,
@@ -362,7 +362,7 @@ const InvoiceList = () => {
                     size="large"
                     startIcon={<AddIcon />}
                     onClick={handleAdd}
-                    sx={{ 
+                    sx={{
                       borderRadius: 3,
                       px: 3,
                       py: 1.5,
@@ -456,10 +456,10 @@ const InvoiceList = () => {
 
                 {error && (
                   <Fade in={!!error}>
-                    <Alert 
-                      severity="error" 
-                      sx={{ 
-                        mb: 3, 
+                    <Alert
+                      severity="error"
+                      sx={{
+                        mb: 3,
                         borderRadius: 2,
                         '& .MuiAlert-icon': { fontSize: 24 }
                       }}
@@ -470,7 +470,7 @@ const InvoiceList = () => {
                 )}
 
                 {/* Modern Table */}
-                <TableContainer sx={{ 
+                <TableContainer sx={{
                   borderRadius: 3,
                   overflow: 'hidden',
                   border: '1px solid',
@@ -479,7 +479,7 @@ const InvoiceList = () => {
                 }}>
                   <Table>
                     <TableHead>
-                      <TableRow sx={{ 
+                      <TableRow sx={{
                         bgcolor: 'grey.50',
                         '& .MuiTableCell-head': {
                           fontWeight: 700,
@@ -540,7 +540,7 @@ const InvoiceList = () => {
                               }}>
                                 <TableCell>
                                   <Box display="flex" alignItems="center" gap={2}>
-                                    <Avatar sx={{ 
+                                    <Avatar sx={{
                                       bgcolor: 'primary.50',
                                       color: 'primary.main',
                                       width: 40,
@@ -596,7 +596,7 @@ const InvoiceList = () => {
                                 </TableCell>
                                 <TableCell align="center">
                                   <Tooltip title="More Actions">
-                                    <IconButton 
+                                    <IconButton
                                       size="small"
                                       onClick={(e) => handleActionMenuOpen(e, invoice)}
                                       sx={{
@@ -639,7 +639,7 @@ const InvoiceList = () => {
             }
           }}
         >
-          <MenuItem 
+          <MenuItem
             onClick={() => {
               handleEdit(selectedInvoice);
               handleActionMenuClose();
@@ -651,7 +651,7 @@ const InvoiceList = () => {
             </ListItemIcon>
             <ListItemText primary="Edit Invoice" />
           </MenuItem>
-          <MenuItem 
+          <MenuItem
             onClick={() => {
               handleDownloadPDF(selectedInvoice);
               handleActionMenuClose();
@@ -663,7 +663,7 @@ const InvoiceList = () => {
             </ListItemIcon>
             <ListItemText primary="Download PDF" />
           </MenuItem>
-          <MenuItem 
+          <MenuItem
             onClick={() => {
               setConfirmDeleteId(selectedInvoice.id);
               handleActionMenuClose();
@@ -678,9 +678,9 @@ const InvoiceList = () => {
         </Menu>
 
         {/* Delete Confirmation Dialog */}
-        <Dialog 
-          open={!!confirmDeleteId} 
-          onClose={() => setConfirmDeleteId(null)} 
+        <Dialog
+          open={!!confirmDeleteId}
+          onClose={() => setConfirmDeleteId(null)}
           maxWidth="sm"
           fullWidth
           PaperProps={{
@@ -690,7 +690,7 @@ const InvoiceList = () => {
             }
           }}
         >
-          <DialogTitle sx={{ 
+          <DialogTitle sx={{
             pb: 2,
             display: 'flex',
             alignItems: 'center',
@@ -718,7 +718,7 @@ const InvoiceList = () => {
             <Button
               onClick={() => setConfirmDeleteId(null)}
               variant="outlined"
-              sx={{ 
+              sx={{
                 borderRadius: 2,
                 textTransform: 'none',
                 fontWeight: 600
@@ -731,7 +731,7 @@ const InvoiceList = () => {
               variant="contained"
               color="error"
               disabled={loading}
-              sx={{ 
+              sx={{
                 borderRadius: 2,
                 textTransform: 'none',
                 fontWeight: 600

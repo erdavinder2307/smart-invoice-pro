@@ -19,6 +19,7 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import SyncAltIcon from "@mui/icons-material/SyncAlt";
 import BusinessIcon from "@mui/icons-material/Business";
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import "./Sidebar.css";
 import authService from "../services/authService";
 
@@ -28,6 +29,7 @@ const navItems = [
   { text: "Invoices", icon: <ReceiptIcon />, path: "/invoices", badge: "new" },
   { text: "Products", icon: <Inventory2Icon />, path: "/products", badge: null },
   { text: "Stock Control", icon: <SyncAltIcon />, path: "/stock-adjustment", badge: "5" },
+  { text: "Bank Accounts", icon: <AccountBalanceIcon />, path: "/bank-accounts", badge: null },
 ];
 
 const drawerWidth = 260;
@@ -97,12 +99,12 @@ const Sidebar = () => {
                     borderRadius: 2,
                     py: 1.5,
                     px: 2,
-                    color: isSelected ? 'white' : theme.palette.grey[300],
-                    background: isSelected 
-                      ? `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)` 
+                    color: isSelected ? 'white' : theme.palette.grey[100], // Lighter text for dark gradient
+                    background: isSelected
+                      ? `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`
                       : 'transparent',
                     '&:hover': {
-                      background: isSelected 
+                      background: isSelected
                         ? `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.darker || theme.palette.primary.dark} 100%)`
                         : `${theme.palette.grey[700]}40`,
                       color: 'white',
@@ -116,15 +118,15 @@ const Sidebar = () => {
                     overflow: 'hidden'
                   }}
                 >
-                  <ListItemIcon 
-                    sx={{ 
+                  <ListItemIcon
+                    sx={{
                       color: 'inherit',
                       minWidth: 40
                     }}
                   >
                     {item.badge ? (
-                      <Badge 
-                        badgeContent={item.badge} 
+                      <Badge
+                        badgeContent={item.badge}
                         color={item.badge === 'new' ? 'success' : 'error'}
                         variant={item.badge === 'new' ? 'dot' : 'standard'}
                       >
@@ -134,8 +136,8 @@ const Sidebar = () => {
                       item.icon
                     )}
                   </ListItemIcon>
-                  <ListItemText 
-                    primary={item.text} 
+                  <ListItemText
+                    primary={item.text}
                     primaryTypographyProps={primaryTypographyProps}
                   />
                 </ListItemButton>
@@ -147,27 +149,37 @@ const Sidebar = () => {
 
       {/* User Profile & Logout Section */}
       <Box sx={{ p: 2, borderTop: `1px solid ${theme.palette.grey[700]}` }}>
-        <Box sx={{ 
-          p: 2, 
+        <Box sx={{
+          p: 2,
           mb: 2,
           borderRadius: 2,
           background: `${theme.palette.grey[800]}60`,
           textAlign: 'center'
         }}>
-          <Typography variant="body2" fontWeight={600} color="white" gutterBottom>
-            Admin User
-          </Typography>
-          <Typography variant="caption" sx={{ color: theme.palette.grey[400] }}>
-            admin@smartinvoice.com
-          </Typography>
+          {(() => {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const username = user.username || 'Admin User';
+            const email = user.email || 'admin@smartinvoice.com';
+
+            return (
+              <>
+                <Typography variant="body2" fontWeight={600} color="white" gutterBottom>
+                  {username}
+                </Typography>
+                <Typography variant="caption" sx={{ color: theme.palette.grey[400] }}>
+                  {email}
+                </Typography>
+              </>
+            );
+          })()}
         </Box>
-        
+
         <Button
           variant="outlined"
           fullWidth
           startIcon={<LogoutIcon />}
           onClick={handleLogout}
-          sx={{ 
+          sx={{
             borderColor: theme.palette.grey[600],
             color: theme.palette.grey[300],
             borderRadius: 2,

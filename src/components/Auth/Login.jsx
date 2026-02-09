@@ -35,9 +35,10 @@ import {
 } from "@mui/icons-material";
 import "./Login.css";
 import myImage from "../../assets/laptop.jpg";
-import authService from "../../services/authService";
+import { useAuth } from "../../context/AuthContext";
 
 const LoginPage = () => {
+  const { login, register } = useAuth();
   const [credentials, setCredentials] = useState({ username: "", password: "", confirmPassword: "" });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -65,7 +66,7 @@ const LoginPage = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setCredentials({ ...credentials, [name]: value });
-    
+
     // Validate password in real-time during signup
     if (name === 'password' && isSignup) {
       validatePassword(value);
@@ -91,26 +92,26 @@ const LoginPage = () => {
     setError("");
     setSuccess("");
     setLoading(true);
-    
+
     try {
       if (isSignup) {
         // Validate password strength
         if (!isPasswordValid()) {
-        setError("Password does not meet the required criteria.");
-        setLoading(false);
-        return;
+          setError("Password does not meet the required criteria.");
+          setLoading(false);
+          return;
         }
-        
+
         // Validate password confirmation
         if (credentials.password !== credentials.confirmPassword) {
-            setError("Passwords do not match.");
-            setLoading(false);
-            return;
+          setError("Passwords do not match.");
+          setLoading(false);
+          return;
         }
-        
+
         // Only send username and password to the API
         const { username, password } = credentials;
-        const response = await authService.register({ username, password });
+        const response = await register({ username, password });
         setSuccess("Account created successfully! You can now sign in.");
         setIsSignup(false);
         setCredentials({ username: "", password: "", confirmPassword: "" });
@@ -122,7 +123,7 @@ const LoginPage = () => {
           hasSpecialChar: false
         });
       } else {
-        const token = await authService.login(credentials);
+        const token = await login(credentials);
         console.log("Login successful, token:", token);
         navigate("/dashboard");
       }
@@ -137,8 +138,8 @@ const LoginPage = () => {
   };
 
   return (
-    <Box sx={{ 
-      minHeight: '100vh', 
+    <Box sx={{
+      minHeight: '100vh',
       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       display: 'flex',
       alignItems: 'center',
@@ -146,10 +147,10 @@ const LoginPage = () => {
       padding: 2
     }}>
       <Container maxWidth="lg">
-        <Paper 
-          elevation={24} 
-          sx={{ 
-            borderRadius: 4, 
+        <Paper
+          elevation={24}
+          sx={{
+            borderRadius: 4,
             overflow: 'hidden',
             background: '#ffffff',
             minHeight: { xs: 'auto', md: '600px' }
@@ -157,11 +158,11 @@ const LoginPage = () => {
         >
           <Grid container sx={{ minHeight: { xs: 'auto', md: '600px' } }}>
             {/* Left Panel - Branding & Image */}
-            <Grid 
-              item 
-              xs={12} 
-              md={6} 
-              sx={{ 
+            <Grid
+              item
+              xs={12}
+              md={6}
+              sx={{
                 background: 'linear-gradient(135deg, #0057e7 0%, #1976d2 100%)',
                 display: 'flex',
                 flexDirection: 'column',
@@ -198,7 +199,7 @@ const LoginPage = () => {
                   opacity: 0.7
                 }}
               />
-              
+
               {/* Content */}
               <Box sx={{ textAlign: 'center', zIndex: 2, mb: 4 }}>
                 <Business sx={{ fontSize: 60, mb: 2 }} />
@@ -208,7 +209,7 @@ const LoginPage = () => {
                 <Typography variant="h6" fontWeight={400} sx={{ opacity: 0.9, mb: 4 }}>
                   Professional Bookkeeping & Invoice Management
                 </Typography>
-                
+
                 {/* Feature highlights */}
                 <Box sx={{ textAlign: 'left', maxWidth: 300 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -229,7 +230,7 @@ const LoginPage = () => {
                   </Box>
                 </Box>
               </Box>
-              
+
               {/* Decorative Image */}
               <Box
                 component="img"
@@ -249,8 +250,8 @@ const LoginPage = () => {
 
             {/* Right Panel - Login Form */}
             <Grid item xs={12} md={6}>
-              <Box 
-                sx={{ 
+              <Box
+                sx={{
                   height: '100%',
                   display: 'flex',
                   alignItems: 'center',
@@ -265,8 +266,8 @@ const LoginPage = () => {
                       {isSignup ? 'Create Account' : 'Welcome Back'}
                     </Typography>
                     <Typography variant="body1" color="text.secondary">
-                      {isSignup 
-                        ? 'Start your professional bookkeeping journey' 
+                      {isSignup
+                        ? 'Start your professional bookkeeping journey'
                         : 'Sign in to access your dashboard'
                       }
                     </Typography>
@@ -374,8 +375,8 @@ const LoginPage = () => {
 
                         {/* Password Requirements - Only for signup when password is entered */}
                         {isSignup && credentials.password && (
-                          <Paper 
-                            variant="outlined" 
+                          <Paper
+                            variant="outlined"
                             sx={{ p: 2, mb: 3, bgcolor: 'grey.50', borderRadius: 2 }}
                           >
                             <Typography variant="subtitle2" fontWeight={600} gutterBottom>
@@ -397,7 +398,7 @@ const LoginPage = () => {
                                       <Cancel color="error" sx={{ fontSize: 18 }} />
                                     )}
                                   </ListItemIcon>
-                                  <ListItemText 
+                                  <ListItemText
                                     primary={text}
                                     primaryTypographyProps={{
                                       variant: 'body2',
@@ -442,8 +443,8 @@ const LoginPage = () => {
                           variant="contained"
                           size="large"
                           disabled={loading}
-                          sx={{ 
-                            mb: 2, 
+                          sx={{
+                            mb: 2,
                             py: 1.5,
                             background: 'linear-gradient(135deg, #0057e7 0%, #1976d2 100%)',
                             borderRadius: 2,
@@ -474,7 +475,7 @@ const LoginPage = () => {
                           variant="outlined"
                           size="large"
                           onClick={() => navigate('/customer/login')}
-                          sx={{ 
+                          sx={{
                             py: 1.5,
                             mb: 2,
                             borderRadius: 2,
@@ -511,7 +512,7 @@ const LoginPage = () => {
                               hasSpecialChar: false
                             });
                           }}
-                          sx={{ 
+                          sx={{
                             py: 1.5,
                             borderRadius: 2,
                             fontSize: '1rem',
@@ -533,10 +534,10 @@ const LoginPage = () => {
                   </Card>
 
                   {/* Footer Text */}
-                  <Typography 
-                    variant="body2" 
-                    color="text.secondary" 
-                    align="center" 
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    align="center"
                     sx={{ mt: 3 }}
                   >
                     By continuing, you agree to our{' '}

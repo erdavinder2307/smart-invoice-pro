@@ -11,14 +11,15 @@ import {
   InputLabel,
   FormControl,
   Typography,
-  Paper,
   Grid,
   CircularProgress,
   Alert,
-  Divider,
+  Card,
+  CardContent,
   InputAdornment,
   Avatar,
   Chip,
+  Fade,
 } from "@mui/material";
 import {
   Inventory as InventoryIcon,
@@ -29,12 +30,12 @@ import {
   Description as DescriptionIcon,
   Save as SaveIcon,
   Cancel as CancelIcon,
+  TipsAndUpdates as TipsIcon,
 } from "@mui/icons-material";
 import { useParams, useNavigate } from "react-router-dom";
 import Header from "./common/Header/Header";
 import Footer from "./common/Header/Footer/Footer";
 import Sidebar from "./Sidebar";
-import './AddEditProduct.css';
 
 const categoryOptions = ["Electronics", "Grocery", "Clothing", "Stationery", "Other"];
 const unitOptions = ["pcs", "kg", "litre", "box", "pack"];
@@ -126,503 +127,382 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
   };
 
   return (
-    <Box className="add-edit-product-root">
+    <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: '#f8fafc' }}>
       <Header />
-      <Box className="add-edit-product-main">
+      <Box sx={{ display: 'flex', flex: 1 }}>
         <Sidebar />
-        <Box className="add-edit-product-content">
-          <Paper 
-            elevation={0} 
-            className="add-edit-product-card"
-            sx={{
-              borderRadius: 4,
-              background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-              border: '1px solid rgba(102,126,234,0.08)',
-              boxShadow: '0 8px 32px rgba(102,126,234,0.12)',
-              position: 'relative',
-              overflow: 'hidden',
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                height: '4px',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              }
-            }}
-          >
-            {/* Header Section */}
-            <Box sx={{ p: 4, pb: 2 }}>
-              <Box display="flex" alignItems="center" gap={3} mb={2}>
-                <Avatar 
-                  sx={{ 
-                    width: 56, 
+        <Box sx={{
+          flex: 1,
+          background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+          minHeight: 'calc(100vh - 128px)',
+          p: 3,
+          position: 'relative',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'linear-gradient(135deg, rgba(79,172,254,0.1) 0%, rgba(0,242,254,0.1) 100%)',
+            backdropFilter: 'blur(10px)'
+          }
+        }}>
+          {/* Main Content Card */}
+          <Card elevation={0} sx={{
+            borderRadius: 4,
+            overflow: 'visible',
+            background: 'rgba(255,255,255,0.95)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.1)',
+            position: 'relative',
+            zIndex: 1,
+            maxWidth: 1000,
+            mx: 'auto'
+          }}>
+            <CardContent sx={{ p: 4 }}>
+              {/* Header Section */}
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+                <Box display="flex" alignItems="center" gap={2}>
+                  <Avatar sx={{
+                    bgcolor: 'primary.main',
+                    width: 56,
                     height: 56,
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    boxShadow: '0 8px 24px rgba(102,126,234,0.3)'
-                  }}
-                >
-                  <InventoryIcon fontSize="large" />
-                </Avatar>
-                <Box>
-                  <Typography 
-                    variant="h4" 
-                    className="add-edit-product-title"
-                    sx={{
-                      fontWeight: 800,
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      backgroundClip: 'text',
-                      WebkitBackgroundClip: 'text',
-                      color: 'transparent',
-                      mb: 1
-                    }}
-                  >
-                    {productId ? "Edit Product" : "Add New Product"}
-                  </Typography>
-                  <Chip 
-                    label={productId ? "Update Mode" : "Create Mode"} 
-                    size="small"
-                    sx={{
-                      bgcolor: productId ? 'warning.50' : 'success.50',
-                      color: productId ? 'warning.700' : 'success.700',
-                      fontWeight: 600,
-                      borderRadius: 2
-                    }}
-                  />
+                    background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+                  }}>
+                    <InventoryIcon sx={{ fontSize: 28 }} />
+                  </Avatar>
+                  <Box>
+                    <Typography variant="h4" fontWeight={700} color="text.primary" gutterBottom>
+                      {productId ? "Edit Product" : "Create New Product"}
+                    </Typography>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <Typography variant="body1" color="text.secondary">
+                        {productId ? "Update product details below" : "Add a new product to your inventory"}
+                      </Typography>
+                      <Chip
+                        label={productId ? "Edit Mode" : "Create Mode"}
+                        size="small"
+                        sx={{
+                          bgcolor: productId ? 'warning.50' : 'success.50',
+                          color: productId ? 'warning.700' : 'success.700',
+                          fontWeight: 600,
+                          borderRadius: 2
+                        }}
+                      />
+                    </Box>
+                  </Box>
                 </Box>
               </Box>
-              <Divider sx={{ mt: 3, borderColor: 'rgba(102,126,234,0.1)' }} />
-            </Box>
-            
-            {error && (
-              <Box sx={{ px: 4 }}>
-                <Alert 
-                  severity="error" 
-                  className="add-edit-product-alert"
-                  sx={{
-                    borderRadius: 3,
-                    border: '1px solid',
-                    borderColor: 'error.200',
-                    bgcolor: 'error.50',
-                    '& .MuiAlert-icon': {
-                      color: 'error.main'
-                    }
-                  }}
-                >
-                  {error}
-                </Alert>
-              </Box>
-            )}
-            
-            <Box 
-              component="form" 
-              onSubmit={handleSubmit} 
-              autoComplete="off" 
-              className="add-edit-product-form"
-              sx={{ p: 4, pt: 2 }}
-            >
-              <Grid container spacing={4} className="add-edit-product-grid">
-                <Grid item xs={12} sm={6}>
-                  <Box 
+
+              {error && (
+                <Fade in={!!error}>
+                  <Alert
+                    severity="error"
                     sx={{
-                      p: 3,
-                      borderRadius: 3,
-                      bgcolor: 'grey.50',
-                      border: '1px solid',
-                      borderColor: 'grey.200',
-                      height: 'fit-content'
+                      mb: 3,
+                      borderRadius: 2,
+                      '& .MuiAlert-icon': { fontSize: 24 }
                     }}
                   >
-                    <Box display="flex" alignItems="center" gap={2} mb={3}>
-                      <Avatar sx={{ bgcolor: 'primary.50', color: 'primary.main', width: 40, height: 40 }}>
-                        <InventoryIcon />
-                      </Avatar>
-                      <Typography variant="h6" fontWeight={700} color="text.primary">
-                        Product Information
-                      </Typography>
-                    </Box>
-                    
-                    <div className="invoice-form-row">
-                      <TextField
-                        label="Product Name"
-                        name="name"
-                        value={form.name}
-                        onChange={handleChange}
-                        fullWidth
-                        margin="normal"
-                        required
-                        className="add-edit-product-field"
-                        InputProps={{
-                          startAdornment: (
-                            <InputAdornment position="start">
-                              <InventoryIcon color="action" />
-                            </InputAdornment>
-                          ),
-                        }}
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            borderRadius: 3,
-                            bgcolor: 'white',
-                            '&:hover': {
-                              bgcolor: 'grey.50',
-                              '& .MuiOutlinedInput-notchedOutline': {
-                                borderColor: 'primary.main',
-                              }
-                            },
-                            '&.Mui-focused': {
-                              bgcolor: 'white',
-                              boxShadow: '0 0 0 3px rgba(102,126,234,0.1)'
-                            }
-                          }
-                        }}
-                      />
-                      <FormControl 
-                        fullWidth 
-                        margin="normal" 
-                        required 
-                        className="add-edit-product-field"
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            borderRadius: 3,
-                            bgcolor: 'white',
-                            '&:hover': {
-                              bgcolor: 'grey.50',
-                              '& .MuiOutlinedInput-notchedOutline': {
-                                borderColor: 'primary.main',
-                              }
-                            },
-                            '&.Mui-focused': {
-                              bgcolor: 'white',
-                              boxShadow: '0 0 0 3px rgba(102,126,234,0.1)'
-                            }
-                          }
-                        }}
-                      >
-                        <InputLabel>Category</InputLabel>
-                        <Select
-                          label="Category"
-                          name="category"
-                          value={form.category}
-                          onChange={handleChange}
-                          startAdornment={
-                            <InputAdornment position="start">
-                              <CategoryIcon color="action" />
-                            </InputAdornment>
-                          }
-                        >
-                          {categoryOptions.map((c) => (
-                            <MenuItem key={c} value={c}>
-                              <Box display="flex" alignItems="center" gap={1}>
-                                <CategoryIcon fontSize="small" />
-                                {c}
-                              </Box>
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </div>
-                    
-                    <div className="invoice-form-row">
-                      <TextField
-                        label="Price per Unit"
-                        name="price"
-                        type="number"
-                        value={form.price}
-                        onChange={handleChange}
-                        fullWidth
-                        margin="normal"
-                        inputProps={{ min: 0, step: 0.01 }}
-                        required
-                        className="add-edit-product-field"
-                        InputProps={{
-                          startAdornment: (
-                            <InputAdornment position="start">
-                              <AttachMoneyIcon color="action" />
-                            </InputAdornment>
-                          ),
-                        }}
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            borderRadius: 3,
-                            bgcolor: 'white',
-                            '&:hover': {
-                              bgcolor: 'grey.50',
-                              '& .MuiOutlinedInput-notchedOutline': {
-                                borderColor: 'primary.main',
-                              }
-                            },
-                            '&.Mui-focused': {
-                              bgcolor: 'white',
-                              boxShadow: '0 0 0 3px rgba(102,126,234,0.1)'
-                            }
-                          }
-                        }}
-                      />
-                      <FormControl 
-                        fullWidth 
-                        margin="normal" 
-                        required 
-                        className="add-edit-product-field"
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            borderRadius: 3,
-                            bgcolor: 'white',
-                            '&:hover': {
-                              bgcolor: 'grey.50',
-                              '& .MuiOutlinedInput-notchedOutline': {
-                                borderColor: 'primary.main',
-                              }
-                            },
-                            '&.Mui-focused': {
-                              bgcolor: 'white',
-                              boxShadow: '0 0 0 3px rgba(102,126,234,0.1)'
-                            }
-                          }
-                        }}
-                      >
-                        <InputLabel>Unit of Measurement</InputLabel>
-                        <Select
-                          label="Unit"
-                          name="unit"
-                          value={form.unit}
-                          onChange={handleChange}
-                          startAdornment={
-                            <InputAdornment position="start">
-                              <ScaleIcon color="action" />
-                            </InputAdornment>
-                          }
-                        >
-                          {unitOptions.map((u) => (
-                            <MenuItem key={u} value={u}>
-                              <Box display="flex" alignItems="center" gap={1}>
-                                <ScaleIcon fontSize="small" />
-                                {u}
-                              </Box>
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </div>
-                    
-                    <div className="invoice-form-row">
-                      <TextField
-                        label="Tax Rate (%)"
-                        name="tax_rate"
-                        type="number"
-                        value={form.tax_rate}
-                        onChange={handleChange}
-                        fullWidth
-                        margin="normal"
-                        inputProps={{ min: 0, step: 0.01 }}
-                        required
-                        className="add-edit-product-field"
-                        InputProps={{
-                          startAdornment: (
-                            <InputAdornment position="start">
-                              <PercentIcon color="action" />
-                            </InputAdornment>
-                          ),
-                        }}
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            borderRadius: 3,
-                            bgcolor: 'white',
-                            '&:hover': {
-                              bgcolor: 'grey.50',
-                              '& .MuiOutlinedInput-notchedOutline': {
-                                borderColor: 'primary.main',
-                              }
-                            },
-                            '&.Mui-focused': {
-                              bgcolor: 'white',
-                              boxShadow: '0 0 0 3px rgba(102,126,234,0.1)'
-                            }
-                          }
-                        }}
-                      />
-                      {productId && (
+                    {error}
+                  </Alert>
+                </Fade>
+              )}
+
+              <Box component="form" onSubmit={handleSubmit} autoComplete="off">
+                <Grid container spacing={3}>
+                  {/* Product Information Section */}
+                  <Grid item xs={12} md={6}>
+                    <Card sx={{ mb: 3, borderRadius: 3, border: '1px solid', borderColor: 'grey.200', height: '100%' }}>
+                      <CardContent sx={{ p: 3 }}>
+                        <Typography variant="h6" fontWeight={600} gutterBottom sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <InventoryIcon color="primary" />
+                          Product Information
+                        </Typography>
+
                         <TextField
-                          label="Available Stock"
-                          name="stock"
-                          value={typeof form.stock === 'number' ? form.stock : 'Not Available'}
+                          label="Product Name"
+                          name="name"
+                          value={form.name}
+                          onChange={handleChange}
                           fullWidth
-                          margin="normal"
-                          InputProps={{ 
-                            readOnly: true,
+                          required
+                          sx={{ mb: 3 }}
+                          InputProps={{
                             startAdornment: (
                               <InputAdornment position="start">
-                                <InventoryIcon color="action" />
+                                <InventoryIcon fontSize="small" color="action" />
                               </InputAdornment>
                             ),
                           }}
-                          className="add-edit-product-field"
+                        />
+
+                        <FormControl fullWidth sx={{ mb: 3 }}>
+                          <InputLabel>Category</InputLabel>
+                          <Select
+                            label="Category"
+                            name="category"
+                            value={form.category}
+                            onChange={handleChange}
+                            required
+                            startAdornment={
+                              <InputAdornment position="start">
+                                <CategoryIcon fontSize="small" color="action" />
+                              </InputAdornment>
+                            }
+                            sx={{
+                              borderRadius: 2,
+                              bgcolor: 'grey.50',
+                              '&.Mui-focused': {
+                                boxShadow: '0 0 0 3px rgba(79,172,254,0.1)'
+                              }
+                            }}
+                          >
+                            {categoryOptions.map((c) => (
+                              <MenuItem key={c} value={c}>
+                                <Box display="flex" alignItems="center" gap={1}>
+                                  <CategoryIcon fontSize="small" />
+                                  {c}
+                                </Box>
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+
+                        <Grid container spacing={2}>
+                          <Grid item xs={12} sm={6}>
+                            <TextField
+                              label="Price per Unit"
+                              name="price"
+                              type="number"
+                              value={form.price}
+                              onChange={handleChange}
+                              fullWidth
+                              inputProps={{ min: 0, step: 0.01 }}
+                              required
+                              InputProps={{
+                                startAdornment: (
+                                  <InputAdornment position="start">
+                                    <AttachMoneyIcon fontSize="small" color="action" />
+                                  </InputAdornment>
+                                ),
+                              }}
+                              sx={{
+                                '& .MuiOutlinedInput-root': {
+                                  borderRadius: 2,
+                                  bgcolor: 'grey.50',
+                                  '&:hover': { bgcolor: 'grey.100' },
+                                  '&.Mui-focused': {
+                                    bgcolor: 'white',
+                                    boxShadow: '0 0 0 3px rgba(79,172,254,0.1)'
+                                  }
+                                }
+                              }}
+                            />
+                          </Grid>
+                          <Grid item xs={12} sm={6}>
+                            <FormControl fullWidth>
+                              <InputLabel>Unit</InputLabel>
+                              <Select
+                                label="Unit"
+                                name="unit"
+                                value={form.unit}
+                                onChange={handleChange}
+                                required
+                                startAdornment={
+                                  <InputAdornment position="start">
+                                    <ScaleIcon fontSize="small" color="action" />
+                                  </InputAdornment>
+                                }
+                                sx={{
+                                  borderRadius: 2,
+                                  bgcolor: 'grey.50',
+                                  '&.Mui-focused': {
+                                    boxShadow: '0 0 0 3px rgba(79,172,254,0.1)'
+                                  }
+                                }}
+                              >
+                                {unitOptions.map((u) => (
+                                  <MenuItem key={u} value={u}>
+                                    <Box display="flex" alignItems="center" gap={1}>
+                                      <ScaleIcon fontSize="small" />
+                                      {u}
+                                    </Box>
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+                          </Grid>
+                        </Grid>
+
+                        <TextField
+                          label="Tax Rate (%)"
+                          name="tax_rate"
+                          type="number"
+                          value={form.tax_rate}
+                          onChange={handleChange}
+                          fullWidth
+                          inputProps={{ min: 0, step: 0.01 }}
+                          required
+                          sx={{ mt: 3 }}
+                          InputProps={{
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <PercentIcon fontSize="small" color="action" />
+                              </InputAdornment>
+                            ),
+                          }}
+                          helperText="GST/tax rate as per applicable regulations"
+                        />
+
+                        {productId && (
+                          <TextField
+                            label="Available Stock"
+                            name="stock"
+                            value={typeof form.stock === 'number' ? form.stock : 'Not Available'}
+                            fullWidth
+                            InputProps={{
+                              readOnly: true,
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <InventoryIcon fontSize="small" color="action" />
+                                </InputAdornment>
+                              ),
+                            }}
+                            sx={{
+                              mt: 3,
+                              '& .MuiOutlinedInput-root': {
+                                borderRadius: 2,
+                                bgcolor: 'info.50',
+                                '&.Mui-focused': {
+                                  boxShadow: '0 0 0 3px rgba(13,110,253,0.1)'
+                                }
+                              }
+                            }}
+                            helperText="Use Stock Adjustment to update inventory"
+                          />
+                        )}
+                      </CardContent>
+                    </Card>
+                  </Grid>
+
+                  {/* Description & Tips Section */}
+                  <Grid item xs={12} md={6}>
+                    <Card sx={{ mb: 3, borderRadius: 3, border: '1px solid', borderColor: 'grey.200', height: '100%' }}>
+                      <CardContent sx={{ p: 3, display: 'flex', flexDirection: 'column', height: '100%' }}>
+                        <Typography variant="h6" fontWeight={600} gutterBottom sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <DescriptionIcon color="primary" />
+                          Description & Details
+                        </Typography>
+
+                        <TextField
+                          label="Product Description"
+                          name="description"
+                          value={form.description}
+                          onChange={handleChange}
+                          fullWidth
+                          multiline
+                          rows={8}
+                          placeholder="Enter detailed product description, features, specifications..."
+                          InputProps={{
+                            startAdornment: (
+                              <InputAdornment position="start" sx={{ alignSelf: 'flex-start', mt: 2 }}>
+                                <DescriptionIcon fontSize="small" color="action" />
+                              </InputAdornment>
+                            ),
+                          }}
                           sx={{
+                            mb: 3,
                             '& .MuiOutlinedInput-root': {
-                              borderRadius: 3,
-                              bgcolor: 'grey.100',
-                              '& .MuiOutlinedInput-notchedOutline': {
-                                borderColor: 'grey.300',
+                              borderRadius: 2,
+                              bgcolor: 'grey.50',
+                              '&:hover': { bgcolor: 'grey.100' },
+                              '&.Mui-focused': {
+                                bgcolor: 'white',
+                                boxShadow: '0 0 0 3px rgba(79,172,254,0.1)'
                               }
                             }
                           }}
                         />
-                      )}
-                    </div>
-                  </Box>
+
+                        {/* Tips Section */}
+                        <Box
+                          sx={{
+                            mt: 'auto',
+                            p: 2.5,
+                            borderRadius: 2,
+                            bgcolor: 'info.50',
+                            border: '1px solid',
+                            borderColor: 'info.200'
+                          }}
+                        >
+                          <Box display="flex" alignItems="center" gap={1} mb={1.5}>
+                            <TipsIcon color="info" fontSize="small" />
+                            <Typography variant="body2" color="info.main" fontWeight={600}>
+                              Product Tips
+                            </Typography>
+                          </Box>
+                          <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
+                            • Use descriptive names for easy identification
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
+                            • Select appropriate category for better organization
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" display="block">
+                            • Include GST/tax rates as per regulations
+                          </Typography>
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Grid>
                 </Grid>
-                
-                <Grid item xs={12} sm={6}>
-                  <Box 
+
+                {/* Action Buttons */}
+                <Box display="flex" justifyContent="flex-end" gap={2} pt={3} mt={2} borderTop="1px solid" borderColor="grey.200">
+                  <Button
+                    type="button"
+                    variant="outlined"
+                    size="large"
+                    startIcon={<CancelIcon />}
+                    onClick={() => { if (onCancel) onCancel(); navigate("/products"); }}
                     sx={{
-                      p: 3,
-                      borderRadius: 3,
-                      bgcolor: 'success.50',
-                      border: '1px solid',
-                      borderColor: 'success.200',
-                      height: '100%',
-                      display: 'flex',
-                      flexDirection: 'column'
+                      borderRadius: 2,
+                      px: 3,
+                      textTransform: 'none',
+                      fontWeight: 600
                     }}
                   >
-                    <Box display="flex" alignItems="center" gap={2} mb={3}>
-                      <Avatar sx={{ bgcolor: 'success.100', color: 'success.main', width: 40, height: 40 }}>
-                        <DescriptionIcon />
-                      </Avatar>
-                      <Typography variant="h6" fontWeight={700} color="text.primary">
-                        Description & Details
-                      </Typography>
-                    </Box>
-                    
-                    <TextField
-                      label="Product Description"
-                      name="description"
-                      value={form.description}
-                      onChange={handleChange}
-                      fullWidth
-                      margin="normal"
-                      multiline
-                      minRows={8}
-                      className="add-edit-product-field"
-                      placeholder="Enter detailed product description, features, specifications..."
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start" sx={{ alignSelf: 'flex-start', mt: 2 }}>
-                            <DescriptionIcon color="action" />
-                          </InputAdornment>
-                        ),
-                      }}
-                      sx={{
-                        flex: 1,
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: 3,
-                          bgcolor: 'white',
-                          '&:hover': {
-                            bgcolor: 'grey.50',
-                            '& .MuiOutlinedInput-notchedOutline': {
-                              borderColor: 'success.main',
-                            }
-                          },
-                          '&.Mui-focused': {
-                            bgcolor: 'white',
-                            boxShadow: '0 0 0 3px rgba(76,175,80,0.1)'
-                          }
-                        }
-                      }}
-                    />
-                    
-                    {/* Info Tips */}
-                    <Box 
-                      sx={{
-                        mt: 2,
-                        p: 2,
-                        borderRadius: 2,
-                        bgcolor: 'info.50',
-                        border: '1px solid',
-                        borderColor: 'info.200'
-                      }}
-                    >
-                      <Typography variant="body2" color="info.main" fontWeight={600} gutterBottom>
-                        💡 Product Tips
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
-                        • Use descriptive names for easy identification
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
-                        • Select appropriate category for better organization
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" display="block">
-                        • Include GST/tax rates as per regulations
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Grid>
-                
-                <Grid item xs={12}>
-                  <Divider sx={{ my: 3, borderColor: 'rgba(102,126,234,0.1)' }} />
-                  <Box className="add-edit-product-actions">
-                    <Button
-                      type="submit"
-                      variant="contained"
-                      color="primary"
-                      disabled={loading}
-                      className="add-edit-product-btn add-edit-product-btn-primary"
-                      startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
-                      sx={{
-                        borderRadius: 3,
-                        px: 4,
-                        py: 1.5,
-                        textTransform: 'none',
-                        fontWeight: 700,
-                        fontSize: '1rem',
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        boxShadow: '0 8px 24px rgba(102,126,234,0.3)',
-                        '&:hover': {
-                          background: 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)',
-                          boxShadow: '0 12px 32px rgba(102,126,234,0.4)',
-                          transform: 'translateY(-2px)'
-                        },
-                        '&:disabled': {
-                          background: 'grey.300',
-                          transform: 'none',
-                          boxShadow: 'none'
-                        },
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      {productId ? "Update Product" : "Add Product"}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outlined"
-                      color="secondary"
-                      onClick={() => { if (onCancel) onCancel(); navigate("/products"); }}
-                      className="add-edit-product-btn add-edit-product-btn-cancel"
-                      startIcon={<CancelIcon />}
-                      sx={{
-                        borderRadius: 3,
-                        px: 4,
-                        py: 1.5,
-                        textTransform: 'none',
-                        fontWeight: 600,
-                        fontSize: '1rem',
-                        borderColor: 'grey.300',
-                        color: 'text.secondary',
-                        '&:hover': {
-                          borderColor: 'grey.400',
-                          bgcolor: 'grey.50',
-                          transform: 'translateY(-1px)'
-                        },
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  </Box>
-                </Grid>
-              </Grid>
-            </Box>
-          </Paper>
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    size="large"
+                    disabled={loading}
+                    startIcon={loading ? <CircularProgress size={18} color="inherit" /> : <SaveIcon />}
+                    sx={{
+                      borderRadius: 2,
+                      px: 3,
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                      boxShadow: '0 8px 24px rgba(79,172,254,0.3)',
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #3b9cef 0%, #00d9e6 100%)',
+                        boxShadow: '0 12px 32px rgba(79,172,254,0.4)',
+                        transform: 'translateY(-2px)'
+                      },
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    {productId ? "Update" : "Create"} Product
+                  </Button>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
         </Box>
       </Box>
       <Footer />

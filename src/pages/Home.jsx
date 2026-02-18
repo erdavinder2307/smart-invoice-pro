@@ -193,15 +193,15 @@ const Home = () => {
                 animate="visible"
                 variants={staggerContainer}
               >
-                <Grid container spacing={3} sx={{ height: '100%' }}>
+                <Grid container spacing={2} sx={{ height: '100%', justifyContent: 'center', alignItems: 'center' }}>
                   {[
                     { icon: <TrendingUp sx={{ fontSize: 48, color: 'primary.main', mb: 1 }} />, title: 'Save 10+ Hours Weekly', desc: 'Automated invoicing and smart workflows eliminate repetitive tasks' },
                     { icon: <Dashboard sx={{ fontSize: 48, color: 'secondary.main', mb: 1 }} />, title: 'Real-time Insights', desc: 'Get instant business analytics and performance metrics' },
                     { icon: <Security sx={{ fontSize: 48, color: 'warning.main', mb: 1 }} />, title: '99.9% Secure', desc: 'Enterprise-grade security with automatic data backups' },
                     { icon: <CloudUpload sx={{ fontSize: 48, color: 'error.main', mb: 1 }} />, title: 'Cloud-Based', desc: 'Access your data anywhere, anytime with cloud synchronization' }
                   ].map((item, index) => (
-                    <Grid item xs={12} sm={6} key={index} sx={{ display: 'flex', justifyContent: 'center' }}>
-                      <motion.div variants={fadeInUp} style={{ width: '100%' }}>
+                    <Grid item xs={6} key={index} sx={{ display: 'flex' }}>
+                      <motion.div variants={fadeInUp} style={{ width: '100%', display: 'flex' }}>
                         <Paper
                           component={motion.div}
                           whileHover={{ y: -10, boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}
@@ -212,20 +212,37 @@ const Home = () => {
                             bgcolor: 'rgba(255,255,255,0.95)',
                             backdropFilter: 'blur(10px)',
                             textAlign: 'center',
+                            height: 200,
                             width: '100%',
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
-                            justifyContent: 'center',
-                            minHeight: 180,
-                            height: '100%'
+                            justifyContent: 'space-between'
                           }}
                         >
-                          {item.icon}
-                          <Typography variant="h6" sx={{ fontWeight: 600, mb: 1, color: 'text.primary', fontSize: '1rem' }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 60 }}>
+                            {item.icon}
+                          </Box>
+                          <Typography
+                            variant="h6"
+                            sx={{
+                              fontWeight: 600,
+                              color: 'text.primary',
+                              fontSize: '1rem',
+                              lineHeight: 1.3,
+                              mb: 1
+                            }}
+                          >
                             {item.title}
                           </Typography>
-                          <Typography variant="body2" sx={{ color: 'text.secondary', lineHeight: 1.4, fontSize: '0.875rem' }}>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              color: 'text.secondary',
+                              lineHeight: 1.5,
+                              fontSize: '0.875rem'
+                            }}
+                          >
                             {item.desc}
                           </Typography>
                         </Paper>

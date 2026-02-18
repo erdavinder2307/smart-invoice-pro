@@ -1,0 +1,151 @@
+/* ============================================
+   WELCOME PROFILE CARD COMPONENT STYLES
+   ============================================
+   Extracted from customer/WelcomeProfileCard.jsx sx props
+   Preserves pixel-perfect rendering
+   ============================================ */
+
+/* Card Container */
+.welcome-card {
+    margin-bottom: 32px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    overflow: visible;
+    position: relative;
+}
+
+.welcome-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    border-radius: 20px 20px 0 0;
+}
+
+/* Card Content */
+.welcome-card-content {
+    padding: 32px;
+}
+
+/* Profile Section */
+.welcome-profile-section {
+    display: flex;
+    align-items: center;
+}
+
+.welcome-profile-section--mobile {
+    flex-direction: column;
+}
+
+.welcome-profile-section--desktop {
+    flex-direction: row;
+}
+
+/* Avatar */
+.welcome-avatar {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    font-size: 2rem;
+}
+
+.welcome-avatar--mobile {
+    margin-right: 0;
+    margin-bottom: 16px;
+}
+
+.welcome-avatar--desktop {
+    margin-right: 24px;
+    margin-bottom: 0;
+}
+
+.welcome-avatar-icon {
+    font-size: 3rem;
+}
+
+/* Profile Info */
+.welcome-profile-info--mobile {
+    text-align: center;
+}
+
+.welcome-profile-info--desktop {
+    text-align: left;
+}
+
+/* Welcome Title */
+.welcome-title {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+}
+
+/* Email Section */
+.welcome-email {
+    display: flex;
+    align-items: center;
+}
+
+.welcome-email--mobile {
+    justify-content: center;
+}
+
+.welcome-email--desktop {
+    justify-content: flex-start;
+}
+
+.welcome-email-icon {
+    margin-right: 8px;
+    color: #666;
+    font-size: 1.2rem;
+}
+
+.welcome-email-text {
+    font-size: 1.1rem;
+}
+
+/* Account ID */
+.welcome-account-id {
+    margin-top: 8px;
+}
+
+/* Actions Section */
+.welcome-actions {
+    display: flex;
+    gap: 16px;
+}
+
+.welcome-actions--mobile {
+    justify-content: center;
+    flex-direction: column;
+}
+
+.welcome-actions--desktop {
+    justify-content: flex-end;
+    flex-direction: row;
+}
+
+/* Logout Button */
+.welcome-logout-button {
+    border-color: #667eea;
+    color: #667eea;
+    border-width: 2px;
+    padding-left: 24px;
+    padding-right: 24px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    border-radius: 12px;
+}
+
+.welcome-logout-button:hover {
+    border-color: #764ba2;
+    color: #764ba2;
+    background-color: rgba(102, 126, 234, 0.05);
+}

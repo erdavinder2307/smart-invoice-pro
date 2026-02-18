@@ -17,6 +17,8 @@ import Features from './pages/Features';
 import Contact from './pages/Contact';
 import ThemeExample from './components/ThemeExample';
 import BankAccounts from './pages/BankAccounts';
+import ComingSoon from './pages/ComingSoon';
+import Profile from './pages/Profile';
 
 const AppRoutes = () => {
   return (
@@ -41,6 +43,15 @@ const AppRoutes = () => {
         <Route path="/products/edit/:id" element={<AddEditProduct />} />
         <Route path="/stock-adjustment" element={<StockAdjustment />} />
         <Route path="/bank-accounts" element={<BankAccounts />} />
+        <Route path="/profile" element={<Profile />} />
+
+        {/* Coming Soon Pages */}
+        <Route path="/api-docs" element={<ComingSoon />} />
+        <Route path="/support" element={<ComingSoon />} />
+        <Route path="/privacy" element={<ComingSoon />} />
+        <Route path="/terms" element={<ComingSoon />} />
+        <Route path="/cookies" element={<ComingSoon />} />
+        <Route path="/pricing" element={<ComingSoon />} />
       </Routes>
     </Router>
   );

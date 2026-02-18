@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -14,25 +14,44 @@ import {
   ListItemIcon,
   IconButton,
   Tooltip,
-  Divider
+  Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions
 } from '@mui/material';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Business,
   Login,
   Dashboard,
   Logout,
-  Person
+  Person,
+  Person as PersonIcon,
+  Settings as SettingsIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
+import '../../styles/components/header.css';
 
 const Header = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
 
   const [anchorElUser, setAnchorElUser] = useState(null);
+  const [shouldNavigateHome, setShouldNavigateHome] = useState(false);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+
+  // Navigate to home after logout completes and state updates
+  useEffect(() => {
+    if (shouldNavigateHome && !isAuthenticated) {
+      navigate('/');
+      setShouldNavigateHome(false);
+    }
+  }, [shouldNavigateHome, isAuthenticated, navigate]);
 
   const handleOpenUserMenu = (event) => {
     setAnchorElUser(event.currentTarget);
@@ -51,16 +70,56 @@ const Header = () => {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogoutClick = () => {
     handleCloseUserMenu();
+    setShowLogoutDialog(true);
+  };
+
+  const handleLogoutConfirm = () => {
+    setShowLogoutDialog(false);
     logout();
-    navigate('/');
+    setShouldNavigateHome(true);
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutDialog(false);
   };
 
   const handleDashboard = () => {
     handleCloseUserMenu();
     navigate('/dashboard');
   };
+
+  const handleProfile = () => {
+    handleCloseUserMenu();
+    navigate('/profile');
+  };
+
+  const handleSettings = () => {
+    handleCloseUserMenu();
+    navigate('/settings');
+  };
+
+  // Helper function to check if route is active
+  const isActiveRoute = (path) => {
+    if (path === '/') {
+      return location.pathname === '/';
+    }
+    return location.pathname.startsWith(path);
+  };
+
+  // Style for active menu item
+  const getMenuItemStyle = (path) => ({
+    color: isActiveRoute(path) ? 'primary.main' : 'text.primary',
+    fontWeight: isActiveRoute(path) ? 700 : 400,
+    borderBottom: isActiveRoute(path) ? '2px solid' : 'none',
+    borderColor: isActiveRoute(path) ? 'primary.main' : 'transparent',
+    '&:hover': {
+      bgcolor: 'grey.100',
+      borderBottom: '2px solid',
+      borderColor: 'primary.main'
+    }
+  });
 
   return (
     <AppBar
@@ -69,26 +128,20 @@ const Header = () => {
       sx={{ bgcolor: 'white', color: 'text.primary' }}
     >
       <Container maxWidth="lg">
-        <Toolbar sx={{ px: 0 }}>
+        <Toolbar className="header-toolbar">
           {/* Logo */}
           <Box
             component="a"
             href={isAuthenticated ? "/dashboard" : "/"}
             onClick={handleLogoClick}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              flexGrow: 1,
-              textDecoration: 'none',
-              cursor: 'pointer'
-            }}
+            className="header-logo"
           >
             <Business sx={{ color: 'primary.main', mr: 1, fontSize: 32 }} />
             <Typography
               variant="h6"
+              className="header-logo-text"
               sx={{
                 color: 'text.primary',
-                fontWeight: 700,
                 fontSize: isMobile ? '1.1rem' : '1.25rem'
               }}
             >
@@ -98,21 +151,16 @@ const Header = () => {
 
           {/* Navigation Links (Desktop) */}
           {!isMobile && (
-            <Box sx={{ display: 'flex', gap: 1, mr: 3 }}>
-              {!isAuthenticated ? (
-                // Public Links
-                <>
-                  <Button component={Link} to="/" color="inherit">Home</Button>
-                  <Button component={Link} to="/about" color="inherit">About</Button>
-                  <Button component={Link} to="/features" color="inherit">Features</Button>
-                  <Button component={Link} to="/contact" color="inherit">Contact</Button>
-                </>
-              ) : (
-                // Private Links (Optional/Reduced when logged in)
-                <>
-                  <Button component={Link} to="/dashboard" color="inherit">Dashboard</Button>
-                  <Button component={Link} to="/invoices" color="inherit">Invoices</Button>
-                </>
+            <Box className="header-nav-links">
+              {/* Public Links - Always visible */}
+              <Button component={Link} to="/" sx={getMenuItemStyle('/')}>Home</Button>
+              <Button component={Link} to="/about" sx={getMenuItemStyle('/about')}>About</Button>
+              <Button component={Link} to="/features" sx={getMenuItemStyle('/features')}>Features</Button>
+              <Button component={Link} to="/contact" sx={getMenuItemStyle('/contact')}>Contact</Button>
+
+              {/* Dashboard Link - Only when authenticated */}
+              {isAuthenticated && (
+                <Button component={Link} to="/dashboard" sx={getMenuItemStyle('/dashboard')}>Dashboard</Button>
               )}
             </Box>
           )}
@@ -124,19 +172,23 @@ const Header = () => {
               startIcon={<Login />}
               onClick={() => navigate('/login')}
               color="primary"
-              sx={{ borderRadius: 2, textTransform: 'none', px: 3 }}
+              className="header-login-button"
             >
               Login
             </Button>
           ) : (
-            <Box sx={{ flexGrow: 0 }}>
+            <Box className="header-user-container">
               <Tooltip title="Open settings">
-                <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
+                <IconButton onClick={handleOpenUserMenu} className="header-avatar-button">
                   <Avatar
                     alt={user?.username || "User"}
-                    sx={{ bgcolor: 'primary.main' }}
+                    src={user?.profile_image || user?.avatar}
+                    sx={{
+                      bgcolor: 'primary.main',
+                      background: user?.profile_image || user?.avatar ? 'transparent' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                    }}
                   >
-                    {user?.username ? user.username.charAt(0).toUpperCase() : <Person />}
+                    {!user?.profile_image && !user?.avatar && (user?.username ? user.username.charAt(0).toUpperCase() : <Person />)}
                   </Avatar>
                 </IconButton>
               </Tooltip>
@@ -177,11 +229,11 @@ const Header = () => {
                   }
                 }}
               >
-                <Box sx={{ px: 2, py: 1 }}>
-                  <Typography variant="subtitle2" noWrap>
+                <Box className="header-user-info">
+                  <Typography variant="subtitle2" className="header-user-name">
                     {user?.username || 'User'}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary" noWrap>
+                  <Typography variant="caption" color="text.secondary" className="header-user-role">
                     User Account
                   </Typography>
                 </Box>
@@ -192,7 +244,19 @@ const Header = () => {
                   </ListItemIcon>
                   Dashboard
                 </MenuItem>
-                <MenuItem onClick={handleLogout}>
+                <MenuItem onClick={handleProfile}>
+                  <ListItemIcon>
+                    <PersonIcon fontSize="small" />
+                  </ListItemIcon>
+                  Profile
+                </MenuItem>
+                <MenuItem onClick={handleSettings}>
+                  <ListItemIcon>
+                    <SettingsIcon fontSize="small" />
+                  </ListItemIcon>
+                  Settings
+                </MenuItem>
+                <MenuItem onClick={handleLogoutClick}>
                   <ListItemIcon>
                     <Logout fontSize="small" color="error" />
                   </ListItemIcon>
@@ -201,6 +265,31 @@ const Header = () => {
               </Menu>
             </Box>
           )}
+
+          {/* Logout Confirmation Dialog */}
+          <Dialog
+            open={showLogoutDialog}
+            onClose={handleLogoutCancel}
+            aria-labelledby="alert-dialog-title"
+            aria-describedby="alert-dialog-description"
+          >
+            <DialogTitle id="alert-dialog-title">
+              {"Confirm Sign Out"}
+            </DialogTitle>
+            <DialogContent>
+              <DialogContentText id="alert-dialog-description">
+                Are you sure you want to sign out of your account?
+              </DialogContentText>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleLogoutCancel} color="primary">
+                Cancel
+              </Button>
+              <Button onClick={handleLogoutConfirm} color="error" autoFocus>
+                Sign Out
+              </Button>
+            </DialogActions>
+          </Dialog>
         </Toolbar>
       </Container>
     </AppBar>

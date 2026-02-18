@@ -1,0 +1,68 @@
+/* ============================================
+   STATS CARD COMPONENT STYLES
+   ============================================
+   Extracted from customer/StatsCard.jsx sx props
+   Preserves pixel-perfect rendering
+   ============================================ */
+
+/* Card Container */
+.stats-card {
+    height: 140px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.stats-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* Card Content */
+.stats-card-content {
+    padding: 24px;
+    height: 100%;
+}
+
+/* Header Section */
+.stats-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+/* Avatar */
+.stats-card-avatar {
+    width: 48px;
+    height: 48px;
+}
+
+/* Trending Icon */
+.stats-card-trending {
+    font-size: 1.2rem;
+}
+
+/* Value Text */
+.stats-card-value {
+    margin-bottom: 4px;
+    font-size: 1.5rem;
+    color: #2c3e50;
+}
+
+/* Title Text */
+.stats-card-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* Subtitle Text */
+.stats-card-subtitle {
+    font-size: 0.75rem;
+    margin-top: 4px;
+    display: block;
+}

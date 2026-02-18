@@ -11,6 +11,7 @@ import {
   CalendarToday,
   GetApp
 } from "@mui/icons-material";
+import '../styles/components/dashboard-header.css';
 
 const DashboardHeader = () => {
   const theme = useTheme();
@@ -24,43 +25,19 @@ const DashboardHeader = () => {
   return (
     <Paper
       elevation={0}
+      className="dashboard-header"
       sx={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        p: 2,
-        borderRadius: 3,
-        border: '1px solid',
         borderColor: 'grey.300',
-        bgcolor: "grey.50",
-        gap: 2
+        bgcolor: "grey.50"
       }}
     >
       {/* Search Bar */}
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        flex: 1, 
-        maxWidth: 500,
-        position: 'relative'
-      }}>
-        <Search sx={{ 
-          position: 'absolute', 
-          left: 16, 
-          color: 'text.secondary',
-          zIndex: 1
-        }} />
+      <Box className="dashboard-search-container">
+        <Search className="dashboard-search-icon" sx={{ color: 'text.secondary' }} />
         <InputBase
           placeholder="Search invoices, customers, products..."
+          className="dashboard-search-input"
           sx={{
-            flex: 1,
-            pl: 6,
-            pr: 2,
-            py: 1.5,
-            borderRadius: 3,
-            bgcolor: "white",
-            fontSize: 16,
-            border: '1px solid',
             borderColor: 'grey.300',
             '&:hover': {
               borderColor: 'grey.400'
@@ -75,32 +52,26 @@ const DashboardHeader = () => {
       </Box>
 
       {/* Action Buttons */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Box className="dashboard-actions">
         {/* Date Chip */}
         <Chip
           icon={<CalendarToday />}
           label={currentDate}
           variant="outlined"
           size="medium"
+          className="dashboard-date-chip"
           sx={{
-            bgcolor: 'white',
-            borderColor: 'grey.300',
-            '& .MuiChip-label': {
-              fontSize: '0.875rem',
-              fontWeight: 500
-            }
+            borderColor: 'grey.300'
           }}
         />
 
         {/* Filter Button */}
-        <IconButton 
-          size="large" 
-          sx={{ 
-            bgcolor: 'white',
-            border: '1px solid',
+        <IconButton
+          size="large"
+          className="dashboard-action-button"
+          sx={{
             borderColor: 'grey.300',
-            borderRadius: 2,
-            '&:hover': { 
+            '&:hover': {
               bgcolor: 'grey.100',
               borderColor: 'grey.400'
             }
@@ -110,14 +81,12 @@ const DashboardHeader = () => {
         </IconButton>
 
         {/* Export Button */}
-        <IconButton 
-          size="large" 
-          sx={{ 
-            bgcolor: 'white',
-            border: '1px solid',
+        <IconButton
+          size="large"
+          className="dashboard-action-button"
+          sx={{
             borderColor: 'grey.300',
-            borderRadius: 2,
-            '&:hover': { 
+            '&:hover': {
               bgcolor: 'grey.100',
               borderColor: 'grey.400'
             }

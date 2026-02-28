@@ -6,7 +6,9 @@ import {
   Grid,
   Link,
   IconButton,
-  Divider
+  Divider,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import {
   Business,
@@ -18,131 +20,173 @@ import {
   LinkedIn,
   GitHub
 } from '@mui/icons-material';
-import '../../styles/components/footer.css';
+
 
 const Footer = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  const linkSx = {
+    textDecoration: 'none',
+    color: 'grey.300',
+    fontSize: '0.9rem',
+    py: 0.5,
+    display: 'block',
+    textAlign: { xs: 'center', md: 'left' },
+    '&:hover': { color: 'white' }
+  };
+
   return (
     <Box
       component="footer"
-      className="footer-container"
       sx={{
-        bgcolor: 'grey.800',
-        color: 'white'
+        bgcolor: 'grey.900',
+        color: 'white',
+        pt: { xs: 6, md: 8 },
+        pb: { xs: 4, md: 6 },
+        mt: 'auto'
       }}
     >
       <Container maxWidth="lg">
-        <Grid container spacing={4}>
-          {/* Company Info */}
+        <Grid container spacing={{ xs: 4, md: 5 }} justifyContent={{ xs: 'center', md: 'flex-start' }}>
+
+          {/* Company Info — full width on mobile */}
           <Grid item xs={12} md={4}>
-            <Box className="footer-company-header">
-              <Business sx={{ color: 'primary.main', mr: 1, fontSize: 32 }} />
-              <Typography variant="h6" className="footer-company-name">
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, justifyContent: { xs: 'center', md: 'flex-start' } }}>
+              <Business sx={{ color: 'primary.main', mr: 1, fontSize: 30 }} />
+              <Typography variant="h6" sx={{ fontWeight: 700, color: 'white', fontSize: '1.1rem' }}>
                 Smart Invoice Pro
               </Typography>
             </Box>
-            <Typography variant="body2" className="footer-company-description" sx={{ color: 'grey.400' }}>
+            <Typography variant="body2" sx={{ color: 'grey.400', mb: 3, lineHeight: 1.7, maxWidth: 320, textAlign: { xs: 'center', md: 'left' } }}>
               Simplifying invoicing and bookkeeping for modern businesses with
               AI-powered solutions and seamless user experience.
             </Typography>
 
-            {/* Social Links */}
-            <Box className="footer-social-links">
-              <IconButton size="small" sx={{ color: 'grey.400', '&:hover': { color: 'primary.main' } }}>
-                <Facebook />
-              </IconButton>
-              <IconButton size="small" sx={{ color: 'grey.400', '&:hover': { color: 'primary.main' } }}>
-                <Twitter />
-              </IconButton>
-              <IconButton size="small" sx={{ color: 'grey.400', '&:hover': { color: 'primary.main' } }}>
-                <LinkedIn />
-              </IconButton>
-              <IconButton size="small" sx={{ color: 'grey.400', '&:hover': { color: 'primary.main' } }}>
-                <GitHub />
-              </IconButton>
+            {/* Social Links — larger touch targets on mobile */}
+            <Box sx={{ display: 'flex', gap: 0.5, justifyContent: { xs: 'center', md: 'flex-start' } }}>
+              {[
+                { icon: <Facebook />, label: 'Facebook' },
+                { icon: <Twitter />, label: 'Twitter' },
+                { icon: <LinkedIn />, label: 'LinkedIn' },
+                { icon: <GitHub />, label: 'GitHub' },
+              ].map(({ icon, label }) => (
+                <IconButton
+                  key={label}
+                  size={isMobile ? 'medium' : 'small'}
+                  aria-label={label}
+                  sx={{
+                    color: 'grey.400',
+                    bgcolor: 'rgba(255,255,255,0.05)',
+                    borderRadius: 2,
+                    '&:hover': { color: 'white', bgcolor: 'primary.main' },
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {icon}
+                </IconButton>
+              ))}
             </Box>
           </Grid>
 
-          {/* Quick Links */}
-          <Grid item xs={12} sm={6} md={2}>
-            <Typography variant="h6" className="footer-section-heading">
+          {/* Quick Links + Product — side by side on mobile, separate columns on desktop */}
+          <Grid item xs={6} sm={6} md={2}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: 'white', letterSpacing: 0.5, textAlign: { xs: 'center', md: 'left' } }}>
               Quick Links
             </Typography>
-            <Box className="footer-links-container">
-              <Link href="/" className="footer-link" sx={{ color: 'grey.300', '&:hover': { color: 'white' } }}>
-                Home
-              </Link>
-              <Link href="/about" className="footer-link" sx={{ color: 'grey.300', '&:hover': { color: 'white' } }}>
-                About
-              </Link>
-              <Link href="/features" className="footer-link" sx={{ color: 'grey.300', '&:hover': { color: 'white' } }}>
-                Features
-              </Link>
-              <Link href="/contact" className="footer-link" sx={{ color: 'grey.300', '&:hover': { color: 'white' } }}>
-                Contact
-              </Link>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: { xs: 'center', md: 'flex-start' } }}>
+              {[
+                { label: 'Home', href: '/' },
+                { label: 'About', href: '/about' },
+                { label: 'Features', href: '/features' },
+                { label: 'Contact', href: '/contact' },
+              ].map(({ label, href }) => (
+                <Link key={label} href={href} sx={linkSx}>{label}</Link>
+              ))}
             </Box>
           </Grid>
 
-          {/* Product Links */}
-          <Grid item xs={12} sm={6} md={3}>
-            <Typography variant="h6" className="footer-section-heading">
+          <Grid item xs={6} sm={6} md={3}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: 'white', letterSpacing: 0.5, textAlign: { xs: 'center', md: 'left' } }}>
               Product
             </Typography>
-            <Box className="footer-links-container">
-              <Link href="/login" className="footer-link" sx={{ color: 'grey.300', '&:hover': { color: 'white' } }}>
-                Dashboard
-              </Link>
-              <Link href="/customer/login" className="footer-link" sx={{ color: 'grey.300', '&:hover': { color: 'white' } }}>
-                Customer Portal
-              </Link>
-              <Link href="/api-docs" className="footer-link" sx={{ color: 'grey.300', '&:hover': { color: 'white' } }}>
-                API Documentation
-              </Link>
-              <Link href="/support" className="footer-link" sx={{ color: 'grey.300', '&:hover': { color: 'white' } }}>
-                Support
-              </Link>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: { xs: 'center', md: 'flex-start' } }}>
+              {[
+                { label: 'Dashboard', href: '/login' },
+                { label: 'Customer Portal', href: '/customer/login' },
+                { label: 'API Docs', href: '/api-docs' },
+                { label: 'Support', href: '/support' },
+              ].map(({ label, href }) => (
+                <Link key={label} href={href} sx={linkSx}>{label}</Link>
+              ))}
             </Box>
           </Grid>
 
-          {/* Contact Info */}
+          {/* Contact Info — full width on mobile */}
           <Grid item xs={12} sm={12} md={3}>
-            <Typography variant="h6" className="footer-section-heading">
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: 'white', letterSpacing: 0.5, textAlign: { xs: 'center', md: 'left' } }}>
               Contact Info
             </Typography>
-            <Box className="footer-links-container">
-              <Typography variant="body2" className="footer-contact-item" sx={{ color: 'grey.300' }}>
-                <Email className="footer-contact-icon" />
-                admin@solidevelectrosoft.com
-              </Typography>
-              <Typography variant="body2" className="footer-contact-item" sx={{ color: 'grey.300' }}>
-                <Phone className="footer-contact-icon" />
-                +91 9115866828
-              </Typography>
-              <Typography variant="body2" className="footer-contact-item" sx={{ color: 'grey.300' }}>
-                <LocationOn className="footer-contact-icon" />
-                Next57 Coworking, Cabin No - 11,  C205 Sm Heights Industrial Area Phase 8b Mohali, 140308
-              </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: { xs: 'center', md: 'flex-start' } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, justifyContent: { xs: 'center', md: 'flex-start' } }}>
+                <Box sx={{ flexShrink: 0, color: 'primary.light' }}>
+                  <Email sx={{ fontSize: 18 }} />
+                </Box>
+                <Typography variant="body2" sx={{ color: 'grey.300', wordBreak: 'break-all' }}>
+                  admin@solidevelectrosoft.com
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, justifyContent: { xs: 'center', md: 'flex-start' } }}>
+                <Box sx={{ flexShrink: 0, color: 'primary.light' }}>
+                  <Phone sx={{ fontSize: 18 }} />
+                </Box>
+                <Typography variant="body2" sx={{ color: 'grey.300' }}>
+                  +91 9115866828
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, justifyContent: { xs: 'center', md: 'flex-start' } }}>
+                <Box sx={{ flexShrink: 0, color: 'primary.light', mt: 0.2 }}>
+                  <LocationOn sx={{ fontSize: 18 }} />
+                </Box>
+                <Typography variant="body2" sx={{ color: 'grey.300', lineHeight: 1.6 }}>
+                  Next57 Coworking, Cabin No - 11, C205 Sm Heights,
+                  Industrial Area Phase 8b, Mohali 140308
+                </Typography>
+              </Box>
             </Box>
           </Grid>
         </Grid>
 
-        <Divider className="footer-divider" sx={{ borderColor: 'grey.600' }} />
+        <Divider sx={{ my: { xs: 4, md: 5 }, borderColor: 'grey.700' }} />
 
-        {/* Bottom Section */}
-        <Box className="footer-bottom">
-          <Typography variant="body2" sx={{ color: 'grey.400' }}>
-            © 2024 Smart Invoice Pro. All rights reserved.
+        {/* Bottom bar — stacked and centered on mobile */}
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 2,
+            textAlign: { xs: 'center', sm: 'left' }
+          }}
+        >
+          <Typography variant="body2" sx={{ color: 'grey.500' }}>
+            © {new Date().getFullYear()} Smart Invoice Pro. All rights reserved.
           </Typography>
-          <Box className="footer-bottom-links">
-            <Link href="/privacy" className="footer-bottom-link" sx={{ color: 'grey.400', '&:hover': { color: 'white' } }}>
-              Privacy Policy
-            </Link>
-            <Link href="/terms" className="footer-bottom-link" sx={{ color: 'grey.400', '&:hover': { color: 'white' } }}>
-              Terms of Service
-            </Link>
-            <Link href="/cookies" className="footer-bottom-link" sx={{ color: 'grey.400', '&:hover': { color: 'white' } }}>
-              Cookie Policy
-            </Link>
+          <Box sx={{ display: 'flex', gap: { xs: 2, sm: 3 }, flexWrap: 'wrap', justifyContent: 'center' }}>
+            {[
+              { label: 'Privacy Policy', href: '/privacy' },
+              { label: 'Terms of Service', href: '/terms' },
+              { label: 'Cookie Policy', href: '/cookies' },
+            ].map(({ label, href }) => (
+              <Link
+                key={label}
+                href={href}
+                sx={{ textDecoration: 'none', fontSize: '0.8rem', color: 'grey.500', '&:hover': { color: 'white' } }}
+              >
+                {label}
+              </Link>
+            ))}
           </Box>
         </Box>
       </Container>

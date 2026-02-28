@@ -185,7 +185,8 @@ const Features = () => {
                     fontWeight: 700,
                     mb: 3,
                     lineHeight: 1.2,
-                    color: 'white'
+                    color: 'white',
+                    fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' }
                   }}
                 >
                   Powerful Features for Smarter Business
@@ -277,11 +278,14 @@ const Features = () => {
                                 key={idx}
                                 label={highlight}
                                 size="small"
+                                variant="outlined"
                                 sx={{
-                                  bgcolor: 'primary.light',
-                                  color: 'primary.dark',
+                                  borderColor: 'primary.main',
+                                  color: 'primary.main',
                                   fontWeight: 500,
-                                  borderRadius: 2
+                                  borderRadius: 2,
+                                  bgcolor: 'primary.50',
+                                  '& .MuiChip-label': { px: 1.5 }
                                 }}
                               />
                             ))}

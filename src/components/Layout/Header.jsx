@@ -19,7 +19,12 @@ import {
   DialogTitle,
   DialogContent,
   DialogContentText,
-  DialogActions
+  DialogActions,
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText
 } from '@mui/material';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -29,10 +34,12 @@ import {
   Logout,
   Person,
   Person as PersonIcon,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Menu as MenuIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
-import '../../styles/components/header.css';
+
 
 const Header = () => {
   const theme = useTheme();
@@ -44,6 +51,7 @@ const Header = () => {
   const [anchorElUser, setAnchorElUser] = useState(null);
   const [shouldNavigateHome, setShouldNavigateHome] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
   // Navigate to home after logout completes and state updates
   useEffect(() => {
@@ -52,6 +60,11 @@ const Header = () => {
       setShouldNavigateHome(false);
     }
   }, [shouldNavigateHome, isAuthenticated, navigate]);
+
+  // Close drawer on route change
+  useEffect(() => {
+    setMobileDrawerOpen(false);
+  }, [location.pathname]);
 
   const handleOpenUserMenu = (event) => {
     setAnchorElUser(event.currentTarget);
@@ -121,178 +134,264 @@ const Header = () => {
     }
   });
 
+  const navLinks = [
+    { label: 'Home', path: '/' },
+    { label: 'About', path: '/about' },
+    { label: 'Features', path: '/features' },
+    { label: 'Contact', path: '/contact' },
+    ...(isAuthenticated ? [{ label: 'Dashboard', path: '/dashboard' }] : []),
+  ];
+
   return (
-    <AppBar
-      position="sticky"
-      elevation={1}
-      sx={{ bgcolor: 'white', color: 'text.primary' }}
-    >
-      <Container maxWidth="lg">
-        <Toolbar className="header-toolbar">
-          {/* Logo */}
-          <Box
-            component="a"
-            href={isAuthenticated ? "/dashboard" : "/"}
-            onClick={handleLogoClick}
-            className="header-logo"
-          >
-            <Business sx={{ color: 'primary.main', mr: 1, fontSize: 32 }} />
-            <Typography
-              variant="h6"
-              className="header-logo-text"
-              sx={{
-                color: 'text.primary',
-                fontSize: isMobile ? '1.1rem' : '1.25rem'
-              }}
+    <>
+      <AppBar
+        position="sticky"
+        elevation={1}
+        sx={{ bgcolor: 'white', color: 'text.primary' }}
+      >
+        <Container maxWidth="lg">
+          <Toolbar sx={{ px: 0 }}>
+            {/* Hamburger — mobile only */}
+            {isMobile && (
+              <IconButton
+                edge="start"
+                onClick={() => setMobileDrawerOpen(true)}
+                sx={{ mr: 1, color: 'text.primary' }}
+                aria-label="open navigation menu"
+              >
+                <MenuIcon />
+              </IconButton>
+            )}
+
+            {/* Logo */}
+            <Box
+              component="a"
+              href={isAuthenticated ? "/dashboard" : "/"}
+              onClick={handleLogoClick}
+              sx={{ display: 'flex', alignItems: 'center', flexGrow: 1, textDecoration: 'none', cursor: 'pointer' }}
             >
+              <Business sx={{ color: 'primary.main', mr: 1, fontSize: 32 }} />
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: 700,
+                  color: 'text.primary',
+                  fontSize: isMobile ? '1rem' : '1.25rem'
+                }}
+              >
+                Smart Invoice Pro
+              </Typography>
+            </Box>
+
+            {/* Navigation Links (Desktop) */}
+            {!isMobile && (
+              <Box sx={{ display: 'flex', gap: 1, mr: 3 }}>
+                {navLinks.map((link) => (
+                  <Button key={link.path} component={Link} to={link.path} sx={getMenuItemStyle(link.path)}>
+                    {link.label}
+                  </Button>
+                ))}
+              </Box>
+            )}
+
+            {/* Auth Action */}
+            {!isAuthenticated ? (
+              <Button
+                variant="contained"
+                startIcon={<Login />}
+                onClick={() => navigate('/login')}
+                color="primary"
+                size={isMobile ? 'small' : 'medium'}
+                sx={{ borderRadius: 1, textTransform: 'none', px: isMobile ? 2 : 3 }}
+              >
+                Login
+              </Button>
+            ) : (
+              <Box sx={{ flexGrow: 0 }}>
+                <Tooltip title="Open settings">
+                  <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
+                    <Avatar
+                      alt={user?.username || "User"}
+                      src={user?.profile_image || user?.avatar}
+                      sx={{
+                        bgcolor: 'primary.main',
+                        background: user?.profile_image || user?.avatar ? 'transparent' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                      }}
+                    >
+                      {!user?.profile_image && !user?.avatar && (user?.username ? user.username.charAt(0).toUpperCase() : <Person />)}
+                    </Avatar>
+                  </IconButton>
+                </Tooltip>
+                <Menu
+                  sx={{ mt: '45px' }}
+                  id="menu-appbar"
+                  anchorEl={anchorElUser}
+                  anchorOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right',
+                  }}
+                  keepMounted
+                  transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right',
+                  }}
+                  open={Boolean(anchorElUser)}
+                  onClose={handleCloseUserMenu}
+                  PaperProps={{
+                    elevation: 3,
+                    sx: {
+                      borderRadius: 2,
+                      minWidth: 180,
+                      overflow: 'visible',
+                      mt: 1.5,
+                      '&:before': {
+                        content: '""',
+                        display: 'block',
+                        position: 'absolute',
+                        top: 0,
+                        right: 14,
+                        width: 10,
+                        height: 10,
+                        bgcolor: 'background.paper',
+                        transform: 'translateY(-50%) rotate(45deg)',
+                        zIndex: 0,
+                      },
+                    }
+                  }}
+                >
+                  <Box sx={{ px: 2, py: 1 }}>
+                    <Typography variant="subtitle2" sx={{ whiteSpace: 'nowrap' }}>
+                      {user?.username || 'User'}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+                      User Account
+                    </Typography>
+                  </Box>
+                  <Divider />
+                  <MenuItem onClick={handleDashboard}>
+                    <ListItemIcon>
+                      <Dashboard fontSize="small" />
+                    </ListItemIcon>
+                    Dashboard
+                  </MenuItem>
+                  <MenuItem onClick={handleProfile}>
+                    <ListItemIcon>
+                      <PersonIcon fontSize="small" />
+                    </ListItemIcon>
+                    Profile
+                  </MenuItem>
+                  <MenuItem onClick={handleSettings}>
+                    <ListItemIcon>
+                      <SettingsIcon fontSize="small" />
+                    </ListItemIcon>
+                    Settings
+                  </MenuItem>
+                  <MenuItem onClick={handleLogoutClick}>
+                    <ListItemIcon>
+                      <Logout fontSize="small" color="error" />
+                    </ListItemIcon>
+                    <Typography color="error">Logout</Typography>
+                  </MenuItem>
+                </Menu>
+              </Box>
+            )}
+
+            {/* Logout Confirmation Dialog */}
+            <Dialog
+              open={showLogoutDialog}
+              onClose={handleLogoutCancel}
+              aria-labelledby="alert-dialog-title"
+              aria-describedby="alert-dialog-description"
+            >
+              <DialogTitle id="alert-dialog-title">
+                {"Confirm Sign Out"}
+              </DialogTitle>
+              <DialogContent>
+                <DialogContentText id="alert-dialog-description">
+                  Are you sure you want to sign out of your account?
+                </DialogContentText>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={handleLogoutCancel} color="primary">
+                  Cancel
+                </Button>
+                <Button onClick={handleLogoutConfirm} color="error" autoFocus>
+                  Sign Out
+                </Button>
+              </DialogActions>
+            </Dialog>
+          </Toolbar>
+        </Container>
+      </AppBar>
+
+      {/* Mobile Navigation Drawer */}
+      <Drawer
+        anchor="left"
+        open={mobileDrawerOpen}
+        onClose={() => setMobileDrawerOpen(false)}
+        PaperProps={{
+          sx: {
+            width: 280,
+            pt: 2,
+          }
+        }}
+      >
+        {/* Drawer Header */}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, pb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Business sx={{ color: 'primary.main', fontSize: 28 }} />
+            <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1rem' }}>
               Smart Invoice Pro
             </Typography>
           </Box>
+          <IconButton onClick={() => setMobileDrawerOpen(false)} size="small">
+            <CloseIcon />
+          </IconButton>
+        </Box>
+        <Divider />
 
-          {/* Navigation Links (Desktop) */}
-          {!isMobile && (
-            <Box className="header-nav-links">
-              {/* Public Links - Always visible */}
-              <Button component={Link} to="/" sx={getMenuItemStyle('/')}>Home</Button>
-              <Button component={Link} to="/about" sx={getMenuItemStyle('/about')}>About</Button>
-              <Button component={Link} to="/features" sx={getMenuItemStyle('/features')}>Features</Button>
-              <Button component={Link} to="/contact" sx={getMenuItemStyle('/contact')}>Contact</Button>
-
-              {/* Dashboard Link - Only when authenticated */}
-              {isAuthenticated && (
-                <Button component={Link} to="/dashboard" sx={getMenuItemStyle('/dashboard')}>Dashboard</Button>
-              )}
-            </Box>
-          )}
-
-          {/* Auth Action */}
-          {!isAuthenticated ? (
-            <Button
-              variant="contained"
-              startIcon={<Login />}
-              onClick={() => navigate('/login')}
-              color="primary"
-              className="header-login-button"
-            >
-              Login
-            </Button>
-          ) : (
-            <Box className="header-user-container">
-              <Tooltip title="Open settings">
-                <IconButton onClick={handleOpenUserMenu} className="header-avatar-button">
-                  <Avatar
-                    alt={user?.username || "User"}
-                    src={user?.profile_image || user?.avatar}
-                    sx={{
-                      bgcolor: 'primary.main',
-                      background: user?.profile_image || user?.avatar ? 'transparent' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                    }}
-                  >
-                    {!user?.profile_image && !user?.avatar && (user?.username ? user.username.charAt(0).toUpperCase() : <Person />)}
-                  </Avatar>
-                </IconButton>
-              </Tooltip>
-              <Menu
-                sx={{ mt: '45px' }}
-                id="menu-appbar"
-                anchorEl={anchorElUser}
-                anchorOrigin={{
-                  vertical: 'top',
-                  horizontal: 'right',
-                }}
-                keepMounted
-                transformOrigin={{
-                  vertical: 'top',
-                  horizontal: 'right',
-                }}
-                open={Boolean(anchorElUser)}
-                onClose={handleCloseUserMenu}
-                PaperProps={{
-                  elevation: 3,
-                  sx: {
-                    borderRadius: 2,
-                    minWidth: 180,
-                    overflow: 'visible',
-                    mt: 1.5,
-                    '&:before': {
-                      content: '""',
-                      display: 'block',
-                      position: 'absolute',
-                      top: 0,
-                      right: 14,
-                      width: 10,
-                      height: 10,
-                      bgcolor: 'background.paper',
-                      transform: 'translateY(-50%) rotate(45deg)',
-                      zIndex: 0,
-                    },
+        {/* Nav Links */}
+        <List sx={{ pt: 1 }}>
+          {navLinks.map((link) => (
+            <ListItem key={link.path} disablePadding>
+              <ListItemButton
+                component={Link}
+                to={link.path}
+                selected={isActiveRoute(link.path)}
+                sx={{
+                  mx: 1,
+                  borderRadius: 2,
+                  '&.Mui-selected': {
+                    bgcolor: 'primary.50',
+                    color: 'primary.main',
+                    '& .MuiListItemText-primary': { fontWeight: 700 }
                   }
                 }}
               >
-                <Box className="header-user-info">
-                  <Typography variant="subtitle2" className="header-user-name">
-                    {user?.username || 'User'}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" className="header-user-role">
-                    User Account
-                  </Typography>
-                </Box>
-                <Divider />
-                <MenuItem onClick={handleDashboard}>
-                  <ListItemIcon>
-                    <Dashboard fontSize="small" />
-                  </ListItemIcon>
-                  Dashboard
-                </MenuItem>
-                <MenuItem onClick={handleProfile}>
-                  <ListItemIcon>
-                    <PersonIcon fontSize="small" />
-                  </ListItemIcon>
-                  Profile
-                </MenuItem>
-                <MenuItem onClick={handleSettings}>
-                  <ListItemIcon>
-                    <SettingsIcon fontSize="small" />
-                  </ListItemIcon>
-                  Settings
-                </MenuItem>
-                <MenuItem onClick={handleLogoutClick}>
-                  <ListItemIcon>
-                    <Logout fontSize="small" color="error" />
-                  </ListItemIcon>
-                  <Typography color="error">Logout</Typography>
-                </MenuItem>
-              </Menu>
-            </Box>
-          )}
+                <ListItemText primary={link.label} />
+              </ListItemButton>
+            </ListItem>
+          ))}
+        </List>
 
-          {/* Logout Confirmation Dialog */}
-          <Dialog
-            open={showLogoutDialog}
-            onClose={handleLogoutCancel}
-            aria-labelledby="alert-dialog-title"
-            aria-describedby="alert-dialog-description"
-          >
-            <DialogTitle id="alert-dialog-title">
-              {"Confirm Sign Out"}
-            </DialogTitle>
-            <DialogContent>
-              <DialogContentText id="alert-dialog-description">
-                Are you sure you want to sign out of your account?
-              </DialogContentText>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={handleLogoutCancel} color="primary">
-                Cancel
-              </Button>
-              <Button onClick={handleLogoutConfirm} color="error" autoFocus>
-                Sign Out
-              </Button>
-            </DialogActions>
-          </Dialog>
-        </Toolbar>
-      </Container>
-    </AppBar>
+        <Divider sx={{ mt: 1 }} />
+
+        {/* Login CTA in drawer */}
+        {!isAuthenticated && (
+          <Box sx={{ p: 2 }}>
+            <Button
+              fullWidth
+              variant="contained"
+              startIcon={<Login />}
+              onClick={() => { navigate('/login'); setMobileDrawerOpen(false); }}
+              sx={{ borderRadius: 2, textTransform: 'none', py: 1.5 }}
+            >
+              Login
+            </Button>
+          </Box>
+        )}
+      </Drawer>
+    </>
   );
 };
 

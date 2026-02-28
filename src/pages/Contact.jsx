@@ -175,14 +175,14 @@ const Contact = () => {
               <Paper
                 elevation={0}
                 sx={{
-                  p: { xs: 4, md: 6 },
+                  p: { xs: 2, sm: 4, md: 6 },
                   borderRadius: 6,
                   border: '1px solid #eef2f6',
                   boxShadow: '0 20px 60px rgba(0,0,0,0.03)',
                   bgcolor: 'white'
                 }}
               >
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 4, justifyContent: { xs: 'center', sm: 'flex-start' } }}>
                   <Send sx={{ color: '#3b82f6', mr: 1.5, fontSize: 28 }} />
                   <Typography variant="h5" sx={{ fontWeight: 700, color: '#1e293b' }}>
                     Send us a Message
@@ -202,9 +202,9 @@ const Contact = () => {
                 )}
 
                 <Box component="form" onSubmit={handleSubmit}>
-                  <Grid container spacing={3}>
-                    <Grid item xs={6}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#334155' }}>
+                  <Grid container spacing={3} justifyContent={{ xs: 'center', sm: 'flex-start' }}>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#334155', textAlign: { xs: 'center', sm: 'left' } }}>
                         Your Name <span style={{ color: '#ef4444' }}>*</span>
                       </Typography>
                       <TextField
@@ -230,8 +230,8 @@ const Contact = () => {
                         }}
                       />
                     </Grid>
-                    <Grid item xs={6}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#334155' }}>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#334155', textAlign: { xs: 'center', sm: 'left' } }}>
                         Email Address <span style={{ color: '#ef4444' }}>*</span>
                       </Typography>
                       <TextField
@@ -258,8 +258,8 @@ const Contact = () => {
                         }}
                       />
                     </Grid>
-                    <Grid item xs={6}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#334155' }}>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#334155', textAlign: { xs: 'center', sm: 'left' } }}>
                         Phone Number
                       </Typography>
                       <TextField
@@ -284,8 +284,8 @@ const Contact = () => {
                         }}
                       />
                     </Grid>
-                    <Grid item xs={6}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#334155' }}>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#334155', textAlign: { xs: 'center', sm: 'left' } }}>
                         Subject <span style={{ color: '#ef4444' }}>*</span>
                       </Typography>
                       <TextField
@@ -312,7 +312,7 @@ const Contact = () => {
                       />
                     </Grid>
                     <Grid item xs={12}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#334155' }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#334155', textAlign: { xs: 'center', sm: 'left' } }}>
                         Message <span style={{ color: '#ef4444' }}>*</span>
                       </Typography>
                       <TextField
@@ -405,7 +405,7 @@ const Contact = () => {
 
       {/* Contact Info */}
       <Container maxWidth="lg" sx={{ pb: 12 }}>
-        <Grid container spacing={4}>
+        <Grid container spacing={4} justifyContent={{ xs: 'center', md: 'flex-start' }}>
           {contactInfo.map((info, index) => (
             <Grid item xs={12} md={4} key={index}>
               <motion.div
@@ -432,12 +432,21 @@ const Contact = () => {
                   }}
                 >
                   <CardContent sx={{ p: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                    <Box sx={
+                      {
+                        display: 'flex',
+                        flexDirection: { xs: 'column', md: 'row' },
+                        alignItems: { xs: 'center', md: 'flex-start' },
+                        textAlign: { xs: 'center', md: 'left' },
+                        gap: 2
+                      }
+                    }>
                       <Box sx={{
                         p: 1.5,
                         bgcolor: 'rgba(241, 245, 249, 0.5)',
                         borderRadius: 3,
-                        color: info.icon.props.sx.color
+                        color: info.icon.props.sx.color,
+                        flexShrink: 0
                       }}>
                         {info.icon}
                       </Box>

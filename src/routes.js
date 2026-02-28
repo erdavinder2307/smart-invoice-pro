@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import InvoiceList from './components/InvoiceList';
 import AddEditInvoice from './components/AddEditInvoice';
 import CustomerList from './components/CustomerList';
+import AddEditCustomer from './components/AddEditCustomer';
 import ProductList from './components/ProductList';
 import AddEditProduct from './components/AddEditProduct';
 import StockAdjustment from './components/StockAdjustment';
@@ -35,6 +36,8 @@ const AppRoutes = () => {
         <Route path="/invoices/add" element={<AddEditInvoice />} />
         <Route path="/invoices/edit/:id" element={<AddEditInvoice />} />
         <Route path="/customers" element={<CustomerList />} />
+        <Route path="/customers/add" element={<AddEditCustomer />} />
+        <Route path="/customers/edit/:id" element={<AddEditCustomer />} />
         <Route path="/customer/login" element={<CustomerLogin />} />
         <Route path="/customer/dashboard" element={<CustomerDashboard />} />
         <Route path="/customer/invoices/:id" element={<CustomerInvoiceDetail />} />

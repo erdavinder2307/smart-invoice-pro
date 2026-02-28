@@ -7,29 +7,44 @@ import {
   Avatar
 } from '@mui/material';
 import { TrendingUp } from '@mui/icons-material';
-import '../../styles/components/stats-card.css';
 
 const StatsCard = ({ title, value, subtitle, icon, color, iconColor }) => {
   return (
-    <Card className="stats-card">
-      <CardContent className="stats-card-content">
-        <Box className="stats-card-header">
+    <Card
+      sx={{
+        height: 140,
+        background: 'rgba(255, 255, 255, 0.95)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(255, 255, 255, 0.2)',
+        borderRadius: '16px',
+        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
+        transition: 'all 0.3s ease',
+        cursor: 'pointer',
+        '&:hover': {
+          transform: 'translateY(-5px)',
+          boxShadow: '0 15px 40px rgba(0, 0, 0, 0.15)',
+        }
+      }}
+    >
+      <CardContent sx={{ p: 3, height: '100%' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Avatar
-            className="stats-card-avatar"
             sx={{
+              width: 48,
+              height: 48,
               backgroundColor: color,
               color: iconColor
             }}
           >
             {icon}
           </Avatar>
-          <TrendingUp className="stats-card-trending" sx={{ color: '#4caf50' }} />
+          <TrendingUp sx={{ color: 'success.main', fontSize: '1.2rem' }} />
         </Box>
 
         <Typography
           variant="h5"
           fontWeight="bold"
-          className="stats-card-value"
+          sx={{ mb: 0.5, fontSize: '1.5rem', color: 'text.primary' }}
         >
           {value}
         </Typography>
@@ -37,7 +52,7 @@ const StatsCard = ({ title, value, subtitle, icon, color, iconColor }) => {
         <Typography
           variant="body2"
           color="text.secondary"
-          className="stats-card-title"
+          sx={{ fontSize: '0.9rem', fontWeight: 500 }}
         >
           {title}
         </Typography>
@@ -46,7 +61,7 @@ const StatsCard = ({ title, value, subtitle, icon, color, iconColor }) => {
           <Typography
             variant="caption"
             color="text.secondary"
-            className="stats-card-subtitle"
+            sx={{ fontSize: '0.75rem', mt: 0.5, display: 'block' }}
           >
             {subtitle}
           </Typography>

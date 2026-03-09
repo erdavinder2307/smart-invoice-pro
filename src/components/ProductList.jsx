@@ -1,17 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { getProducts, deleteProduct } from "../services/productService";
 import MainLayout from "./Layout/MainLayout";
+import SectionHeader from "./common/SectionHeader";
+import StandardDataTable from "./common/StandardDataTable";
+import axios from "axios";
+import { createApiUrl } from "../config/api";
 import {
   Box,
   Button,
   Typography,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   CircularProgress,
   Alert,
   IconButton,
@@ -41,12 +38,11 @@ import SearchIcon from '@mui/icons-material/Search';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import CategoryIcon from '@mui/icons-material/Category';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
-import ScaleIcon from '@mui/icons-material/Scale';
 import PercentIcon from '@mui/icons-material/Percent';
 import WarningIcon from '@mui/icons-material/Warning';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
-import FilterListIcon from '@mui/icons-material/FilterList';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 
 const ProductList = () => {
   const [products, setProducts] = useState([]);
@@ -55,9 +51,17 @@ const ProductList = () => {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
+  const [stockFilter, setStockFilter] = useState("All");
   const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const navigate = useNavigate();
+
+  // Helper function to get available quantity - defined before use
+  const getAvailableQuantity = (product) => {
+    return typeof product.stock === 'number' ? product.stock :
+      (typeof product.opening_stock === 'number' && typeof product.sold === 'number' ?
+        (product.opening_stock - product.sold) : 0);
+  };
 
   const filteredProducts = products.filter(product => {
     const matchesSearch =
@@ -66,8 +70,21 @@ const ProductList = () => {
       product.category?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesCategory = categoryFilter === "All" || product.category === categoryFilter;
+    
+    // Apply stock filter
+    const availableQty = getAvailableQuantity(product);
+    const reorderLevel = product.reorder_level || 10;
+    let matchesStock = true;
+    
+    if (stockFilter === "Low Stock") {
+      matchesStock = availableQty > 0 && availableQty <= reorderLevel;
+    } else if (stockFilter === "Out of Stock") {
+      matchesStock = availableQty <= 0;
+    } else if (stockFilter === "In Stock") {
+      matchesStock = availableQty > reorderLevel;
+    }
 
-    return matchesSearch && matchesCategory;
+    return matchesSearch && matchesCategory && matchesStock;
   });
 
   const categories = [...new Set(products.map(p => p.category).filter(Boolean))];
@@ -79,12 +96,6 @@ const ProductList = () => {
     if (availableQty <= 0) return { status: 'Out of Stock', color: 'error', icon: <WarningIcon fontSize="small" /> };
     if (availableQty <= 10) return { status: 'Low Stock', color: 'warning', icon: <WarningIcon fontSize="small" /> };
     return { status: 'In Stock', color: 'success', icon: <CheckCircleIcon fontSize="small" /> };
-  };
-
-  const getAvailableQuantity = (product) => {
-    return typeof product.stock === 'number' ? product.stock :
-      (typeof product.opening_stock === 'number' && typeof product.sold === 'number' ?
-        (product.opening_stock - product.sold) : 0);
   };
 
   const handleActionMenuOpen = (event, product) => {
@@ -130,6 +141,26 @@ const ProductList = () => {
       setError("Failed to delete product");
     }
     setLoading(false);
+  };
+
+  const handleRestock = async (product) => {
+    if (!product.preferred_vendor_id) {
+      setError(`Cannot restock ${product.name}: No preferred vendor set`);
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const response = await axios.post(createApiUrl(`/api/products/${product.id}/restock`));
+      setError("");
+      alert(`Purchase Order ${response.data.po_number} created successfully for ${product.name}`);
+      // Optionally navigate to the PO page
+      // navigate(`/purchase-orders/edit/${response.data.po_id}`);
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to create restock PO");
+    }
+    setLoading(false);
+    handleActionMenuClose();
   };
 
 
@@ -250,54 +281,24 @@ const ProductList = () => {
           zIndex: 1
         }}>
           <CardContent sx={{ p: 4 }}>
-            {/* Header Section */}
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-              <Box display="flex" alignItems="center" gap={2}>
-                <Avatar sx={{
-                  bgcolor: 'primary.main',
-                  width: 56,
-                  height: 56,
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                }}>
-                  <InventoryIcon sx={{ fontSize: 28 }} />
-                </Avatar>
-                <Box>
-                  <Typography variant="h4" fontWeight={700} color="text.primary" gutterBottom>
-                    Product Inventory
-                  </Typography>
-                  <Typography variant="body1" color="text.secondary">
-                    Manage your product catalog and inventory
-                  </Typography>
-                </Box>
-              </Box>
-              <Button
-                variant="contained"
-                size="large"
-                startIcon={<AddIcon />}
-                onClick={handleAdd}
-                sx={{
-                  borderRadius: 3,
-                  px: 3,
-                  py: 1.5,
-                  fontWeight: 600,
-                  textTransform: 'none',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  boxShadow: '0 8px 24px rgba(102,126,234,0.3)',
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)',
-                    boxShadow: '0 12px 32px rgba(102,126,234,0.4)',
-                    transform: 'translateY(-2px)'
-                  },
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                Add New Product
-              </Button>
-            </Box>
+            <SectionHeader
+              title="Product Inventory"
+              subtitle="Manage your product catalog and inventory"
+              primaryAction={
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={handleAdd}
+                >
+                  Add New Product
+                </Button>
+              }
+              sx={{ mb: 4 }}
+            />
 
             {/* Search and Filters */}
             <Grid container spacing={3} sx={{ mb: 4 }}>
-              <Grid item xs={12} md={8}>
+              <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
                   variant="outlined"
@@ -326,7 +327,7 @@ const ProductList = () => {
                   }}
                 />
               </Grid>
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} sm={6} md={3}>
                 <TextField
                   select
                   fullWidth
@@ -340,7 +341,7 @@ const ProductList = () => {
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <FilterListIcon color="action" />
+                        <CategoryIcon color="action" />
                       </InputAdornment>
                     ),
                   }}
@@ -364,6 +365,44 @@ const ProductList = () => {
                   ))}
                 </TextField>
               </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <TextField
+                  select
+                  fullWidth
+                  variant="outlined"
+                  label="Filter by Stock"
+                  value={stockFilter}
+                  onChange={(e) => setStockFilter(e.target.value)}
+                  SelectProps={{
+                    native: true,
+                  }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <WarningIcon color="action" />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 3,
+                      bgcolor: 'grey.50',
+                      '&:hover': {
+                        bgcolor: 'grey.100',
+                      },
+                      '&.Mui-focused': {
+                        bgcolor: 'white',
+                        boxShadow: '0 0 0 3px rgba(102,126,234,0.1)'
+                      }
+                    }
+                  }}
+                >
+                  <option value="All">All Stock Levels</option>
+                  <option value="In Stock">In Stock</option>
+                  <option value="Low Stock">Low Stock</option>
+                  <option value="Out of Stock">Out of Stock</option>
+                </TextField>
+              </Grid>
             </Grid>
 
             {error && (
@@ -381,177 +420,137 @@ const ProductList = () => {
               </Fade>
             )}
 
-            {/* Modern Table */}
-            <TableContainer sx={{
-              borderRadius: 3,
-              overflow: 'hidden',
-              border: '1px solid',
-              borderColor: 'grey.200',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.05)'
-            }}>
-              <Table>
-                <TableHead>
-                  <TableRow sx={{
-                    bgcolor: 'grey.50',
-                    '& .MuiTableCell-head': {
-                      fontWeight: 700,
-                      color: 'text.primary',
-                      fontSize: '0.95rem',
-                      borderBottom: '2px solid',
-                      borderColor: 'grey.200',
-                      py: 2
-                    }
-                  }}>
-                    <TableCell>Product Info</TableCell>
-                    <TableCell>Category</TableCell>
-                    <TableCell>Pricing</TableCell>
-                    <TableCell>Stock Status</TableCell>
-                    <TableCell align="center" width={120}>Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
-                        <CircularProgress size={40} />
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                          Loading products...
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  ) : filteredProducts.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
-                        <InventoryIcon sx={{ fontSize: 48, color: 'grey.300', mb: 2 }} />
-                        <Typography variant="h6" color="text.secondary" gutterBottom>
-                          {searchTerm || categoryFilter !== "All" ? 'No products found' : 'No products yet'}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {searchTerm || categoryFilter !== "All" ? 'Try adjusting your search or filters' : 'Add your first product to get started'}
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredProducts.map((product, index) => {
-                      const availableQty = getAvailableQuantity(product);
-                      const stockInfo = getStockStatus(product.stock, product.opening_stock, product.sold);
+            <StandardDataTable
+              columns={[
+                { id: 'product', label: 'Product Info' },
+                { id: 'category', label: 'Category' },
+                { id: 'pricing', label: 'Pricing' },
+                { id: 'stock', label: 'Stock Status' },
+                { id: 'actions', label: 'Actions', align: 'center', width: 120 }
+              ]}
+              loading={loading}
+              emptyMessage={
+                searchTerm || categoryFilter !== "All" 
+                  ? 'No products found. Try adjusting your search or filters.'
+                  : 'No products yet. Add your first product to get started.'
+              }
+              renderRow={(product, index) => {
+                const availableQty = getAvailableQuantity(product);
+                const stockInfo = getStockStatus(product.stock, product.opening_stock, product.sold);
+                const reorderLevel = product.reorder_level || 10;
+                const isLowStock = availableQty > 0 && availableQty <= reorderLevel;
+                const isOutOfStock = availableQty <= 0;
 
-                      return (
-                        <Fade in={true} timeout={300 + index * 100} key={product.id}>
-                          <TableRow sx={{
-                            '&:hover': {
-                              bgcolor: 'grey.50',
-                              transform: 'scale(1.001)',
-                              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                            },
-                            transition: 'all 0.2s ease',
-                            '& .MuiTableCell-root': {
-                              borderBottom: '1px solid',
-                              borderColor: 'grey.100',
-                              py: 2
-                            }
+                return (
+                  <Fade in={true} timeout={300 + index * 100} key={product.id}>
+                    <Box
+                      component="tr"
+                      sx={{
+                        bgcolor: isOutOfStock ? 'error.50' : (isLowStock ? 'warning.50' : 'transparent'),
+                        '&:hover': {
+                          bgcolor: isOutOfStock ? 'error.100' : (isLowStock ? 'warning.100' : 'grey.50')
+                        }
+                      }}
+                    >
+                      <Box component="td">
+                        <Box display="flex" alignItems="center" gap={2}>
+                          <Avatar sx={{
+                            bgcolor: 'primary.50',
+                            color: 'primary.main',
+                            width: 40,
+                            height: 40,
+                            fontSize: '1rem',
+                            fontWeight: 600
                           }}>
-                            <TableCell>
-                              <Box display="flex" alignItems="center" gap={2}>
-                                <Avatar sx={{
-                                  bgcolor: 'primary.50',
-                                  color: 'primary.main',
-                                  width: 40,
-                                  height: 40,
-                                  fontSize: '1rem',
-                                  fontWeight: 600
-                                }}>
-                                  {product.name?.charAt(0)?.toUpperCase() || 'P'}
-                                </Avatar>
-                                <Box>
-                                  <Typography variant="subtitle1" fontWeight={600} color="text.primary">
-                                    {product.name}
-                                  </Typography>
-                                  <Typography variant="body2" color="text.secondary" sx={{
-                                    maxWidth: 200,
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap'
-                                  }}>
-                                    {product.description || 'No description'}
-                                  </Typography>
-                                </Box>
-                              </Box>
-                            </TableCell>
-                            <TableCell>
-                              <Chip
-                                icon={<CategoryIcon fontSize="small" />}
-                                label={product.category || 'Uncategorized'}
-                                size="small"
-                                sx={{
-                                  bgcolor: 'primary.50',
-                                  color: 'primary.700',
-                                  fontWeight: 600,
-                                  border: '1px solid',
-                                  borderColor: 'primary.200'
-                                }}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Box>
-                                <Box display="flex" alignItems="center" gap={1} mb={0.5}>
-                                  <AttachMoneyIcon sx={{ fontSize: 16, color: 'success.main' }} />
-                                  <Typography variant="body2" color="text.primary" fontWeight={600}>
-                                    ₹{product.price || '0'}
-                                  </Typography>
-                                  <Typography variant="caption" color="text.secondary">
-                                    / {product.unit || 'unit'}
-                                  </Typography>
-                                </Box>
-                                <Box display="flex" alignItems="center" gap={1}>
-                                  <PercentIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                                  <Typography variant="body2" color="text.secondary">
-                                    {product.tax_rate || 0}% tax
-                                  </Typography>
-                                </Box>
-                              </Box>
-                            </TableCell>
-                            <TableCell>
-                              <Box>
-                                <Chip
-                                  icon={stockInfo.icon}
-                                  label={stockInfo.status}
-                                  size="small"
-                                  color={stockInfo.color}
-                                  sx={{ fontWeight: 600, mb: 1 }}
-                                />
-                                <Typography variant="body2" color="text.secondary">
-                                  {availableQty} {product.unit || 'units'} available
-                                </Typography>
-                              </Box>
-                            </TableCell>
-                            <TableCell align="center">
-                              <Tooltip title="More Actions">
-                                <IconButton
-                                  size="small"
-                                  onClick={(e) => handleActionMenuOpen(e, product)}
-                                  sx={{
-                                    color: 'primary.main',
-                                    bgcolor: 'primary.50',
-                                    '&:hover': {
-                                      bgcolor: 'primary.100',
-                                      transform: 'scale(1.1)'
-                                    },
-                                    transition: 'all 0.2s ease'
-                                  }}
-                                >
-                                  <MoreVertIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            </TableCell>
-                          </TableRow>
-                        </Fade>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                            {product.name?.charAt(0)?.toUpperCase() || 'P'}
+                          </Avatar>
+                          <Box>
+                            <Typography variant="subtitle1" fontWeight={600} color="text.primary">
+                              {product.name}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{
+                              maxWidth: 200,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {product.description || 'No description'}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </Box>
+                      <Box component="td">
+                        <Chip
+                          icon={<CategoryIcon fontSize="small" />}
+                          label={product.category || 'Uncategorized'}
+                          size="small"
+                          sx={{
+                            bgcolor: 'primary.50',
+                            color: 'primary.700',
+                            fontWeight: 600,
+                            border: '1px solid',
+                            borderColor: 'primary.200'
+                          }}
+                        />
+                      </Box>
+                      <Box component="td">
+                        <Box>
+                          <Box display="flex" alignItems="center" gap={1} mb={0.5}>
+                            <AttachMoneyIcon sx={{ fontSize: 16, color: 'success.main' }} />
+                            <Typography variant="body2" color="text.primary" fontWeight={600}>
+                              ₹{product.price || '0'}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              / {product.unit || 'unit'}
+                            </Typography>
+                          </Box>
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <PercentIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                            <Typography variant="body2" color="text.secondary">
+                              {product.tax_rate || 0}% tax
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </Box>
+                      <Box component="td">
+                        <Box>
+                          <Chip
+                            icon={stockInfo.icon}
+                            label={stockInfo.status}
+                            size="small"
+                            color={stockInfo.color}
+                            sx={{ fontWeight: 600, mb: 1 }}
+                          />
+                          <Typography variant="body2" color="text.secondary">
+                            {availableQty} {product.unit || 'units'} available
+                          </Typography>
+                        </Box>
+                      </Box>
+                      <Box component="td" sx={{ textAlign: 'center' }}>
+                        <Tooltip title="More Actions">
+                          <IconButton
+                            size="small"
+                            onClick={(e) => handleActionMenuOpen(e, product)}
+                            sx={{
+                              color: 'primary.main',
+                              bgcolor: 'primary.50',
+                              '&:hover': {
+                                bgcolor: 'primary.100',
+                                transform: 'scale(1.1)'
+                              },
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
+                            <MoreVertIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </Box>
+                  </Fade>
+                );
+              }}
+              data={filteredProducts}
+            />
           </CardContent>
         </Card>
       </Box>
@@ -581,6 +580,17 @@ const ProductList = () => {
           </ListItemIcon>
           <ListItemText primary="Edit Product" />
         </MenuItem>
+        {selectedProduct && selectedProduct.preferred_vendor_id && (
+          <MenuItem
+            onClick={() => handleRestock(selectedProduct)}
+            sx={{ py: 1.5, color: 'success.main' }}
+          >
+            <ListItemIcon>
+              <ShoppingCartIcon fontSize="small" color="success" />
+            </ListItemIcon>
+            <ListItemText primary="Restock (Generate PO)" />
+          </MenuItem>
+        )}
         <MenuItem
           onClick={() => {
             setConfirmDeleteId(selectedProduct.id);

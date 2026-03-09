@@ -5,21 +5,20 @@ import "./InvoiceList.css";
 import MainLayout from "./Layout/MainLayout";
 import StatusBadge from "./common/StatusBadge";
 import SummaryCard from "./common/SummaryCard";
+import SectionHeader from "./common/SectionHeader";
+import StandardDataTable from "./common/StandardDataTable";
 import axios from "axios";
 import {
   Box,
   Button,
   Typography,
   Paper,
-  Table,
-  TableBody,
   TableCell,
-  TableContainer,
-  TableHead,
   TableRow,
   CircularProgress,
   Alert,
   Checkbox,
+  Chip,
   InputAdornment,
   TextField,
   Fade,
@@ -37,7 +36,7 @@ import {
   Container,
   FormControl,
   Select,
-  TablePagination
+  Snackbar
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
@@ -51,6 +50,15 @@ import TodayIcon from "@mui/icons-material/Today";
 import DateRangeIcon from "@mui/icons-material/DateRange";
 import ErrorIcon from "@mui/icons-material/Error";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import PaymentIcon from "@mui/icons-material/Payment";
+import LinkIcon from '@mui/icons-material/Link';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
+import ThumbUpAltIcon from '@mui/icons-material/ThumbUpAlt';
+import ThumbDownAltIcon from '@mui/icons-material/ThumbDownAlt';
+import SendIcon from '@mui/icons-material/Send';
+import PayNowModal from "./PayNowModal";
+import { useAuth } from "../context/AuthContext";
 
 const initialForm = {
   invoice_number: "",
@@ -86,9 +94,16 @@ const InvoiceList = () => {
   const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [selectedInvoices, setSelectedInvoices] = useState([]);
+  const [payNowOpen, setPayNowOpen] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState('');
+  const [linkCopied, setLinkCopied] = useState(false);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  // Approval-specific state
+  const [rejectDialog, setRejectDialog] = useState({ open: false, invoiceId: null, reason: '' });
+  const [approvalToast, setApprovalToast] = useState({ open: false, message: '', severity: 'success' });
   const navigate = useNavigate();
+  const { user, canApprove } = useAuth();
 
   const filteredInvoices = invoices.filter((invoice) => {
     const customer = customers.find((c) => c.id === invoice.customer_id);
@@ -193,6 +208,76 @@ const InvoiceList = () => {
     setSelectedInvoice(null);
   };
 
+  const handleCopyPortalLink = async (invoice) => {
+    let token = invoice.portal_token;
+    if (!token) {
+      // Generate one on demand for legacy invoices
+      try {
+        const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const res = await axios.post(
+          createApiUrl(`/api/invoices/${invoice.id}/generate-portal-token`),
+          {},
+          { headers: { 'X-User-Id': storedUser.id || '' } }
+        );
+        token = res.data.portal_token;
+        setInvoices(prev => prev.map(inv => inv.id === invoice.id ? { ...inv, portal_token: token } : inv));
+      } catch {
+        setError('Could not generate portal link. Please try again.');
+        return;
+      }
+    }
+    const link = `${window.location.origin}/portal/invoice/${token}`;
+    navigator.clipboard.writeText(link).then(() => {
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 3500);
+    });
+  };
+
+  // ── Approval actions ──────────────────────────────────────────────────────
+  const handleSubmitForApproval = async (invoice) => {
+    try {
+      await axios.post(
+        createApiUrl(`/api/invoices/${invoice.id}/submit-for-approval`),
+        {},
+        { headers: { 'X-User-Id': user?.id || '' } }
+      );
+      setApprovalToast({ open: true, message: 'Invoice submitted for approval.', severity: 'info' });
+      fetchInvoices();
+    } catch (err) {
+      setApprovalToast({ open: true, message: err.response?.data?.error || 'Submit failed.', severity: 'error' });
+    }
+  };
+
+  const handleApproveInvoice = async (invoice) => {
+    try {
+      await axios.post(
+        createApiUrl(`/api/invoices/${invoice.id}/approve`),
+        {},
+        { headers: { 'X-User-Id': user?.id || '' } }
+      );
+      setApprovalToast({ open: true, message: 'Invoice approved and set to Issued.', severity: 'success' });
+      fetchInvoices();
+    } catch (err) {
+      setApprovalToast({ open: true, message: err.response?.data?.error || 'Approval failed.', severity: 'error' });
+    }
+  };
+
+  const handleRejectConfirm = async () => {
+    const { invoiceId, reason } = rejectDialog;
+    try {
+      await axios.post(
+        createApiUrl(`/api/invoices/${invoiceId}/reject`),
+        { reason },
+        { headers: { 'X-User-Id': user?.id || '' } }
+      );
+      setApprovalToast({ open: true, message: 'Invoice rejected and returned to Draft.', severity: 'warning' });
+      setRejectDialog({ open: false, invoiceId: null, reason: '' });
+      fetchInvoices();
+    } catch (err) {
+      setApprovalToast({ open: true, message: err.response?.data?.error || 'Rejection failed.', severity: 'error' });
+    }
+  };
+
   const handleDownloadPDF = async (invoice) => {
     try {
       const response = await axios.post(
@@ -243,44 +328,51 @@ const InvoiceList = () => {
     setPage(0);
   };
 
+  const invoiceColumns = [
+    {
+      key: "select",
+      label: (
+        <Checkbox
+          indeterminate={
+            selectedInvoices.length > 0 &&
+            selectedInvoices.length < paginatedInvoices.length
+          }
+          checked={
+            paginatedInvoices.length > 0 &&
+            selectedInvoices.length === paginatedInvoices.length
+          }
+          onChange={handleSelectAll}
+        />
+      ),
+      width: 42,
+    },
+    { key: "date", label: "Date" },
+    { key: "invoice", label: "Invoice #" },
+    { key: "order", label: "Order Number" },
+    { key: "customer", label: "Customer Name" },
+    { key: "status", label: "Status" },
+    { key: "due", label: "Due Date" },
+    { key: "amount", label: "Amount", align: "right" },
+    { key: "balance", label: "Balance Due", align: "right" },
+    { key: "actions", label: "Actions", align: "center" },
+  ];
+
 
   return (
     <MainLayout>
       <Container maxWidth="xl" sx={{ py: 4 }}>
         {/* Page Header */}
         <Box sx={{ mb: 4 }}>
-          <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
-            flexWrap="wrap"
-            gap={2}
-            mb={3}
-          >
-            <Box>
-              <Typography variant="h4" fontWeight={700} gutterBottom>
-                All Invoices
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Track and manage all customer invoices and payments
-              </Typography>
-            </Box>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={handleAdd}
-              sx={{
-                borderRadius: 2,
-                px: 3,
-                py: 1.25,
-                fontWeight: 600,
-                textTransform: "none",
-                boxShadow: 2
-              }}
-            >
-              New Invoice
-            </Button>
-          </Box>
+          <SectionHeader
+            title="All Invoices"
+            subtitle="Track and manage all customer invoices and payments"
+            primaryAction={{
+              label: "New Invoice",
+              icon: <AddIcon />,
+              onClick: handleAdd,
+            }}
+            sx={{ mb: 3 }}
+          />
 
           {/* Payment Summary Strip */}
           <Paper
@@ -405,157 +497,97 @@ const InvoiceList = () => {
         )}
 
         {/* Main Invoice Table */}
-        <Paper
-          elevation={0}
-          sx={{
-            borderRadius: 3,
-            border: "1px solid",
-            borderColor: "grey.200",
-            overflow: "hidden"
+        <StandardDataTable
+          columns={invoiceColumns}
+          rows={paginatedInvoices}
+          loading={loading}
+          emptyMessage={searchTerm || statusFilter !== "All" ? "No invoices found" : "No invoices yet"}
+          pagination={{
+            rowsPerPageOptions: [10, 25, 50],
+            count: filteredInvoices.length,
+            rowsPerPage,
+            page,
+            onPageChange: handleChangePage,
+            onRowsPerPageChange: handleChangeRowsPerPage,
           }}
-        >
-          <TableContainer>
-            <Table stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell padding="checkbox">
-                    <Checkbox
-                      indeterminate={
-                        selectedInvoices.length > 0 &&
-                        selectedInvoices.length < paginatedInvoices.length
-                      }
-                      checked={
-                        paginatedInvoices.length > 0 &&
-                        selectedInvoices.length === paginatedInvoices.length
-                      }
-                      onChange={handleSelectAll}
+          renderRow={(invoice) => {
+            const customer = customers.find((c) => c.id === invoice.customer_id);
+            return (
+              <TableRow
+                key={invoice.id}
+                hover
+                sx={{
+                  "&:hover": { bgcolor: "grey.50" },
+                  cursor: "pointer"
+                }}
+              >
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    checked={selectedInvoices.includes(invoice.id)}
+                    onChange={() => handleSelectOne(invoice.id)}
+                  />
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2">{invoice.issue_date || "—"}</Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2" fontWeight={600}>
+                    {invoice.invoice_number}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2" color="text.secondary">
+                    {invoice.order_number || "—"}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2">
+                    {customer ? customer.name : `Customer #${invoice.customer_id}`}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <StatusBadge status={invoice.status || "Draft"} />
+                  {invoice.status === 'Pending Approval' && (
+                    <Chip
+                      label="Pending"
+                      size="small"
+                      color="warning"
+                      icon={<HourglassEmptyIcon />}
+                      sx={{ ml: 0.5, fontSize: '0.7rem' }}
                     />
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Invoice #</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Order Number</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Customer Name</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Due Date</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }} align="right">
-                    Amount
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 600 }} align="right">
-                    Balance Due
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 600 }} align="center">
-                    Actions
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={10} align="center" sx={{ py: 8 }}>
-                      <CircularProgress size={40} />
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                        Loading invoices...
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                ) : paginatedInvoices.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={10} align="center" sx={{ py: 8 }}>
-                      <Typography variant="h6" color="text.secondary" gutterBottom>
-                        {searchTerm || statusFilter !== "All"
-                          ? "No invoices found"
-                          : "No invoices yet"}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {searchTerm || statusFilter !== "All"
-                          ? "Try adjusting your search or filters"
-                          : "Click 'New Invoice' to create your first invoice"}
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  paginatedInvoices.map((invoice) => {
-                    const customer = customers.find((c) => c.id === invoice.customer_id);
-                    return (
-                      <TableRow
-                        key={invoice.id}
-                        hover
-                        sx={{
-                          "&:hover": { bgcolor: "grey.50" },
-                          cursor: "pointer"
-                        }}
-                      >
-                        <TableCell padding="checkbox">
-                          <Checkbox
-                            checked={selectedInvoices.includes(invoice.id)}
-                            onChange={() => handleSelectOne(invoice.id)}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">{invoice.issue_date || "—"}</Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" fontWeight={600}>
-                            {invoice.invoice_number}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" color="text.secondary">
-                            {invoice.order_number || "—"}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {customer ? customer.name : `Customer #${invoice.customer_id}`}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <StatusBadge status={invoice.status || "Draft"} />
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">{invoice.due_date || "—"}</Typography>
-                        </TableCell>
-                        <TableCell align="right">
-                          <Typography variant="body2" fontWeight={600}>
-                            ₹{invoice.total_amount?.toLocaleString() || "0"}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="right">
-                          <Typography
-                            variant="body2"
-                            fontWeight={600}
-                            color={invoice.balance_due > 0 ? "error.main" : "success.main"}
-                          >
-                            ₹{invoice.balance_due?.toLocaleString() || "0"}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="center">
-                          <Tooltip title="Actions">
-                            <IconButton
-                              size="small"
-                              onClick={(e) => handleActionMenuOpen(e, invoice)}
-                            >
-                              <MoreVertIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-          <TablePagination
-            rowsPerPageOptions={[10, 25, 50]}
-            component="div"
-            count={filteredInvoices.length}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={handleChangePage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-          />
-        </Paper>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2">{invoice.due_date || "—"}</Typography>
+                </TableCell>
+                <TableCell align="right">
+                  <Typography variant="body2" fontWeight={600}>
+                    ₹{invoice.total_amount?.toLocaleString() || "0"}
+                  </Typography>
+                </TableCell>
+                <TableCell align="right">
+                  <Typography
+                    variant="body2"
+                    fontWeight={600}
+                    color={invoice.balance_due > 0 ? "error.main" : "success.main"}
+                  >
+                    ₹{invoice.balance_due?.toLocaleString() || "0"}
+                  </Typography>
+                </TableCell>
+                <TableCell align="center">
+                  <Tooltip title="Actions">
+                    <IconButton
+                      size="small"
+                      onClick={(e) => handleActionMenuOpen(e, invoice)}
+                    >
+                      <MoreVertIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </TableCell>
+              </TableRow>
+            );
+          }}
+        />
       </Container>
 
       {/* Action Menu */}
@@ -583,6 +615,20 @@ const InvoiceList = () => {
           </ListItemIcon>
           <ListItemText primary="Edit Invoice" />
         </MenuItem>
+        {selectedInvoice && selectedInvoice.status !== 'Paid' && selectedInvoice.status !== 'Cancelled' && (
+          <MenuItem
+            onClick={() => {
+              setPayNowOpen(true);
+              handleActionMenuClose();
+            }}
+            sx={{ py: 1.25 }}
+          >
+            <ListItemIcon>
+              <PaymentIcon fontSize="small" color="success" />
+            </ListItemIcon>
+            <ListItemText primary="Pay Now" secondary="Online via Zoho Payments" />
+          </MenuItem>
+        )}
         <MenuItem
           onClick={() => {
             handleDownloadPDF(selectedInvoice);
@@ -597,6 +643,55 @@ const InvoiceList = () => {
         </MenuItem>
         <MenuItem
           onClick={() => {
+            handleCopyPortalLink(selectedInvoice);
+            handleActionMenuClose();
+          }}
+          sx={{ py: 1.25 }}
+        >
+          <ListItemIcon>
+            <LinkIcon fontSize="small" color="primary" />
+          </ListItemIcon>
+          <ListItemText primary="Copy Portal Link" secondary="Share with customer" />
+        </MenuItem>
+        {/* ── Approval actions ─────────────────────────────────────────── */}
+        {selectedInvoice?.status === 'Draft' && (
+          <MenuItem
+            onClick={() => {
+              handleSubmitForApproval(selectedInvoice);
+              handleActionMenuClose();
+            }}
+            sx={{ py: 1.25 }}
+          >
+            <ListItemIcon><SendIcon fontSize="small" color="info" /></ListItemIcon>
+            <ListItemText primary="Submit for Approval" />
+          </MenuItem>
+        )}
+        {selectedInvoice?.status === 'Pending Approval' && canApprove && (
+          <MenuItem
+            onClick={() => {
+              handleApproveInvoice(selectedInvoice);
+              handleActionMenuClose();
+            }}
+            sx={{ py: 1.25, color: 'success.main' }}
+          >
+            <ListItemIcon><ThumbUpAltIcon fontSize="small" color="success" /></ListItemIcon>
+            <ListItemText primary="Approve" />
+          </MenuItem>
+        )}
+        {selectedInvoice?.status === 'Pending Approval' && canApprove && (
+          <MenuItem
+            onClick={() => {
+              setRejectDialog({ open: true, invoiceId: selectedInvoice.id, reason: '' });
+              handleActionMenuClose();
+            }}
+            sx={{ py: 1.25, color: 'error.main' }}
+          >
+            <ListItemIcon><ThumbDownAltIcon fontSize="small" color="error" /></ListItemIcon>
+            <ListItemText primary="Reject" />
+          </MenuItem>
+        )}
+        <MenuItem
+          onClick={() => {
             setConfirmDeleteId(selectedInvoice.id);
             handleActionMenuClose();
           }}
@@ -608,6 +703,48 @@ const InvoiceList = () => {
           <ListItemText primary="Delete Invoice" />
         </MenuItem>
       </Menu>
+
+      {/* Pay Now Modal */}
+      <PayNowModal
+        open={payNowOpen}
+        onClose={() => setPayNowOpen(false)}
+        invoice={selectedInvoice}
+        onSuccess={(txnId) => {
+          setPayNowOpen(false);
+          setPaymentSuccess(`Payment initiated! Transaction ID: ${txnId}. The invoice will be marked as Paid once confirmed.`);
+          setTimeout(() => setPaymentSuccess(''), 8000);
+          fetchInvoices();
+        }}
+      />
+
+      {/* Link Copied Toast */}
+      <Snackbar
+        open={linkCopied}
+        autoHideDuration={3500}
+        onClose={() => setLinkCopied(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setLinkCopied(false)}
+          severity="success"
+          icon={<CheckCircleOutlineIcon />}
+          sx={{ width: '100%' }}
+        >
+          Portal link copied! Share it with your customer.
+        </Alert>
+      </Snackbar>
+
+      {/* Payment Success Snackbar */}
+      <Snackbar
+        open={!!paymentSuccess}
+        autoHideDuration={8000}
+        onClose={() => setPaymentSuccess('')}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setPaymentSuccess('')} severity="success" sx={{ width: '100%' }}>
+          {paymentSuccess}
+        </Alert>
+      </Snackbar>
 
       {/* Delete Confirmation Dialog */}
       <Dialog
@@ -655,6 +792,59 @@ const InvoiceList = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Reject Invoice Dialog */}
+      <Dialog
+        open={rejectDialog.open}
+        onClose={() => setRejectDialog({ open: false, invoiceId: null, reason: '' })}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <DialogTitle>Reject Invoice & Return to Draft</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Please provide a reason so the team can fix the issues.
+          </Typography>
+          <TextField
+            fullWidth
+            multiline
+            rows={3}
+            label="Rejection reason"
+            value={rejectDialog.reason}
+            onChange={(e) => setRejectDialog((d) => ({ ...d, reason: e.target.value }))}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={() => setRejectDialog({ open: false, invoiceId: null, reason: '' })}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleRejectConfirm}
+            disabled={!rejectDialog.reason.trim()}
+          >
+            Reject & Return to Draft
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Approval Toast */}
+      <Snackbar
+        open={approvalToast.open}
+        autoHideDuration={4000}
+        onClose={() => setApprovalToast((t) => ({ ...t, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setApprovalToast((t) => ({ ...t, open: false }))}
+          severity={approvalToast.severity}
+          sx={{ width: '100%' }}
+        >
+          {approvalToast.message}
+        </Alert>
+      </Snackbar>
     </MainLayout>
   );
 };

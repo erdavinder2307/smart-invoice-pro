@@ -1,16 +1,24 @@
 import axios from 'axios';
 import { createApiUrl } from '../config/api';
 
-const getAuthHeader = () => {
-    const token = localStorage.getItem('token');
-    return token ? { Authorization: `Bearer ${token}` } : {};
+const getUserHeaders = () => {
+    try {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        return user.id ? { 'X-User-Id': user.id, 'X-Username': user.username || '' } : {};
+    } catch {
+        return {};
+    }
 };
 
-export const getBankAccounts = async () => {
+// Accepts an optional userId to override localStorage (for use with AuthContext)
+export const getBankAccounts = async (userId) => {
     try {
+        const headers = userId
+            ? { 'X-User-Id': userId }
+            : getUserHeaders();
         const response = await axios.get(
             createApiUrl('/api/bank-accounts'),
-            { headers: getAuthHeader() }
+            { headers }
         );
         return response.data;
     } catch (error) {
@@ -19,12 +27,15 @@ export const getBankAccounts = async () => {
     }
 };
 
-export const createBankAccount = async (accountData) => {
+export const createBankAccount = async (accountData, userId) => {
     try {
+        const headers = userId
+            ? { 'X-User-Id': userId }
+            : getUserHeaders();
         const response = await axios.post(
             createApiUrl('/api/bank-accounts'),
             accountData,
-            { headers: getAuthHeader() }
+            { headers }
         );
         return response.data;
     } catch (error) {
@@ -33,11 +44,14 @@ export const createBankAccount = async (accountData) => {
     }
 };
 
-export const getBankAccountById = async (id) => {
+export const getBankAccountById = async (id, userId) => {
     try {
+        const headers = userId
+            ? { 'X-User-Id': userId }
+            : getUserHeaders();
         const response = await axios.get(
             createApiUrl(`/api/bank-accounts/${id}`),
-            { headers: getAuthHeader() }
+            { headers }
         );
         return response.data;
     } catch (error) {

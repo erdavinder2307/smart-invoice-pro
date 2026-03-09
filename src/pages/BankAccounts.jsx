@@ -3,6 +3,7 @@ import {
     getBankAccounts,
 } from "../services/bankAccountService";
 import MainLayout from "../components/Layout/MainLayout";
+import { useAuth } from "../context/AuthContext";
 import {
     Box,
     Button,
@@ -42,6 +43,7 @@ const BankAccounts = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const navigate = useNavigate();
     const theme = useTheme();
+    const { user } = useAuth();
 
     const filteredAccounts = bankAccounts.filter(account =>
         account.bank_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -67,10 +69,11 @@ const BankAccounts = () => {
     };
 
     const fetchBankAccounts = async () => {
+        if (!user?.id) return;
         setLoading(true);
         setError("");
         try {
-            const data = await getBankAccounts();
+            const data = await getBankAccounts(user.id);
             setBankAccounts(data);
         } catch (err) {
             setError("Failed to fetch bank accounts. Please try again.");
@@ -81,7 +84,7 @@ const BankAccounts = () => {
 
     useEffect(() => {
         fetchBankAccounts();
-    }, []);
+    }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleView = (account) => {
         navigate(`/bank-accounts/${account.id}`);

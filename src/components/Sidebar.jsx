@@ -12,7 +12,6 @@ import Box from "@mui/material/Box";
 import Avatar from "@mui/material/Avatar";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
-import Badge from "@mui/material/Badge";
 import Tooltip from "@mui/material/Tooltip";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
@@ -22,51 +21,127 @@ import DialogContentText from "@mui/material/DialogContentText";
 import IconButton from "@mui/material/IconButton";
 import { useTheme } from "@mui/material/styles";
 
-import HomeIcon from "@mui/icons-material/Home";
-import PeopleIcon from "@mui/icons-material/People";
-import ReceiptIcon from "@mui/icons-material/Receipt";
-import LogoutIcon from "@mui/icons-material/Logout";
+// ── Icons ────────────────────────────────────────────────────────────────────
+import DashboardIcon from "@mui/icons-material/Dashboard";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
-import SyncAltIcon from "@mui/icons-material/SyncAlt";
-import BusinessIcon from "@mui/icons-material/Business";
+import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
+import PeopleIcon from "@mui/icons-material/People";
+import RequestQuoteIcon from "@mui/icons-material/RequestQuote";
+import ReceiptIcon from "@mui/icons-material/Receipt";
+import EventRepeatIcon from "@mui/icons-material/EventRepeat";
+import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import AssignmentIcon from "@mui/icons-material/Assignment";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
+import AssessmentIcon from "@mui/icons-material/Assessment";
+import SettingsIcon from "@mui/icons-material/Settings";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import LogoutIcon from "@mui/icons-material/Logout";
+import BusinessIcon from "@mui/icons-material/Business";
 
 import { useAuth } from "../context/AuthContext";
 
+// ── Constants ────────────────────────────────────────────────────────────────
+// ── Constants ────────────────────────────────────────────────────────────────
 const DRAWER_EXPANDED = 256;
 const DRAWER_COLLAPSED = 72;
 
-// ── Sidebar colours (shared) ─────────────────────────────────────────────────
-const ICON_DEFAULT = "rgba(255,255,255,0.65)";
-const ICON_ACTIVE = "common.white";
-const TEXT_DEFAULT = "rgba(255,255,255,0.85)";
-const TEXT_ACTIVE = "common.white";
-const BG_HOVER = "grey.800";
-const BG_ACTIVE = "primary.main";
-const BG_ACTIVE_DARK = "primary.dark";
+// ── Navigation Configuration ─────────────────────────────────────────────────
+const NAV_CONFIG = {
+  dashboard: {
+    id: 'dashboard',
+    label: 'Dashboard',
+    icon: <DashboardIcon />,
+    path: '/dashboard',
+  },
+  items: {
+    id: 'items',
+    label: 'Items',
+    icon: <Inventory2Icon />,
+    path: '/products',
+  },
+  sales: {
+    id: 'sales',
+    label: 'Sales',
+    icon: <PointOfSaleIcon />,
+    expandable: true,
+    children: [
+      { id: 'customers', label: 'Customers', icon: <PeopleIcon />, path: '/customers' },
+      { id: 'quotes', label: 'Quotes', icon: <RequestQuoteIcon />, path: '/quotes' },
+      { id: 'invoices', label: 'Invoices', icon: <ReceiptIcon />, path: '/invoices' },
+      { id: 'recurring', label: 'Recurring Invoices', icon: <EventRepeatIcon />, path: '/recurring-profiles' },
+    ],
+  },
+  purchases: {
+    id: 'purchases',
+    label: 'Purchases',
+    icon: <ShoppingCartIcon />,
+    expandable: true,
+    children: [
+      { id: 'vendors', label: 'Vendors', icon: <LocalShippingIcon />, path: '/vendors' },
+      { id: 'purchase-orders', label: 'Purchase Orders', icon: <ShoppingCartIcon />, path: '/purchase-orders' },
+      { id: 'bills', label: 'Bills', icon: <AssignmentIcon />, path: '/bills' },
+    ],
+  },
+  banking: {
+    id: 'banking',
+    label: 'Banking',
+    icon: <AccountBalanceIcon />,
+    expandable: true,
+    children: [
+      { id: 'bank-accounts', label: 'Bank Accounts', icon: <AccountBalanceIcon />, path: '/bank-accounts' },
+    ],
+  },
+  reports: {
+    id: 'reports',
+    label: 'Reports',
+    icon: <AssessmentIcon />,
+    path: '/reports',
+  },
+  settings: {
+    id: 'settings',
+    label: 'Settings',
+    icon: <SettingsIcon />,
+    path: '/settings/users',
+    adminOnly: true,
+  },
+};
 
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
-  const { logout } = useAuth();
+  const { logout, isAdmin } = useAuth();
 
-  // ── Sidebar collapse (localStorage-persisted) ────────────────────────────
+  // ── Sidebar collapse state (persisted) ───────────────────────────────────
   const [isCollapsed, setIsCollapsed] = useState(
     () => localStorage.getItem("sidebarCollapsed") === "true"
   );
 
-  // ── Sales submenu collapse ───────────────────────────────────────────────
-  const salesPaths = ["/customers", "/invoices"];
-  const [salesOpen, setSalesOpen] = useState(() => {
-    const stored = localStorage.getItem("salesMenuOpen");
-    if (stored !== null) return stored === "true";
-    return salesPaths.some((p) => location.pathname.startsWith(p));
+  // ── Expanded sections state (persisted per section) ──────────────────────
+  const [expandedSections, setExpandedSections] = useState(() => {
+    const stored = localStorage.getItem("navExpandedSections");
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch {
+        return {};
+      }
+    }
+    // Auto-expand section based on current route
+    const autoExpand = {};
+    Object.entries(NAV_CONFIG).forEach(([key, config]) => {
+      if (config.expandable && config.children) {
+        const isActive = config.children.some(child => 
+          location.pathname.startsWith(child.path)
+        );
+        autoExpand[key] = isActive;
+      }
+    });
+    return autoExpand;
   });
 
   // ── Logout dialog ────────────────────────────────────────────────────────
@@ -74,13 +149,40 @@ const Sidebar = () => {
 
   const drawerWidth = isCollapsed ? DRAWER_COLLAPSED : DRAWER_EXPANDED;
 
+  // ── Toggle sidebar collapse ──────────────────────────────────────────────
   const toggleSidebar = () => {
     const next = !isCollapsed;
     setIsCollapsed(next);
     localStorage.setItem("sidebarCollapsed", String(next));
   };
 
-  // Auto-collapse on small screens
+  // ── Toggle section expansion ─────────────────────────────────────────────
+  const toggleSection = (sectionId) => {
+    const next = { ...expandedSections, [sectionId]: !expandedSections[sectionId] };
+    setExpandedSections(next);
+    localStorage.setItem("navExpandedSections", JSON.stringify(next));
+  };
+
+  // ── Auto-expand section when navigating to child route ───────────────────
+  useEffect(() => {
+    Object.entries(NAV_CONFIG).forEach(([key, config]) => {
+      if (config.expandable && config.children) {
+        const isActive = config.children.some(child => 
+          location.pathname.startsWith(child.path)
+        );
+        if (isActive && !expandedSections[key]) {
+          setExpandedSections(prev => {
+            const next = { ...prev, [key]: true };
+            localStorage.setItem("navExpandedSections", JSON.stringify(next));
+            return next;
+          });
+        }
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
+  // ── Auto-collapse on small screens ───────────────────────────────────────
   useEffect(() => {
     const onResize = () => {
       if (window.innerWidth < 768 && !isCollapsed) {
@@ -93,22 +195,6 @@ const Sidebar = () => {
     return () => window.removeEventListener("resize", onResize);
   }, [isCollapsed]);
 
-  // Keep Sales open when navigating to a sales route
-  useEffect(() => {
-    if (salesPaths.some((p) => location.pathname.startsWith(p))) {
-      setSalesOpen(true);
-      localStorage.setItem("salesMenuOpen", "true");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
-
-  // Persist salesOpen state
-  const toggleSalesMenu = () => {
-    const next = !salesOpen;
-    setSalesOpen(next);
-    localStorage.setItem("salesMenuOpen", String(next));
-  };
-
   // ── User info ─────────────────────────────────────────────────────────────
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
   const username = storedUser.username || "Admin User";
@@ -118,14 +204,30 @@ const Sidebar = () => {
   // ── Logout handlers ───────────────────────────────────────────────────────
   const handleLogoutClick = () => setShowLogoutDialog(true);
   const handleLogoutCancel = () => setShowLogoutDialog(false);
-  const handleLogoutConfirm = () => { setShowLogoutDialog(false); logout(); navigate("/"); };
+  const handleLogoutConfirm = () => { 
+    setShowLogoutDialog(false); 
+    logout(); 
+    navigate("/"); 
+  };
 
-  // ── Shared drawer paper sx ────────────────────────────────────────────────
+  // ── Check if path is active ───────────────────────────────────────────────
+  const isPathActive = (path) => {
+    if (path === '/dashboard') {
+      return location.pathname === '/dashboard';
+    }
+    return location.pathname.startsWith(path);
+  };
+
+  // ── Check if section has active child ─────────────────────────────────────
+  const isSectionActive = (section) => {
+    if (!section.expandable || !section.children) return false;
+    return section.children.some(child => isPathActive(child.path));
+  };
+
+  // ── Drawer styles ─────────────────────────────────────────────────────────
   const drawerPaperSx = {
     width: drawerWidth,
     bgcolor: "grey.900",
-    "& .MuiTypography-root": { color: TEXT_DEFAULT },
-    "& .MuiListItemIcon-root": { color: ICON_DEFAULT },
     border: "none",
     boxSizing: "border-box",
     transition: theme.transitions.create("width", {
@@ -137,114 +239,117 @@ const Sidebar = () => {
     flexDirection: "column",
   };
 
-  // ── Shared nav-button sx factory ─────────────────────────────────────────
-  const navBtnSx = (isActive) => ({
-    borderRadius: 2,
+  // ── Nav button styles ─────────────────────────────────────────────────────
+  const navButtonSx = (isActive, isChild = false) => ({
+    borderRadius: 1.5,
     py: 1.25,
-    px: isCollapsed ? 0 : 1.5,
+    px: isCollapsed ? 0 : (isChild ? 1.5 : 2),
+    pl: isCollapsed ? 0 : (isChild ? 3.5 : 2),
     justifyContent: isCollapsed ? "center" : "flex-start",
-    minHeight: 48,
+    minHeight: isChild ? 40 : 44,
     mb: 0.5,
-    bgcolor: isActive ? BG_ACTIVE : "transparent",
-    transition: "background-color 0.15s ease",
+    bgcolor: isActive ? "primary.main" : "transparent",
+    color: isActive ? "common.white" : "rgba(255,255,255,0.7)",
+    transition: "all 0.2s ease",
     "& .MuiListItemIcon-root": {
-      color: isActive ? ICON_ACTIVE : ICON_DEFAULT,
+      minWidth: isCollapsed ? 0 : (isChild ? 32 : 40),
+      justifyContent: "center",
+      color: isActive ? "common.white" : "rgba(255,255,255,0.65)",
     },
     "& .MuiListItemText-primary": {
-      color: isActive ? TEXT_ACTIVE : TEXT_DEFAULT,
+      fontSize: isChild ? "0.8125rem" : "0.875rem",
       fontWeight: isActive ? 600 : 500,
-      fontSize: "0.9rem",
+      color: isActive ? "common.white" : "rgba(255,255,255,0.85)",
     },
     "&:hover": {
-      bgcolor: isActive ? BG_ACTIVE_DARK : BG_HOVER,
+      bgcolor: isActive ? "primary.dark" : "rgba(255,255,255,0.08)",
       "& .MuiListItemIcon-root": { color: "common.white" },
       "& .MuiListItemText-primary": { color: "common.white" },
     },
-    "&.Mui-selected": { bgcolor: BG_ACTIVE, "&:hover": { bgcolor: BG_ACTIVE_DARK } },
-    "&.Mui-selected.MuiListItemButton-root": { bgcolor: BG_ACTIVE },
   });
 
-  // ── Render a simple flat nav button ──────────────────────────────────────
-  const renderNavBtn = ({ text, icon, path, badge }) => {
-    const isActive = location.pathname === path;
-    const iconNode = badge ? (
-      <Badge
-        badgeContent={badge}
-        color={badge === "new" ? "success" : "error"}
-        variant={badge === "new" ? "dot" : "standard"}
-      >
-        {icon}
-      </Badge>
-    ) : icon;
-
-    const btn = (
+  // ── Render simple nav item ────────────────────────────────────────────────
+  const renderNavItem = (config, isChild = false) => {
+    if (config.adminOnly && !isAdmin) return null;
+    
+    const isActive = isPathActive(config.path);
+    
+    const button = (
       <ListItemButton
-        selected={isActive}
-        onClick={() => navigate(path)}
-        sx={navBtnSx(isActive)}
+        onClick={() => navigate(config.path)}
+        sx={navButtonSx(isActive, isChild)}
       >
-        <ListItemIcon sx={{ minWidth: isCollapsed ? 0 : 40, justifyContent: "center" }}>
-          {iconNode}
-        </ListItemIcon>
-        {!isCollapsed && <ListItemText primary={text} />}
+        <ListItemIcon>{config.icon}</ListItemIcon>
+        {!isCollapsed && <ListItemText primary={config.label} />}
       </ListItemButton>
     );
 
     return (
-      <ListItem key={text} disablePadding>
+      <ListItem key={config.id} disablePadding>
         {isCollapsed ? (
-          <Tooltip title={text} placement="right" arrow>{btn}</Tooltip>
-        ) : btn}
+          <Tooltip title={config.label} placement="right" arrow>
+            {button}
+          </Tooltip>
+        ) : button}
       </ListItem>
     );
   };
 
-  // ── Sales sub-items ───────────────────────────────────────────────────────
-  const salesChildren = [
-    { text: "Customers", icon: <PeopleIcon />, path: "/customers" },
-    { text: "Invoices", icon: <ReceiptIcon />, path: "/invoices", badge: "new" },
-  ];
+  // ── Render expandable section ─────────────────────────────────────────────
+  const renderExpandableSection = (sectionKey, config) => {
+    const isExpanded = expandedSections[sectionKey] || false;
+    const hasActiveChild = isSectionActive(config);
 
-  const isSalesActive = salesPaths.some((p) => location.pathname.startsWith(p));
+    const parentButton = (
+      <ListItemButton
+        onClick={() => {
+          if (isCollapsed) {
+            // In collapsed mode, navigate to first child
+            if (config.children && config.children.length > 0) {
+              navigate(config.children[0].path);
+            }
+          } else {
+            toggleSection(sectionKey);
+          }
+        }}
+        sx={{
+          ...navButtonSx(hasActiveChild && isCollapsed, false),
+          mb: isCollapsed ? 0.5 : 0,
+        }}
+      >
+        <ListItemIcon>{config.icon}</ListItemIcon>
+        {!isCollapsed && (
+          <>
+            <ListItemText primary={config.label} />
+            {isExpanded ? (
+              <ExpandLessIcon sx={{ fontSize: 18, color: "rgba(255,255,255,0.65)" }} />
+            ) : (
+              <ExpandMoreIcon sx={{ fontSize: 18, color: "rgba(255,255,255,0.65)" }} />
+            )}
+          </>
+        )}
+      </ListItemButton>
+    );
 
-  // ── Sales parent button ───────────────────────────────────────────────────
-  const salesParentBtn = (
-    <ListItemButton
-      onClick={() => {
-        if (isCollapsed) {
-          // In collapsed mode navigate to first sales child
-          navigate("/customers");
-        } else {
-          toggleSalesMenu();
-        }
-      }}
-      sx={{
-        ...navBtnSx(isSalesActive && isCollapsed),
-        mb: 0, // no bottom margin — children follow immediately
-      }}
-    >
-      <ListItemIcon sx={{ minWidth: isCollapsed ? 0 : 40, justifyContent: "center" }}>
-        <PointOfSaleIcon />
-      </ListItemIcon>
-      {!isCollapsed && (
-        <>
-          <ListItemText primary="Sales" />
-          {salesOpen ? (
-            <ExpandLessIcon sx={{ fontSize: 18, color: TEXT_DEFAULT, mr: 0.5 }} />
-          ) : (
-            <ExpandMoreIcon sx={{ fontSize: 18, color: TEXT_DEFAULT, mr: 0.5 }} />
-          )}
-        </>
-      )}
-    </ListItemButton>
-  );
+    return (
+      <ListItem key={sectionKey} disablePadding sx={{ flexDirection: "column", alignItems: "stretch" }}>
+        {isCollapsed ? (
+          <Tooltip title={config.label} placement="right" arrow>
+            {parentButton}
+          </Tooltip>
+        ) : parentButton}
 
-  // ── Flat navigation items (non-Sales) ─────────────────────────────────────
-  const flatNavItems = [
-    { text: "Products", icon: <Inventory2Icon />, path: "/products" },
-    { text: "Stock Control", icon: <SyncAltIcon />, path: "/stock-adjustment", badge: "5" },
-    { text: "Bank Accounts", icon: <AccountBalanceIcon />, path: "/bank-accounts" },
-  ];
+        {/* Children - only shown in expanded mode */}
+        {!isCollapsed && config.children && (
+          <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+            <List disablePadding>
+              {config.children.map(child => renderNavItem(child, true))}
+            </List>
+          </Collapse>
+        )}
+      </ListItem>
+    );
+  };
 
   return (
     <>
@@ -280,7 +385,7 @@ const Sidebar = () => {
                 Smart Invoice
               </Typography>
               <Typography variant="caption" sx={{ color: "grey.500" }}>
-                Professional Edition
+                Pro Edition
               </Typography>
             </Box>
           )}
@@ -292,7 +397,7 @@ const Sidebar = () => {
             display: "flex",
             justifyContent: isCollapsed ? "center" : "flex-end",
             px: 1,
-            py: 0.5,
+            py: 0.75,
             borderBottom: "1px solid",
             borderColor: "grey.800",
           }}
@@ -313,111 +418,28 @@ const Sidebar = () => {
         </Box>
 
         {/* ── Navigation List ───────────────────────────────────────────── */}
-        <Box sx={{ flex: 1, py: 1.5, overflowY: "auto", overflowX: "hidden" }}>
-          <List sx={{ px: isCollapsed ? 0.75 : 1.5 }} disablePadding>
-
+        <Box sx={{ flex: 1, py: 2, overflowY: "auto", overflowX: "hidden" }}>
+          <List sx={{ px: isCollapsed ? 1 : 1.5 }} disablePadding>
             {/* Dashboard */}
-            {renderNavBtn({ text: "Dashboard", icon: <HomeIcon />, path: "/dashboard" })}
+            {renderNavItem(NAV_CONFIG.dashboard)}
 
-            {/* ── Sales Group ─────────────────────────────────────────── */}
-            <ListItem disablePadding sx={{ flexDirection: "column", alignItems: "stretch" }}>
-              {isCollapsed ? (
-                <Tooltip title="Sales" placement="right" arrow>
-                  {salesParentBtn}
-                </Tooltip>
-              ) : salesParentBtn}
+            {/* Items */}
+            {renderNavItem(NAV_CONFIG.items)}
 
-              {/* Subitems — shown only in expanded mode */}
-              {!isCollapsed && (
-                <Collapse in={salesOpen} timeout="auto" unmountOnExit>
-                  <List disablePadding sx={{ pl: 1.5 }}>
-                    {salesChildren.map(({ text, icon, path, badge }) => {
-                      const isActive = location.pathname.startsWith(path);
-                      const iconNode = badge ? (
-                        <Badge
-                          badgeContent={badge}
-                          color="success"
-                          variant="dot"
-                        >
-                          {icon}
-                        </Badge>
-                      ) : icon;
+            {/* Sales - expandable */}
+            {renderExpandableSection('sales', NAV_CONFIG.sales)}
 
-                      return (
-                        <ListItem key={text} disablePadding>
-                          <ListItemButton
-                            selected={isActive}
-                            onClick={() => navigate(path)}
-                            sx={{
-                              borderRadius: 2,
-                              py: 1,
-                              px: 1.5,
-                              minHeight: 44,
-                              mb: 0.5,
-                              ml: 1,                    // indent under Sales
-                              bgcolor: isActive ? BG_ACTIVE : "transparent",
-                              transition: "background-color 0.15s ease",
-                              "& .MuiListItemIcon-root": {
-                                color: isActive ? ICON_ACTIVE : ICON_DEFAULT,
-                              },
-                              "& .MuiListItemText-primary": {
-                                color: isActive ? TEXT_ACTIVE : TEXT_DEFAULT,
-                                fontWeight: isActive ? 600 : 400,
-                                fontSize: "0.875rem",
-                              },
-                              "&:hover": {
-                                bgcolor: isActive ? BG_ACTIVE_DARK : BG_HOVER,
-                                "& .MuiListItemIcon-root": { color: "common.white" },
-                                "& .MuiListItemText-primary": { color: "common.white" },
-                              },
-                              "&.Mui-selected": {
-                                bgcolor: BG_ACTIVE,
-                                "&:hover": { bgcolor: BG_ACTIVE_DARK },
-                              },
-                            }}
-                          >
-                            <ListItemIcon sx={{ minWidth: 36, justifyContent: "center" }}>
-                              {iconNode}
-                            </ListItemIcon>
-                            <ListItemText primary={text} />
-                          </ListItemButton>
-                        </ListItem>
-                      );
-                    })}
+            {/* Purchases - expandable */}
+            {renderExpandableSection('purchases', NAV_CONFIG.purchases)}
 
-                    {/* Coming soon placeholders */}
-                    {[
-                      { text: "Quotes (Coming Soon)" },
-                      { text: "Recurring (Coming Soon)" },
-                    ].map(({ text }) => (
-                      <ListItem key={text} disablePadding>
-                        <ListItemButton
-                          disabled
-                          sx={{
-                            borderRadius: 2,
-                            py: 0.75,
-                            px: 1.5,
-                            ml: 1,
-                            mb: 0.25,
-                            "& .MuiListItemText-primary": {
-                              fontSize: "0.8rem",
-                              color: "grey.600",
-                              fontStyle: "italic",
-                            },
-                            "& .MuiListItemIcon-root": { color: "grey.700" },
-                          }}
-                        >
-                          <ListItemText primary={text} />
-                        </ListItemButton>
-                      </ListItem>
-                    ))}
-                  </List>
-                </Collapse>
-              )}
-            </ListItem>
+            {/* Banking - expandable */}
+            {renderExpandableSection('banking', NAV_CONFIG.banking)}
 
-            {/* ── Remaining flat items ─────────────────────────────────── */}
-            {flatNavItems.map((item) => renderNavBtn(item))}
+            {/* Reports */}
+            {renderNavItem(NAV_CONFIG.reports)}
+
+            {/* Settings (admin only) */}
+            {renderNavItem(NAV_CONFIG.settings)}
           </List>
         </Box>
 

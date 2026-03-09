@@ -124,7 +124,6 @@ const LoginPage = () => {
         });
       } else {
         const token = await login(credentials);
-        console.log("Login successful, token:", token);
         navigate("/dashboard");
       }
     } catch (err) {
@@ -219,11 +218,12 @@ const LoginPage = () => {
                     backdropFilter: 'blur(20px)',
                     background: 'rgba(255, 255, 255, 0.98)',
                     borderRadius: 4,
-                    overflow: 'hidden',
-                    boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+                    overflow: 'visible',
+                    boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+                    maxHeight: 'none'
                   }}
                 >
-                  <CardContent sx={{ p: { xs: 3, md: 5 } }}>
+                  <CardContent sx={{ p: { xs: 3, md: 5 }, overflow: 'visible' }}>
                     {/* Header */}
                     <motion.div variants={fadeInUp}>
                       <Box sx={{ textAlign: 'center', mb: 4 }}>
@@ -269,35 +269,64 @@ const LoginPage = () => {
                     {/* Form */}
                     <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
                       {/* Username Field */}
-                      <motion.div variants={fadeInUp}>
-                        <TextField
-                          fullWidth
-                          label="Username"
-                          name="username"
-                          value={credentials.username}
-                          onChange={handleChange}
-                          variant="outlined"
-                          margin="normal"
-                          required
-                          InputProps={{
-                            startAdornment: (
-                              <InputAdornment position="start">
-                                <Person color="action" />
-                              </InputAdornment>
-                            ),
-                          }}
-                          sx={{ mb: 2 }}
-                        />
-                      </motion.div>
+                      <TextField
+                        fullWidth
+                        label="Username"
+                        name="username"
+                        value={credentials.username}
+                        onChange={handleChange}
+                        variant="outlined"
+                        margin="normal"
+                        required
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <Person color="action" />
+                            </InputAdornment>
+                          ),
+                        }}
+                        sx={{ mb: 2 }}
+                      />
 
                       {/* Password Field */}
-                      <motion.div variants={fadeInUp}>
+                      <TextField
+                        fullWidth
+                        label="Password"
+                        name="password"
+                        type={showPassword ? 'text' : 'password'}
+                        value={credentials.password}
+                        onChange={handleChange}
+                        variant="outlined"
+                        margin="normal"
+                        required
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <Lock color="action" />
+                            </InputAdornment>
+                          ),
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <IconButton
+                                onClick={() => setShowPassword(!showPassword)}
+                                edge="end"
+                              >
+                                {showPassword ? <VisibilityOff /> : <Visibility />}
+                              </IconButton>
+                            </InputAdornment>
+                          ),
+                        }}
+                        sx={{ mb: isSignup ? 1 : 2 }}
+                      />
+
+                      {/* Confirm Password Field - Only for signup */}
+                      {isSignup && (
                         <TextField
                           fullWidth
-                          label="Password"
-                          name="password"
-                          type={showPassword ? 'text' : 'password'}
-                          value={credentials.password}
+                          label="Confirm Password"
+                          name="confirmPassword"
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          value={credentials.confirmPassword}
                           onChange={handleChange}
                           variant="outlined"
                           margin="normal"
@@ -305,97 +334,60 @@ const LoginPage = () => {
                           InputProps={{
                             startAdornment: (
                               <InputAdornment position="start">
-                                <Lock color="action" />
+                                <Security color="action" />
                               </InputAdornment>
                             ),
                             endAdornment: (
                               <InputAdornment position="end">
                                 <IconButton
-                                  onClick={() => setShowPassword(!showPassword)}
+                                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                   edge="end"
                                 >
-                                  {showPassword ? <VisibilityOff /> : <Visibility />}
+                                  {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
                                 </IconButton>
                               </InputAdornment>
                             ),
                           }}
-                          sx={{ mb: isSignup ? 1 : 2 }}
+                          sx={{ mb: 2 }}
                         />
-                      </motion.div>
-
-                      {/* Confirm Password Field - Only for signup */}
-                      {isSignup && (
-                        <motion.div variants={fadeInUp}>
-                          <TextField
-                            fullWidth
-                            label="Confirm Password"
-                            name="confirmPassword"
-                            type={showConfirmPassword ? 'text' : 'password'}
-                            value={credentials.confirmPassword}
-                            onChange={handleChange}
-                            variant="outlined"
-                            margin="normal"
-                            required
-                            InputProps={{
-                              startAdornment: (
-                                <InputAdornment position="start">
-                                  <Security color="action" />
-                                </InputAdornment>
-                              ),
-                              endAdornment: (
-                                <InputAdornment position="end">
-                                  <IconButton
-                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                    edge="end"
-                                  >
-                                    {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                                  </IconButton>
-                                </InputAdornment>
-                              ),
-                            }}
-                            sx={{ mb: 2 }}
-                          />
-                        </motion.div>
                       )}
 
                       {/* Password Requirements - Only for signup when password is entered */}
                       {isSignup && credentials.password && (
-                        <motion.div variants={fadeInUp}>
-                          <Paper
-                            variant="outlined"
-                            sx={{ p: 2, mb: 3, bgcolor: 'grey.50', borderRadius: 2 }}
-                          >
-                            <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                              Password Requirements:
-                            </Typography>
-                            <List dense sx={{ py: 0 }}>
-                              {[
-                                { key: 'minLength', text: 'At least 8 characters' },
-                                { key: 'hasUppercase', text: 'One uppercase letter' },
-                                { key: 'hasLowercase', text: 'One lowercase letter' },
-                                { key: 'hasNumber', text: 'One number' },
-                                { key: 'hasSpecialChar', text: 'One special character' }
-                              ].map(({ key, text }) => (
-                                <ListItem key={key} sx={{ py: 0, px: 0 }}>
-                                  <ListItemIcon sx={{ minWidth: 36 }}>
-                                    {passwordValidation[key] ? (
-                                      <CheckCircle color="success" sx={{ fontSize: 18 }} />
-                                    ) : (
-                                      <Cancel color="error" sx={{ fontSize: 18 }} />
-                                    )}
-                                  </ListItemIcon>
-                                  <ListItemText
-                                    primary={text}
-                                    primaryTypographyProps={{
-                                      variant: 'body2',
-                                      color: passwordValidation[key] ? 'success.main' : 'error.main'
-                                    }}
-                                  />
-                                </ListItem>
-                              ))}
-                            </List>
-                          </Paper>
-                        </motion.div>
+                        <Paper
+                          variant="outlined"
+                          sx={{ p: 2, mb: 3, bgcolor: 'grey.50', borderRadius: 2 }}
+                        >
+                          <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                            Password Requirements:
+                          </Typography>
+                          <List dense sx={{ py: 0 }}>
+                            {[
+                              { key: 'minLength', text: 'At least 8 characters' },
+                              { key: 'hasUppercase', text: 'One uppercase letter' },
+                              { key: 'hasLowercase', text: 'One lowercase letter' },
+                              { key: 'hasNumber', text: 'One number' },
+                              { key: 'hasSpecialChar', text: 'One special character' }
+                            ].map(({ key, text }) => (
+                              <ListItem key={key} sx={{ py: 0, px: 0 }}>
+                                <ListItemIcon sx={{ minWidth: 36 }}>
+                                  {passwordValidation[key] ? (
+                                    <CheckCircle color="success" sx={{ fontSize: 18 }} />
+                                  ) : (
+                                    <Cancel color="error" sx={{ fontSize: 18 }} />
+                                  )}
+                                </ListItemIcon>
+                                <ListItemText
+                                  primary={text}
+                                  primaryTypographyProps={{
+                                    variant: 'body2',
+                                    color: passwordValidation[key] ? 'success.main' : 'error.main'
+                                  }}
+                                />
+                              </ListItem>
+                            ))}
+                          </List>
+                        </Paper>
                       )}
 
                       {/* Remember Me & Forgot Password - Only for login */}

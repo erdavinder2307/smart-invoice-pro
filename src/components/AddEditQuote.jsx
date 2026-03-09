@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { createInvoice, updateInvoice } from '../services/invoiceService';
 import { createApiUrl } from '../config/api';
 import {
   Alert, Box, Button, Checkbox, CircularProgress, Container,
@@ -14,23 +13,20 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { C, ZohoRow, AppSelect, FieldLabel, fieldSx, menuItemSx, footerSx, cancelBtnSx, saveBtnSx } from './common/formStyles';
 
-const statusOptions = ['Draft', 'Issued', 'Paid', 'Overdue', 'Cancelled'];
-const invoiceTypeOptions = ['Tax Invoice', 'Proforma', 'Credit Note'];
+const statusOptions = ['Draft', 'Sent', 'Accepted', 'Declined', 'Expired', 'Converted'];
 
 const initialForm = {
-  invoice_number: '', customer_id: '', issue_date: '', due_date: '',
+  quote_number: '', customer_id: '', issue_date: '', expiry_date: '',
   payment_terms: '', subtotal: 0, cgst_amount: 0, sgst_amount: 0,
-  igst_amount: 0, total_tax: 0, total_amount: 0, amount_paid: 0,
-  balance_due: 0, status: 'Draft', payment_mode: '', notes: '',
-  terms_conditions: '', is_gst_applicable: false,
-  invoice_type: 'Tax Invoice', subject: '', salesperson: '',
+  igst_amount: 0, total_tax: 0, total_amount: 0,
+  status: 'Draft', notes: '', terms_conditions: '',
+  is_gst_applicable: false, subject: '', salesperson: '',
   items: [{ quantity: 1, rate: 0, discount: 0, tax: 0, amount: 0 }],
 };
 
-/* ── Reusable table-cell field ─────────────────────────────────────── */
-const CellField = ({ value, onChange, type = 'number', width = 90, inputProps }) => (
+const CellField = ({ value, onChange, width = 90, inputProps }) => (
   <TextField
-    size="small" type={type} value={value} onChange={onChange}
+    size="small" type="number" value={value} onChange={onChange}
     inputProps={inputProps}
     sx={{
       width,
@@ -45,10 +41,10 @@ const CellField = ({ value, onChange, type = 'number', width = 90, inputProps })
   />
 );
 
-const AddEditInvoice = ({ onSuccess, onCancel }) => {
+const AddEditQuote = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const invoiceId = id;
+  const quoteId = id;
   const [form, setForm] = useState(initialForm);
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -57,23 +53,28 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
   useEffect(() => {
     axios.get(createApiUrl('/api/customers')).then(res => {
       setCustomers(res.data);
-      if (!invoiceId) {
-        axios.get(createApiUrl('/api/invoices/next-number'))
-          .then(nr => setForm(f => ({ ...f, invoice_number: nr.data.next_invoice_number })))
-          .catch(() => { });
+      if (!quoteId) {
+        const today = new Date().toISOString().slice(0, 10);
+        const expiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        axios.get(createApiUrl('/api/quotes/next-number'))
+          .then(nr => setForm(f => ({ ...f, quote_number: nr.data.next_number, issue_date: today, expiry_date: expiry })))
+          .catch(() => setForm(f => ({ ...f, quote_number: 'QT-001', issue_date: today, expiry_date: expiry })));
       } else {
-        axios.get(createApiUrl(`/api/invoices/${invoiceId}`)).then(r => setForm(r.data));
+        axios.get(createApiUrl(`/api/quotes/${quoteId}`))
+          .then(r => setForm(r.data))
+          .catch(() => setError('Failed to load quote'));
       }
-    });
-  }, [invoiceId]);
+    }).catch(() => setError('Failed to load customers'));
+  }, [quoteId]);
 
   useEffect(() => {
+    let subtotal = 0;
+    form.items?.forEach(item => { subtotal += (item.quantity * item.rate - item.discount) * (1 + item.tax / 100); });
     const total_tax = +form.cgst_amount + +form.sgst_amount + +form.igst_amount;
-    const total_amount = +form.subtotal + total_tax;
-    const balance_due = total_amount - +form.amount_paid;
-    setForm(f => ({ ...f, total_tax, total_amount, balance_due }));
+    const total_amount = subtotal + total_tax;
+    setForm(f => ({ ...f, subtotal, total_tax, total_amount }));
     // eslint-disable-next-line
-  }, [form.subtotal, form.cgst_amount, form.sgst_amount, form.igst_amount, form.amount_paid]);
+  }, [form.items, form.cgst_amount, form.sgst_amount, form.igst_amount]);
 
   const handleChange = e => {
     const { name, value, type, checked } = e.target;
@@ -85,7 +86,6 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
     items[idx] = { ...items[idx], [field]: val };
     setForm(f => ({ ...f, items }));
   };
-
   const addItem = () => setForm(f => ({ ...f, items: [...f.items, { quantity: 1, rate: 0, discount: 0, tax: 0, amount: 0 }] }));
   const removeItem = idx => {
     const items = form.items.filter((_, i) => i !== idx);
@@ -96,20 +96,22 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    if (!form.customer_id) { setError('Please select a customer'); setLoading(false); return; }
+    if (form.expiry_date && form.issue_date && new Date(form.expiry_date) <= new Date(form.issue_date)) {
+      setError('Expiry date must be after issue date'); setLoading(false); return;
+    }
     try {
-      if (invoiceId) await updateInvoice(invoiceId, form);
-      else await createInvoice(form);
-      if (onSuccess) onSuccess();
-      navigate('/invoices');
-    } catch { setError('Failed to save invoice'); }
+      if (quoteId) await axios.put(createApiUrl(`/api/quotes/${quoteId}`), form);
+      else await axios.post(createApiUrl('/api/quotes'), form);
+      navigate('/quotes');
+    } catch (err) { setError('Failed to save quote: ' + (err.response?.data?.error || err.message)); }
     setLoading(false);
   };
 
-  /* totals helper */
   const itemTotal = item => ((item.quantity * item.rate - item.discount) * (1 + item.tax / 100));
 
   return (
-    <MainLayout title={invoiceId ? 'Edit Invoice' : 'New Invoice'}>
+    <MainLayout title={quoteId ? 'Edit Quote' : 'New Quote'}>
       <Box sx={{ bgcolor: C.pageBg, minHeight: '100vh', pb: 6 }}>
         <Container maxWidth="lg" sx={{ pt: 3 }}>
 
@@ -120,10 +122,10 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
             elevation={0}
             sx={{ bgcolor: C.white, border: `1px solid ${C.border}`, borderRadius: '4px', overflow: 'hidden' }}
           >
-            {/* ══ HEADER FIELDS ═══════════════════════════════════════════ */}
+            {/* ══ HEADER FIELDS ══════════════════════════════════════════ */}
             <Box sx={{ px: 3 }}>
               <Box sx={{ py: 1.5, borderBottom: `1px solid ${C.divider}` }}>
-                <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>Invoice Details</Typography>
+                <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>Quote Details</Typography>
               </Box>
 
               <ZohoRow label="Customer" required>
@@ -135,20 +137,10 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                 </Box>
               </ZohoRow>
 
-              <ZohoRow label="Invoice #">
-                <TextField
-                  value={form.invoice_number} size="small"
+              <ZohoRow label="Quote #">
+                <TextField value={form.quote_number} size="small"
                   InputProps={{ readOnly: true }}
-                  sx={{ ...fieldSx, maxWidth: 200, '& .MuiOutlinedInput-root': { bgcolor: C.sectionBg } }}
-                />
-              </ZohoRow>
-
-              <ZohoRow label="Invoice Type">
-                <Box sx={{ width: 220 }}>
-                  <AppSelect name="invoice_type" value={form.invoice_type} onChange={handleChange}>
-                    {invoiceTypeOptions.map(t => <MenuItem key={t} value={t} sx={menuItemSx}>{t}</MenuItem>)}
-                  </AppSelect>
-                </Box>
+                  sx={{ ...fieldSx, maxWidth: 200, '& .MuiOutlinedInput-root': { bgcolor: C.sectionBg } }} />
               </ZohoRow>
 
               <ZohoRow label="Status">
@@ -159,26 +151,21 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                 </Box>
               </ZohoRow>
 
-              <ZohoRow label="Invoice Date">
+              <ZohoRow label="Issue Date">
                 <TextField name="issue_date" value={form.issue_date} onChange={handleChange}
-                  type="date" size="small" InputLabelProps={{ shrink: true }}
+                  type="date" size="small" required InputLabelProps={{ shrink: true }}
                   sx={{ ...fieldSx, maxWidth: 220 }} />
               </ZohoRow>
 
-              <ZohoRow label="Due Date">
-                <TextField name="due_date" value={form.due_date} onChange={handleChange}
-                  type="date" size="small" InputLabelProps={{ shrink: true }}
+              <ZohoRow label="Expiry Date">
+                <TextField name="expiry_date" value={form.expiry_date} onChange={handleChange}
+                  type="date" size="small" required InputLabelProps={{ shrink: true }}
                   sx={{ ...fieldSx, maxWidth: 220 }} />
               </ZohoRow>
 
               <ZohoRow label="Payment Terms">
                 <TextField name="payment_terms" value={form.payment_terms} onChange={handleChange}
                   size="small" placeholder="e.g. Net 30" sx={{ ...fieldSx, maxWidth: 280 }} />
-              </ZohoRow>
-
-              <ZohoRow label="Payment Mode">
-                <TextField name="payment_mode" value={form.payment_mode} onChange={handleChange}
-                  size="small" placeholder="Bank Transfer, Cash, UPI…" sx={{ ...fieldSx, maxWidth: 280 }} />
               </ZohoRow>
 
               <ZohoRow label="Salesperson">
@@ -188,11 +175,11 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
 
               <ZohoRow label="Subject">
                 <TextField name="subject" value={form.subject} onChange={handleChange}
-                  size="small" fullWidth placeholder="What is this invoice for?" sx={fieldSx} />
+                  size="small" fullWidth placeholder="What is this quote for?" sx={fieldSx} />
               </ZohoRow>
             </Box>
 
-            {/* ══ LINE ITEMS ══════════════════════════════════════════════ */}
+            {/* ══ LINE ITEMS ════════════════════════════════════════════ */}
             <Box sx={{ px: 3, pt: 2.5, pb: 2, borderTop: `1px solid ${C.divider}` }}>
               <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333', mb: 1.5 }}>Line Items</Typography>
               <TableContainer sx={{ border: `1px solid ${C.border}`, borderRadius: '4px' }}>
@@ -242,21 +229,14 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                   </TableBody>
                 </Table>
               </TableContainer>
-              <Button
-                size="small" startIcon={<AddIcon />} onClick={addItem}
-                sx={{
-                  mt: 1.5, textTransform: 'none', fontSize: '0.8125rem', color: C.primary,
-                  borderColor: C.border, borderRadius: '4px'
-                }}
-                variant="outlined"
-              >
+              <Button size="small" startIcon={<AddIcon />} onClick={addItem} variant="outlined"
+                sx={{ mt: 1.5, textTransform: 'none', fontSize: '0.8125rem', color: C.primary, borderColor: C.border, borderRadius: '4px' }}>
                 Add Line Item
               </Button>
             </Box>
 
-            {/* ══ TOTALS + GST ════════════════════════════════════════════ */}
+            {/* ══ TOTALS + GST ════════════════════════════════════════ */}
             <Box sx={{ px: 3, py: 2.5, borderTop: `1px solid ${C.divider}`, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-              {/* Subtotal / GST fields */}
               <Box sx={{ flex: '1 1 320px' }}>
                 <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333', mb: 2 }}>Tax Details</Typography>
                 <FormControlLabel
@@ -278,8 +258,7 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                 )}
               </Box>
 
-              {/* Summary */}
-              <Box sx={{ flex: '0 0 280px', bgcolor: C.sectionBg, borderRadius: '4px', border: `1px solid ${C.border}`, p: 2 }}>
+              <Box sx={{ flex: '0 0 260px', bgcolor: C.sectionBg, borderRadius: '4px', border: `1px solid ${C.border}`, p: 2 }}>
                 <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333', mb: 1.5 }}>Summary</Typography>
                 {[
                   ['Subtotal', `₹${(+form.subtotal).toFixed(2)}`, false],
@@ -291,21 +270,10 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                     <Typography sx={{ fontSize: '0.875rem', fontWeight: bold ? 700 : 500, color: bold ? C.primary : C.label }}>{val}</Typography>
                   </Box>
                 ))}
-                <Divider sx={{ borderColor: C.divider, my: 1 }} />
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography sx={{ fontSize: '0.875rem', color: C.hint }}>Amount Paid</Typography>
-                  <TextField size="small" type="number" name="amount_paid" value={form.amount_paid}
-                    onChange={handleChange} inputProps={{ min: 0, step: 0.01 }}
-                    sx={{ ...fieldSx, width: 120 }} />
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', bgcolor: '#fff3e0', borderRadius: '4px', px: 1.5, py: 1 }}>
-                  <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: '#e65100' }}>Balance Due</Typography>
-                  <Typography sx={{ fontSize: '0.875rem', fontWeight: 700, color: '#e65100' }}>₹{(+form.balance_due).toFixed(2)}</Typography>
-                </Box>
               </Box>
             </Box>
 
-            {/* ══ NOTES & TERMS ═══════════════════════════════════════════ */}
+            {/* ══ NOTES & TERMS ══════════════════════════════════════ */}
             <Box sx={{ px: 3, borderTop: `1px solid ${C.divider}` }}>
               <Box sx={{ py: 1.5, borderBottom: `1px solid ${C.divider}` }}>
                 <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>Notes & Terms</Typography>
@@ -318,17 +286,17 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
               <ZohoRow label="Terms & Conditions" alignStart noDivider>
                 <TextField name="terms_conditions" value={form.terms_conditions} onChange={handleChange}
                   size="small" fullWidth multiline rows={2}
-                  placeholder="Payment due as per terms specified…" sx={fieldSx} />
+                  placeholder="Payment terms, return policy, etc." sx={fieldSx} />
               </ZohoRow>
             </Box>
 
-            {/* ══ FOOTER ═════════════════════════════════════════════════ */}
+            {/* ══ FOOTER ═════════════════════════════════════════════ */}
             <Box sx={footerSx}>
-              <Button variant="outlined" onClick={() => { if (onCancel) onCancel(); navigate('/invoices'); }} disabled={loading} sx={cancelBtnSx}>Cancel</Button>
+              <Button variant="outlined" onClick={() => navigate('/quotes')} disabled={loading} sx={cancelBtnSx}>Cancel</Button>
               <Button type="submit" variant="contained" disabled={loading}
                 startIcon={loading ? <CircularProgress size={14} color="inherit" /> : null}
                 sx={saveBtnSx}>
-                {loading ? 'Saving…' : invoiceId ? 'Update' : 'Save'}
+                {loading ? 'Saving…' : quoteId ? 'Update' : 'Save'}
               </Button>
             </Box>
           </Paper>
@@ -338,4 +306,4 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
   );
 };
 
-export default AddEditInvoice;
+export default AddEditQuote;

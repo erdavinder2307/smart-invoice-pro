@@ -4,17 +4,14 @@ import { createApiUrl } from "../config/api";
 import MainLayout from "./Layout/MainLayout";
 import StatusBadge from "./common/StatusBadge";
 import SummaryCard from "./common/SummaryCard";
+import SectionHeader from "./common/SectionHeader";
+import StandardDataTable from "./common/StandardDataTable";
 import axios from "axios";
 import {
   Box,
   Button,
   Typography,
-  Paper,
-  Table,
-  TableBody,
   TableCell,
-  TableContainer,
-  TableHead,
   TableRow,
   CircularProgress,
   Alert,
@@ -32,10 +29,7 @@ import {
   MenuItem,
   Select,
   FormControl,
-  TablePagination,
-  Container,
-  Chip,
-  Avatar
+  Container
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
@@ -49,7 +43,6 @@ import PeopleIcon from "@mui/icons-material/People";
 import LockIcon from "@mui/icons-material/Lock";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
-import ReceiptIcon from "@mui/icons-material/Receipt";
 
 const initialForm = {
   name: "",
@@ -249,43 +242,50 @@ const CustomerList = () => {
     setPage(0);
   };
 
+  const customerColumns = [
+    {
+      key: "select",
+      label: (
+        <Checkbox
+          indeterminate={
+            selectedCustomers.length > 0 &&
+            selectedCustomers.length < paginatedCustomers.length
+          }
+          checked={
+            paginatedCustomers.length > 0 &&
+            selectedCustomers.length === paginatedCustomers.length
+          }
+          onChange={handleSelectAll}
+        />
+      ),
+      width: 42,
+    },
+    { key: "name", label: "Name" },
+    { key: "company_name", label: "Company Name" },
+    { key: "email", label: "Email" },
+    { key: "phone", label: "Work Phone" },
+    { key: "place_of_supply", label: "Place of Supply" },
+    { key: "receivables", label: "Receivables", align: "right" },
+    { key: "unused_credits", label: "Unused Credits", align: "right" },
+    { key: "status", label: "Status" },
+    { key: "actions", label: "Actions", align: "center" },
+  ];
+
   return (
     <MainLayout>
       <Container maxWidth="xl" sx={{ py: 4 }}>
         {/* Page Header */}
         <Box sx={{ mb: 4 }}>
-          <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
-            flexWrap="wrap"
-            gap={2}
-            mb={3}
-          >
-            <Box>
-              <Typography variant="h4" fontWeight={700} gutterBottom>
-                Customers
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Manage your customer relationships and track receivables
-              </Typography>
-            </Box>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => navigate('/customers/add')}
-              sx={{
-                borderRadius: 2,
-                px: 3,
-                py: 1.25,
-                fontWeight: 600,
-                textTransform: "none",
-                boxShadow: 2
-              }}
-            >
-              New Customer
-            </Button>
-          </Box>
+          <SectionHeader
+            title="Customers"
+            subtitle="Manage your customer relationships and track receivables"
+            primaryAction={{
+              label: "New Customer",
+              icon: <AddIcon />,
+              onClick: () => navigate('/customers/add'),
+            }}
+            sx={{ mb: 3 }}
+          />
 
           {/* Summary Cards */}
           <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -377,157 +377,89 @@ const CustomerList = () => {
         )}
 
         {/* Main Table */}
-        <Paper
-          elevation={0}
-          sx={{
-            borderRadius: 3,
-            border: "1px solid",
-            borderColor: "grey.200",
-            overflow: "hidden"
+        <StandardDataTable
+          columns={customerColumns}
+          rows={paginatedCustomers}
+          loading={loading}
+          emptyMessage={searchTerm ? "No customers found" : "No customers yet"}
+          pagination={{
+            rowsPerPageOptions: [10, 25, 50],
+            count: filteredCustomers.length,
+            rowsPerPage,
+            page,
+            onPageChange: handleChangePage,
+            onRowsPerPageChange: handleChangeRowsPerPage,
           }}
-        >
-          <TableContainer>
-            <Table stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell padding="checkbox">
-                    <Checkbox
-                      indeterminate={
-                        selectedCustomers.length > 0 &&
-                        selectedCustomers.length < paginatedCustomers.length
-                      }
-                      checked={
-                        paginatedCustomers.length > 0 &&
-                        selectedCustomers.length === paginatedCustomers.length
-                      }
-                      onChange={handleSelectAll}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Company Name</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Email</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Work Phone</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Place of Supply</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }} align="right">
-                    Receivables
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 600 }} align="right">
-                    Unused Credits
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }} align="center">
-                    Actions
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={10} align="center" sx={{ py: 8 }}>
-                      <CircularProgress size={40} />
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                        Loading customers...
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                ) : paginatedCustomers.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={10} align="center" sx={{ py: 8 }}>
-                      <PeopleIcon sx={{ fontSize: 48, color: "grey.300", mb: 2 }} />
-                      <Typography variant="h6" color="text.secondary" gutterBottom>
-                        {searchTerm ? "No customers found" : "No customers yet"}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {searchTerm
-                          ? "Try adjusting your search terms"
-                          : "Click 'New Customer' to add your first customer"}
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  paginatedCustomers.map((customer) => (
-                    <TableRow
-                      key={customer.id}
-                      hover
-                      sx={{
-                        "&:hover": { bgcolor: "grey.50" },
-                        cursor: "pointer"
-                      }}
+          renderRow={(customer) => (
+            <TableRow
+              key={customer.id}
+              hover
+              sx={{
+                "&:hover": { bgcolor: "grey.50" },
+                cursor: "pointer"
+              }}
+            >
+              <TableCell padding="checkbox">
+                <Checkbox
+                  checked={selectedCustomers.includes(customer.id)}
+                  onChange={() => handleSelectOne(customer.id)}
+                />
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2" fontWeight={600}>
+                  {customer.name}
+                </Typography>
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2">{customer.company_name}</Typography>
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2">{customer.email}</Typography>
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2">{customer.phone}</Typography>
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2">{customer.place_of_supply}</Typography>
+              </TableCell>
+              <TableCell align="right">
+                <Typography variant="body2" fontWeight={600} color="success.main">
+                  ₹{customer.receivables?.toLocaleString() || "0"}
+                </Typography>
+              </TableCell>
+              <TableCell align="right">
+                <Typography variant="body2" fontWeight={600} color="info.main">
+                  ₹{customer.unused_credits?.toLocaleString() || "0"}
+                </Typography>
+              </TableCell>
+              <TableCell>
+                <StatusBadge status={customer.status || "Active"} />
+              </TableCell>
+              <TableCell align="center">
+                <Box display="flex" gap={0.5} justifyContent="center">
+                  <Tooltip title="Edit">
+                    <IconButton
+                      size="small"
+                      onClick={() => navigate(`/customers/edit/${customer.id}`)}
+                      sx={{ color: "primary.main" }}
                     >
-                      <TableCell padding="checkbox">
-                        <Checkbox
-                          checked={selectedCustomers.includes(customer.id)}
-                          onChange={() => handleSelectOne(customer.id)}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" fontWeight={600}>
-                          {customer.name}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">{customer.company_name}</Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">{customer.email}</Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">{customer.phone}</Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">{customer.place_of_supply}</Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="body2" fontWeight={600} color="success.main">
-                          ₹{customer.receivables?.toLocaleString() || "0"}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="body2" fontWeight={600} color="info.main">
-                          ₹{customer.unused_credits?.toLocaleString() || "0"}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={customer.status || "Active"} />
-                      </TableCell>
-                      <TableCell align="center">
-                        <Box display="flex" gap={0.5} justifyContent="center">
-                          <Tooltip title="Edit">
-                            <IconButton
-                              size="small"
-                              onClick={() => navigate(`/customers/edit/${customer.id}`)}
-                              sx={{ color: "primary.main" }}
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Delete">
-                            <IconButton
-                              size="small"
-                              onClick={() => setConfirmDeleteId(customer.id)}
-                              sx={{ color: "error.main" }}
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-          <TablePagination
-            rowsPerPageOptions={[10, 25, 50]}
-            component="div"
-            count={filteredCustomers.length}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={handleChangePage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-          />
-        </Paper>
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Delete">
+                    <IconButton
+                      size="small"
+                      onClick={() => setConfirmDeleteId(customer.id)}
+                      sx={{ color: "error.main" }}
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              </TableCell>
+            </TableRow>
+          )}
+        />
       </Container>
 
       {/* Modern Add/Edit Dialog */}

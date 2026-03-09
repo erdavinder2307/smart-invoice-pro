@@ -7,16 +7,21 @@ import {
   Alert,
   CircularProgress,
   Grid,
-  Divider
+  Divider,
+  Snackbar
 } from '@mui/material';
+import PaymentIcon from '@mui/icons-material/Payment';
 import { useNavigate, useParams } from 'react-router-dom';
 import { createApiUrl } from '../config/api';
 import API_CONFIG from '../config/api';
+import PayNowModal from '../components/PayNowModal';
 
 const CustomerInvoiceDetail = () => {
   const [invoice, setInvoice] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [payNowOpen, setPayNowOpen] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState('');
   const navigate = useNavigate();
   const { id } = useParams();
 
@@ -132,15 +137,28 @@ const CustomerInvoiceDetail = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Paper sx={{ p: 4 }}>
+    <>
+      <Box sx={{ p: 3 }}>
+        <Paper sx={{ p: 4 }}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
           <Typography variant="h4">
             Invoice Details
           </Typography>
-          <Button variant="outlined" onClick={handleBackToDashboard}>
-            Back to Dashboard
-          </Button>
+          <Box display="flex" gap={2}>
+            {invoice.status !== 'Paid' && invoice.status !== 'Cancelled' && (
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={<PaymentIcon />}
+                onClick={() => setPayNowOpen(true)}
+              >
+                Pay Now
+              </Button>
+            )}
+            <Button variant="outlined" onClick={handleBackToDashboard}>
+              Back to Dashboard
+            </Button>
+          </Box>
         </Box>
         
         <Grid container spacing={3}>
@@ -187,8 +205,30 @@ const CustomerInvoiceDetail = () => {
             </Grid>
           )}
         </Grid>
-      </Paper>
-    </Box>
+        </Paper>
+      </Box>
+
+    <PayNowModal
+      open={payNowOpen}
+      onClose={() => setPayNowOpen(false)}
+      invoice={invoice}
+      onSuccess={(txnId) => {
+        setPayNowOpen(false);
+        setPaymentSuccess(`Payment initiated! Transaction ID: ${txnId}. Your invoice will be marked as Paid once confirmed.`);
+      }}
+    />
+
+    <Snackbar
+      open={!!paymentSuccess}
+      autoHideDuration={8000}
+      onClose={() => setPaymentSuccess('')}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+    >
+      <Alert onClose={() => setPaymentSuccess('')} severity="success" sx={{ width: '100%' }}>
+        {paymentSuccess}
+      </Alert>
+    </Snackbar>
+    </>
   );
 };
 

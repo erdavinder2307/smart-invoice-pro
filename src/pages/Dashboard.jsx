@@ -49,6 +49,7 @@ import ProductStockSummary from "../components/ProductStockSummary";
 import StatCard from "../components/common/StatCard";
 import SectionPaper from "../components/common/SectionPaper";
 import FeatureCard from "../components/common/FeatureCard";
+import SectionHeader from "../components/common/SectionHeader";
 import {
   dummyKpiCards,
   dummyBankingData,
@@ -182,14 +183,11 @@ const DashboardPage = () => {
           }}
         >
           {/* Greeting */}
-          <Box>
-            <Typography variant="h5" fontWeight={700} color="text.primary">
-              Hello, {greetName} 👋
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              Here's an overview of your business today — Thursday, 19 Feb 2026.
-            </Typography>
-          </Box>
+          <SectionHeader
+            title={`Hello, ${greetName} 👋`}
+            subtitle="Here's an overview of your business today"
+            sx={{ mb: 0, minWidth: 280, flex: 1 }}
+          />
 
           {/* Search + date filter */}
           <Box sx={{ display: "flex", gap: 1.5, alignItems: "center", flexWrap: "wrap" }}>

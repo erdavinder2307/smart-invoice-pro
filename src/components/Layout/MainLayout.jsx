@@ -1,37 +1,48 @@
 
 import React from "react";
 import Box from "@mui/material/Box";
-import { useTheme } from "@mui/material/styles";
+import Container from "@mui/material/Container";
 import Sidebar from "../Sidebar";
-import UserHeaderProfile from "../UserHeaderProfile";
-import { useLocation } from "react-router-dom";
 import Typography from "@mui/material/Typography";
 import DashboardHeader from "../DashboardHeader";
+import TopUtilityBar from "./TopUtilityBar";
+import AppBreadcrumbs from "./AppBreadcrumbs";
 
-const MainLayout = ({ children, title, subtitle, showDashboardHeader = false }) => {
-    const theme = useTheme();
+const MainLayout = ({
+    children,
+    title,
+    subtitle,
+    showDashboardHeader = false,
+    showUtilityBar = true,
+    showBreadcrumbs = true,
+}) => {
 
     return (
         <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "grey.50" }}>
             <Sidebar />
             <Box component="main" sx={{ flex: 1, width: 0, display: 'flex', flexDirection: 'column' }}>
-                {/* Modern Header Area */}
+                {/* Top Utility Bar */}
+                {showUtilityBar && (
+                    <Box sx={{ position: 'sticky', top: 0, zIndex: 1200 }}>
+                        <TopUtilityBar />
+                    </Box>
+                )}
+
+                {/* Breadcrumb Row */}
+                {showBreadcrumbs && <AppBreadcrumbs />}
+
+                {/* Page Header Area */}
                 <Box sx={{
                     bgcolor: 'white',
                     borderBottom: '1px solid',
-                    borderColor: 'grey.300',
+                    borderColor: 'divider',
                     px: { xs: 1.5, md: 2.5 },
-                    py: 1.5,
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                    position: 'sticky',
-                    top: 0,
-                    zIndex: 1100
+                    py: title || subtitle || showDashboardHeader ? 1.5 : 0.5,
                 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: showDashboardHeader ? 1.5 : 0 }}>
-                        {/* Title Section */}
-                        <Box>
+                    {(title || subtitle) && (
+                        <Box sx={{ mb: showDashboardHeader ? 1.5 : 0 }}>
                             {title && (
-                                <Typography variant="h5" fontWeight={700} color="text.primary" sx={{ mb: subtitle ? 0.5 : 0 }}>
+                                <Typography variant="h5" color="text.primary" sx={{ mb: subtitle ? 0.25 : 0 }}>
                                     {title}
                                 </Typography>
                             )}
@@ -41,20 +52,17 @@ const MainLayout = ({ children, title, subtitle, showDashboardHeader = false }) 
                                 </Typography>
                             )}
                         </Box>
-
-                        {/* User Profile Section */}
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <UserHeaderProfile />
-                        </Box>
-                    </Box>
+                    )}
 
                     {/* Optional Dashboard Header Components (Search, Filters etc) */}
                     {showDashboardHeader && <DashboardHeader />}
                 </Box>
 
                 {/* Main Content Area */}
-                <Box sx={{ flex: 1, p: { xs: 1.5, md: 2.5 }, bgcolor: "grey.50", overflowY: "auto" }}>
-                    {children}
+                <Box sx={{ flex: 1, bgcolor: "grey.50", overflowY: "auto" }}>
+                    <Container maxWidth={false} sx={{ px: { xs: 1.5, md: 2.5 }, py: 2 }}>
+                        {children}
+                    </Container>
                 </Box>
             </Box>
         </Box>

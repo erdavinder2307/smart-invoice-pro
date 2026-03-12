@@ -225,7 +225,7 @@ const AddEditSalesOrder = () => {
                       value={form.customer_id}
                       onChange={handleChange}
                       label="Customer"
-                      sx={{ borderRadius: 2 }}
+                      sx={{ borderRadius: 2, textAlign: 'left', '& .MuiSelect-select': { textAlign: 'left' } }}
                     >
                       {customers.map((c) => (
                         <MenuItem key={c.id} value={c.id}>
@@ -243,7 +243,7 @@ const AddEditSalesOrder = () => {
                       value={form.status}
                       onChange={handleChange}
                       label="Status"
-                      sx={{ borderRadius: 2 }}
+                      sx={{ borderRadius: 2, textAlign: 'left', '& .MuiSelect-select': { textAlign: 'left' } }}
                     >
                       {statusOptions.map((s) => (
                         <MenuItem key={s} value={s}>
@@ -402,7 +402,7 @@ const AddEditSalesOrder = () => {
                 <ShoppingCartIcon color="primary" />
                 Line Items
               </Typography>
-              <TableContainer sx={{ borderRadius: 2, border: '1px solid', borderColor: 'grey.200' }}>
+              <TableContainer sx={{ borderRadius: 2, border: '1px solid', borderColor: 'grey.200', overflowX: 'hidden' }}>
                 <Table size="small">
                   <TableHead sx={{ bgcolor: 'grey.50' }}>
                     <TableRow>

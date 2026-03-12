@@ -142,7 +142,7 @@ const ProductStockSummary = () => {
       </Box>
 
       {/* Table */}
-      <TableContainer sx={{ maxHeight: 400 }}>
+      <TableContainer sx={{ maxHeight: 400, overflowX: 'hidden' }}>
         <Table stickyHeader>
           <TableHead>
             <TableRow>

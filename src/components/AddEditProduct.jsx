@@ -3,20 +3,100 @@ import axios from 'axios';
 import { createProduct, updateProduct } from '../services/productService';
 import { createApiUrl } from '../config/api';
 import {
-  Alert, Box, Button, CircularProgress, Container,
-  Grid, InputAdornment, MenuItem, Paper, TextField, Typography,
+  Alert,
+  Box,
+  Button,
+  Checkbox,
+  CircularProgress,
+  Container,
+  FormControlLabel,
+  Grid,
+  InputAdornment,
+  MenuItem,
+  Paper,
+  Radio,
+  RadioGroup,
+  TextField,
+  Typography,
 } from '@mui/material';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import SearchIcon from '@mui/icons-material/Search';
 import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from './Layout/MainLayout';
-import { C, ZohoRow, AppSelect, FieldLabel, fieldSx, menuItemSx, footerSx, cancelBtnSx, saveBtnSx } from './common/formStyles';
+import {
+  AppSelect,
+  C,
+  FieldLabel,
+  ZohoRow,
+  cancelBtnSx,
+  fieldSx,
+  footerSx,
+  menuItemSx,
+  saveBtnSx,
+} from './common/formStyles';
 
 const categoryOptions = ['Electronics', 'Grocery', 'Clothing', 'Stationery', 'Other'];
-const unitOptions = ['pcs', 'kg', 'litre', 'box', 'pack'];
+const unitOptions = ['pcs', 'kg', 'litre', 'box', 'pack', 'hrs', 'set'];
+const taxPreferenceOptions = [
+  { value: 'taxable', label: 'Taxable' },
+  { value: 'tax_exempt', label: 'Tax Exempt' },
+];
+const taxRateOptions = [
+  { value: '0', intra: 'Tax Exempt', inter: 'Tax Exempt' },
+  { value: '5', intra: 'GST5 [5%]', inter: 'IGST5 [5%]' },
+  { value: '12', intra: 'GST12 [12%]', inter: 'IGST12 [12%]' },
+  { value: '18', intra: 'GST18 [18%]', inter: 'IGST18 [18%]' },
+  { value: '28', intra: 'GST28 [28%]', inter: 'IGST28 [28%]' },
+];
+const salesAccountOptions = ['Sales', 'Sales Returns', 'Other Income'];
+const purchaseAccountOptions = ['Cost of Goods Sold', 'Purchases', 'Cost of Sales'];
 
 const initialForm = {
-  name: '', description: '', category: '',
-  price: '', unit: '', tax_rate: '',
-  reorder_level: '', reorder_qty: '', preferred_vendor_id: '',
+  item_type: 'goods',
+  name: '',
+  hsn_sac: '',
+  category: '',
+  unit: '',
+  tax_preference: 'taxable',
+  tax_rate: '18',
+  description: '',
+  purchase_description: '',
+  price: '',
+  purchase_rate: '',
+  sales_enabled: true,
+  purchase_enabled: true,
+  sales_account: 'Sales',
+  purchase_account: 'Cost of Goods Sold',
+  reorder_level: '',
+  reorder_qty: '',
+  preferred_vendor_id: '',
+  stock: '',
+};
+
+const sectionTitleSx = {
+  fontSize: '0.875rem',
+  fontWeight: 600,
+  color: '#333',
+};
+
+const helperLineSx = {
+  fontSize: '0.75rem',
+  color: C.hint,
+  lineHeight: 1.6,
+};
+
+const taxLabelSx = {
+  fontSize: '0.8125rem',
+  color: '#333',
+  minWidth: 120,
+};
+
+const infoLabelSx = {
+  width: 104,
+  minWidth: 104,
+  fontSize: '0.8125rem',
+  color: '#333',
+  lineHeight: 1.3,
 };
 
 const AddEditProduct = ({ onSuccess, onCancel }) => {
@@ -26,224 +106,498 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [vendors, setVendors] = useState([]);
+  const [showInventoryFields, setShowInventoryFields] = useState(false);
+  const [showTaxRateEditor, setShowTaxRateEditor] = useState(false);
+
+  const selectedTaxRate = taxRateOptions.find((option) => option.value === String(form.tax_rate ?? '18')) || taxRateOptions[3];
 
   useEffect(() => {
     axios.get(createApiUrl('/api/vendors'))
-      .then(res => setVendors(res.data))
-      .catch(() => { });
+      .then((res) => setVendors(Array.isArray(res.data) ? res.data : []))
+      .catch(() => {});
+
     if (productId) {
       setLoading(true);
       axios.get(createApiUrl(`/api/products/${productId}`))
-        .then(res => setForm(res.data))
+        .then((res) => {
+          setForm((prev) => ({
+            ...prev,
+            ...res.data,
+            item_type: res.data?.item_type || 'goods',
+            hsn_sac: res.data?.hsn_sac || '',
+            tax_preference: res.data?.tax_preference || (Number(res.data?.tax_rate || 0) > 0 ? 'taxable' : 'tax_exempt'),
+            purchase_description: res.data?.purchase_description || '',
+            purchase_rate: res.data?.purchase_rate ?? '',
+            sales_enabled: res.data?.sales_enabled ?? true,
+            purchase_enabled: res.data?.purchase_enabled ?? true,
+            sales_account: res.data?.sales_account || 'Sales',
+            purchase_account: res.data?.purchase_account || 'Cost of Goods Sold',
+          }));
+        })
         .catch(() => setError('Failed to fetch product details'))
         .finally(() => setLoading(false));
     }
   }, [productId]);
 
-  const handleChange = e => {
-    const { name, value } = e.target;
-    setForm(p => ({ ...p, [name]: value }));
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setForm((prev) => {
+      const nextValue = type === 'checkbox' ? checked : value;
+      const updates = { [name]: nextValue };
+
+      if (name === 'tax_preference' && value === 'tax_exempt') {
+        updates.tax_rate = '0';
+      }
+
+      if (name === 'sales_enabled' && !checked) {
+        updates.price = '';
+      }
+
+      if (name === 'purchase_enabled' && !checked) {
+        updates.purchase_rate = '';
+      }
+
+      return { ...prev, ...updates };
+    });
   };
 
   const validateForm = () => {
-    if (!form.name.trim()) return 'Product name is required';
-    if (!form.category.trim()) return 'Category is required';
-    if (!form.price || Number(form.price) < 0) return 'Valid price is required';
+    if (!form.name.trim()) return 'Item name is required';
     if (!form.unit.trim()) return 'Unit is required';
-    if (form.tax_rate === '' || Number(form.tax_rate) < 0) return 'Valid tax rate is required';
+    if (form.sales_enabled && (form.price === '' || Number(form.price) < 0)) return 'Valid selling price is required';
+    if (form.purchase_enabled && (form.purchase_rate === '' || Number(form.purchase_rate) < 0)) return 'Valid cost price is required';
+    if (form.tax_preference === 'taxable' && (form.tax_rate === '' || Number(form.tax_rate) < 0)) return 'Valid tax rate is required';
     return null;
   };
 
-  const handleSubmit = async e => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    const err = validateForm();
-    if (err) return setError(err);
+    const validationError = validateForm();
+    if (validationError) return setError(validationError);
+
+    const payload = {
+      ...form,
+      price: form.sales_enabled ? Number(form.price || 0) : 0,
+      purchase_rate: form.purchase_enabled ? Number(form.purchase_rate || 0) : 0,
+      tax_rate: form.tax_preference === 'taxable' ? Number(form.tax_rate || 0) : 0,
+      reorder_level: form.reorder_level === '' ? 0 : Number(form.reorder_level),
+      reorder_qty: form.reorder_qty === '' ? 0 : Number(form.reorder_qty),
+    };
+
     setLoading(true);
     try {
-      if (productId) await updateProduct(productId, form);
-      else await createProduct(form);
+      if (productId) await updateProduct(productId, payload);
+      else await createProduct(payload);
       if (onSuccess) onSuccess();
       navigate('/products');
-    } catch { setError('Failed to save product'); }
-    setLoading(false);
+    } catch {
+      setError('Failed to save product');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (loading && !form.name) return (
-    <MainLayout title="Product">
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <CircularProgress />
-      </Box>
-    </MainLayout>
-  );
+  if (loading && !form.name) {
+    return (
+      <MainLayout title="Product">
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+          <CircularProgress />
+        </Box>
+      </MainLayout>
+    );
+  }
 
   return (
-    <MainLayout title={productId ? 'Edit Product' : 'New Product'}>
-      <Box sx={{ bgcolor: C.pageBg, minHeight: '100vh', pb: 6 }}>
-        <Container maxWidth="lg" sx={{ pt: 3 }}>
-
+    <MainLayout showBreadcrumbs={false}>
+      <Box sx={{ bgcolor: '#f7f8fb', minHeight: '100vh', pb: 6 }}>
+        <Container maxWidth="xl" sx={{ pt: 2 }}>
           {error && (
             <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2, borderRadius: '4px' }}>
               {error}
             </Alert>
           )}
 
+          <Typography sx={{ fontSize: '1.85rem', fontWeight: 500, color: '#212121', mb: 1.5, textAlign: 'left' }}>
+            {productId ? 'Edit Item' : 'New Item'}
+          </Typography>
+
           <Paper
-            component="form" onSubmit={handleSubmit} autoComplete="off"
+            component="form"
+            onSubmit={handleSubmit}
+            autoComplete="off"
             elevation={0}
             sx={{ bgcolor: C.white, border: `1px solid ${C.border}`, borderRadius: '4px', overflow: 'hidden' }}
           >
-            {/* ══ PRODUCT DETAILS ════════════════════════════════════════ */}
             <Box sx={{ px: 3 }}>
-              <Box sx={{ py: 1.5, borderBottom: `1px solid ${C.divider}` }}>
-                <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>
-                  Product Information
-                </Typography>
-              </Box>
-
-              <ZohoRow label="Product Name" required>
-                <TextField
-                  name="name" value={form.name} onChange={handleChange}
-                  size="small" fullWidth required sx={fieldSx}
-                />
+              <ZohoRow label="Type" hint="Choose whether this item is a good or a service">
+                <RadioGroup row name="item_type" value={form.item_type} onChange={handleChange} sx={{ gap: 1.5 }}>
+                  <FormControlLabel
+                    value="goods"
+                    control={<Radio size="small" sx={{ p: '3px', mr: '4px', color: '#bbb', '&.Mui-checked': { color: C.primary } }} />}
+                    label={<Typography sx={{ fontSize: '0.8125rem', color: C.label }}>Goods</Typography>}
+                    sx={{ m: 0 }}
+                  />
+                  <FormControlLabel
+                    value="service"
+                    control={<Radio size="small" sx={{ p: '3px', mr: '4px', color: '#bbb', '&.Mui-checked': { color: C.primary } }} />}
+                    label={<Typography sx={{ fontSize: '0.8125rem', color: C.label }}>Service</Typography>}
+                    sx={{ m: 0 }}
+                  />
+                </RadioGroup>
               </ZohoRow>
 
-              <ZohoRow label="Category" required>
-                <Box sx={{ width: 280 }}>
-                  <AppSelect name="category" value={form.category} onChange={handleChange} displayEmpty>
-                    <MenuItem value="" sx={{ ...menuItemSx, color: C.hint }}>Select category</MenuItem>
-                    {categoryOptions.map(c => <MenuItem key={c} value={c} sx={menuItemSx}>{c}</MenuItem>)}
+              <ZohoRow label="Name" required>
+                <Box sx={{ width: 360, maxWidth: '100%' }}>
+                  <TextField
+                    name="name"
+                    value={form.name}
+                    onChange={handleChange}
+                    size="small"
+                    fullWidth
+                    required
+                    sx={fieldSx}
+                  />
+                </Box>
+              </ZohoRow>
+
+              <ZohoRow label="Unit" hint="Unit used while selling or purchasing this item">
+                <Box sx={{ width: 260, maxWidth: '100%' }}>
+                  <AppSelect name="unit" value={form.unit} onChange={handleChange} displayEmpty>
+                    <MenuItem value="" sx={{ ...menuItemSx, color: C.hint }}>Select unit</MenuItem>
+                    {unitOptions.map((unit) => <MenuItem key={unit} value={unit} sx={menuItemSx}>{unit}</MenuItem>)}
                   </AppSelect>
                 </Box>
               </ZohoRow>
 
-              <ZohoRow label="Description" alignStart>
-                <TextField
-                  name="description" value={form.description} onChange={handleChange}
-                  size="small" fullWidth multiline rows={3}
-                  placeholder="Product description, features, specifications…"
-                  sx={fieldSx}
-                />
+              <ZohoRow label="HSN Code">
+                <Box sx={{ width: 260, maxWidth: '100%' }}>
+                  <TextField
+                    name="hsn_sac"
+                    value={form.hsn_sac}
+                    onChange={handleChange}
+                    size="small"
+                    fullWidth
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <SearchIcon sx={{ fontSize: 15, color: C.primary }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={fieldSx}
+                  />
+                </Box>
+              </ZohoRow>
+
+              <ZohoRow label="Tax Preference" required noDivider>
+                <Box sx={{ width: 260, maxWidth: '100%' }}>
+                  <AppSelect name="tax_preference" value={form.tax_preference} onChange={handleChange}>
+                    {taxPreferenceOptions.map((option) => (
+                      <MenuItem key={option.value} value={option.value} sx={menuItemSx}>{option.label}</MenuItem>
+                    ))}
+                  </AppSelect>
+                </Box>
               </ZohoRow>
             </Box>
 
-            {/* ══ PRICING & STOCK ══════════════════════════════════════════ */}
-            <Box sx={{ px: 3, borderTop: `1px solid ${C.divider}` }}>
-              <Box sx={{ py: 1.5, borderBottom: `1px solid ${C.divider}` }}>
-                <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>
-                  Pricing & Unit
-                </Typography>
+            <Box sx={{ px: 3, py: 2, borderTop: `1px solid ${C.divider}` }}>
+              <Grid container spacing={4}>
+                <Grid item xs={12} md={6}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                    <Typography sx={sectionTitleSx}>Sales Information</Typography>
+                    <FormControlLabel
+                      sx={{ m: 0 }}
+                      control={(
+                        <Checkbox
+                          size="small"
+                          name="sales_enabled"
+                          checked={form.sales_enabled}
+                          onChange={handleChange}
+                          sx={{ p: '3px', mr: '4px', color: '#bbb', '&.Mui-checked': { color: C.primary } }}
+                        />
+                      )}
+                      label={<Typography sx={{ fontSize: '0.8125rem', color: C.label }}>Sellable</Typography>}
+                    />
+                  </Box>
+
+                  <Box sx={{ display: 'grid', gap: 1.25 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <Typography sx={infoLabelSx}>Selling Price <Box component="span" sx={{ color: C.red }}>*</Box></Typography>
+                      <TextField
+                        name="price"
+                        value={form.price}
+                        onChange={handleChange}
+                        type="number"
+                        size="small"
+                        fullWidth
+                        disabled={!form.sales_enabled}
+                        inputProps={{ min: 0, step: 0.01 }}
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <Typography sx={{ fontSize: '0.8125rem', color: C.hint }}>INR</Typography>
+                            </InputAdornment>
+                          ),
+                        }}
+                        sx={fieldSx}
+                      />
+                    </Box>
+
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <Typography sx={infoLabelSx}>Account <Box component="span" sx={{ color: C.red }}>*</Box></Typography>
+                      <AppSelect name="sales_account" value={form.sales_account} onChange={handleChange} disabled={!form.sales_enabled}>
+                        {salesAccountOptions.map((account) => <MenuItem key={account} value={account} sx={menuItemSx}>{account}</MenuItem>)}
+                      </AppSelect>
+                    </Box>
+
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                      <Typography sx={{ ...infoLabelSx, pt: '8px' }}>Description</Typography>
+                      <TextField
+                        name="description"
+                        value={form.description}
+                        onChange={handleChange}
+                        size="small"
+                        fullWidth
+                        multiline
+                        rows={3}
+                        disabled={!form.sales_enabled}
+                        sx={fieldSx}
+                      />
+                    </Box>
+                  </Box>
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                    <Typography sx={sectionTitleSx}>Purchase Information</Typography>
+                    <FormControlLabel
+                      sx={{ m: 0 }}
+                      control={(
+                        <Checkbox
+                          size="small"
+                          name="purchase_enabled"
+                          checked={form.purchase_enabled}
+                          onChange={handleChange}
+                          sx={{ p: '3px', mr: '4px', color: '#bbb', '&.Mui-checked': { color: C.primary } }}
+                        />
+                      )}
+                      label={<Typography sx={{ fontSize: '0.8125rem', color: C.label }}>Purchasable</Typography>}
+                    />
+                  </Box>
+
+                  <Box sx={{ display: 'grid', gap: 1.25 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <Typography sx={infoLabelSx}>Cost Price <Box component="span" sx={{ color: C.red }}>*</Box></Typography>
+                      <TextField
+                        name="purchase_rate"
+                        value={form.purchase_rate}
+                        onChange={handleChange}
+                        type="number"
+                        size="small"
+                        fullWidth
+                        disabled={!form.purchase_enabled}
+                        inputProps={{ min: 0, step: 0.01 }}
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <Typography sx={{ fontSize: '0.8125rem', color: C.hint }}>INR</Typography>
+                            </InputAdornment>
+                          ),
+                        }}
+                        sx={fieldSx}
+                      />
+                    </Box>
+
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <Typography sx={infoLabelSx}>Account <Box component="span" sx={{ color: C.red }}>*</Box></Typography>
+                      <AppSelect name="purchase_account" value={form.purchase_account} onChange={handleChange} disabled={!form.purchase_enabled}>
+                        {purchaseAccountOptions.map((account) => <MenuItem key={account} value={account} sx={menuItemSx}>{account}</MenuItem>)}
+                      </AppSelect>
+                    </Box>
+
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                      <Typography sx={{ ...infoLabelSx, pt: '8px' }}>Description</Typography>
+                      <TextField
+                        name="purchase_description"
+                        value={form.purchase_description}
+                        onChange={handleChange}
+                        size="small"
+                        fullWidth
+                        multiline
+                        rows={3}
+                        disabled={!form.purchase_enabled}
+                        sx={fieldSx}
+                      />
+                    </Box>
+
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <Typography sx={infoLabelSx}>Preferred Vendor</Typography>
+                      <AppSelect
+                        name="preferred_vendor_id"
+                        value={form.preferred_vendor_id}
+                        onChange={handleChange}
+                        displayEmpty
+                        disabled={!form.purchase_enabled}
+                      >
+                        <MenuItem value="" sx={{ ...menuItemSx, color: C.hint }}>None</MenuItem>
+                        {vendors.map((vendor) => (
+                          <MenuItem key={vendor.id} value={vendor.id} sx={menuItemSx}>{vendor.vendor_name}</MenuItem>
+                        ))}
+                      </AppSelect>
+                    </Box>
+                  </Box>
+                </Grid>
+              </Grid>
+            </Box>
+
+            <Box sx={{ px: 3, py: 2, borderTop: `1px solid ${C.divider}` }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1.5 }}>
+                <Typography sx={{ ...sectionTitleSx, textAlign: 'left' }}>Default Tax Rates</Typography>
+                <Button
+                  type="button"
+                  size="small"
+                  onClick={() => setShowTaxRateEditor((prev) => !prev)}
+                  sx={{
+                    p: 0,
+                    minWidth: 18,
+                    lineHeight: 1,
+                    color: C.primary,
+                    '&:hover': { bgcolor: 'transparent' },
+                  }}
+                >
+                  <EditOutlinedIcon sx={{ fontSize: 14 }} />
+                </Button>
               </Box>
 
-              <ZohoRow label="Price per Unit" required>
-                <TextField
-                  name="price" value={form.price} onChange={handleChange}
-                  type="number" size="small" required
-                  inputProps={{ min: 0, step: 0.01 }}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Typography sx={{ fontSize: '0.8125rem', color: C.hint }}>₹</Typography>
-                      </InputAdornment>
-                    ),
-                  }}
-                  sx={{ ...fieldSx, maxWidth: 240 }}
-                />
-              </ZohoRow>
-
-              <ZohoRow label="Unit" required>
-                <Box sx={{ width: 180 }}>
-                  <AppSelect name="unit" value={form.unit} onChange={handleChange} displayEmpty>
-                    <MenuItem value="" sx={{ ...menuItemSx, color: C.hint }}>Select unit</MenuItem>
-                    {unitOptions.map(u => <MenuItem key={u} value={u} sx={menuItemSx}>{u}</MenuItem>)}
-                  </AppSelect>
+              <Box sx={{ display: 'grid', gap: 1.25 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Typography sx={taxLabelSx}>Intra State Tax Rate</Typography>
+                  {showTaxRateEditor ? (
+                    <Box sx={{ width: 190, maxWidth: '100%' }}>
+                      <AppSelect
+                        name="tax_rate"
+                        value={String(form.tax_rate ?? '18')}
+                        onChange={handleChange}
+                        disabled={form.tax_preference !== 'taxable'}
+                      >
+                        {taxRateOptions.map((option) => (
+                          <MenuItem key={`intra-${option.value}`} value={option.value} sx={menuItemSx}>
+                            {option.intra}
+                          </MenuItem>
+                        ))}
+                      </AppSelect>
+                    </Box>
+                  ) : (
+                    <Typography sx={{ fontSize: '0.8125rem', color: C.hint }}>
+                      {form.tax_preference === 'taxable' ? selectedTaxRate.intra : 'Tax exempt'}
+                    </Typography>
+                  )}
                 </Box>
-              </ZohoRow>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Typography sx={taxLabelSx}>Inter State Tax Rate</Typography>
+                  {showTaxRateEditor ? (
+                    <Box sx={{ width: 190, maxWidth: '100%' }}>
+                      <AppSelect
+                        name="tax_rate"
+                        value={String(form.tax_rate ?? '18')}
+                        onChange={handleChange}
+                        disabled={form.tax_preference !== 'taxable'}
+                      >
+                        {taxRateOptions.map((option) => (
+                          <MenuItem key={`inter-${option.value}`} value={option.value} sx={menuItemSx}>
+                            {option.inter}
+                          </MenuItem>
+                        ))}
+                      </AppSelect>
+                    </Box>
+                  ) : (
+                    <Typography sx={{ fontSize: '0.8125rem', color: C.hint }}>
+                      {form.tax_preference === 'taxable' ? selectedTaxRate.inter : 'Tax exempt'}
+                    </Typography>
+                  )}
+                </Box>
+              </Box>
+            </Box>
 
-              <ZohoRow label="Tax Rate (%)" required>
-                <TextField
-                  name="tax_rate" value={form.tax_rate} onChange={handleChange}
-                  type="number" size="small" required
-                  inputProps={{ min: 0, step: 0.01 }}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <Typography sx={{ fontSize: '0.8125rem', color: C.hint }}>%</Typography>
-                      </InputAdornment>
-                    ),
-                  }}
-                  helperText="GST/tax rate as per applicable regulations"
-                  sx={{ ...fieldSx, maxWidth: 200 }}
-                />
-              </ZohoRow>
+            <Box sx={{ px: 3, py: 2, borderTop: `1px solid ${C.divider}` }}>
+              <Typography sx={{ ...helperLineSx, mb: 2 }}>
+                Do you want to keep track of this item? Enable inventory to view its stock based on the sales and purchase transactions you record.
+              </Typography>
+              <Button
+                type="button"
+                size="small"
+                onClick={() => setShowInventoryFields((prev) => !prev)}
+                sx={{
+                  p: 0,
+                  minWidth: 0,
+                  textTransform: 'none',
+                  fontSize: '0.78rem',
+                  color: C.primary,
+                  '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' },
+                }}
+              >
+                {showInventoryFields ? 'Hide inventory details' : 'Add inventory details'}
+              </Button>
 
-              {productId && (
-                <ZohoRow label="Available Stock">
-                  <TextField
-                    value={typeof form.stock === 'number' ? form.stock : '—'}
-                    size="small"
-                    InputProps={{ readOnly: true }}
-                    helperText="Use Stock Adjustment to update inventory"
-                    sx={{ ...fieldSx, maxWidth: 200, '& .MuiOutlinedInput-root': { bgcolor: C.sectionBg } }}
-                  />
-                </ZohoRow>
+              {showInventoryFields && (
+                <Grid container spacing={3} sx={{ mt: 0.5 }}>
+                  <Grid item xs={12} md={4}>
+                    <FieldLabel hint="Alert when stock falls to this level">Reorder Level</FieldLabel>
+                    <TextField
+                      name="reorder_level"
+                      value={form.reorder_level}
+                      onChange={handleChange}
+                      type="number"
+                      size="small"
+                      fullWidth
+                      inputProps={{ min: 0, step: 1 }}
+                      sx={fieldSx}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <FieldLabel hint="Quantity to order when restocking">Reorder Quantity</FieldLabel>
+                    <TextField
+                      name="reorder_qty"
+                      value={form.reorder_qty}
+                      onChange={handleChange}
+                      type="number"
+                      size="small"
+                      fullWidth
+                      inputProps={{ min: 0, step: 1 }}
+                      sx={fieldSx}
+                    />
+                  </Grid>
+                  {productId && (
+                    <Grid item xs={12} md={4}>
+                      <FieldLabel>Available Stock</FieldLabel>
+                      <TextField
+                        value={typeof form.stock === 'number' ? form.stock : '—'}
+                        size="small"
+                        fullWidth
+                        InputProps={{ readOnly: true }}
+                        helperText="Use Stock Adjustment to update inventory"
+                        sx={{ ...fieldSx, '& .MuiOutlinedInput-root': { bgcolor: C.sectionBg } }}
+                      />
+                    </Grid>
+                  )}
+                </Grid>
               )}
             </Box>
 
-            {/* ══ INVENTORY MANAGEMENT ════════════════════════════════════ */}
-            <Box sx={{ px: 3, borderTop: `1px solid ${C.divider}` }}>
-              <Box sx={{ py: 1.5, borderBottom: `1px solid ${C.divider}` }}>
-                <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>
-                  Inventory Management
-                </Typography>
-              </Box>
-
-              {/* Two-column grid for inventory fields */}
-              <Box sx={{ py: 2 }}>
-                <Grid container spacing={3}>
-                  <Grid item xs={12} sm={4}>
-                    <FieldLabel hint="Alert when stock falls to this level">Reorder Level</FieldLabel>
-                    <TextField
-                      name="reorder_level" value={form.reorder_level} onChange={handleChange}
-                      type="number" size="small" fullWidth
-                      inputProps={{ min: 0, step: 1 }} sx={fieldSx}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={4}>
-                    <FieldLabel hint="Quantity to order when restocking">Reorder Quantity</FieldLabel>
-                    <TextField
-                      name="reorder_qty" value={form.reorder_qty} onChange={handleChange}
-                      type="number" size="small" fullWidth
-                      inputProps={{ min: 0, step: 1 }} sx={fieldSx}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={4}>
-                    <FieldLabel hint="Used for auto-generating restock orders">Preferred Vendor</FieldLabel>
-                    <AppSelect
-                      name="preferred_vendor_id" value={form.preferred_vendor_id}
-                      onChange={handleChange} displayEmpty
-                    >
-                      <MenuItem value="" sx={{ ...menuItemSx, color: C.hint }}>None</MenuItem>
-                      {vendors.map(v => (
-                        <MenuItem key={v.id} value={v.id} sx={menuItemSx}>{v.vendor_name}</MenuItem>
-                      ))}
-                    </AppSelect>
-                  </Grid>
-                </Grid>
-              </Box>
-            </Box>
-
-            {/* ══ FOOTER ═════════════════════════════════════════════════ */}
-            <Box sx={footerSx}>
+            <Box sx={{ ...footerSx, justifyContent: 'flex-start' }}>
               <Button
                 variant="outlined"
                 onClick={() => { if (onCancel) onCancel(); navigate('/products'); }}
-                disabled={loading} sx={cancelBtnSx}
+                disabled={loading}
+                sx={cancelBtnSx}
               >
                 Cancel
               </Button>
               <Button
-                type="submit" variant="contained" disabled={loading}
+                type="submit"
+                variant="contained"
+                disabled={loading}
                 startIcon={loading ? <CircularProgress size={14} color="inherit" /> : null}
                 sx={saveBtnSx}
               >

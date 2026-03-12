@@ -258,6 +258,7 @@ const BankAccounts = () => {
                         <TableContainer sx={{
                             borderRadius: 3,
                             overflow: 'hidden',
+                            overflowX: 'hidden',
                             border: '1px solid',
                             borderColor: 'grey.200',
                             boxShadow: '0 4px 20px rgba(0,0,0,0.05)'

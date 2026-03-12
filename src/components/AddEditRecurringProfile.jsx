@@ -256,6 +256,8 @@ const AddEditRecurringProfile = () => {
                       sx={{
                         borderRadius: 2,
                         bgcolor: 'grey.50',
+                        textAlign: 'left',
+                        '& .MuiSelect-select': { textAlign: 'left' },
                       }}
                     >
                       <MenuItem value="">Select Customer</MenuItem>
@@ -278,6 +280,8 @@ const AddEditRecurringProfile = () => {
                       sx={{
                         borderRadius: 2,
                         bgcolor: 'grey.50',
+                        textAlign: 'left',
+                        '& .MuiSelect-select': { textAlign: 'left' },
                       }}
                     >
                       {frequencyOptions.map((f) => (
@@ -299,6 +303,8 @@ const AddEditRecurringProfile = () => {
                       sx={{
                         borderRadius: 2,
                         bgcolor: 'grey.50',
+                        textAlign: 'left',
+                        '& .MuiSelect-select': { textAlign: 'left' },
                       }}
                     >
                       {statusOptions.map((s) => (
@@ -427,7 +433,7 @@ const AddEditRecurringProfile = () => {
                     <DescriptionIcon color="primary" />
                     Invoice Line Items
                   </Typography>
-                  <TableContainer sx={{ borderRadius: 2, border: '1px solid', borderColor: 'grey.200' }}>
+                  <TableContainer sx={{ borderRadius: 2, border: '1px solid', borderColor: 'grey.200', overflowX: 'hidden' }}>
                     <Table size="small">
                       <TableHead sx={{ bgcolor: 'grey.50' }}>
                         <TableRow>

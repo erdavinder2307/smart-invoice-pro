@@ -198,7 +198,7 @@ const PortalInvoiceView = () => {
 
             {/* Line items */}
             {invoice.items && invoice.items.length > 0 ? (
-              <TableContainer sx={{ mb: 3 }}>
+              <TableContainer sx={{ mb: 3, overflowX: 'hidden' }}>
                 <Table size="small">
                   <TableHead>
                     <TableRow sx={{ bgcolor: 'grey.50' }}>

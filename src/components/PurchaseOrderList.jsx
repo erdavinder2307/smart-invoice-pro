@@ -300,7 +300,7 @@ const PurchaseOrderList = () => {
             </Box>
           ) : (
             <>
-              <TableContainer>
+              <TableContainer sx={{ overflowX: "hidden" }}>
                 <Table>
                   <TableHead sx={{ bgcolor: "grey.50" }}>
                     <TableRow>

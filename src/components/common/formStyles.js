@@ -48,10 +48,11 @@ export const selectSx = {
     borderRadius: '4px',
     backgroundColor: C.white,
     fontSize: '0.875rem',
+    textAlign: 'left',
     '& .MuiOutlinedInput-notchedOutline': { borderColor: C.border },
     '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#b0b0b0' },
     '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: C.primary, borderWidth: '1px' },
-    '& .MuiSelect-select': { py: '7px', px: '10px', fontSize: '0.875rem' },
+    '& .MuiSelect-select': { py: '7px', px: '10px', fontSize: '0.875rem', textAlign: 'left' },
 };
 
 export const menuItemSx = { fontSize: '0.875rem' };

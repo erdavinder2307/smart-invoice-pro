@@ -1,239 +1,158 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createApiUrl } from "../config/api";
-import MainLayout from "./Layout/MainLayout";
-import StatusBadge from "./common/StatusBadge";
-import SummaryCard from "./common/SummaryCard";
-import SectionHeader from "./common/SectionHeader";
-import StandardDataTable from "./common/StandardDataTable";
 import axios from "axios";
 import {
+  Alert,
   Box,
   Button,
-  Typography,
-  TableCell,
-  TableRow,
-  CircularProgress,
-  Alert,
-  TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  IconButton,
   Checkbox,
-  InputAdornment,
+  CircularProgress,
+  Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Fade,
-  Grid,
-  Tooltip,
-  MenuItem,
-  Select,
   FormControl,
-  Container
+  IconButton,
+  InputAdornment,
+  MenuItem,
+  Paper,
+  Select,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TablePagination,
+  TableRow,
+  TextField,
+  Tooltip,
+  Typography,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
-import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
 import SearchIcon from "@mui/icons-material/Search";
-import BusinessIcon from "@mui/icons-material/Business";
-import EmailIcon from "@mui/icons-material/Email";
-import PhoneIcon from "@mui/icons-material/Phone";
-import LocationOnIcon from "@mui/icons-material/LocationOn";
-import PeopleIcon from "@mui/icons-material/People";
-import LockIcon from "@mui/icons-material/Lock";
-import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
-import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
+import MainLayout from "./Layout/MainLayout";
+import { createApiUrl } from "../config/api";
 
-const initialForm = {
-  name: "",
-  email: "",
-  phone: "",
-  address: "",
-  gst_number: "",
-  password: "",
+const VIEW_OPTIONS = [
+  { value: "All", label: "All Customers" },
+  { value: "Active", label: "Active Customers" },
+  { value: "Inactive", label: "Inactive Customers" },
+];
+
+const formatCurrency = (amount) => new Intl.NumberFormat("en-IN", {
+  style: "currency",
+  currency: "INR",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+}).format(Number(amount || 0));
+
+const normalizeCustomer = (customer) => {
+  const displayName = customer.display_name
+    || customer.name
+    || [customer.first_name, customer.last_name].filter(Boolean).join(" ").trim()
+    || "Untitled Customer";
+
+  return {
+    ...customer,
+    name: displayName,
+    company_name: customer.company_name || displayName,
+    email: customer.email || "-",
+    phone: customer.phone || customer.mobile || "-",
+    place_of_supply: customer.place_of_supply || customer.billing_state || customer.shipping_state || "-",
+    receivables: Number(customer.receivables || 0),
+    unused_credits: Number(customer.unused_credits || 0),
+    status: customer.status || "Active",
+  };
 };
 
 const CustomerList = () => {
   const navigate = useNavigate();
   const [customers, setCustomers] = useState([]);
-  const [form, setForm] = useState(initialForm);
-  const [showModal, setShowModal] = useState(false);
-  const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("Active");
   const [selectedCustomers, setSelectedCustomers] = useState([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  // Filter customers based on search term and status
-  const filteredCustomers = customers.filter((customer) => {
-    const matchesSearch =
-      customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.phone?.includes(searchTerm) ||
-      customer.gst_number?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesStatus = statusFilter === "All" || customer.status === statusFilter;
-
-    return matchesSearch && matchesStatus;
-  });
-
-  // Paginated customers
-  const paginatedCustomers = filteredCustomers.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage
-  );
-
-  // Calculate summary stats
-  const totalReceivables = filteredCustomers.reduce(
-    (sum, c) => sum + (c.receivables || 0),
-    0
-  );
-  const totalUnusedCredits = filteredCustomers.reduce(
-    (sum, c) => sum + (c.unused_credits || 0),
-    0
-  );
-
   const fetchCustomers = async () => {
     setLoading(true);
+    setError("");
     try {
       const res = await axios.get(createApiUrl("/api/customers"));
-      // Add mock data for receivables and unused credits if not present
-      const enhancedCustomers = res.data.map(c => ({
-        ...c,
-        status: c.status || "Active",
-        receivables: c.receivables || Math.floor(Math.random() * 50000),
-        unused_credits: c.unused_credits || Math.floor(Math.random() * 5000),
-        company_name: c.company_name || c.name,
-        place_of_supply: c.place_of_supply || "Delhi"
-      }));
-      setCustomers(enhancedCustomers);
+      setCustomers(Array.isArray(res.data) ? res.data.map(normalizeCustomer) : []);
     } catch {
       setCustomers([]);
+      setError("Failed to load customers.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
     fetchCustomers();
   }, []);
 
-  const getRandomCustomer = () => {
-    const names = ["Amit Sharma", "Priya Singh", "Rahul Verma", "Sneha Patel", "Vikram Rao", "Neha Gupta", "Rohan Mehta", "Anjali Desai"];
-    const emails = ["amit", "priya", "rahul", "sneha", "vikram", "neha", "rohan", "anjali"];
-    const streets = ["MG Road", "Park Street", "Sector 21", "DLF Phase 3", "Bandra West", "Salt Lake", "Koramangala", "Powai"];
-    const cities = ["Delhi", "Mumbai", "Bangalore", "Chennai", "Kolkata", "Hyderabad", "Pune", "Ahmedabad"];
-    const gst = ["27AAEPM1234C1ZV", "07AABCU9603R1Z2", "19AACCM9910C1ZP", "29AAACG2115R1Z6", "24AAACB2894G1ZB", "09AAACG2115R1Z2"];
-    const idx = Math.floor(Math.random() * names.length);
-    return {
-      name: names[idx],
-      email: emails[idx] + Math.floor(Math.random() * 1000) + "@example.com",
-      phone: "9" + Math.floor(100000000 + Math.random() * 900000000),
-      address: `${Math.floor(Math.random() * 100) + 1}, ${streets[idx]}, ${cities[idx]}`,
-      gst_number: gst[Math.floor(Math.random() * gst.length)],
-      password: "" // Empty password field for new customers
-    };
-  };
+  useEffect(() => {
+    setPage(0);
+  }, [searchTerm, statusFilter]);
 
-  const openModal = (customer = null) => {
-    if (customer) {
-      // When editing, copy all fields except password (we don't show existing password)
-      setForm({
-        ...customer,
-        password: "" // Clear password field for editing
-      });
-      setEditingId(customer.id);
-    } else {
-      setForm(getRandomCustomer());
-      setEditingId(null);
-    }
-    setError("");
-    setShowModal(true);
-  };
+  const filteredCustomers = customers.filter((customer) => {
+    const term = searchTerm.trim().toLowerCase();
+    const matchesSearch = !term || [
+      customer.name,
+      customer.company_name,
+      customer.email,
+      customer.phone,
+      customer.gst_number,
+      customer.place_of_supply,
+    ].some((value) => String(value || "").toLowerCase().includes(term));
 
-  const closeModal = () => {
-    setShowModal(false);
-    setForm(initialForm);
-    setEditingId(null);
-    setError("");
-  };
+    const matchesStatus = statusFilter === "All" || customer.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const validateForm = () => {
-    if (!form.name.trim()) return "Name is required";
-    if (!form.email.trim() || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email)) return "Valid email is required";
-    if (!form.phone.trim()) return "Phone is required";
-    if (!form.address.trim()) return "Address is required";
-    if (!form.gst_number.trim()) return "GST Number is required";
-    return null;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const err = validateForm();
-    if (err) return setError(err);
-    setLoading(true);
-    try {
-      // Prepare form data, only include password if it's provided
-      const formData = { ...form };
-
-      // For edit mode, only include password if it's not empty
-      if (editingId && !formData.password) {
-        delete formData.password;
-      }
-
-      if (editingId) {
-        await axios.put(createApiUrl(`/api/customers/${editingId}`), formData);
-      } else {
-        await axios.post(createApiUrl("/api/customers"), formData);
-      }
-      fetchCustomers();
-      closeModal();
-    } catch {
-      setError("Failed to save customer");
-    }
-    setLoading(false);
-  };
+  const paginatedCustomers = filteredCustomers.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage,
+  );
 
   const handleDelete = async (id) => {
     setLoading(true);
     try {
       await axios.delete(createApiUrl(`/api/customers/${id}`));
-      fetchCustomers();
       setConfirmDeleteId(null);
+      setSelectedCustomers((prev) => prev.filter((customerId) => customerId !== id));
+      await fetchCustomers();
     } catch {
-      setError("Failed to delete customer");
+      setError("Failed to delete customer.");
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  // Handle select all checkbox
   const handleSelectAll = (event) => {
     if (event.target.checked) {
-      setSelectedCustomers(paginatedCustomers.map((c) => c.id));
-    } else {
-      setSelectedCustomers([]);
+      setSelectedCustomers(paginatedCustomers.map((customer) => customer.id));
+      return;
     }
+    setSelectedCustomers([]);
   };
 
-  // Handle individual checkbox
   const handleSelectOne = (customerId) => {
-    setSelectedCustomers((prev) =>
+    setSelectedCustomers((prev) => (
       prev.includes(customerId)
         ? prev.filter((id) => id !== customerId)
         : [...prev, customerId]
-    );
+    ));
   };
 
-  // Pagination handlers
-  const handleChangePage = (event, newPage) => {
+  const handleChangePage = (_event, newPage) => {
     setPage(newPage);
   };
 
@@ -242,419 +161,420 @@ const CustomerList = () => {
     setPage(0);
   };
 
-  const customerColumns = [
-    {
-      key: "select",
-      label: (
-        <Checkbox
-          indeterminate={
-            selectedCustomers.length > 0 &&
-            selectedCustomers.length < paginatedCustomers.length
-          }
-          checked={
-            paginatedCustomers.length > 0 &&
-            selectedCustomers.length === paginatedCustomers.length
-          }
-          onChange={handleSelectAll}
-        />
-      ),
-      width: 42,
-    },
-    { key: "name", label: "Name" },
-    { key: "company_name", label: "Company Name" },
-    { key: "email", label: "Email" },
-    { key: "phone", label: "Work Phone" },
-    { key: "place_of_supply", label: "Place of Supply" },
-    { key: "receivables", label: "Receivables", align: "right" },
-    { key: "unused_credits", label: "Unused Credits", align: "right" },
-    { key: "status", label: "Status" },
-    { key: "actions", label: "Actions", align: "center" },
-  ];
+  const allVisibleSelected = paginatedCustomers.length > 0
+    && paginatedCustomers.every((customer) => selectedCustomers.includes(customer.id));
+  const someVisibleSelected = paginatedCustomers.some((customer) => selectedCustomers.includes(customer.id));
 
   return (
     <MainLayout>
-      <Container maxWidth="xl" sx={{ py: 4 }}>
-        {/* Page Header */}
-        <Box sx={{ mb: 4 }}>
-          <SectionHeader
-            title="Customers"
-            subtitle="Manage your customer relationships and track receivables"
-            primaryAction={{
-              label: "New Customer",
-              icon: <AddIcon />,
-              onClick: () => navigate('/customers/add'),
-            }}
-            sx={{ mb: 3 }}
-          />
-
-          {/* Summary Cards */}
-          <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={12} sm={6} md={4}>
-              <SummaryCard
-                label="Total Customers"
-                value={filteredCustomers.length}
-                icon={<PeopleIcon />}
-                accentColor="primary.main"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={4}>
-              <SummaryCard
-                label="Total Receivables"
-                value={`₹${totalReceivables.toLocaleString()}`}
-                icon={<AttachMoneyIcon />}
-                accentColor="success.main"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={4}>
-              <SummaryCard
-                label="Unused Credits"
-                value={`₹${totalUnusedCredits.toLocaleString()}`}
-                icon={<AccountBalanceWalletIcon />}
-                accentColor="info.main"
-              />
-            </Grid>
-          </Grid>
-
-          {/* Filters and Search */}
-          <Box
-            display="flex"
-            gap={2}
-            flexWrap="wrap"
-            alignItems="center"
-            sx={{
-              bgcolor: "background.paper",
-              p: 2,
-              borderRadius: 3,
-              border: "1px solid",
-              borderColor: "grey.200"
-            }}
-          >
-            <FormControl size="small" sx={{ minWidth: 150 }}>
-              <Select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                displayEmpty
-                sx={{ borderRadius: 2 }}
-              >
-                <MenuItem value="All">All Status</MenuItem>
-                <MenuItem value="Active">Active</MenuItem>
-                <MenuItem value="Inactive">Inactive</MenuItem>
-              </Select>
-            </FormControl>
-            <TextField
-              size="small"
-              placeholder="Search customers..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon fontSize="small" />
-                  </InputAdornment>
-                )
-              }}
-              sx={{
-                flex: 1,
-                minWidth: 250,
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 2
-                }
-              }}
-            />
-          </Box>
-        </Box>
-
-        {error && (
-          <Fade in={!!error}>
-            <Alert
-              severity="error"
-              onClose={() => setError("")}
-              sx={{ mb: 3, borderRadius: 2 }}
-            >
-              {error}
-            </Alert>
-          </Fade>
-        )}
-
-        {/* Main Table */}
-        <StandardDataTable
-          columns={customerColumns}
-          rows={paginatedCustomers}
-          loading={loading}
-          emptyMessage={searchTerm ? "No customers found" : "No customers yet"}
-          pagination={{
-            rowsPerPageOptions: [10, 25, 50],
-            count: filteredCustomers.length,
-            rowsPerPage,
-            page,
-            onPageChange: handleChangePage,
-            onRowsPerPageChange: handleChangeRowsPerPage,
-          }}
-          renderRow={(customer) => (
-            <TableRow
-              key={customer.id}
-              hover
-              sx={{
-                "&:hover": { bgcolor: "grey.50" },
-                cursor: "pointer"
-              }}
-            >
-              <TableCell padding="checkbox">
-                <Checkbox
-                  checked={selectedCustomers.includes(customer.id)}
-                  onChange={() => handleSelectOne(customer.id)}
-                />
-              </TableCell>
-              <TableCell>
-                <Typography variant="body2" fontWeight={600}>
-                  {customer.name}
-                </Typography>
-              </TableCell>
-              <TableCell>
-                <Typography variant="body2">{customer.company_name}</Typography>
-              </TableCell>
-              <TableCell>
-                <Typography variant="body2">{customer.email}</Typography>
-              </TableCell>
-              <TableCell>
-                <Typography variant="body2">{customer.phone}</Typography>
-              </TableCell>
-              <TableCell>
-                <Typography variant="body2">{customer.place_of_supply}</Typography>
-              </TableCell>
-              <TableCell align="right">
-                <Typography variant="body2" fontWeight={600} color="success.main">
-                  ₹{customer.receivables?.toLocaleString() || "0"}
-                </Typography>
-              </TableCell>
-              <TableCell align="right">
-                <Typography variant="body2" fontWeight={600} color="info.main">
-                  ₹{customer.unused_credits?.toLocaleString() || "0"}
-                </Typography>
-              </TableCell>
-              <TableCell>
-                <StatusBadge status={customer.status || "Active"} />
-              </TableCell>
-              <TableCell align="center">
-                <Box display="flex" gap={0.5} justifyContent="center">
-                  <Tooltip title="Edit">
-                    <IconButton
-                      size="small"
-                      onClick={() => navigate(`/customers/edit/${customer.id}`)}
-                      sx={{ color: "primary.main" }}
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Delete">
-                    <IconButton
-                      size="small"
-                      onClick={() => setConfirmDeleteId(customer.id)}
-                      sx={{ color: "error.main" }}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                </Box>
-              </TableCell>
-            </TableRow>
-          )}
-        />
-      </Container>
-
-      {/* Modern Add/Edit Dialog */}
-      <Dialog
-        open={showModal}
-        onClose={closeModal}
-        maxWidth="md"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            boxShadow: 4
-          }
+      <Container
+        maxWidth={false}
+        sx={{
+          px: { xs: 2, md: 3 },
+          py: { xs: 2, md: 2.5 },
+          bgcolor: "#f7f8fb",
+          minHeight: "100%",
         }}
       >
-        <DialogTitle sx={{ pb: 2, borderBottom: "1px solid", borderColor: "grey.200" }}>
-          <Typography variant="h5" fontWeight={700}>
-            {editingId ? "Edit Customer" : "Add New Customer"}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {editingId ? "Update customer information" : "Enter customer details below"}
-          </Typography>
-        </DialogTitle>
-        <DialogContent sx={{ pt: 3 }}>
-          {error && (
-            <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
-              {error}
-            </Alert>
-          )}
-          <Grid container spacing={2.5}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label="Full Name"
-                name="name"
-                value={form.name}
-                onChange={handleChange}
-                fullWidth
-                required
-                size="small"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <BusinessIcon fontSize="small" color="action" />
-                    </InputAdornment>
-                  )
-                }}
-                sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label="Email Address"
-                name="email"
-                value={form.email}
-                onChange={handleChange}
-                fullWidth
-                required
-                type="email"
-                size="small"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <EmailIcon fontSize="small" color="action" />
-                    </InputAdornment>
-                  )
-                }}
-                sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label="Phone Number"
-                name="phone"
-                value={form.phone}
-                onChange={handleChange}
-                fullWidth
-                required
-                size="small"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <PhoneIcon fontSize="small" color="action" />
-                    </InputAdornment>
-                  )
-                }}
-                sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label="GST Number"
-                name="gst_number"
-                value={form.gst_number}
-                onChange={handleChange}
-                fullWidth
-                required
-                size="small"
-                sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label="Login Password"
-                name="password"
-                value={form.password}
-                onChange={handleChange}
-                fullWidth
-                type="password"
-                size="small"
-                placeholder={editingId ? "Leave blank to keep current" : "Set login password"}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <LockIcon fontSize="small" color="action" />
-                    </InputAdornment>
-                  )
-                }}
-                sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
-                helperText={editingId ? "Leave blank to keep existing password" : "Password for customer portal"}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                label="Address"
-                name="address"
-                value={form.address}
-                onChange={handleChange}
-                fullWidth
-                required
-                multiline
-                rows={3}
-                size="small"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start" sx={{ alignSelf: "flex-start", mt: 1.5 }}>
-                      <LocationOnIcon fontSize="small" color="action" />
-                    </InputAdornment>
-                  )
-                }}
-                sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
-              />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3, pt: 2, gap: 1.5, borderTop: "1px solid", borderColor: "grey.200" }}>
-          <Button
-            onClick={closeModal}
-            variant="outlined"
-            sx={{ borderRadius: 2, px: 3, textTransform: "none", fontWeight: 600 }}
+        <Box>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: { xs: "stretch", md: "center" },
+              justifyContent: "space-between",
+              gap: 2,
+              flexDirection: { xs: "column", md: "row" },
+              mb: 1.5,
+            }}
           >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            variant="contained"
-            disabled={loading}
-            sx={{ borderRadius: 2, px: 3, textTransform: "none", fontWeight: 600 }}
-          >
-            {loading ? <CircularProgress size={20} color="inherit" /> : editingId ? "Update" : "Add Customer"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+            <FormControl
+              size="small"
+              sx={{
+                minWidth: 210,
+                maxWidth: 260,
+                "& .MuiOutlinedInput-root": {
+                  bgcolor: "transparent",
+                  borderRadius: "8px",
+                  fontSize: "1.5rem",
+                  fontWeight: 600,
+                  color: "#202124",
+                  "& fieldset": { border: "none" },
+                  "&:hover fieldset": { border: "none" },
+                  "&.Mui-focused fieldset": { border: "none" },
+                },
+                "& .MuiSelect-select": {
+                  px: 0,
+                  py: 0,
+                  pr: "28px !important",
+                },
+                "& .MuiSelect-icon": {
+                  right: -2,
+                  color: "#5f6368",
+                },
+              }}
+            >
+              <Select
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value)}
+              >
+                {VIEW_OPTIONS.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-      {/* Modern Delete Confirmation Dialog */}
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => navigate("/customers/add")}
+              sx={{
+                alignSelf: { xs: "flex-start", md: "center" },
+                borderRadius: "7px",
+                px: 1.8,
+                py: 0.8,
+                minWidth: "auto",
+                textTransform: "none",
+                fontSize: "0.875rem",
+                fontWeight: 600,
+                boxShadow: "none",
+                bgcolor: "#3b82f6",
+                "&:hover": { bgcolor: "#2563eb", boxShadow: "none" },
+              }}
+            >
+              New
+            </Button>
+          </Box>
+
+          <Paper
+            elevation={0}
+            sx={{
+              border: "1px solid #e5e7eb",
+              borderRadius: "10px",
+              overflow: "hidden",
+              bgcolor: "#fff",
+            }}
+          >
+            <Box
+              sx={{
+                px: 2,
+                py: 1.25,
+                borderBottom: "1px solid #edf0f3",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 2,
+                flexWrap: "wrap",
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, minHeight: 36 }}>
+                {selectedCustomers.length > 0 && (
+                  <Typography sx={{ fontSize: "0.8125rem", color: "#5f6368" }}>
+                    {selectedCustomers.length} selected
+                  </Typography>
+                )}
+              </Box>
+
+              <TextField
+                size="small"
+                placeholder="Search in Customers"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon sx={{ fontSize: 18, color: "#9aa0a6" }} />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  width: { xs: "100%", md: 280 },
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: "8px",
+                    bgcolor: "#fbfcfe",
+                    fontSize: "0.875rem",
+                    "& fieldset": { borderColor: "#e3e7ee" },
+                    "&:hover fieldset": { borderColor: "#cfd6df" },
+                    "&.Mui-focused fieldset": { borderColor: "#4f8df7" },
+                  },
+                }}
+              />
+            </Box>
+
+            {error && (
+              <Fade in={!!error}>
+                <Alert severity="error" onClose={() => setError("")} sx={{ m: 2, borderRadius: 2 }}>
+                  {error}
+                </Alert>
+              </Fade>
+            )}
+
+            <TableContainer sx={{ width: "100%", overflowX: "hidden" }}>
+              <Table size="small" sx={{ width: "100%", tableLayout: "fixed" }}>
+                <TableHead>
+                  <TableRow sx={{ bgcolor: "#fafbfc" }}>
+                    <TableCell padding="checkbox" sx={{ borderBottomColor: "#edf0f3", width: 46 }}>
+                      <Checkbox
+                        indeterminate={someVisibleSelected && !allVisibleSelected}
+                        checked={allVisibleSelected}
+                        onChange={handleSelectAll}
+                        sx={{ color: "#b6bdc7" }}
+                      />
+                    </TableCell>
+                    {[
+                      "NAME",
+                      "COMPANY NAME",
+                      "EMAIL",
+                      "WORK PHONE",
+                      "PLACE OF SUPPLY",
+                      "RECEIVABLES (BCY)",
+                      "UNUSED CREDITS (BCY)",
+                      "",
+                    ].map((label, index) => (
+                      <TableCell
+                        key={`${label}-${index}`}
+                        align={index >= 5 && index <= 6 ? "right" : index === 7 ? "center" : "left"}
+                        sx={{
+                          borderBottomColor: "#edf0f3",
+                          py: 1.2,
+                          color: "#8b95a7",
+                          fontSize: "0.68rem",
+                          letterSpacing: "0.05em",
+                          fontWeight: 700,
+                          whiteSpace: "nowrap",
+                          width: index === 0 ? "18%" : undefined,
+                          maxWidth: index === 0 ? "18%" : undefined,
+                          ...(index === 1 ? { width: "18%", maxWidth: "18%" } : {}),
+                          ...(index === 2 ? { width: "19%", maxWidth: "19%" } : {}),
+                          ...(index === 3 ? { width: "11%", maxWidth: "11%" } : {}),
+                          ...(index === 4 ? { width: "11%", maxWidth: "11%" } : {}),
+                          ...(index === 5 ? { width: "11%", maxWidth: "11%" } : {}),
+                          ...(index === 6 ? { width: "11%", maxWidth: "11%" } : {}),
+                          ...(index === 7 ? { width: 72, maxWidth: 72 } : {}),
+                        }}
+                      >
+                        {label}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                </TableHead>
+
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={9} align="center" sx={{ py: 8, borderBottom: 0 }}>
+                        <CircularProgress size={24} />
+                      </TableCell>
+                    </TableRow>
+                  ) : paginatedCustomers.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={9} align="center" sx={{ py: 8, borderBottom: 0 }}>
+                        <Typography sx={{ fontSize: "0.9rem", color: "#6b7280" }}>
+                          {searchTerm ? "No customers matched your search." : "No customers available."}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    paginatedCustomers.map((customer) => {
+                      const isSelected = selectedCustomers.includes(customer.id);
+                      const receivablesColor = customer.receivables > 0 ? "#111827" : "#6b7280";
+                      const unusedCreditsColor = customer.unused_credits > 0 ? "#111827" : "#6b7280";
+
+                      return (
+                        <TableRow
+                          key={customer.id}
+                          hover
+                          selected={isSelected}
+                          sx={{
+                            "& td": { borderBottomColor: "#edf0f3", py: 1.7 },
+                            "&:hover": { bgcolor: "#fafcff" },
+                          }}
+                        >
+                          <TableCell padding="checkbox">
+                            <Checkbox
+                              checked={isSelected}
+                              onChange={() => handleSelectOne(customer.id)}
+                              sx={{ color: "#b6bdc7" }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Typography
+                              onClick={() => navigate(`/customers/edit/${customer.id}`)}
+                              title={customer.name}
+                              sx={{
+                                fontSize: "0.825rem",
+                                fontWeight: 600,
+                                color: "#2563eb",
+                                cursor: "pointer",
+                                display: "block",
+                                width: "100%",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                                "&:hover": { textDecoration: "underline" },
+                              }}
+                            >
+                              {customer.name}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography
+                              title={customer.company_name}
+                              sx={{
+                                fontSize: "0.8125rem",
+                                color: "#2b3340",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {customer.company_name}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography
+                              title={customer.email}
+                              sx={{
+                                fontSize: "0.8125rem",
+                                color: "#2b3340",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {customer.email}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography
+                              title={customer.phone}
+                              sx={{
+                                fontSize: "0.8125rem",
+                                color: "#2b3340",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {customer.phone}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography
+                              title={customer.place_of_supply}
+                              sx={{
+                                fontSize: "0.8125rem",
+                                color: "#2b3340",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {customer.place_of_supply}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography sx={{ fontSize: "0.8125rem", fontWeight: 500, color: receivablesColor }}>
+                              {formatCurrency(customer.receivables)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography sx={{ fontSize: "0.8125rem", fontWeight: 500, color: unusedCreditsColor }}>
+                              {formatCurrency(customer.unused_credits)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="center">
+                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0.25 }}>
+                              <Tooltip title="Edit customer">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => navigate(`/customers/edit/${customer.id}`)}
+                                  sx={{ color: "#5f87e7" }}
+                                >
+                                  <EditIcon sx={{ fontSize: 17 }} />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Delete customer">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => setConfirmDeleteId(customer.id)}
+                                  sx={{ color: "#ef4444" }}
+                                >
+                                  <DeleteIcon sx={{ fontSize: 17 }} />
+                                </IconButton>
+                              </Tooltip>
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            <Box sx={{ borderTop: "1px solid #edf0f3" }}>
+              <TablePagination
+                rowsPerPageOptions={[10, 25, 50]}
+                component="div"
+                count={filteredCustomers.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={handleChangePage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+                sx={{
+                  ".MuiTablePagination-toolbar": {
+                    minHeight: 52,
+                    px: 2,
+                  },
+                  ".MuiTablePagination-selectLabel, .MuiTablePagination-displayedRows": {
+                    fontSize: "0.75rem",
+                    color: "#5f6368",
+                  },
+                  ".MuiTablePagination-select": {
+                    fontSize: "0.75rem",
+                  },
+                }}
+              />
+            </Box>
+          </Paper>
+        </Box>
+      </Container>
+
       <Dialog
         open={!!confirmDeleteId}
         onClose={() => setConfirmDeleteId(null)}
-        maxWidth="sm"
+        maxWidth="xs"
         fullWidth
         PaperProps={{
           sx: {
-            borderRadius: 3,
-            boxShadow: 4
-          }
+            borderRadius: 2,
+            boxShadow: 6,
+          },
         }}
       >
-        <DialogTitle sx={{ pb: 2 }}>
-          <Typography variant="h6" fontWeight={700} color="error.main">
-            Delete Customer
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            This action cannot be undone
+        <DialogTitle sx={{ pb: 1.25 }}>
+          <Typography sx={{ fontSize: "1rem", fontWeight: 700, color: "#1f2937" }}>
+            Delete customer?
           </Typography>
         </DialogTitle>
         <DialogContent>
-          <Typography variant="body1" color="text.secondary">
-            Are you sure you want to delete this customer? All associated data will be permanently
-            removed.
+          <Typography sx={{ fontSize: "0.9rem", color: "#6b7280", lineHeight: 1.6 }}>
+            This customer will be removed permanently. This action cannot be undone.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3, gap: 1.5 }}>
+        <DialogActions sx={{ px: 3, pb: 2.5, pt: 1.5, gap: 1 }}>
           <Button
             onClick={() => setConfirmDeleteId(null)}
             variant="outlined"
-            sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600 }}
+            sx={{
+              textTransform: "none",
+              borderRadius: "8px",
+              px: 2.25,
+              borderColor: "#d1d5db",
+              color: "#4b5563",
+            }}
           >
             Cancel
           </Button>
@@ -663,9 +583,14 @@ const CustomerList = () => {
             variant="contained"
             color="error"
             disabled={loading}
-            sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600 }}
+            sx={{
+              textTransform: "none",
+              borderRadius: "8px",
+              px: 2.25,
+              boxShadow: "none",
+            }}
           >
-            {loading ? <CircularProgress size={20} color="inherit" /> : "Delete"}
+            {loading ? <CircularProgress size={18} color="inherit" /> : "Delete"}
           </Button>
         </DialogActions>
       </Dialog>

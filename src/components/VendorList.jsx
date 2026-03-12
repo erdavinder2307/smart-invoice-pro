@@ -249,7 +249,7 @@ const VendorList = () => {
             overflow: "hidden"
           }}
         >
-          <TableContainer>
+          <TableContainer sx={{ overflowX: "hidden" }}>
             <Table stickyHeader>
               <TableHead>
                 <TableRow>

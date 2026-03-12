@@ -347,7 +347,7 @@ const BankReconciliation = () => {
                   )}
                 </Box>
               ) : (
-                <TableContainer>
+                <TableContainer sx={{ overflowX: 'hidden' }}>
                   <Table size="small">
                     <TableHead>
                       <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: 'grey.50' } }}>

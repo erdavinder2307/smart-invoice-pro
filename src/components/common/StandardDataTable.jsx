@@ -24,8 +24,8 @@ const StandardDataTable = ({
 }) => {
   return (
     <Paper>
-      <TableContainer>
-        <Table stickyHeader size="small">
+      <TableContainer sx={{ width: "100%", overflowX: "hidden" }}>
+        <Table stickyHeader size="small" sx={{ width: "100%" }}>
           <TableHead>
             <TableRow>
               {columns.map((column) => (

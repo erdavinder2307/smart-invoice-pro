@@ -1,53 +1,54 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { createApiUrl } from "../config/api";
 import MainLayout from "./Layout/MainLayout";
-import StatusBadge from "./common/StatusBadge";
-import SummaryCard from "./common/SummaryCard";
 import {
+  Alert,
   Box,
   Button,
-  Typography,
+  Checkbox,
+  CircularProgress,
+  Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControl,
+  IconButton,
+  InputAdornment,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
   Paper,
+  Select,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
+  TablePagination,
   TableRow,
-  CircularProgress,
-  Alert,
-  InputAdornment,
   TextField,
-  Fade,
-  Grid,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
-  Container,
-  FormControl,
-  Select,
-  TablePagination
+  Typography,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
-import SearchIcon from "@mui/icons-material/Search";
-import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import ReceiptIcon from "@mui/icons-material/Receipt";
+import SearchIcon from "@mui/icons-material/Search";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
-import RequestQuoteIcon from "@mui/icons-material/RequestQuote";
-import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
-import EventIcon from "@mui/icons-material/Event";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import CancelIcon from "@mui/icons-material/Cancel";
+
+const statusStyle = {
+  Draft: { color: "#9aa3af", bg: "transparent" },
+  Sent: { color: "#0f6cbd", bg: "#eaf4ff" },
+  Accepted: { color: "#1f7a36", bg: "#eaf7ee" },
+  Declined: { color: "#a3320b", bg: "#feefe8" },
+  Expired: { color: "#9a6700", bg: "#fff6d6" },
+  Converted: { color: "#5b21b6", bg: "#f4efff" },
+};
 
 const QuoteList = () => {
   const [quotes, setQuotes] = useState([]);
@@ -61,6 +62,7 @@ const QuoteList = () => {
   const [selectedQuote, setSelectedQuote] = useState(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [selectedIds, setSelectedIds] = useState([]);
   const navigate = useNavigate();
 
   const fetchQuotes = async () => {
@@ -90,35 +92,35 @@ const QuoteList = () => {
     fetchCustomers();
   }, []);
 
-  const filteredQuotes = quotes.filter((quote) => {
-    const customer = customers.find((c) => c.id === quote.customer_id);
-    const customerName = customer ? customer.name : "";
+  const customerMap = useMemo(() => {
+    const map = new Map();
+    customers.forEach((customer) => map.set(String(customer.id), customer.name || ""));
+    return map;
+  }, [customers]);
 
-    const matchesSearch =
-      quote.quote_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      quote.subject?.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredQuotes = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
 
-    const matchesStatus = statusFilter === "All" || quote.status === statusFilter;
+    return quotes
+      .filter((quote) => {
+        const customerName = customerMap.get(String(quote.customer_id)) || "";
+        const matchesSearch =
+          !term
+          || quote.quote_number?.toLowerCase().includes(term)
+          || customerName.toLowerCase().includes(term)
+          || (quote.reference_number || "").toLowerCase().includes(term);
 
-    return matchesSearch && matchesStatus;
-  });
+        const matchesStatus = statusFilter === "All" || quote.status === statusFilter;
+        return matchesSearch && matchesStatus;
+      })
+      .sort((a, b) => {
+        const aDate = new Date(a.issue_date || a.created_at || 0).getTime();
+        const bDate = new Date(b.issue_date || b.created_at || 0).getTime();
+        return bDate - aDate;
+      });
+  }, [customerMap, quotes, searchTerm, statusFilter]);
 
-  const paginatedQuotes = filteredQuotes.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage
-  );
-
-  // Calculate summary metrics
-  const totalQuoteValue = quotes.reduce((sum, quote) => sum + (quote.total_amount || 0), 0);
-  
-  const acceptedCount = quotes.filter((q) => q.status === "Accepted").length;
-  
-  const pendingCount = quotes.filter((q) => 
-    q.status === "Draft" || q.status === "Sent"
-  ).length;
-  
-  const expiredCount = quotes.filter((q) => q.status === "Expired").length;
+  const paginatedQuotes = filteredQuotes.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   const handleEdit = (quote) => {
     navigate(`/quotes/edit/${quote.id}`);
@@ -176,255 +178,318 @@ const QuoteList = () => {
   };
 
   const getCustomerName = (customerId) => {
-    const customer = customers.find((c) => c.id === customerId);
-    return customer ? customer.name : "Unknown";
+    return customerMap.get(String(customerId)) || "Unknown";
   };
 
-  const getStatusColor = (status) => {
-    const statusColors = {
-      Draft: "default",
-      Sent: "info",
-      Accepted: "success",
-      Declined: "error",
-      Expired: "warning",
-      Converted: "secondary"
-    };
-    return statusColors[status] || "default";
+  const formatDate = (dateValue) => {
+    if (!dateValue) return "-";
+    const parsed = new Date(dateValue);
+    if (Number.isNaN(parsed.getTime())) return "-";
+    return parsed.toLocaleDateString("en-GB");
+  };
+
+  const formatAmount = (amountValue) => {
+    const amount = Number(amountValue || 0);
+    return `₹${amount.toFixed(2)}`;
+  };
+
+  const allVisibleSelected = paginatedQuotes.length > 0
+    && paginatedQuotes.every((quote) => selectedIds.includes(quote.id));
+
+  const handleSelectAllVisible = (checked) => {
+    if (checked) {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...paginatedQuotes.map((quote) => quote.id)])));
+      return;
+    }
+
+    setSelectedIds((prev) => prev.filter((id) => !paginatedQuotes.some((quote) => quote.id === id)));
+  };
+
+  const handleRowSelect = (quoteId, checked) => {
+    setSelectedIds((prev) => {
+      if (checked) {
+        return prev.includes(quoteId) ? prev : [...prev, quoteId];
+      }
+      return prev.filter((id) => id !== quoteId);
+    });
   };
 
   return (
     <MainLayout>
-      <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-        <Fade in timeout={500}>
-          <Box>
-            {/* Header */}
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 4 }}>
-              <Box>
-                <Typography variant="h4" fontWeight={700} sx={{ mb: 0.5, display: "flex", alignItems: "center", gap: 1 }}>
-                  <RequestQuoteIcon fontSize="large" color="primary" />
-                  Quotes & Estimates
-                </Typography>
-                <Typography variant="body1" color="text.secondary">
-                  Create and manage customer quotes
-                </Typography>
-              </Box>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={handleAdd}
+      <Container
+        maxWidth={false}
+        sx={{
+          py: 2.5,
+          px: { xs: 2, md: 3 },
+          bgcolor: "#f5f6f8",
+          minHeight: "calc(100vh - 72px)",
+        }}
+      >
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
+          <Typography sx={{ fontSize: "1.7rem", fontWeight: 600, color: "#1f2937", lineHeight: 1.2 }}>
+            All Quotes
+          </Typography>
+          <Button
+            variant="contained"
+            onClick={handleAdd}
+            startIcon={<AddIcon fontSize="small" />}
+            sx={{
+              minWidth: 92,
+              borderRadius: "6px",
+              textTransform: "none",
+              fontWeight: 600,
+              fontSize: "0.85rem",
+              py: 0.7,
+              px: 1.8,
+              boxShadow: "none",
+              bgcolor: "#3b82f6",
+              "&:hover": { bgcolor: "#2563eb", boxShadow: "none" },
+            }}
+          >
+            New
+          </Button>
+        </Box>
+
+        {error && (
+          <Alert severity="error" sx={{ mb: 1.5 }} onClose={() => setError("")}>
+            {error}
+          </Alert>
+        )}
+
+        <Paper
+          sx={{
+            borderRadius: "8px",
+            border: "1px solid #e5e7eb",
+            boxShadow: "none",
+            mb: 1.5,
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              px: 1.5,
+              py: 1,
+              flexWrap: "wrap",
+              borderBottom: "1px solid #edf0f3",
+              bgcolor: "#fbfcfd",
+            }}
+          >
+            <TextField
+              size="small"
+              placeholder="Search in Quotes"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setPage(0);
+              }}
+              sx={{
+                width: { xs: "100%", sm: 320 },
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: "6px",
+                  fontSize: "0.84rem",
+                  bgcolor: "#fff",
+                },
+              }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: "#8b96a6", fontSize: 18 }} />
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <FormControl size="small" sx={{ minWidth: 145 }}>
+              <Select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setPage(0);
+                }}
                 sx={{
-                  borderRadius: 2,
-                  px: 3,
-                  py: 1.5,
-                  textTransform: "none",
-                  fontWeight: 600,
-                  boxShadow: 2,
-                  "&:hover": { boxShadow: 4 }
+                  borderRadius: "6px",
+                  fontSize: "0.84rem",
+                  bgcolor: "#fff",
                 }}
               >
-                New Quote
-              </Button>
+                <MenuItem value="All">All Status</MenuItem>
+                <MenuItem value="Draft">Draft</MenuItem>
+                <MenuItem value="Sent">Sent</MenuItem>
+                <MenuItem value="Accepted">Accepted</MenuItem>
+                <MenuItem value="Declined">Declined</MenuItem>
+                <MenuItem value="Expired">Expired</MenuItem>
+                <MenuItem value="Converted">Converted</MenuItem>
+              </Select>
+            </FormControl>
+
+            <Typography sx={{ fontSize: "0.82rem", color: "#6b7280" }}>
+              {filteredQuotes.length} quote{filteredQuotes.length === 1 ? "" : "s"}
+            </Typography>
+          </Box>
+
+          {loading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+              <CircularProgress size={30} />
             </Box>
+          ) : (
+            <>
+              <TableContainer
+                sx={{
+                  width: "100%",
+                  overflowX: "hidden",
+                }}
+              >
+                <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
+                  <TableHead sx={{ bgcolor: "#f4f6f9" }}>
+                    <TableRow>
+                      <TableCell sx={{ width: 40, py: 0.6, borderBottom: "1px solid #e6e9ee" }}>
+                        <Checkbox
+                          size="small"
+                          checked={allVisibleSelected}
+                          indeterminate={!allVisibleSelected && selectedIds.length > 0}
+                          onChange={(event) => handleSelectAllVisible(event.target.checked)}
+                          sx={{ p: 0.5 }}
+                        />
+                      </TableCell>
+                      <TableCell sx={{ py: 0.8, borderBottom: "1px solid #e6e9ee" }}>
+                        <Typography sx={{ fontSize: "0.68rem", fontWeight: 700, color: "#7b8493", letterSpacing: 0.3 }}>
+                          DATE
+                        </Typography>
+                      </TableCell>
+                      <TableCell sx={{ py: 0.8, borderBottom: "1px solid #e6e9ee" }}>
+                        <Typography sx={{ fontSize: "0.68rem", fontWeight: 700, color: "#7b8493", letterSpacing: 0.3 }}>
+                          QUOTE NUMBER
+                        </Typography>
+                      </TableCell>
+                      <TableCell sx={{ py: 0.8, borderBottom: "1px solid #e6e9ee" }}>
+                        <Typography sx={{ fontSize: "0.68rem", fontWeight: 700, color: "#7b8493", letterSpacing: 0.3 }}>
+                          REFERENCE NUMBER
+                        </Typography>
+                      </TableCell>
+                      <TableCell sx={{ py: 0.8, borderBottom: "1px solid #e6e9ee" }}>
+                        <Typography sx={{ fontSize: "0.68rem", fontWeight: 700, color: "#7b8493", letterSpacing: 0.3 }}>
+                          CUSTOMER NAME
+                        </Typography>
+                      </TableCell>
+                      <TableCell sx={{ py: 0.8, borderBottom: "1px solid #e6e9ee", width: 110 }}>
+                        <Typography sx={{ fontSize: "0.68rem", fontWeight: 700, color: "#7b8493", letterSpacing: 0.3 }}>
+                          STATUS
+                        </Typography>
+                      </TableCell>
+                      <TableCell sx={{ py: 0.8, borderBottom: "1px solid #e6e9ee", width: 120 }} align="right">
+                        <Typography sx={{ fontSize: "0.68rem", fontWeight: 700, color: "#7b8493", letterSpacing: 0.3 }}>
+                          AMOUNT
+                        </Typography>
+                      </TableCell>
+                      <TableCell sx={{ py: 0.8, borderBottom: "1px solid #e6e9ee", width: 62 }} align="center" />
+                    </TableRow>
+                  </TableHead>
 
-            {/* Summary Cards */}
-            <Grid container spacing={3} sx={{ mb: 4 }}>
-              <Grid item xs={12} sm={6} md={3}>
-                <SummaryCard
-                  title="Total Quote Value"
-                  value={`₹${totalQuoteValue.toLocaleString()}`}
-                  icon={<AttachMoneyIcon />}
-                  color="#667eea"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <SummaryCard
-                  title="Accepted"
-                  value={acceptedCount}
-                  icon={<CheckCircleIcon />}
-                  color="#48bb78"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <SummaryCard
-                  title="Pending"
-                  value={pendingCount}
-                  icon={<EventIcon />}
-                  color="#ed8936"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <SummaryCard
-                  title="Expired"
-                  value={expiredCount}
-                  icon={<CancelIcon />}
-                  color="#f56565"
-                />
-              </Grid>
-            </Grid>
+                  <TableBody>
+                    {paginatedQuotes.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} align="center" sx={{ py: 7, color: "#7b8493", borderBottom: "none" }}>
+                          No quotes found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      paginatedQuotes.map((quote) => {
+                        const s = statusStyle[quote.status] || statusStyle.Draft;
+                        const checked = selectedIds.includes(quote.id);
 
-            {error && (
-              <Fade in={!!error}>
-                <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }} onClose={() => setError("")}>
-                  {error}
-                </Alert>
-              </Fade>
-            )}
+                        return (
+                          <TableRow
+                            key={quote.id}
+                            hover
+                            onClick={() => handleEdit(quote)}
+                            sx={{
+                              cursor: "pointer",
+                              "& .MuiTableCell-root": {
+                                borderBottom: "1px solid #edf0f3",
+                                fontSize: "0.82rem",
+                                color: "#374151",
+                                py: 0.72,
+                              },
+                            }}
+                          >
+                            <TableCell onClick={(event) => event.stopPropagation()}>
+                              <Checkbox
+                                size="small"
+                                checked={checked}
+                                onChange={(event) => handleRowSelect(quote.id, event.target.checked)}
+                                sx={{ p: 0.5 }}
+                              />
+                            </TableCell>
 
-            {/* Filters */}
-            <Paper sx={{ p: 3, mb: 3, borderRadius: 3, border: "1px solid", borderColor: "grey.200" }}>
-              <Grid container spacing={2} alignItems="center">
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    placeholder="Search by quote number, customer, or subject..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <SearchIcon color="action" />
-                        </InputAdornment>
-                      ),
-                    }}
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        borderRadius: 2,
-                        bgcolor: "grey.50"
-                      }
-                    }}
-                  />
-                </Grid>
-                <Grid item xs={12} md={3}>
-                  <FormControl fullWidth>
-                    <Select
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value)}
-                      sx={{ borderRadius: 2, bgcolor: "grey.50" }}
-                    >
-                      <MenuItem value="All">All Status</MenuItem>
-                      <MenuItem value="Draft">Draft</MenuItem>
-                      <MenuItem value="Sent">Sent</MenuItem>
-                      <MenuItem value="Accepted">Accepted</MenuItem>
-                      <MenuItem value="Declined">Declined</MenuItem>
-                      <MenuItem value="Expired">Expired</MenuItem>
-                      <MenuItem value="Converted">Converted</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} md={3}>
-                  <Typography variant="body2" color="text.secondary" textAlign="right">
-                    {filteredQuotes.length} quote{filteredQuotes.length !== 1 ? 's' : ''} found
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Paper>
+                            <TableCell>{formatDate(quote.issue_date)}</TableCell>
 
-            {/* Table */}
-            <Paper sx={{ borderRadius: 3, border: "1px solid", borderColor: "grey.200", overflow: "hidden" }}>
-              {loading ? (
-                <Box sx={{ display: "flex", justifyContent: "center", p: 6 }}>
-                  <CircularProgress />
-                </Box>
-              ) : (
-                <>
-                  <TableContainer>
-                    <Table>
-                      <TableHead sx={{ bgcolor: "grey.50" }}>
-                        <TableRow>
-                          <TableCell sx={{ fontWeight: 700 }}>Quote #</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Customer</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Subject</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Issue Date</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Expiry Date</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Amount</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 700 }}>Actions</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {paginatedQuotes.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
-                              <Typography color="text.secondary">No quotes found</Typography>
+                            <TableCell>
+                              <Typography sx={{ fontSize: "0.82rem", color: "#1565d8", fontWeight: 600 }}>
+                                {quote.quote_number || "-"}
+                              </Typography>
+                            </TableCell>
+
+                            <TableCell>{quote.reference_number || "-"}</TableCell>
+
+                            <TableCell>{getCustomerName(quote.customer_id)}</TableCell>
+
+                            <TableCell>
+                              <Box
+                                component="span"
+                                sx={{
+                                  display: "inline-block",
+                                  px: s.bg === "transparent" ? 0 : 0.8,
+                                  py: s.bg === "transparent" ? 0 : 0.25,
+                                  borderRadius: "10px",
+                                  fontSize: "0.69rem",
+                                  fontWeight: 700,
+                                  letterSpacing: 0.22,
+                                  color: s.color,
+                                  bgcolor: s.bg,
+                                  textTransform: "uppercase",
+                                }}
+                              >
+                                {quote.status || "Draft"}
+                              </Box>
+                            </TableCell>
+
+                            <TableCell align="right" sx={{ fontWeight: 600, color: "#111827" }}>
+                              {formatAmount(quote.total_amount)}
+                            </TableCell>
+
+                            <TableCell align="center" onClick={(event) => event.stopPropagation()}>
+                              <IconButton size="small" onClick={(event) => handleActionMenuOpen(event, quote)}>
+                                <MoreVertIcon sx={{ fontSize: 18, color: "#7b8493" }} />
+                              </IconButton>
                             </TableCell>
                           </TableRow>
-                        ) : (
-                          paginatedQuotes.map((quote) => (
-                            <TableRow
-                              key={quote.id}
-                              sx={{
-                                "&:hover": { bgcolor: "grey.50" },
-                                cursor: "pointer"
-                              }}
-                              onClick={() => handleEdit(quote)}
-                            >
-                              <TableCell>
-                                <Typography variant="body2" fontWeight={600}>
-                                  {quote.quote_number}
-                                </Typography>
-                              </TableCell>
-                              <TableCell>
-                                <Typography variant="body2">
-                                  {getCustomerName(quote.customer_id)}
-                                </Typography>
-                              </TableCell>
-                              <TableCell>
-                                <Typography variant="body2" noWrap sx={{ maxWidth: 200 }}>
-                                  {quote.subject || "-"}
-                                </Typography>
-                              </TableCell>
-                              <TableCell>
-                                <Typography variant="body2">
-                                  {new Date(quote.issue_date).toLocaleDateString()}
-                                </Typography>
-                              </TableCell>
-                              <TableCell>
-                                <Typography variant="body2">
-                                  {new Date(quote.expiry_date).toLocaleDateString()}
-                                </Typography>
-                              </TableCell>
-                              <TableCell>
-                                <Typography variant="body2" fontWeight={600} color="primary">
-                                  ₹{quote.total_amount?.toLocaleString() || "0"}
-                                </Typography>
-                              </TableCell>
-                              <TableCell>
-                                <StatusBadge status={quote.status} color={getStatusColor(quote.status)} />
-                              </TableCell>
-                              <TableCell align="center">
-                                <IconButton
-                                  size="small"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleActionMenuOpen(e, quote);
-                                  }}
-                                >
-                                  <MoreVertIcon />
-                                </IconButton>
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                  <TablePagination
-                    component="div"
-                    count={filteredQuotes.length}
-                    page={page}
-                    onPageChange={handleChangePage}
-                    rowsPerPage={rowsPerPage}
-                    onRowsPerPageChange={handleChangeRowsPerPage}
-                    rowsPerPageOptions={[5, 10, 25, 50]}
-                  />
-                </>
-              )}
-            </Paper>
-          </Box>
-        </Fade>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              <TablePagination
+                component="div"
+                count={filteredQuotes.length}
+                page={page}
+                onPageChange={handleChangePage}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+                rowsPerPageOptions={[10, 25, 50]}
+                sx={{
+                  borderTop: "1px solid #edf0f3",
+                  ".MuiTablePagination-selectLabel, .MuiTablePagination-displayedRows": { fontSize: "0.78rem" },
+                }}
+              />
+            </>
+          )}
+        </Paper>
       </Container>
 
-      {/* Action Menu */}
       <Menu
         anchorEl={actionMenuAnchor}
         open={Boolean(actionMenuAnchor)}
@@ -456,7 +521,6 @@ const QuoteList = () => {
         </MenuItem>
       </Menu>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog open={!!confirmDeleteId} onClose={() => setConfirmDeleteId(null)}>
         <DialogTitle>Confirm Delete</DialogTitle>
         <DialogContent>

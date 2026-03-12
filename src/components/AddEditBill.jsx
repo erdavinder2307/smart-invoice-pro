@@ -284,6 +284,7 @@ const AddEditBill = () => {
                     value={form.vendor_id}
                     onChange={handleChange}
                     label="Vendor"
+                    sx={{ textAlign: 'left', '& .MuiSelect-select': { textAlign: 'left' } }}
                   >
                     {vendors.map(vendor => (
                       <MenuItem key={vendor.id} value={vendor.id}>
@@ -534,6 +535,7 @@ const AddEditBill = () => {
                     value={form.payment_status}
                     onChange={handleChange}
                     label="Payment Status"
+                    sx={{ textAlign: 'left', '& .MuiSelect-select': { textAlign: 'left' } }}
                   >
                     <MenuItem value="Unpaid">Unpaid</MenuItem>
                     <MenuItem value="Partially Paid">Partially Paid</MenuItem>

@@ -238,6 +238,7 @@ const AddEditPurchaseOrder = () => {
                     value={form.vendor_id}
                     onChange={handleChange}
                     label="Vendor"
+                    sx={{ textAlign: 'left', '& .MuiSelect-select': { textAlign: 'left' } }}
                   >
                     {vendors.map(vendor => (
                       <MenuItem key={vendor.id} value={vendor.id}>
@@ -402,6 +403,7 @@ const AddEditPurchaseOrder = () => {
                     value={form.status}
                     onChange={handleChange}
                     label="Status"
+                    sx={{ textAlign: 'left', '& .MuiSelect-select': { textAlign: 'left' } }}
                   >
                     <MenuItem value="Draft">Draft</MenuItem>
                     <MenuItem value="Sent">Sent</MenuItem>

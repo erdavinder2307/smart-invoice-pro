@@ -25,31 +25,35 @@ const DashboardHeader = () => {
     <Paper
       elevation={0}
       sx={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
         p: 2,
-        borderRadius: 3,
+        borderRadius: '24px',
         border: '1px solid',
         borderColor: 'grey.300',
-        bgcolor: "grey.50",
-        gap: 2
+        bgcolor: 'grey.50',
+        gap: 2,
       }}
     >
       {/* Search Bar */}
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        flex: 1, 
-        maxWidth: 500,
-        position: 'relative'
-      }}>
-        <Search sx={{ 
-          position: 'absolute', 
-          left: 16, 
-          color: 'text.secondary',
-          zIndex: 1
-        }} />
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          flex: 1,
+          maxWidth: 500,
+          position: 'relative',
+        }}
+      >
+        <Search
+          sx={{
+            position: 'absolute',
+            left: 16,
+            zIndex: 1,
+            color: 'text.secondary',
+          }}
+        />
         <InputBase
           placeholder="Search invoices, customers, products..."
           sx={{
@@ -57,8 +61,8 @@ const DashboardHeader = () => {
             pl: 6,
             pr: 2,
             py: 1.5,
-            borderRadius: 3,
-            bgcolor: "white",
+            borderRadius: '24px',
+            backgroundColor: 'white',
             fontSize: 16,
             border: '1px solid',
             borderColor: 'grey.300',
@@ -83,24 +87,24 @@ const DashboardHeader = () => {
           variant="outlined"
           size="medium"
           sx={{
-            bgcolor: 'white',
+            backgroundColor: 'white',
             borderColor: 'grey.300',
             '& .MuiChip-label': {
               fontSize: '0.875rem',
-              fontWeight: 500
+              fontWeight: 500,
             }
           }}
         />
 
         {/* Filter Button */}
-        <IconButton 
-          size="large" 
-          sx={{ 
-            bgcolor: 'white',
+        <IconButton
+          size="large"
+          sx={{
+            backgroundColor: 'white',
             border: '1px solid',
             borderColor: 'grey.300',
-            borderRadius: 2,
-            '&:hover': { 
+            borderRadius: '16px',
+            '&:hover': {
               bgcolor: 'grey.100',
               borderColor: 'grey.400'
             }
@@ -110,14 +114,14 @@ const DashboardHeader = () => {
         </IconButton>
 
         {/* Export Button */}
-        <IconButton 
-          size="large" 
-          sx={{ 
-            bgcolor: 'white',
+        <IconButton
+          size="large"
+          sx={{
+            backgroundColor: 'white',
             border: '1px solid',
             borderColor: 'grey.300',
-            borderRadius: 2,
-            '&:hover': { 
+            borderRadius: '16px',
+            '&:hover': {
               bgcolor: 'grey.100',
               borderColor: 'grey.400'
             }

@@ -12,7 +12,7 @@ const StatsCard = ({ title, value, subtitle, icon, color, iconColor }) => {
   return (
     <Card
       sx={{
-        height: '140px',
+        height: 140,
         background: 'rgba(255, 255, 255, 0.95)',
         backdropFilter: 'blur(20px)',
         border: '1px solid rgba(255, 255, 255, 0.2)',
@@ -27,52 +27,41 @@ const StatsCard = ({ title, value, subtitle, icon, color, iconColor }) => {
       }}
     >
       <CardContent sx={{ p: 3, height: '100%' }}>
-        <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Avatar
             sx={{
-              backgroundColor: color,
-              color: iconColor,
               width: 48,
-              height: 48
+              height: 48,
+              backgroundColor: color,
+              color: iconColor
             }}
           >
             {icon}
           </Avatar>
-          <TrendingUp sx={{ color: '#4caf50', fontSize: '1.2rem' }} />
+          <TrendingUp sx={{ color: 'success.main', fontSize: '1.2rem' }} />
         </Box>
-        
-        <Typography 
-          variant="h5" 
+
+        <Typography
+          variant="h5"
           fontWeight="bold"
-          sx={{
-            color: '#2c3e50',
-            mb: 0.5,
-            fontSize: '1.5rem'
-          }}
+          sx={{ mb: 0.5, fontSize: '1.5rem', color: 'text.primary' }}
         >
           {value}
         </Typography>
-        
-        <Typography 
-          variant="body2" 
+
+        <Typography
+          variant="body2"
           color="text.secondary"
-          sx={{ 
-            fontSize: '0.9rem',
-            fontWeight: 500
-          }}
+          sx={{ fontSize: '0.9rem', fontWeight: 500 }}
         >
           {title}
         </Typography>
-        
+
         {subtitle && (
-          <Typography 
-            variant="caption" 
+          <Typography
+            variant="caption"
             color="text.secondary"
-            sx={{ 
-              fontSize: '0.75rem',
-              mt: 0.5,
-              display: 'block'
-            }}
+            sx={{ fontSize: '0.75rem', mt: 0.5, display: 'block' }}
           >
             {subtitle}
           </Typography>

@@ -55,24 +55,23 @@ const ProductStockSummary = () => {
   const criticalStockCount = products.filter(p => p.stock < 5).length;
 
   return (
-    <Paper 
-      elevation={0} 
-      sx={{ 
-        borderRadius: 3, 
-        border: '1px solid #e5e7eb',
-        background: 'white',
+    <Paper
+      elevation={1}
+      sx={{
+        borderRadius: 3,
         overflow: 'hidden'
       }}
     >
       {/* Header */}
-      <Box sx={{ 
-        p: 3, 
-        borderBottom: '1px solid #e5e7eb',
-        background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)'
+      <Box sx={{
+        p: 3,
+        borderBottom: '1px solid',
+        borderColor: 'divider',
+        bgcolor: 'grey.50'
       }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Inventory sx={{ color: '#3b82f6', mr: 2, fontSize: 28 }} />
+            <Inventory sx={{ color: 'primary.main', mr: 2, fontSize: 28 }} />
             <Box>
               <Typography variant="h6" fontWeight={700} color="text.primary">
                 Inventory Overview
@@ -83,23 +82,25 @@ const ProductStockSummary = () => {
             </Box>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <IconButton 
-              onClick={fetchData} 
+            <IconButton
+              onClick={fetchData}
               size="small"
-              sx={{ 
-                bgcolor: 'white',
-                border: '1px solid #d1d5db',
-                '&:hover': { bgcolor: '#f3f4f6' }
+              sx={{
+                bgcolor: 'background.paper',
+                border: '1px solid',
+                borderColor: 'divider',
+                '&:hover': { bgcolor: 'grey.100' }
               }}
             >
               <Refresh />
             </IconButton>
-            <IconButton 
+            <IconButton
               size="small"
-              sx={{ 
-                bgcolor: 'white',
-                border: '1px solid #d1d5db',
-                '&:hover': { bgcolor: '#f3f4f6' }
+              sx={{
+                bgcolor: 'background.paper',
+                border: '1px solid',
+                borderColor: 'divider',
+                '&:hover': { bgcolor: 'grey.100' }
               }}
             >
               <MoreVert />
@@ -113,9 +114,9 @@ const ProductStockSummary = () => {
             icon={<Inventory />}
             label={`${products.length} Total Products`}
             variant="outlined"
-            sx={{ 
-              bgcolor: 'white',
-              borderColor: '#d1d5db',
+            sx={{
+              bgcolor: 'background.paper',
+              borderColor: 'divider',
               fontWeight: 600
             }}
           />
@@ -141,31 +142,34 @@ const ProductStockSummary = () => {
       </Box>
 
       {/* Table */}
-      <TableContainer sx={{ maxHeight: 400 }}>
+      <TableContainer sx={{ maxHeight: 400, overflowX: 'hidden' }}>
         <Table stickyHeader>
           <TableHead>
             <TableRow>
-              <TableCell sx={{ 
-                fontWeight: 700, 
-                bgcolor: '#f8fafc', 
-                borderBottom: '2px solid #e5e7eb',
-                color: '#374151'
+              <TableCell sx={{
+                fontWeight: 700,
+                bgcolor: 'grey.50',
+                borderBottom: '2px solid',
+                borderColor: 'divider',
+                color: 'text.primary'
               }}>
                 Product Details
               </TableCell>
-              <TableCell align="center" sx={{ 
-                fontWeight: 700, 
-                bgcolor: '#f8fafc', 
-                borderBottom: '2px solid #e5e7eb',
-                color: '#374151'
+              <TableCell align="center" sx={{
+                fontWeight: 700,
+                bgcolor: 'grey.50',
+                borderBottom: '2px solid',
+                borderColor: 'divider',
+                color: 'text.primary'
               }}>
                 Current Stock
               </TableCell>
-              <TableCell align="center" sx={{ 
-                fontWeight: 700, 
-                bgcolor: '#f8fafc', 
-                borderBottom: '2px solid #e5e7eb',
-                color: '#374151'
+              <TableCell align="center" sx={{
+                fontWeight: 700,
+                bgcolor: 'grey.50',
+                borderBottom: '2px solid',
+                borderColor: 'divider',
+                color: 'text.primary'
               }}>
                 Status
               </TableCell>
@@ -184,8 +188,8 @@ const ProductStockSummary = () => {
             ) : error ? (
               <TableRow>
                 <TableCell colSpan={3} sx={{ textAlign: 'center', py: 4 }}>
-                  <Alert 
-                    severity="error" 
+                  <Alert
+                    severity="error"
                     sx={{ maxWidth: 400, mx: 'auto' }}
                     action={
                       <Button size="small" onClick={fetchData}>
@@ -215,13 +219,13 @@ const ProductStockSummary = () => {
               products.map((product, index) => {
                 const stockInfo = getStockStatus(product.stock);
                 return (
-                  <TableRow 
+                  <TableRow
                     key={product.id || product.sku || index}
                     hover
-                    sx={{ 
-                      '&:hover': { bgcolor: '#f8fafc' },
-                      bgcolor: stockInfo.status === 'critical' ? '#fef2f2' : 
-                               stockInfo.status === 'low' ? '#fffbeb' : 'inherit'
+                    sx={{
+                      '&:hover': { bgcolor: 'grey.50' },
+                      bgcolor: stockInfo.status === 'critical' ? 'error.50' :
+                        stockInfo.status === 'low' ? 'warning.50' : 'inherit'
                     }}
                   >
                     <TableCell sx={{ py: 2 }}>
@@ -235,11 +239,11 @@ const ProductStockSummary = () => {
                       </Box>
                     </TableCell>
                     <TableCell align="center" sx={{ py: 2 }}>
-                      <Typography 
-                        variant="h6" 
+                      <Typography
+                        variant="h6"
                         fontWeight={700}
-                        color={stockInfo.status === 'critical' ? 'error.main' : 
-                               stockInfo.status === 'low' ? 'warning.main' : 'text.primary'}
+                        color={stockInfo.status === 'critical' ? 'error.main' :
+                          stockInfo.status === 'low' ? 'warning.main' : 'text.primary'}
                       >
                         {product.stock}
                       </Typography>
@@ -253,7 +257,7 @@ const ProductStockSummary = () => {
                         icon={
                           stockInfo.status === 'good' ? <TrendingUp /> : <TrendingDown />
                         }
-                        sx={{ 
+                        sx={{
                           fontWeight: 600,
                           minWidth: 100
                         }}
@@ -269,10 +273,11 @@ const ProductStockSummary = () => {
 
       {/* Footer */}
       {!loading && !error && products.length > 0 && (
-        <Box sx={{ 
-          p: 2, 
-          borderTop: '1px solid #e5e7eb',
-          bgcolor: '#f8fafc',
+        <Box sx={{
+          p: 2,
+          borderTop: '1px solid',
+          borderColor: 'divider',
+          bgcolor: 'grey.50',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center'
@@ -280,8 +285,8 @@ const ProductStockSummary = () => {
           <Typography variant="body2" color="text.secondary">
             Showing {products.length} products
           </Typography>
-          <Button 
-            size="small" 
+          <Button
+            size="small"
             variant="outlined"
             sx={{ textTransform: 'none', fontWeight: 600 }}
           >

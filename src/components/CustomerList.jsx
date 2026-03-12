@@ -1,899 +1,600 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { createApiUrl } from "../config/api";
-import Header from "./common/Header/Header";
-import Footer from "./common/Header/Footer/Footer";
-import Sidebar from "./Sidebar";
 import {
+  Alert,
   Box,
   Button,
-  Typography,
+  Checkbox,
+  CircularProgress,
+  Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Fade,
+  FormControl,
+  IconButton,
+  InputAdornment,
+  MenuItem,
   Paper,
+  Select,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
+  TablePagination,
   TableRow,
-  CircularProgress,
-  Alert,
   TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  IconButton,
-  Chip,
-  Avatar,
-  InputAdornment,
-  Fade,
-  Slide,
-  Card,
-  CardContent,
-  Grid,
   Tooltip,
-  Badge
+  Typography,
 } from "@mui/material";
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import PersonAddIcon from '@mui/icons-material/PersonAdd';
-import SearchIcon from '@mui/icons-material/Search';
-import BusinessIcon from '@mui/icons-material/Business';
-import EmailIcon from '@mui/icons-material/Email';
-import PhoneIcon from '@mui/icons-material/Phone';
-import LocationOnIcon from '@mui/icons-material/LocationOn';
-import ReceiptIcon from '@mui/icons-material/Receipt';
-import PeopleIcon from '@mui/icons-material/People';
-import LockIcon from '@mui/icons-material/Lock';
+import AddIcon from "@mui/icons-material/Add";
+import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
+import SearchIcon from "@mui/icons-material/Search";
+import MainLayout from "./Layout/MainLayout";
+import { createApiUrl } from "../config/api";
 
-const initialForm = {
-  name: "",
-  email: "",
-  phone: "",
-  address: "",
-  gst_number: "",
-  password: "",
+const VIEW_OPTIONS = [
+  { value: "All", label: "All Customers" },
+  { value: "Active", label: "Active Customers" },
+  { value: "Inactive", label: "Inactive Customers" },
+];
+
+const formatCurrency = (amount) => new Intl.NumberFormat("en-IN", {
+  style: "currency",
+  currency: "INR",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+}).format(Number(amount || 0));
+
+const normalizeCustomer = (customer) => {
+  const displayName = customer.display_name
+    || customer.name
+    || [customer.first_name, customer.last_name].filter(Boolean).join(" ").trim()
+    || "Untitled Customer";
+
+  return {
+    ...customer,
+    name: displayName,
+    company_name: customer.company_name || displayName,
+    email: customer.email || "-",
+    phone: customer.phone || customer.mobile || "-",
+    place_of_supply: customer.place_of_supply || customer.billing_state || customer.shipping_state || "-",
+    receivables: Number(customer.receivables || 0),
+    unused_credits: Number(customer.unused_credits || 0),
+    status: customer.status || "Active",
+  };
 };
 
 const CustomerList = () => {
+  const navigate = useNavigate();
   const [customers, setCustomers] = useState([]);
-  const [form, setForm] = useState(initialForm);
-  const [showModal, setShowModal] = useState(false);
-  const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-
-  const filteredCustomers = customers.filter(customer =>
-    customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.phone?.includes(searchTerm) ||
-    customer.gst_number?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const [statusFilter, setStatusFilter] = useState("Active");
+  const [selectedCustomers, setSelectedCustomers] = useState([]);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const fetchCustomers = async () => {
     setLoading(true);
+    setError("");
     try {
       const res = await axios.get(createApiUrl("/api/customers"));
-      setCustomers(res.data);
+      setCustomers(Array.isArray(res.data) ? res.data.map(normalizeCustomer) : []);
     } catch {
       setCustomers([]);
+      setError("Failed to load customers.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
     fetchCustomers();
   }, []);
 
-  const getRandomCustomer = () => {
-    const names = ["Amit Sharma", "Priya Singh", "Rahul Verma", "Sneha Patel", "Vikram Rao", "Neha Gupta", "Rohan Mehta", "Anjali Desai"];
-    const emails = ["amit", "priya", "rahul", "sneha", "vikram", "neha", "rohan", "anjali"];
-    const streets = ["MG Road", "Park Street", "Sector 21", "DLF Phase 3", "Bandra West", "Salt Lake", "Koramangala", "Powai"];
-    const cities = ["Delhi", "Mumbai", "Bangalore", "Chennai", "Kolkata", "Hyderabad", "Pune", "Ahmedabad"];
-    const gst = ["27AAEPM1234C1ZV", "07AABCU9603R1Z2", "19AACCM9910C1ZP", "29AAACG2115R1Z6", "24AAACB2894G1ZB", "09AAACG2115R1Z2"];
-    const idx = Math.floor(Math.random() * names.length);
-    return {
-      name: names[idx],
-      email: emails[idx] + Math.floor(Math.random() * 1000) + "@example.com",
-      phone: "9" + Math.floor(100000000 + Math.random() * 900000000),
-      address: `${Math.floor(Math.random() * 100) + 1}, ${streets[idx]}, ${cities[idx]}`,
-      gst_number: gst[Math.floor(Math.random() * gst.length)],
-      password: "" // Empty password field for new customers
-    };
-  };
+  useEffect(() => {
+    setPage(0);
+  }, [searchTerm, statusFilter]);
 
-  const openModal = (customer = null) => {
-    if (customer) {
-      // When editing, copy all fields except password (we don't show existing password)
-      setForm({
-        ...customer,
-        password: "" // Clear password field for editing
-      });
-      setEditingId(customer.id);
-    } else {
-      setForm(getRandomCustomer());
-      setEditingId(null);
-    }
-    setError("");
-    setShowModal(true);
-  };
+  const filteredCustomers = customers.filter((customer) => {
+    const term = searchTerm.trim().toLowerCase();
+    const matchesSearch = !term || [
+      customer.name,
+      customer.company_name,
+      customer.email,
+      customer.phone,
+      customer.gst_number,
+      customer.place_of_supply,
+    ].some((value) => String(value || "").toLowerCase().includes(term));
 
-  const closeModal = () => {
-    setShowModal(false);
-    setForm(initialForm);
-    setEditingId(null);
-    setError("");
-  };
+    const matchesStatus = statusFilter === "All" || customer.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const validateForm = () => {
-    if (!form.name.trim()) return "Name is required";
-    if (!form.email.trim() || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email)) return "Valid email is required";
-    if (!form.phone.trim()) return "Phone is required";
-    if (!form.address.trim()) return "Address is required";
-    if (!form.gst_number.trim()) return "GST Number is required";
-    return null;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const err = validateForm();
-    if (err) return setError(err);
-    setLoading(true);
-    try {
-      // Prepare form data, only include password if it's provided
-      const formData = { ...form };
-
-      // For edit mode, only include password if it's not empty
-      if (editingId && !formData.password) {
-        delete formData.password;
-      }
-
-      if (editingId) {
-        await axios.put(createApiUrl(`/api/customers/${editingId}`), formData);
-      } else {
-        await axios.post(createApiUrl("/api/customers"), formData);
-      }
-      fetchCustomers();
-      closeModal();
-    } catch {
-      setError("Failed to save customer");
-    }
-    setLoading(false);
-  };
+  const paginatedCustomers = filteredCustomers.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage,
+  );
 
   const handleDelete = async (id) => {
     setLoading(true);
     try {
       await axios.delete(createApiUrl(`/api/customers/${id}`));
-      fetchCustomers();
       setConfirmDeleteId(null);
+      setSelectedCustomers((prev) => prev.filter((customerId) => customerId !== id));
+      await fetchCustomers();
     } catch {
-      setError("Failed to delete customer");
+      setError("Failed to delete customer.");
+      setLoading(false);
     }
-    setLoading(false);
   };
 
+  const handleSelectAll = (event) => {
+    if (event.target.checked) {
+      setSelectedCustomers(paginatedCustomers.map((customer) => customer.id));
+      return;
+    }
+    setSelectedCustomers([]);
+  };
+
+  const handleSelectOne = (customerId) => {
+    setSelectedCustomers((prev) => (
+      prev.includes(customerId)
+        ? prev.filter((id) => id !== customerId)
+        : [...prev, customerId]
+    ));
+  };
+
+  const handleChangePage = (_event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  const allVisibleSelected = paginatedCustomers.length > 0
+    && paginatedCustomers.every((customer) => selectedCustomers.includes(customer.id));
+  const someVisibleSelected = paginatedCustomers.some((customer) => selectedCustomers.includes(customer.id));
+
   return (
-    <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: '#f8fafc' }}>
-      <Header />
-      <Box sx={{ display: 'flex', flex: 1 }}>
-        <Sidebar />
-        <Box sx={{
-          flex: 1,
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          minHeight: 'calc(100vh - 128px)',
-          p: 3,
-          position: 'relative',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'linear-gradient(135deg, rgba(102,126,234,0.1) 0%, rgba(118,75,162,0.1) 100%)',
-            backdropFilter: 'blur(10px)'
-          }
-        }}>
-          {/* Stats Cards */}
-          <Grid container spacing={3} sx={{ mb: 4, position: 'relative', zIndex: 1 }}>
-            <Grid item xs={12} sm={6} md={3}>
-              <Card sx={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                color: 'white',
-                borderRadius: 3,
-                boxShadow: '0 8px 32px rgba(102,126,234,0.3)',
-                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: '0 12px 40px rgba(102,126,234,0.4)'
-                }
-              }}>
-                <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', py: 3 }}>
-                  <PeopleIcon sx={{ fontSize: 40, mb: 2, opacity: 0.9 }} />
-                  <Typography variant="h4" fontWeight={700} gutterBottom>
-                    {customers.length}
-                  </Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                    Total Customers
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Card sx={{
-                background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                color: 'white',
-                borderRadius: 3,
-                boxShadow: '0 8px 32px rgba(240,147,251,0.3)',
-                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: '0 12px 40px rgba(240,147,251,0.4)'
-                }
-              }}>
-                <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', py: 3 }}>
-                  <BusinessIcon sx={{ fontSize: 40, mb: 2, opacity: 0.9 }} />
-                  <Typography variant="h4" fontWeight={700} gutterBottom>
-                    {customers.filter(c => c.gst_number).length}
-                  </Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                    GST Registered
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Card sx={{
-                background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-                color: 'white',
-                borderRadius: 3,
-                boxShadow: '0 8px 32px rgba(79,172,254,0.3)',
-                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: '0 12px 40px rgba(79,172,254,0.4)'
-                }
-              }}>
-                <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', py: 3 }}>
-                  <EmailIcon sx={{ fontSize: 40, mb: 2, opacity: 0.9 }} />
-                  <Typography variant="h4" fontWeight={700} gutterBottom>
-                    {customers.filter(c => c.email).length}
-                  </Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                    With Email
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Card sx={{
-                background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-                color: 'white',
-                borderRadius: 3,
-                boxShadow: '0 8px 32px rgba(67,233,123,0.3)',
-                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: '0 12px 40px rgba(67,233,123,0.4)'
-                }
-              }}>
-                <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', py: 3 }}>
-                  <PhoneIcon sx={{ fontSize: 40, mb: 2, opacity: 0.9 }} />
-                  <Typography variant="h4" fontWeight={700} gutterBottom>
-                    {customers.filter(c => c.phone).length}
-                  </Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                    With Phone
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-
-          {/* Main Content Card */}
-          <Card elevation={0} sx={{
-            borderRadius: 4,
-            overflow: 'visible',
-            background: 'rgba(255,255,255,0.95)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255,255,255,0.2)',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.1)',
-            position: 'relative',
-            zIndex: 1
-          }}>
-            <CardContent sx={{ p: 4 }}>
-              {/* Header Section */}
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-                <Box display="flex" alignItems="center" gap={2}>
-                  <Avatar sx={{
-                    bgcolor: 'primary.main',
-                    width: 56,
-                    height: 56,
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                  }}>
-                    <PeopleIcon sx={{ fontSize: 28 }} />
-                  </Avatar>
-                  <Box>
-                    <Typography variant="h4" fontWeight={700} color="text.primary" gutterBottom>
-                      Customer Management
-                    </Typography>
-                    <Typography variant="body1" color="text.secondary">
-                      Manage your customer database with ease
-                    </Typography>
-                  </Box>
-                </Box>
-                <Button
-                  variant="contained"
-                  size="large"
-                  startIcon={<PersonAddIcon />}
-                  onClick={() => openModal()}
-                  sx={{
-                    borderRadius: 3,
-                    px: 3,
-                    py: 1.5,
-                    fontWeight: 600,
-                    textTransform: 'none',
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    boxShadow: '0 8px 24px rgba(102,126,234,0.3)',
-                    '&:hover': {
-                      background: 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)',
-                      boxShadow: '0 12px 32px rgba(102,126,234,0.4)',
-                      transform: 'translateY(-2px)'
-                    },
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  Add New Customer
-                </Button>
-              </Box>
-
-              {/* Search and Filters */}
-              <Box sx={{ mb: 4 }}>
-                <TextField
-                  fullWidth
-                  variant="outlined"
-                  placeholder="Search customers by name, email, phone, or GST number..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon color="action" />
-                      </InputAdornment>
-                    ),
-                  }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 3,
-                      bgcolor: 'grey.50',
-                      '&:hover': {
-                        bgcolor: 'grey.100',
-                      },
-                      '&.Mui-focused': {
-                        bgcolor: 'white',
-                        boxShadow: '0 0 0 3px rgba(102,126,234,0.1)'
-                      }
-                    }
-                  }}
-                />
-              </Box>
-
-              {error && (
-                <Fade in={!!error}>
-                  <Alert
-                    severity="error"
-                    sx={{
-                      mb: 3,
-                      borderRadius: 2,
-                      '& .MuiAlert-icon': { fontSize: 24 }
-                    }}
-                  >
-                    {error}
-                  </Alert>
-                </Fade>
-              )}
-
-              {/* Modern Table */}
-              <TableContainer sx={{
-                borderRadius: 3,
-                overflow: 'hidden',
-                border: '1px solid',
-                borderColor: 'grey.200',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.05)'
-              }}>
-                <Table>
-                  <TableHead>
-                    <TableRow sx={{
-                      bgcolor: 'grey.50',
-                      '& .MuiTableCell-head': {
-                        fontWeight: 700,
-                        color: 'text.primary',
-                        fontSize: '0.95rem',
-                        borderBottom: '2px solid',
-                        borderColor: 'grey.200',
-                        py: 2
-                      }
-                    }}>
-                      <TableCell>Customer Info</TableCell>
-                      <TableCell>Contact Details</TableCell>
-                      <TableCell>Address</TableCell>
-                      <TableCell>GST Number</TableCell>
-                      <TableCell align="center" width={120}>Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {loading ? (
-                      <TableRow>
-                        <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
-                          <CircularProgress size={40} />
-                          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                            Loading customers...
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-                    ) : filteredCustomers.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
-                          <PeopleIcon sx={{ fontSize: 48, color: 'grey.300', mb: 2 }} />
-                          <Typography variant="h6" color="text.secondary" gutterBottom>
-                            {searchTerm ? 'No customers found' : 'No customers yet'}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {searchTerm ? 'Try adjusting your search terms' : 'Add your first customer to get started'}
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredCustomers.map((customer, index) => (
-                        <Fade in={true} timeout={300 + index * 100} key={customer.id}>
-                          <TableRow sx={{
-                            '&:hover': {
-                              bgcolor: 'grey.50',
-                              transform: 'scale(1.001)',
-                              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                            },
-                            transition: 'all 0.2s ease',
-                            '& .MuiTableCell-root': {
-                              borderBottom: '1px solid',
-                              borderColor: 'grey.100',
-                              py: 2
-                            }
-                          }}>
-                            <TableCell>
-                              <Box display="flex" alignItems="center" gap={2}>
-                                <Avatar sx={{
-                                  bgcolor: 'primary.main',
-                                  width: 40,
-                                  height: 40,
-                                  fontSize: '1rem',
-                                  fontWeight: 600
-                                }}>
-                                  {customer.name?.charAt(0)?.toUpperCase() || 'C'}
-                                </Avatar>
-                                <Box>
-                                  <Typography variant="subtitle1" fontWeight={600} color="text.primary">
-                                    {customer.name}
-                                  </Typography>
-                                  <Typography variant="body2" color="text.secondary">
-                                    Customer ID: #{customer.id}
-                                  </Typography>
-                                </Box>
-                              </Box>
-                            </TableCell>
-                            <TableCell>
-                              <Box>
-                                <Box display="flex" alignItems="center" gap={1} mb={0.5}>
-                                  <EmailIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                                  <Typography variant="body2" color="text.primary">
-                                    {customer.email}
-                                  </Typography>
-                                </Box>
-                                <Box display="flex" alignItems="center" gap={1}>
-                                  <PhoneIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                                  <Typography variant="body2" color="text.primary">
-                                    {customer.phone}
-                                  </Typography>
-                                </Box>
-                              </Box>
-                            </TableCell>
-                            <TableCell>
-                              <Box display="flex" alignItems="center" gap={1}>
-                                <LocationOnIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                                <Typography variant="body2" color="text.primary">
-                                  {customer.address}
-                                </Typography>
-                              </Box>
-                            </TableCell>
-                            <TableCell>
-                              {customer.gst_number ? (
-                                <Chip
-                                  icon={<ReceiptIcon />}
-                                  label={customer.gst_number}
-                                  size="small"
-                                  sx={{
-                                    bgcolor: 'success.50',
-                                    color: 'success.700',
-                                    fontWeight: 600,
-                                    border: '1px solid',
-                                    borderColor: 'success.200'
-                                  }}
-                                />
-                              ) : (
-                                <Chip
-                                  label="Not Registered"
-                                  size="small"
-                                  variant="outlined"
-                                  sx={{
-                                    color: 'text.secondary',
-                                    borderColor: 'grey.300'
-                                  }}
-                                />
-                              )}
-                            </TableCell>
-                            <TableCell align="center">
-                              <Box display="flex" justifyContent="center" gap={1}>
-                                <Tooltip title="Edit Customer">
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => openModal(customer)}
-                                    sx={{
-                                      color: 'primary.main',
-                                      bgcolor: 'primary.50',
-                                      '&:hover': {
-                                        bgcolor: 'primary.100',
-                                        transform: 'scale(1.1)'
-                                      },
-                                      transition: 'all 0.2s ease'
-                                    }}
-                                  >
-                                    <EditIcon fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                                <Tooltip title="Delete Customer">
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => setConfirmDeleteId(customer.id)}
-                                    sx={{
-                                      color: 'error.main',
-                                      bgcolor: 'error.50',
-                                      '&:hover': {
-                                        bgcolor: 'error.100',
-                                        transform: 'scale(1.1)'
-                                      },
-                                      transition: 'all 0.2s ease'
-                                    }}
-                                  >
-                                    <DeleteIcon fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                              </Box>
-                            </TableCell>
-                          </TableRow>
-                        </Fade>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </CardContent>
-          </Card>
-        </Box>
-
-        {/* Modern Add/Edit Dialog */}
-        <Dialog
-          open={showModal}
-          onClose={closeModal}
-          maxWidth="md"
-          fullWidth
-          TransitionComponent={Slide}
-          TransitionProps={{ direction: "up" }}
-          PaperProps={{
-            sx: {
-              borderRadius: 4,
-              boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.9) 100%)',
-              backdropFilter: 'blur(20px)'
-            }
-          }}
-        >
-          <DialogTitle sx={{
-            pb: 2,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white',
-            mb: 3
-          }}>
-            <Box display="flex" alignItems="center" gap={2}>
-              <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)' }}>
-                {editingId ? <EditIcon /> : <PersonAddIcon />}
-              </Avatar>
-              <Box>
-                <Typography variant="h5" fontWeight={700}>
-                  {editingId ? "Edit Customer" : "Add New Customer"}
-                </Typography>
-                <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                  {editingId ? "Update customer information" : "Enter customer details below"}
-                </Typography>
-              </Box>
-            </Box>
-          </DialogTitle>
-          <DialogContent sx={{ px: 4, pb: 2 }}>
-            {error && (
-              <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
-                {error}
-              </Alert>
-            )}
-            <Grid container spacing={3} sx={{ mt: 1 }}>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Full Name"
-                  name="name"
-                  value={form.name}
-                  onChange={handleChange}
-                  fullWidth
-                  required
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <BusinessIcon color="action" />
-                      </InputAdornment>
-                    ),
-                  }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2,
-                      '&.Mui-focused': {
-                        boxShadow: '0 0 0 3px rgba(102,126,234,0.1)'
-                      }
-                    }
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Email Address"
-                  name="email"
-                  value={form.email}
-                  onChange={handleChange}
-                  fullWidth
-                  required
-                  type="email"
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <EmailIcon color="action" />
-                      </InputAdornment>
-                    ),
-                  }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2,
-                      '&.Mui-focused': {
-                        boxShadow: '0 0 0 3px rgba(102,126,234,0.1)'
-                      }
-                    }
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Phone Number"
-                  name="phone"
-                  value={form.phone}
-                  onChange={handleChange}
-                  fullWidth
-                  required
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <PhoneIcon color="action" />
-                      </InputAdornment>
-                    ),
-                  }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2,
-                      '&.Mui-focused': {
-                        boxShadow: '0 0 0 3px rgba(102,126,234,0.1)'
-                      }
-                    }
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="GST Number"
-                  name="gst_number"
-                  value={form.gst_number}
-                  onChange={handleChange}
-                  fullWidth
-                  required
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <ReceiptIcon color="action" />
-                      </InputAdornment>
-                    ),
-                  }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2,
-                      '&.Mui-focused': {
-                        boxShadow: '0 0 0 3px rgba(102,126,234,0.1)'
-                      }
-                    }
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Login Password"
-                  name="password"
-                  value={form.password}
-                  onChange={handleChange}
-                  fullWidth
-                  type="password"
-                  placeholder={editingId ? "Leave blank to keep current password" : "Set login password for customer"}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <LockIcon color="action" />
-                      </InputAdornment>
-                    ),
-                  }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2,
-                      '&.Mui-focused': {
-                        boxShadow: '0 0 0 3px rgba(102,126,234,0.1)'
-                      }
-                    }
-                  }}
-                  helperText={editingId ? "Leave blank to keep existing password" : "Password for customer portal access"}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  label="Address"
-                  name="address"
-                  value={form.address}
-                  onChange={handleChange}
-                  fullWidth
-                  required
-                  multiline
-                  rows={3}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start" sx={{ alignSelf: 'flex-start', mt: 2 }}>
-                        <LocationOnIcon color="action" />
-                      </InputAdornment>
-                    ),
-                  }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2,
-                      '&.Mui-focused': {
-                        boxShadow: '0 0 0 3px rgba(102,126,234,0.1)'
-                      }
-                    }
-                  }}
-                />
-              </Grid>
-            </Grid>
-          </DialogContent>
-          <DialogActions sx={{ px: 4, pb: 4, pt: 2, gap: 2 }}>
-            <Button
-              onClick={closeModal}
-              variant="outlined"
-              size="large"
+    <MainLayout>
+      <Container
+        maxWidth={false}
+        sx={{
+          px: { xs: 2, md: 3 },
+          py: { xs: 2, md: 2.5 },
+          bgcolor: "#f7f8fb",
+          minHeight: "100%",
+        }}
+      >
+        <Box>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: { xs: "stretch", md: "center" },
+              justifyContent: "space-between",
+              gap: 2,
+              flexDirection: { xs: "column", md: "row" },
+              mb: 1.5,
+            }}
+          >
+            <FormControl
+              size="small"
               sx={{
-                borderRadius: 2,
-                px: 3,
-                textTransform: 'none',
-                fontWeight: 600
+                minWidth: 210,
+                maxWidth: 260,
+                "& .MuiOutlinedInput-root": {
+                  bgcolor: "transparent",
+                  borderRadius: "8px",
+                  fontSize: "1.5rem",
+                  fontWeight: 600,
+                  color: "#202124",
+                  "& fieldset": { border: "none" },
+                  "&:hover fieldset": { border: "none" },
+                  "&.Mui-focused fieldset": { border: "none" },
+                },
+                "& .MuiSelect-select": {
+                  px: 0,
+                  py: 0,
+                  pr: "28px !important",
+                },
+                "& .MuiSelect-icon": {
+                  right: -2,
+                  color: "#5f6368",
+                },
               }}
             >
-              Cancel
-            </Button>
+              <Select
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value)}
+              >
+                {VIEW_OPTIONS.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
             <Button
-              onClick={handleSubmit}
               variant="contained"
-              size="large"
-              disabled={loading}
+              startIcon={<AddIcon />}
+              onClick={() => navigate("/customers/add")}
               sx={{
-                borderRadius: 2,
-                px: 4,
-                textTransform: 'none',
+                alignSelf: { xs: "flex-start", md: "center" },
+                borderRadius: "7px",
+                px: 1.8,
+                py: 0.8,
+                minWidth: "auto",
+                textTransform: "none",
+                fontSize: "0.875rem",
                 fontWeight: 600,
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)',
-                }
+                boxShadow: "none",
+                bgcolor: "#3b82f6",
+                "&:hover": { bgcolor: "#2563eb", boxShadow: "none" },
               }}
             >
-              {loading ? (
-                <CircularProgress size={20} color="inherit" />
-              ) : (
-                editingId ? "Update Customer" : "Add Customer"
-              )}
+              New
             </Button>
-          </DialogActions>
-        </Dialog>
+          </Box>
 
-        {/* Modern Delete Confirmation Dialog */}
-        <Dialog
-          open={!!confirmDeleteId}
-          onClose={() => setConfirmDeleteId(null)}
-          maxWidth="sm"
-          fullWidth
-          PaperProps={{
-            sx: {
-              borderRadius: 4,
-              boxShadow: '0 20px 60px rgba(0,0,0,0.2)'
-            }
-          }}
-        >
-          <DialogTitle sx={{
-            pb: 2,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            color: 'error.main'
-          }}>
-            <Avatar sx={{ bgcolor: 'error.100', color: 'error.main' }}>
-              <DeleteIcon />
-            </Avatar>
-            <Box>
-              <Typography variant="h6" fontWeight={700}>
-                Delete Customer
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                This action cannot be undone
-              </Typography>
+          <Paper
+            elevation={0}
+            sx={{
+              border: "1px solid #e5e7eb",
+              borderRadius: "10px",
+              overflow: "hidden",
+              bgcolor: "#fff",
+            }}
+          >
+            <Box
+              sx={{
+                px: 2,
+                py: 1.25,
+                borderBottom: "1px solid #edf0f3",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 2,
+                flexWrap: "wrap",
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, minHeight: 36 }}>
+                {selectedCustomers.length > 0 && (
+                  <Typography sx={{ fontSize: "0.8125rem", color: "#5f6368" }}>
+                    {selectedCustomers.length} selected
+                  </Typography>
+                )}
+              </Box>
+
+              <TextField
+                size="small"
+                placeholder="Search in Customers"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon sx={{ fontSize: 18, color: "#9aa0a6" }} />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  width: { xs: "100%", md: 280 },
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: "8px",
+                    bgcolor: "#fbfcfe",
+                    fontSize: "0.875rem",
+                    "& fieldset": { borderColor: "#e3e7ee" },
+                    "&:hover fieldset": { borderColor: "#cfd6df" },
+                    "&.Mui-focused fieldset": { borderColor: "#4f8df7" },
+                  },
+                }}
+              />
             </Box>
-          </DialogTitle>
-          <DialogContent sx={{ pb: 2 }}>
-            <Typography variant="body1" color="text.secondary">
-              Are you sure you want to delete this customer? All associated data will be permanently removed.
-            </Typography>
-          </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 3, gap: 2 }}>
-            <Button
-              onClick={() => setConfirmDeleteId(null)}
-              variant="outlined"
-              sx={{
-                borderRadius: 2,
-                textTransform: 'none',
-                fontWeight: 600
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => handleDelete(confirmDeleteId)}
-              variant="contained"
-              color="error"
-              disabled={loading}
-              sx={{
-                borderRadius: 2,
-                textTransform: 'none',
-                fontWeight: 600
-              }}
-            >
-              {loading ? <CircularProgress size={20} color="inherit" /> : "Delete"}
-            </Button>
-          </DialogActions>
-        </Dialog>
-      </Box>
-      <Footer />
-    </Box>
+
+            {error && (
+              <Fade in={!!error}>
+                <Alert severity="error" onClose={() => setError("")} sx={{ m: 2, borderRadius: 2 }}>
+                  {error}
+                </Alert>
+              </Fade>
+            )}
+
+            <TableContainer sx={{ width: "100%", overflowX: "hidden" }}>
+              <Table size="small" sx={{ width: "100%", tableLayout: "fixed" }}>
+                <TableHead>
+                  <TableRow sx={{ bgcolor: "#fafbfc" }}>
+                    <TableCell padding="checkbox" sx={{ borderBottomColor: "#edf0f3", width: 46 }}>
+                      <Checkbox
+                        indeterminate={someVisibleSelected && !allVisibleSelected}
+                        checked={allVisibleSelected}
+                        onChange={handleSelectAll}
+                        sx={{ color: "#b6bdc7" }}
+                      />
+                    </TableCell>
+                    {[
+                      "NAME",
+                      "COMPANY NAME",
+                      "EMAIL",
+                      "WORK PHONE",
+                      "PLACE OF SUPPLY",
+                      "RECEIVABLES (BCY)",
+                      "UNUSED CREDITS (BCY)",
+                      "",
+                    ].map((label, index) => (
+                      <TableCell
+                        key={`${label}-${index}`}
+                        align={index >= 5 && index <= 6 ? "right" : index === 7 ? "center" : "left"}
+                        sx={{
+                          borderBottomColor: "#edf0f3",
+                          py: 1.2,
+                          color: "#8b95a7",
+                          fontSize: "0.68rem",
+                          letterSpacing: "0.05em",
+                          fontWeight: 700,
+                          whiteSpace: "nowrap",
+                          width: index === 0 ? "18%" : undefined,
+                          maxWidth: index === 0 ? "18%" : undefined,
+                          ...(index === 1 ? { width: "18%", maxWidth: "18%" } : {}),
+                          ...(index === 2 ? { width: "19%", maxWidth: "19%" } : {}),
+                          ...(index === 3 ? { width: "11%", maxWidth: "11%" } : {}),
+                          ...(index === 4 ? { width: "11%", maxWidth: "11%" } : {}),
+                          ...(index === 5 ? { width: "11%", maxWidth: "11%" } : {}),
+                          ...(index === 6 ? { width: "11%", maxWidth: "11%" } : {}),
+                          ...(index === 7 ? { width: 72, maxWidth: 72 } : {}),
+                        }}
+                      >
+                        {label}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                </TableHead>
+
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={9} align="center" sx={{ py: 8, borderBottom: 0 }}>
+                        <CircularProgress size={24} />
+                      </TableCell>
+                    </TableRow>
+                  ) : paginatedCustomers.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={9} align="center" sx={{ py: 8, borderBottom: 0 }}>
+                        <Typography sx={{ fontSize: "0.9rem", color: "#6b7280" }}>
+                          {searchTerm ? "No customers matched your search." : "No customers available."}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    paginatedCustomers.map((customer) => {
+                      const isSelected = selectedCustomers.includes(customer.id);
+                      const receivablesColor = customer.receivables > 0 ? "#111827" : "#6b7280";
+                      const unusedCreditsColor = customer.unused_credits > 0 ? "#111827" : "#6b7280";
+
+                      return (
+                        <TableRow
+                          key={customer.id}
+                          hover
+                          selected={isSelected}
+                          sx={{
+                            "& td": { borderBottomColor: "#edf0f3", py: 1.7 },
+                            "&:hover": { bgcolor: "#fafcff" },
+                          }}
+                        >
+                          <TableCell padding="checkbox">
+                            <Checkbox
+                              checked={isSelected}
+                              onChange={() => handleSelectOne(customer.id)}
+                              sx={{ color: "#b6bdc7" }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Typography
+                              onClick={() => navigate(`/customers/edit/${customer.id}`)}
+                              title={customer.name}
+                              sx={{
+                                fontSize: "0.825rem",
+                                fontWeight: 600,
+                                color: "#2563eb",
+                                cursor: "pointer",
+                                display: "block",
+                                width: "100%",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                                "&:hover": { textDecoration: "underline" },
+                              }}
+                            >
+                              {customer.name}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography
+                              title={customer.company_name}
+                              sx={{
+                                fontSize: "0.8125rem",
+                                color: "#2b3340",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {customer.company_name}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography
+                              title={customer.email}
+                              sx={{
+                                fontSize: "0.8125rem",
+                                color: "#2b3340",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {customer.email}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography
+                              title={customer.phone}
+                              sx={{
+                                fontSize: "0.8125rem",
+                                color: "#2b3340",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {customer.phone}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography
+                              title={customer.place_of_supply}
+                              sx={{
+                                fontSize: "0.8125rem",
+                                color: "#2b3340",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {customer.place_of_supply}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography sx={{ fontSize: "0.8125rem", fontWeight: 500, color: receivablesColor }}>
+                              {formatCurrency(customer.receivables)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography sx={{ fontSize: "0.8125rem", fontWeight: 500, color: unusedCreditsColor }}>
+                              {formatCurrency(customer.unused_credits)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="center">
+                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0.25 }}>
+                              <Tooltip title="Edit customer">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => navigate(`/customers/edit/${customer.id}`)}
+                                  sx={{ color: "#5f87e7" }}
+                                >
+                                  <EditIcon sx={{ fontSize: 17 }} />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Delete customer">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => setConfirmDeleteId(customer.id)}
+                                  sx={{ color: "#ef4444" }}
+                                >
+                                  <DeleteIcon sx={{ fontSize: 17 }} />
+                                </IconButton>
+                              </Tooltip>
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            <Box sx={{ borderTop: "1px solid #edf0f3" }}>
+              <TablePagination
+                rowsPerPageOptions={[10, 25, 50]}
+                component="div"
+                count={filteredCustomers.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={handleChangePage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+                sx={{
+                  ".MuiTablePagination-toolbar": {
+                    minHeight: 52,
+                    px: 2,
+                  },
+                  ".MuiTablePagination-selectLabel, .MuiTablePagination-displayedRows": {
+                    fontSize: "0.75rem",
+                    color: "#5f6368",
+                  },
+                  ".MuiTablePagination-select": {
+                    fontSize: "0.75rem",
+                  },
+                }}
+              />
+            </Box>
+          </Paper>
+        </Box>
+      </Container>
+
+      <Dialog
+        open={!!confirmDeleteId}
+        onClose={() => setConfirmDeleteId(null)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: 6,
+          },
+        }}
+      >
+        <DialogTitle sx={{ pb: 1.25 }}>
+          <Typography sx={{ fontSize: "1rem", fontWeight: 700, color: "#1f2937" }}>
+            Delete customer?
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Typography sx={{ fontSize: "0.9rem", color: "#6b7280", lineHeight: 1.6 }}>
+            This customer will be removed permanently. This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5, pt: 1.5, gap: 1 }}>
+          <Button
+            onClick={() => setConfirmDeleteId(null)}
+            variant="outlined"
+            sx={{
+              textTransform: "none",
+              borderRadius: "8px",
+              px: 2.25,
+              borderColor: "#d1d5db",
+              color: "#4b5563",
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={() => handleDelete(confirmDeleteId)}
+            variant="contained"
+            color="error"
+            disabled={loading}
+            sx={{
+              textTransform: "none",
+              borderRadius: "8px",
+              px: 2.25,
+              boxShadow: "none",
+            }}
+          >
+            {loading ? <CircularProgress size={18} color="inherit" /> : "Delete"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </MainLayout>
   );
 };
 

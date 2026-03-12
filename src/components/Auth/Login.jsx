@@ -10,7 +10,6 @@ import {
   Container,
   Grid,
   Paper,
-  Divider,
   Alert,
   FormControlLabel,
   Checkbox,
@@ -28,13 +27,14 @@ import {
   VisibilityOff,
   Person,
   Lock,
-  Business,
   Security,
   CheckCircle,
-  Cancel
+  Cancel,
+  LoginOutlined
 } from "@mui/icons-material";
-import "./Login.css";
-import myImage from "../../assets/laptop.jpg";
+import { motion } from 'framer-motion';
+import Header from '../Layout/Header';
+import Footer from '../Layout/Footer';
 import { useAuth } from "../../context/AuthContext";
 
 const LoginPage = () => {
@@ -124,7 +124,6 @@ const LoginPage = () => {
         });
       } else {
         const token = await login(credentials);
-        console.log("Login successful, token:", token);
         navigate("/dashboard");
       }
     } catch (err) {
@@ -137,185 +136,197 @@ const LoginPage = () => {
     setLoading(false);
   };
 
+  const fadeInUp = {
+    hidden: { opacity: 0, y: 30 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.6, ease: 'easeOut' }
+    }
+  };
+
+  const staggerContainer = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.2
+      }
+    }
+  };
+
   return (
-    <Box sx={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 2
-    }}>
-      <Container maxWidth="lg">
-        <Paper
-          elevation={24}
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <Header />
+
+      <Box
+        component={motion.div}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+        sx={{
+          flex: 1,
+          background: 'linear-gradient(135deg, #0a0e27 0%, #1e3a8a 50%, #0f172a 100%)',
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          py: { xs: 4, md: 8 },
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        {/* Background decorations */}
+        <Box
           sx={{
-            borderRadius: 4,
-            overflow: 'hidden',
-            background: '#ffffff',
-            minHeight: { xs: 'auto', md: '600px' }
+            position: 'absolute',
+            top: '10%',
+            right: '-5%',
+            width: '400px',
+            height: '400px',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(30,58,138,0.3) 0%, transparent 70%)',
+            filter: 'blur(60px)',
+            pointerEvents: 'none'
           }}
-        >
-          <Grid container sx={{ minHeight: { xs: 'auto', md: '600px' } }}>
-            {/* Left Panel - Branding & Image */}
-            <Grid
-              item
-              xs={12}
-              md={6}
-              sx={{
-                background: 'linear-gradient(135deg, #0057e7 0%, #1976d2 100%)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white',
-                padding: 4,
-                position: 'relative',
-                overflow: 'hidden'
-              }}
-            >
-              {/* Background Pattern */}
-              <Box
-                sx={{
-                  position: 'absolute',
-                  top: -50,
-                  right: -50,
-                  width: 200,
-                  height: 200,
-                  borderRadius: '50%',
-                  background: 'rgba(255,255,255,0.1)',
-                  opacity: 0.5
-                }}
-              />
-              <Box
-                sx={{
-                  position: 'absolute',
-                  bottom: -100,
-                  left: -100,
-                  width: 300,
-                  height: 300,
-                  borderRadius: '50%',
-                  background: 'rgba(255,255,255,0.05)',
-                  opacity: 0.7
-                }}
-              />
+        />
+        <Box
+          sx={{
+            position: 'absolute',
+            bottom: '10%',
+            left: '-5%',
+            width: '350px',
+            height: '350px',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(59,130,246,0.2) 0%, transparent 70%)',
+            filter: 'blur(60px)',
+            pointerEvents: 'none'
+          }}
+        />
 
-              {/* Content */}
-              <Box sx={{ textAlign: 'center', zIndex: 2, mb: 4 }}>
-                <Business sx={{ fontSize: 60, mb: 2 }} />
-                <Typography variant="h3" fontWeight={700} gutterBottom>
-                  Smart Invoice Pro
-                </Typography>
-                <Typography variant="h6" fontWeight={400} sx={{ opacity: 0.9, mb: 4 }}>
-                  Professional Bookkeeping & Invoice Management
-                </Typography>
-
-                {/* Feature highlights */}
-                <Box sx={{ textAlign: 'left', maxWidth: 300 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <CheckCircle sx={{ mr: 2, fontSize: 20 }} />
-                    <Typography variant="body1">Invoice Generation & Management</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <CheckCircle sx={{ mr: 2, fontSize: 20 }} />
-                    <Typography variant="body1">Customer & Product Tracking</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <CheckCircle sx={{ mr: 2, fontSize: 20 }} />
-                    <Typography variant="body1">Real-time Financial Reports</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <CheckCircle sx={{ mr: 2, fontSize: 20 }} />
-                    <Typography variant="body1">Secure Data Management</Typography>
-                  </Box>
-                </Box>
-              </Box>
-
-              {/* Decorative Image */}
-              <Box
-                component="img"
-                src={myImage}
-                alt="Professional bookkeeping"
-                sx={{
-                  width: { xs: 200, md: 250 },
-                  height: { xs: 200, md: 250 },
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                  border: '4px solid rgba(255,255,255,0.3)',
-                  boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
-                  zIndex: 2
-                }}
-              />
-            </Grid>
-
-            {/* Right Panel - Login Form */}
-            <Grid item xs={12} md={6}>
-              <Box
-                sx={{
-                  height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: { xs: 3, md: 4 }
-                }}
+        <Container maxWidth="lg">
+          <Grid container spacing={4} alignItems="center">
+            <Grid item xs={12} md={6} lg={5} sx={{ mx: 'auto' }}>
+              <motion.div
+                initial="hidden"
+                animate="visible"
+                variants={staggerContainer}
               >
-                <Box sx={{ width: '100%', maxWidth: 400 }}>
-                  {/* Header */}
-                  <Box sx={{ textAlign: 'center', mb: 4 }}>
-                    <Typography variant="h4" fontWeight={700} color="primary.main" gutterBottom>
-                      {isSignup ? 'Create Account' : 'Welcome Back'}
-                    </Typography>
-                    <Typography variant="body1" color="text.secondary">
-                      {isSignup
-                        ? 'Start your professional bookkeeping journey'
-                        : 'Sign in to access your dashboard'
-                      }
-                    </Typography>
-                  </Box>
-
-                  {/* Alerts */}
-                  {error && (
-                    <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
-                      {error}
-                    </Alert>
-                  )}
-                  {success && (
-                    <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }}>
-                      {success}
-                    </Alert>
-                  )}
-
-                  {/* Form */}
-                  <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
-                    <CardContent sx={{ p: 4 }}>
-                      <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
-                        {/* Username Field */}
-                        <TextField
-                          fullWidth
-                          label="Username"
-                          name="username"
-                          value={credentials.username}
-                          onChange={handleChange}
-                          variant="outlined"
-                          margin="normal"
-                          required
-                          InputProps={{
-                            startAdornment: (
-                              <InputAdornment position="start">
-                                <Person color="action" />
-                              </InputAdornment>
-                            ),
+                <Card
+                  elevation={24}
+                  sx={{
+                    backdropFilter: 'blur(20px)',
+                    background: 'rgba(255, 255, 255, 0.98)',
+                    borderRadius: 4,
+                    overflow: 'visible',
+                    boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+                    maxHeight: 'none'
+                  }}
+                >
+                  <CardContent sx={{ p: { xs: 3, md: 5 }, overflow: 'visible' }}>
+                    {/* Header */}
+                    <motion.div variants={fadeInUp}>
+                      <Box sx={{ textAlign: 'center', mb: 4 }}>
+                        <Box
+                          sx={{
+                            display: 'inline-flex',
+                            p: 2,
+                            borderRadius: '50%',
+                            bgcolor: 'primary.main',
+                            mb: 2
                           }}
-                          sx={{ mb: 2 }}
-                        />
+                        >
+                          <LoginOutlined sx={{ fontSize: 40, color: 'white' }} />
+                        </Box>
+                        <Typography variant="h4" fontWeight={700} color="primary.main" gutterBottom>
+                          {isSignup ? 'Create Account' : 'Welcome Back'}
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary">
+                          {isSignup
+                            ? 'Start your professional bookkeeping journey'
+                            : 'Sign in to access your dashboard'
+                          }
+                        </Typography>
+                      </Box>
+                    </motion.div>
 
-                        {/* Password Field */}
+                    {/* Alerts */}
+                    {error && (
+                      <motion.div variants={fadeInUp}>
+                        <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
+                          {error}
+                        </Alert>
+                      </motion.div>
+                    )}
+                    {success && (
+                      <motion.div variants={fadeInUp}>
+                        <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }}>
+                          {success}
+                        </Alert>
+                      </motion.div>
+                    )}
+
+                    {/* Form */}
+                    <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
+                      {/* Username Field */}
+                      <TextField
+                        fullWidth
+                        label="Username"
+                        name="username"
+                        value={credentials.username}
+                        onChange={handleChange}
+                        variant="outlined"
+                        margin="normal"
+                        required
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <Person color="action" />
+                            </InputAdornment>
+                          ),
+                        }}
+                        sx={{ mb: 2 }}
+                      />
+
+                      {/* Password Field */}
+                      <TextField
+                        fullWidth
+                        label="Password"
+                        name="password"
+                        type={showPassword ? 'text' : 'password'}
+                        value={credentials.password}
+                        onChange={handleChange}
+                        variant="outlined"
+                        margin="normal"
+                        required
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <Lock color="action" />
+                            </InputAdornment>
+                          ),
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <IconButton
+                                onClick={() => setShowPassword(!showPassword)}
+                                edge="end"
+                              >
+                                {showPassword ? <VisibilityOff /> : <Visibility />}
+                              </IconButton>
+                            </InputAdornment>
+                          ),
+                        }}
+                        sx={{ mb: isSignup ? 1 : 2 }}
+                      />
+
+                      {/* Confirm Password Field - Only for signup */}
+                      {isSignup && (
                         <TextField
                           fullWidth
-                          label="Password"
-                          name="password"
-                          type={showPassword ? 'text' : 'password'}
-                          value={credentials.password}
+                          label="Confirm Password"
+                          name="confirmPassword"
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          value={credentials.confirmPassword}
                           onChange={handleChange}
                           variant="outlined"
                           margin="normal"
@@ -323,96 +334,65 @@ const LoginPage = () => {
                           InputProps={{
                             startAdornment: (
                               <InputAdornment position="start">
-                                <Lock color="action" />
+                                <Security color="action" />
                               </InputAdornment>
                             ),
                             endAdornment: (
                               <InputAdornment position="end">
                                 <IconButton
-                                  onClick={() => setShowPassword(!showPassword)}
+                                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                   edge="end"
                                 >
-                                  {showPassword ? <VisibilityOff /> : <Visibility />}
+                                  {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
                                 </IconButton>
                               </InputAdornment>
                             ),
                           }}
-                          sx={{ mb: isSignup ? 1 : 2 }}
+                          sx={{ mb: 2 }}
                         />
+                      )}
 
-                        {/* Confirm Password Field - Only for signup */}
-                        {isSignup && (
-                          <TextField
-                            fullWidth
-                            label="Confirm Password"
-                            name="confirmPassword"
-                            type={showConfirmPassword ? 'text' : 'password'}
-                            value={credentials.confirmPassword}
-                            onChange={handleChange}
-                            variant="outlined"
-                            margin="normal"
-                            required
-                            InputProps={{
-                              startAdornment: (
-                                <InputAdornment position="start">
-                                  <Security color="action" />
-                                </InputAdornment>
-                              ),
-                              endAdornment: (
-                                <InputAdornment position="end">
-                                  <IconButton
-                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                    edge="end"
-                                  >
-                                    {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                                  </IconButton>
-                                </InputAdornment>
-                              ),
-                            }}
-                            sx={{ mb: 2 }}
-                          />
-                        )}
+                      {/* Password Requirements - Only for signup when password is entered */}
+                      {isSignup && credentials.password && (
+                        <Paper
+                          variant="outlined"
+                          sx={{ p: 2, mb: 3, bgcolor: 'grey.50', borderRadius: 2 }}
+                        >
+                          <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                            Password Requirements:
+                          </Typography>
+                          <List dense sx={{ py: 0 }}>
+                            {[
+                              { key: 'minLength', text: 'At least 8 characters' },
+                              { key: 'hasUppercase', text: 'One uppercase letter' },
+                              { key: 'hasLowercase', text: 'One lowercase letter' },
+                              { key: 'hasNumber', text: 'One number' },
+                              { key: 'hasSpecialChar', text: 'One special character' }
+                            ].map(({ key, text }) => (
+                              <ListItem key={key} sx={{ py: 0, px: 0 }}>
+                                <ListItemIcon sx={{ minWidth: 36 }}>
+                                  {passwordValidation[key] ? (
+                                    <CheckCircle color="success" sx={{ fontSize: 18 }} />
+                                  ) : (
+                                    <Cancel color="error" sx={{ fontSize: 18 }} />
+                                  )}
+                                </ListItemIcon>
+                                <ListItemText
+                                  primary={text}
+                                  primaryTypographyProps={{
+                                    variant: 'body2',
+                                    color: passwordValidation[key] ? 'success.main' : 'error.main'
+                                  }}
+                                />
+                              </ListItem>
+                            ))}
+                          </List>
+                        </Paper>
+                      )}
 
-                        {/* Password Requirements - Only for signup when password is entered */}
-                        {isSignup && credentials.password && (
-                          <Paper
-                            variant="outlined"
-                            sx={{ p: 2, mb: 3, bgcolor: 'grey.50', borderRadius: 2 }}
-                          >
-                            <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                              Password Requirements:
-                            </Typography>
-                            <List dense sx={{ py: 0 }}>
-                              {[
-                                { key: 'minLength', text: 'At least 8 characters' },
-                                { key: 'hasUppercase', text: 'One uppercase letter' },
-                                { key: 'hasLowercase', text: 'One lowercase letter' },
-                                { key: 'hasNumber', text: 'One number' },
-                                { key: 'hasSpecialChar', text: 'One special character' }
-                              ].map(({ key, text }) => (
-                                <ListItem key={key} sx={{ py: 0, px: 0 }}>
-                                  <ListItemIcon sx={{ minWidth: 36 }}>
-                                    {passwordValidation[key] ? (
-                                      <CheckCircle color="success" sx={{ fontSize: 18 }} />
-                                    ) : (
-                                      <Cancel color="error" sx={{ fontSize: 18 }} />
-                                    )}
-                                  </ListItemIcon>
-                                  <ListItemText
-                                    primary={text}
-                                    primaryTypographyProps={{
-                                      variant: 'body2',
-                                      color: passwordValidation[key] ? 'success.main' : 'error.main'
-                                    }}
-                                  />
-                                </ListItem>
-                              ))}
-                            </List>
-                          </Paper>
-                        )}
-
-                        {/* Remember Me & Forgot Password - Only for login */}
-                        {!isSignup && (
+                      {/* Remember Me & Forgot Password - Only for login */}
+                      {!isSignup && (
+                        <motion.div variants={fadeInUp}>
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                             <FormControlLabel
                               control={
@@ -434,10 +414,15 @@ const LoginPage = () => {
                               Forgot Password?
                             </Link>
                           </Box>
-                        )}
+                        </motion.div>
+                      )}
 
-                        {/* Submit Button */}
+                      {/* Submit Button */}
+                      <motion.div variants={fadeInUp}>
                         <Button
+                          component={motion.button}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
                           type="submit"
                           fullWidth
                           variant="contained"
@@ -461,16 +446,14 @@ const LoginPage = () => {
                         >
                           {loading ? 'Please wait...' : (isSignup ? 'Create Account' : 'Sign In')}
                         </Button>
+                      </motion.div>
 
-                        {/* Divider */}
-                        <Divider sx={{ my: 3 }}>
-                          <Typography variant="body2" color="text.secondary">
-                            or
-                          </Typography>
-                        </Divider>
-
-                        {/* Customer Portal Link */}
+                      {/* Customer Portal Link */}
+                      <motion.div variants={fadeInUp}>
                         <Button
+                          component={motion.button}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
                           fullWidth
                           variant="outlined"
                           size="large"
@@ -493,11 +476,16 @@ const LoginPage = () => {
                         >
                           Customer Portal Login
                         </Button>
+                      </motion.div>
 
-                        {/* Toggle Sign up / Sign in */}
+                      {/* Toggle Sign up / Sign in */}
+                      <motion.div variants={fadeInUp}>
                         <Button
+                          component={motion.button}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
                           fullWidth
-                          variant="outlined"
+                          variant="text"
                           size="large"
                           onClick={() => {
                             setIsSignup(!isSignup);
@@ -518,39 +506,38 @@ const LoginPage = () => {
                             fontSize: '1rem',
                             fontWeight: 600,
                             textTransform: 'none',
-                            borderColor: 'primary.main',
                             color: 'primary.main',
                             '&:hover': {
-                              bgcolor: 'primary.main',
-                              color: 'white',
-                              borderColor: 'primary.main'
+                              bgcolor: 'primary.50'
                             }
                           }}
                         >
                           {isSignup ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
                         </Button>
-                      </Box>
-                    </CardContent>
-                  </Card>
+                      </motion.div>
+                    </Box>
 
-                  {/* Footer Text */}
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    align="center"
-                    sx={{ mt: 3 }}
-                  >
-                    By continuing, you agree to our{' '}
-                    <Link href="#" underline="hover">Terms of Service</Link>
-                    {' '}and{' '}
-                    <Link href="#" underline="hover">Privacy Policy</Link>
-                  </Typography>
-                </Box>
-              </Box>
+                    {/* Footer Text */}
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      align="center"
+                      sx={{ mt: 3 }}
+                    >
+                      By continuing, you agree to our{' '}
+                      <Link href="/terms" underline="hover">Terms of Service</Link>
+                      {' '}and{' '}
+                      <Link href="/privacy" underline="hover">Privacy Policy</Link>
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </motion.div>
             </Grid>
           </Grid>
-        </Paper>
-      </Container>
+        </Container>
+      </Box>
+
+      <Footer />
     </Box>
   );
 };

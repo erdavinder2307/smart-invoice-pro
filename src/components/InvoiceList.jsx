@@ -1,35 +1,27 @@
 import React, { useEffect, useState } from "react";
-import {
-  getInvoices,
-  deleteInvoice,
-} from "../services/invoiceService";
+import { getInvoices, deleteInvoice } from "../services/invoiceService";
 import { createApiUrl } from "../config/api";
 import "./InvoiceList.css";
-import Header from "./common/Header/Header";
-import Footer from "./common/Header/Footer/Footer";
-import Sidebar from "./Sidebar";
+import MainLayout from "./Layout/MainLayout";
+import StatusBadge from "./common/StatusBadge";
+import SummaryCard from "./common/SummaryCard";
+import SectionHeader from "./common/SectionHeader";
+import StandardDataTable from "./common/StandardDataTable";
 import axios from "axios";
 import {
   Box,
   Button,
   Typography,
   Paper,
-  Table,
-  TableBody,
   TableCell,
-  TableContainer,
-  TableHead,
   TableRow,
   CircularProgress,
   Alert,
+  Checkbox,
   Chip,
-  Avatar,
   InputAdornment,
   TextField,
   Fade,
-  Slide,
-  Card,
-  CardContent,
   Grid,
   Tooltip,
   IconButton,
@@ -40,25 +32,33 @@ import {
   Menu,
   MenuItem,
   ListItemIcon,
-  ListItemText
+  ListItemText,
+  Container,
+  FormControl,
+  Select,
+  Snackbar
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import AddIcon from '@mui/icons-material/Add';
-import SearchIcon from '@mui/icons-material/Search';
-import ReceiptIcon from '@mui/icons-material/Receipt';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import DownloadIcon from '@mui/icons-material/Download';
-import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
-import FilterListIcon from '@mui/icons-material/FilterList';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
-import PersonIcon from '@mui/icons-material/Person';
-import AssignmentIcon from '@mui/icons-material/Assignment';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import PendingIcon from '@mui/icons-material/Pending';
-import ErrorIcon from '@mui/icons-material/Error';
+import AddIcon from "@mui/icons-material/Add";
+import SearchIcon from "@mui/icons-material/Search";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
+import TodayIcon from "@mui/icons-material/Today";
+import DateRangeIcon from "@mui/icons-material/DateRange";
+import ErrorIcon from "@mui/icons-material/Error";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import PaymentIcon from "@mui/icons-material/Payment";
+import LinkIcon from '@mui/icons-material/Link';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
+import ThumbUpAltIcon from '@mui/icons-material/ThumbUpAlt';
+import ThumbDownAltIcon from '@mui/icons-material/ThumbDownAlt';
+import SendIcon from '@mui/icons-material/Send';
+import PayNowModal from "./PayNowModal";
+import { useAuth } from "../context/AuthContext";
 
 const initialForm = {
   invoice_number: "",
@@ -93,11 +93,21 @@ const InvoiceList = () => {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [selectedInvoices, setSelectedInvoices] = useState([]);
+  const [payNowOpen, setPayNowOpen] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState('');
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  // Approval-specific state
+  const [rejectDialog, setRejectDialog] = useState({ open: false, invoiceId: null, reason: '' });
+  const [approvalToast, setApprovalToast] = useState({ open: false, message: '', severity: 'success' });
   const navigate = useNavigate();
+  const { user, canApprove } = useAuth();
 
-  const filteredInvoices = invoices.filter(invoice => {
-    const customer = customers.find(c => c.id === invoice.customer_id);
-    const customerName = customer ? customer.name : '';
+  const filteredInvoices = invoices.filter((invoice) => {
+    const customer = customers.find((c) => c.id === invoice.customer_id);
+    const customerName = customer ? customer.name : "";
 
     const matchesSearch =
       invoice.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -109,24 +119,36 @@ const InvoiceList = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const getStatusColor = (status) => {
-    switch (status?.toLowerCase()) {
-      case 'paid': return 'success';
-      case 'pending': return 'warning';
-      case 'overdue': return 'error';
-      case 'draft': return 'default';
-      default: return 'default';
-    }
-  };
+  // Paginated invoices
+  const paginatedInvoices = filteredInvoices.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
 
-  const getStatusIcon = (status) => {
-    switch (status?.toLowerCase()) {
-      case 'paid': return <CheckCircleIcon fontSize="small" />;
-      case 'pending': return <PendingIcon fontSize="small" />;
-      case 'overdue': return <ErrorIcon fontSize="small" />;
-      default: return <AssignmentIcon fontSize="small" />;
-    }
-  };
+  // Calculate summary metrics
+  const totalOutstanding = invoices
+    .filter((inv) => inv.status?.toLowerCase() !== "paid")
+    .reduce((sum, inv) => sum + (inv.balance_due || inv.total_amount || 0), 0);
+
+  const dueToday = invoices.filter((inv) => {
+    const today = new Date().toISOString().split("T")[0];
+    return inv.due_date === today && inv.status?.toLowerCase() !== "paid";
+  }).length;
+
+  const dueWithin30Days = invoices.filter((inv) => {
+    if (inv.status?.toLowerCase() === "paid") return false;
+    const today = new Date();
+    const dueDate = new Date(inv.due_date);
+    const diffTime = dueDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays >= 0 && diffDays <= 30;
+  }).length;
+
+  const overdueCount = invoices.filter(
+    (inv) => inv.status?.toLowerCase() === "overdue"
+  ).length;
+
+  const avgDaysToGetPaid = invoices.length > 0 ? Math.floor(Math.random() * 15) + 10 : 0; // Mock data
 
   const fetchInvoices = async () => {
     setLoading(true);
@@ -186,6 +208,76 @@ const InvoiceList = () => {
     setSelectedInvoice(null);
   };
 
+  const handleCopyPortalLink = async (invoice) => {
+    let token = invoice.portal_token;
+    if (!token) {
+      // Generate one on demand for legacy invoices
+      try {
+        const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const res = await axios.post(
+          createApiUrl(`/api/invoices/${invoice.id}/generate-portal-token`),
+          {},
+          { headers: { 'X-User-Id': storedUser.id || '' } }
+        );
+        token = res.data.portal_token;
+        setInvoices(prev => prev.map(inv => inv.id === invoice.id ? { ...inv, portal_token: token } : inv));
+      } catch {
+        setError('Could not generate portal link. Please try again.');
+        return;
+      }
+    }
+    const link = `${window.location.origin}/portal/invoice/${token}`;
+    navigator.clipboard.writeText(link).then(() => {
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 3500);
+    });
+  };
+
+  // ── Approval actions ──────────────────────────────────────────────────────
+  const handleSubmitForApproval = async (invoice) => {
+    try {
+      await axios.post(
+        createApiUrl(`/api/invoices/${invoice.id}/submit-for-approval`),
+        {},
+        { headers: { 'X-User-Id': user?.id || '' } }
+      );
+      setApprovalToast({ open: true, message: 'Invoice submitted for approval.', severity: 'info' });
+      fetchInvoices();
+    } catch (err) {
+      setApprovalToast({ open: true, message: err.response?.data?.error || 'Submit failed.', severity: 'error' });
+    }
+  };
+
+  const handleApproveInvoice = async (invoice) => {
+    try {
+      await axios.post(
+        createApiUrl(`/api/invoices/${invoice.id}/approve`),
+        {},
+        { headers: { 'X-User-Id': user?.id || '' } }
+      );
+      setApprovalToast({ open: true, message: 'Invoice approved and set to Issued.', severity: 'success' });
+      fetchInvoices();
+    } catch (err) {
+      setApprovalToast({ open: true, message: err.response?.data?.error || 'Approval failed.', severity: 'error' });
+    }
+  };
+
+  const handleRejectConfirm = async () => {
+    const { invoiceId, reason } = rejectDialog;
+    try {
+      await axios.post(
+        createApiUrl(`/api/invoices/${invoiceId}/reject`),
+        { reason },
+        { headers: { 'X-User-Id': user?.id || '' } }
+      );
+      setApprovalToast({ open: true, message: 'Invoice rejected and returned to Draft.', severity: 'warning' });
+      setRejectDialog({ open: false, invoiceId: null, reason: '' });
+      fetchInvoices();
+    } catch (err) {
+      setApprovalToast({ open: true, message: err.response?.data?.error || 'Rejection failed.', severity: 'error' });
+    }
+  };
+
   const handleDownloadPDF = async (invoice) => {
     try {
       const response = await axios.post(
@@ -193,10 +285,12 @@ const InvoiceList = () => {
         { invoice },
         { responseType: "blob" }
       );
-      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
-      const link = document.createElement('a');
+      const url = window.URL.createObjectURL(
+        new Blob([response.data], { type: "application/pdf" })
+      );
+      const link = document.createElement("a");
       link.href = url;
-      link.setAttribute('download', `${invoice.invoice_number || 'invoice'}.pdf`);
+      link.setAttribute("download", `${invoice.invoice_number || "invoice"}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -206,545 +300,552 @@ const InvoiceList = () => {
     }
   };
 
+  // Handle select all checkbox
+  const handleSelectAll = (event) => {
+    if (event.target.checked) {
+      setSelectedInvoices(paginatedInvoices.map((inv) => inv.id));
+    } else {
+      setSelectedInvoices([]);
+    }
+  };
+
+  // Handle individual checkbox
+  const handleSelectOne = (invoiceId) => {
+    setSelectedInvoices((prev) =>
+      prev.includes(invoiceId)
+        ? prev.filter((id) => id !== invoiceId)
+        : [...prev, invoiceId]
+    );
+  };
+
+  // Pagination handlers
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  const invoiceColumns = [
+    {
+      key: "select",
+      label: (
+        <Checkbox
+          indeterminate={
+            selectedInvoices.length > 0 &&
+            selectedInvoices.length < paginatedInvoices.length
+          }
+          checked={
+            paginatedInvoices.length > 0 &&
+            selectedInvoices.length === paginatedInvoices.length
+          }
+          onChange={handleSelectAll}
+        />
+      ),
+      width: 42,
+    },
+    { key: "date", label: "Date" },
+    { key: "invoice", label: "Invoice #" },
+    { key: "order", label: "Order Number" },
+    { key: "customer", label: "Customer Name" },
+    { key: "status", label: "Status" },
+    { key: "due", label: "Due Date" },
+    { key: "amount", label: "Amount", align: "right" },
+    { key: "balance", label: "Balance Due", align: "right" },
+    { key: "actions", label: "Actions", align: "center" },
+  ];
+
+
   return (
-    <>
-      <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: '#f8fafc' }}>
-        <Header />
-        <Box sx={{ display: 'flex', flex: 1 }}>
-          <Sidebar />
-          <Box sx={{
-            flex: 1,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            minHeight: 'calc(100vh - 128px)',
-            p: 3,
-            position: 'relative',
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'linear-gradient(135deg, rgba(102,126,234,0.1) 0%, rgba(118,75,162,0.1) 100%)',
-              backdropFilter: 'blur(10px)'
-            }
-          }}>
-            {/* Stats Cards */}
-            <Grid container spacing={3} sx={{ mb: 4, position: 'relative', zIndex: 1 }}>
+    <MainLayout>
+      <Container maxWidth="xl" sx={{ py: 4 }}>
+        {/* Page Header */}
+        <Box sx={{ mb: 4 }}>
+          <SectionHeader
+            title="All Invoices"
+            subtitle="Track and manage all customer invoices and payments"
+            primaryAction={{
+              label: "New Invoice",
+              icon: <AddIcon />,
+              onClick: handleAdd,
+            }}
+            sx={{ mb: 3 }}
+          />
+
+          {/* Payment Summary Strip */}
+          <Paper
+            elevation={0}
+            sx={{
+              p: 3,
+              mb: 3,
+              borderRadius: 3,
+              border: "1px solid",
+              borderColor: "grey.200",
+              bgcolor: "background.paper"
+            }}
+          >
+            <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600}>
+              Payment Summary
+            </Typography>
+            <Grid container spacing={2} sx={{ mt: 0.5 }}>
               <Grid item xs={12} sm={6} md={3}>
-                <Card sx={{
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  color: 'white',
-                  borderRadius: 3,
-                  boxShadow: '0 8px 32px rgba(102,126,234,0.3)',
-                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: '0 12px 40px rgba(102,126,234,0.4)'
-                  }
-                }}>
-                  <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', py: 3 }}>
-                    <ReceiptIcon sx={{ fontSize: 40, mb: 2, opacity: 0.9 }} />
-                    <Typography variant="h4" fontWeight={700} gutterBottom>
-                      {invoices.length}
-                    </Typography>
-                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                      Total Invoices
-                    </Typography>
-                  </CardContent>
-                </Card>
+                <SummaryCard
+                  label="Outstanding Receivables"
+                  value={`₹${totalOutstanding.toLocaleString()}`}
+                  icon={<AttachMoneyIcon />}
+                  accentColor="error.main"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} md={2}>
+                <SummaryCard
+                  label="Due Today"
+                  value={dueToday}
+                  icon={<TodayIcon />}
+                  accentColor="warning.main"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} md={2}>
+                <SummaryCard
+                  label="Due Within 30 Days"
+                  value={dueWithin30Days}
+                  icon={<DateRangeIcon />}
+                  accentColor="info.main"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} md={2}>
+                <SummaryCard
+                  label="Overdue"
+                  value={overdueCount}
+                  icon={<ErrorIcon />}
+                  accentColor="error.main"
+                />
               </Grid>
               <Grid item xs={12} sm={6} md={3}>
-                <Card sx={{
-                  background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-                  color: 'white',
-                  borderRadius: 3,
-                  boxShadow: '0 8px 32px rgba(67,233,123,0.3)',
-                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: '0 12px 40px rgba(67,233,123,0.4)'
-                  }
-                }}>
-                  <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', py: 3 }}>
-                    <CheckCircleIcon sx={{ fontSize: 40, mb: 2, opacity: 0.9 }} />
-                    <Typography variant="h4" fontWeight={700} gutterBottom>
-                      {invoices.filter(inv => inv.status?.toLowerCase() === 'paid').length}
-                    </Typography>
-                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                      Paid Invoices
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <Card sx={{
-                  background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                  color: 'white',
-                  borderRadius: 3,
-                  boxShadow: '0 8px 32px rgba(240,147,251,0.3)',
-                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: '0 12px 40px rgba(240,147,251,0.4)'
-                  }
-                }}>
-                  <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', py: 3 }}>
-                    <PendingIcon sx={{ fontSize: 40, mb: 2, opacity: 0.9 }} />
-                    <Typography variant="h4" fontWeight={700} gutterBottom>
-                      {invoices.filter(inv => inv.status?.toLowerCase() === 'pending').length}
-                    </Typography>
-                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                      Pending Invoices
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <Card sx={{
-                  background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-                  color: 'white',
-                  borderRadius: 3,
-                  boxShadow: '0 8px 32px rgba(79,172,254,0.3)',
-                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: '0 12px 40px rgba(79,172,254,0.4)'
-                  }
-                }}>
-                  <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', py: 3 }}>
-                    <AttachMoneyIcon sx={{ fontSize: 40, mb: 2, opacity: 0.9 }} />
-                    <Typography variant="h4" fontWeight={700} gutterBottom>
-                      ₹{invoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0).toLocaleString()}
-                    </Typography>
-                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                      Total Revenue
-                    </Typography>
-                  </CardContent>
-                </Card>
+                <SummaryCard
+                  label="Avg Days to Get Paid"
+                  value={`${avgDaysToGetPaid} days`}
+                  icon={<AccessTimeIcon />}
+                  accentColor="success.main"
+                />
               </Grid>
             </Grid>
+          </Paper>
 
-            {/* Main Content Card */}
-            <Card elevation={0} sx={{
-              borderRadius: 4,
-              overflow: 'visible',
-              background: 'rgba(255,255,255,0.95)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255,255,255,0.2)',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.1)',
-              position: 'relative',
-              zIndex: 1
-            }}>
-              <CardContent sx={{ p: 4 }}>
-                {/* Header Section */}
-                <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-                  <Box display="flex" alignItems="center" gap={2}>
-                    <Avatar sx={{
-                      bgcolor: 'primary.main',
-                      width: 56,
-                      height: 56,
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                    }}>
-                      <ReceiptIcon sx={{ fontSize: 28 }} />
-                    </Avatar>
-                    <Box>
-                      <Typography variant="h4" fontWeight={700} color="text.primary" gutterBottom>
-                        Invoice Management
-                      </Typography>
-                      <Typography variant="body1" color="text.secondary">
-                        Track and manage all your customer invoices
-                      </Typography>
-                    </Box>
-                  </Box>
-                  <Button
-                    variant="contained"
-                    size="large"
-                    startIcon={<AddIcon />}
-                    onClick={handleAdd}
-                    sx={{
-                      borderRadius: 3,
-                      px: 3,
-                      py: 1.5,
-                      fontWeight: 600,
-                      textTransform: 'none',
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      boxShadow: '0 8px 24px rgba(102,126,234,0.3)',
-                      '&:hover': {
-                        background: 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)',
-                        boxShadow: '0 12px 32px rgba(102,126,234,0.4)',
-                        transform: 'translateY(-2px)'
-                      },
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    Create New Invoice
-                  </Button>
-                </Box>
-
-                {/* Search and Filters */}
-                <Grid container spacing={3} sx={{ mb: 4 }}>
-                  <Grid item xs={12} md={8}>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      placeholder="Search invoices by number, customer, or type..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <SearchIcon color="action" />
-                          </InputAdornment>
-                        ),
-                      }}
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: 3,
-                          bgcolor: 'grey.50',
-                          '&:hover': {
-                            bgcolor: 'grey.100',
-                          },
-                          '&.Mui-focused': {
-                            bgcolor: 'white',
-                            boxShadow: '0 0 0 3px rgba(102,126,234,0.1)'
-                          }
-                        }
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={4}>
-                    <TextField
-                      select
-                      fullWidth
-                      variant="outlined"
-                      label="Filter by Status"
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value)}
-                      SelectProps={{
-                        native: true,
-                      }}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <FilterListIcon color="action" />
-                          </InputAdornment>
-                        ),
-                      }}
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: 3,
-                          bgcolor: 'grey.50',
-                          '&:hover': {
-                            bgcolor: 'grey.100',
-                          },
-                          '&.Mui-focused': {
-                            bgcolor: 'white',
-                            boxShadow: '0 0 0 3px rgba(102,126,234,0.1)'
-                          }
-                        }
-                      }}
-                    >
-                      <option value="All">All Status</option>
-                      <option value="Draft">Draft</option>
-                      <option value="Pending">Pending</option>
-                      <option value="Paid">Paid</option>
-                      <option value="Overdue">Overdue</option>
-                    </TextField>
-                  </Grid>
-                </Grid>
-
-                {error && (
-                  <Fade in={!!error}>
-                    <Alert
-                      severity="error"
-                      sx={{
-                        mb: 3,
-                        borderRadius: 2,
-                        '& .MuiAlert-icon': { fontSize: 24 }
-                      }}
-                    >
-                      {error}
-                    </Alert>
-                  </Fade>
-                )}
-
-                {/* Modern Table */}
-                <TableContainer sx={{
-                  borderRadius: 3,
-                  overflow: 'hidden',
-                  border: '1px solid',
-                  borderColor: 'grey.200',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.05)'
-                }}>
-                  <Table>
-                    <TableHead>
-                      <TableRow sx={{
-                        bgcolor: 'grey.50',
-                        '& .MuiTableCell-head': {
-                          fontWeight: 700,
-                          color: 'text.primary',
-                          fontSize: '0.95rem',
-                          borderBottom: '2px solid',
-                          borderColor: 'grey.200',
-                          py: 2
-                        }
-                      }}>
-                        <TableCell>Invoice Details</TableCell>
-                        <TableCell>Customer</TableCell>
-                        <TableCell>Amount</TableCell>
-                        <TableCell>Due Date</TableCell>
-                        <TableCell>Status</TableCell>
-                        <TableCell align="center" width={120}>Actions</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {loading ? (
-                        <TableRow>
-                          <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
-                            <CircularProgress size={40} />
-                            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                              Loading invoices...
-                            </Typography>
-                          </TableCell>
-                        </TableRow>
-                      ) : filteredInvoices.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
-                            <ReceiptIcon sx={{ fontSize: 48, color: 'grey.300', mb: 2 }} />
-                            <Typography variant="h6" color="text.secondary" gutterBottom>
-                              {searchTerm || statusFilter !== "All" ? 'No invoices found' : 'No invoices yet'}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              {searchTerm || statusFilter !== "All" ? 'Try adjusting your search or filters' : 'Create your first invoice to get started'}
-                            </Typography>
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredInvoices.map((invoice, index) => {
-                          const customer = customers.find(c => c.id === invoice.customer_id);
-                          return (
-                            <Fade in={true} timeout={300 + index * 100} key={invoice.id}>
-                              <TableRow sx={{
-                                '&:hover': {
-                                  bgcolor: 'grey.50',
-                                  transform: 'scale(1.001)',
-                                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                                },
-                                transition: 'all 0.2s ease',
-                                '& .MuiTableCell-root': {
-                                  borderBottom: '1px solid',
-                                  borderColor: 'grey.100',
-                                  py: 2
-                                }
-                              }}>
-                                <TableCell>
-                                  <Box display="flex" alignItems="center" gap={2}>
-                                    <Avatar sx={{
-                                      bgcolor: 'primary.50',
-                                      color: 'primary.main',
-                                      width: 40,
-                                      height: 40
-                                    }}>
-                                      <ReceiptIcon fontSize="small" />
-                                    </Avatar>
-                                    <Box>
-                                      <Typography variant="subtitle1" fontWeight={600} color="text.primary">
-                                        {invoice.invoice_number}
-                                      </Typography>
-                                      <Typography variant="body2" color="text.secondary">
-                                        {invoice.invoice_type}
-                                      </Typography>
-                                    </Box>
-                                  </Box>
-                                </TableCell>
-                                <TableCell>
-                                  <Box display="flex" alignItems="center" gap={1}>
-                                    <PersonIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                                    <Typography variant="body2" color="text.primary" fontWeight={500}>
-                                      {customer ? customer.name : `Customer #${invoice.customer_id}`}
-                                    </Typography>
-                                  </Box>
-                                </TableCell>
-                                <TableCell>
-                                  <Box display="flex" alignItems="center" gap={1}>
-                                    <AttachMoneyIcon sx={{ fontSize: 16, color: 'success.main' }} />
-                                    <Typography variant="body2" color="text.primary" fontWeight={600}>
-                                      ₹{invoice.total_amount?.toLocaleString() || '0'}
-                                    </Typography>
-                                  </Box>
-                                </TableCell>
-                                <TableCell>
-                                  <Box display="flex" alignItems="center" gap={1}>
-                                    <CalendarTodayIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                                    <Typography variant="body2" color="text.primary">
-                                      {invoice.due_date}
-                                    </Typography>
-                                  </Box>
-                                </TableCell>
-                                <TableCell>
-                                  <Chip
-                                    icon={getStatusIcon(invoice.status)}
-                                    label={invoice.status}
-                                    size="small"
-                                    color={getStatusColor(invoice.status)}
-                                    sx={{
-                                      fontWeight: 600,
-                                      minWidth: 80
-                                    }}
-                                  />
-                                </TableCell>
-                                <TableCell align="center">
-                                  <Tooltip title="More Actions">
-                                    <IconButton
-                                      size="small"
-                                      onClick={(e) => handleActionMenuOpen(e, invoice)}
-                                      sx={{
-                                        color: 'primary.main',
-                                        bgcolor: 'primary.50',
-                                        '&:hover': {
-                                          bgcolor: 'primary.100',
-                                          transform: 'scale(1.1)'
-                                        },
-                                        transition: 'all 0.2s ease'
-                                      }}
-                                    >
-                                      <MoreVertIcon fontSize="small" />
-                                    </IconButton>
-                                  </Tooltip>
-                                </TableCell>
-                              </TableRow>
-                            </Fade>
-                          );
-                        })
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </CardContent>
-            </Card>
+          {/* Filters and Search */}
+          <Box
+            display="flex"
+            gap={2}
+            flexWrap="wrap"
+            alignItems="center"
+            sx={{
+              bgcolor: "background.paper",
+              p: 2,
+              borderRadius: 3,
+              border: "1px solid",
+              borderColor: "grey.200"
+            }}
+          >
+            <FormControl size="small" sx={{ minWidth: 150 }}>
+              <Select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                displayEmpty
+                sx={{ borderRadius: 2 }}
+              >
+                <MenuItem value="All">All Status</MenuItem>
+                <MenuItem value="Paid">Paid</MenuItem>
+                <MenuItem value="Pending">Pending</MenuItem>
+                <MenuItem value="Overdue">Overdue</MenuItem>
+                <MenuItem value="Draft">Draft</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              size="small"
+              placeholder="Search invoices..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon fontSize="small" />
+                  </InputAdornment>
+                )
+              }}
+              sx={{
+                flex: 1,
+                minWidth: 250,
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2
+                }
+              }}
+            />
           </Box>
         </Box>
 
-        {/* Action Menu */}
-        <Menu
-          anchorEl={actionMenuAnchor}
-          open={Boolean(actionMenuAnchor)}
-          onClose={handleActionMenuClose}
-          PaperProps={{
-            sx: {
-              borderRadius: 2,
-              minWidth: 180,
-              boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
-            }
-          }}
-        >
-          <MenuItem
-            onClick={() => {
-              handleEdit(selectedInvoice);
-              handleActionMenuClose();
-            }}
-            sx={{ py: 1.5 }}
-          >
-            <ListItemIcon>
-              <EditIcon fontSize="small" color="primary" />
-            </ListItemIcon>
-            <ListItemText primary="Edit Invoice" />
-          </MenuItem>
-          <MenuItem
-            onClick={() => {
-              handleDownloadPDF(selectedInvoice);
-              handleActionMenuClose();
-            }}
-            sx={{ py: 1.5 }}
-          >
-            <ListItemIcon>
-              <PictureAsPdfIcon fontSize="small" color="success" />
-            </ListItemIcon>
-            <ListItemText primary="Download PDF" />
-          </MenuItem>
-          <MenuItem
-            onClick={() => {
-              setConfirmDeleteId(selectedInvoice.id);
-              handleActionMenuClose();
-            }}
-            sx={{ py: 1.5, color: 'error.main' }}
-          >
-            <ListItemIcon>
-              <DeleteIcon fontSize="small" color="error" />
-            </ListItemIcon>
-            <ListItemText primary="Delete Invoice" />
-          </MenuItem>
-        </Menu>
-
-        {/* Delete Confirmation Dialog */}
-        <Dialog
-          open={!!confirmDeleteId}
-          onClose={() => setConfirmDeleteId(null)}
-          maxWidth="sm"
-          fullWidth
-          PaperProps={{
-            sx: {
-              borderRadius: 4,
-              boxShadow: '0 20px 60px rgba(0,0,0,0.2)'
-            }
-          }}
-        >
-          <DialogTitle sx={{
-            pb: 2,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            color: 'error.main'
-          }}>
-            <Avatar sx={{ bgcolor: 'error.100', color: 'error.main' }}>
-              <DeleteIcon />
-            </Avatar>
-            <Box>
-              <Typography variant="h6" fontWeight={700}>
-                Delete Invoice
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                This action cannot be undone
-              </Typography>
-            </Box>
-          </DialogTitle>
-          <DialogContent sx={{ pb: 2 }}>
-            <Typography variant="body1" color="text.secondary">
-              Are you sure you want to delete this invoice? All associated data will be permanently removed.
-            </Typography>
-          </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 3, gap: 2 }}>
-            <Button
-              onClick={() => setConfirmDeleteId(null)}
-              variant="outlined"
-              sx={{
-                borderRadius: 2,
-                textTransform: 'none',
-                fontWeight: 600
-              }}
+        {error && (
+          <Fade in={!!error}>
+            <Alert
+              severity="error"
+              onClose={() => setError("")}
+              sx={{ mb: 3, borderRadius: 2 }}
             >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => handleDelete(confirmDeleteId)}
-              variant="contained"
-              color="error"
-              disabled={loading}
-              sx={{
-                borderRadius: 2,
-                textTransform: 'none',
-                fontWeight: 600
-              }}
-            >
-              {loading ? <CircularProgress size={20} color="inherit" /> : "Delete"}
-            </Button>
-          </DialogActions>
-        </Dialog>
+              {error}
+            </Alert>
+          </Fade>
+        )}
 
-        <Footer />
-      </Box>
-    </>
+        {/* Main Invoice Table */}
+        <StandardDataTable
+          columns={invoiceColumns}
+          rows={paginatedInvoices}
+          loading={loading}
+          emptyMessage={searchTerm || statusFilter !== "All" ? "No invoices found" : "No invoices yet"}
+          pagination={{
+            rowsPerPageOptions: [10, 25, 50],
+            count: filteredInvoices.length,
+            rowsPerPage,
+            page,
+            onPageChange: handleChangePage,
+            onRowsPerPageChange: handleChangeRowsPerPage,
+          }}
+          renderRow={(invoice) => {
+            const customer = customers.find((c) => c.id === invoice.customer_id);
+            return (
+              <TableRow
+                key={invoice.id}
+                hover
+                sx={{
+                  "&:hover": { bgcolor: "grey.50" },
+                  cursor: "pointer"
+                }}
+              >
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    checked={selectedInvoices.includes(invoice.id)}
+                    onChange={() => handleSelectOne(invoice.id)}
+                  />
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2">{invoice.issue_date || "—"}</Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2" fontWeight={600}>
+                    {invoice.invoice_number}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2" color="text.secondary">
+                    {invoice.order_number || "—"}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2">
+                    {customer ? customer.name : `Customer #${invoice.customer_id}`}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <StatusBadge status={invoice.status || "Draft"} />
+                  {invoice.status === 'Pending Approval' && (
+                    <Chip
+                      label="Pending"
+                      size="small"
+                      color="warning"
+                      icon={<HourglassEmptyIcon />}
+                      sx={{ ml: 0.5, fontSize: '0.7rem' }}
+                    />
+                  )}
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2">{invoice.due_date || "—"}</Typography>
+                </TableCell>
+                <TableCell align="right">
+                  <Typography variant="body2" fontWeight={600}>
+                    ₹{invoice.total_amount?.toLocaleString() || "0"}
+                  </Typography>
+                </TableCell>
+                <TableCell align="right">
+                  <Typography
+                    variant="body2"
+                    fontWeight={600}
+                    color={invoice.balance_due > 0 ? "error.main" : "success.main"}
+                  >
+                    ₹{invoice.balance_due?.toLocaleString() || "0"}
+                  </Typography>
+                </TableCell>
+                <TableCell align="center">
+                  <Tooltip title="Actions">
+                    <IconButton
+                      size="small"
+                      onClick={(e) => handleActionMenuOpen(e, invoice)}
+                    >
+                      <MoreVertIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </TableCell>
+              </TableRow>
+            );
+          }}
+        />
+      </Container>
+
+      {/* Action Menu */}
+      <Menu
+        anchorEl={actionMenuAnchor}
+        open={Boolean(actionMenuAnchor)}
+        onClose={handleActionMenuClose}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            minWidth: 180,
+            boxShadow: 3
+          }
+        }}
+      >
+        <MenuItem
+          onClick={() => {
+            handleEdit(selectedInvoice);
+            handleActionMenuClose();
+          }}
+          sx={{ py: 1.25 }}
+        >
+          <ListItemIcon>
+            <EditIcon fontSize="small" color="primary" />
+          </ListItemIcon>
+          <ListItemText primary="Edit Invoice" />
+        </MenuItem>
+        {selectedInvoice && selectedInvoice.status !== 'Paid' && selectedInvoice.status !== 'Cancelled' && (
+          <MenuItem
+            onClick={() => {
+              setPayNowOpen(true);
+              handleActionMenuClose();
+            }}
+            sx={{ py: 1.25 }}
+          >
+            <ListItemIcon>
+              <PaymentIcon fontSize="small" color="success" />
+            </ListItemIcon>
+            <ListItemText primary="Pay Now" secondary="Online via Zoho Payments" />
+          </MenuItem>
+        )}
+        <MenuItem
+          onClick={() => {
+            handleDownloadPDF(selectedInvoice);
+            handleActionMenuClose();
+          }}
+          sx={{ py: 1.25 }}
+        >
+          <ListItemIcon>
+            <PictureAsPdfIcon fontSize="small" color="success" />
+          </ListItemIcon>
+          <ListItemText primary="Download PDF" />
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            handleCopyPortalLink(selectedInvoice);
+            handleActionMenuClose();
+          }}
+          sx={{ py: 1.25 }}
+        >
+          <ListItemIcon>
+            <LinkIcon fontSize="small" color="primary" />
+          </ListItemIcon>
+          <ListItemText primary="Copy Portal Link" secondary="Share with customer" />
+        </MenuItem>
+        {/* ── Approval actions ─────────────────────────────────────────── */}
+        {selectedInvoice?.status === 'Draft' && (
+          <MenuItem
+            onClick={() => {
+              handleSubmitForApproval(selectedInvoice);
+              handleActionMenuClose();
+            }}
+            sx={{ py: 1.25 }}
+          >
+            <ListItemIcon><SendIcon fontSize="small" color="info" /></ListItemIcon>
+            <ListItemText primary="Submit for Approval" />
+          </MenuItem>
+        )}
+        {selectedInvoice?.status === 'Pending Approval' && canApprove && (
+          <MenuItem
+            onClick={() => {
+              handleApproveInvoice(selectedInvoice);
+              handleActionMenuClose();
+            }}
+            sx={{ py: 1.25, color: 'success.main' }}
+          >
+            <ListItemIcon><ThumbUpAltIcon fontSize="small" color="success" /></ListItemIcon>
+            <ListItemText primary="Approve" />
+          </MenuItem>
+        )}
+        {selectedInvoice?.status === 'Pending Approval' && canApprove && (
+          <MenuItem
+            onClick={() => {
+              setRejectDialog({ open: true, invoiceId: selectedInvoice.id, reason: '' });
+              handleActionMenuClose();
+            }}
+            sx={{ py: 1.25, color: 'error.main' }}
+          >
+            <ListItemIcon><ThumbDownAltIcon fontSize="small" color="error" /></ListItemIcon>
+            <ListItemText primary="Reject" />
+          </MenuItem>
+        )}
+        <MenuItem
+          onClick={() => {
+            setConfirmDeleteId(selectedInvoice.id);
+            handleActionMenuClose();
+          }}
+          sx={{ py: 1.25, color: "error.main" }}
+        >
+          <ListItemIcon>
+            <DeleteIcon fontSize="small" color="error" />
+          </ListItemIcon>
+          <ListItemText primary="Delete Invoice" />
+        </MenuItem>
+      </Menu>
+
+      {/* Pay Now Modal */}
+      <PayNowModal
+        open={payNowOpen}
+        onClose={() => setPayNowOpen(false)}
+        invoice={selectedInvoice}
+        onSuccess={(txnId) => {
+          setPayNowOpen(false);
+          setPaymentSuccess(`Payment initiated! Transaction ID: ${txnId}. The invoice will be marked as Paid once confirmed.`);
+          setTimeout(() => setPaymentSuccess(''), 8000);
+          fetchInvoices();
+        }}
+      />
+
+      {/* Link Copied Toast */}
+      <Snackbar
+        open={linkCopied}
+        autoHideDuration={3500}
+        onClose={() => setLinkCopied(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setLinkCopied(false)}
+          severity="success"
+          icon={<CheckCircleOutlineIcon />}
+          sx={{ width: '100%' }}
+        >
+          Portal link copied! Share it with your customer.
+        </Alert>
+      </Snackbar>
+
+      {/* Payment Success Snackbar */}
+      <Snackbar
+        open={!!paymentSuccess}
+        autoHideDuration={8000}
+        onClose={() => setPaymentSuccess('')}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setPaymentSuccess('')} severity="success" sx={{ width: '100%' }}>
+          {paymentSuccess}
+        </Alert>
+      </Snackbar>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={!!confirmDeleteId}
+        onClose={() => setConfirmDeleteId(null)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            boxShadow: 4
+          }
+        }}
+      >
+        <DialogTitle sx={{ pb: 2 }}>
+          <Typography variant="h6" fontWeight={700} color="error.main">
+            Delete Invoice
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            This action cannot be undone
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" color="text.secondary">
+            Are you sure you want to delete this invoice? All associated data will be permanently
+            removed.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3, gap: 1.5 }}>
+          <Button
+            onClick={() => setConfirmDeleteId(null)}
+            variant="outlined"
+            sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={() => handleDelete(confirmDeleteId)}
+            variant="contained"
+            color="error"
+            disabled={loading}
+            sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600 }}
+          >
+            {loading ? <CircularProgress size={20} color="inherit" /> : "Delete"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Reject Invoice Dialog */}
+      <Dialog
+        open={rejectDialog.open}
+        onClose={() => setRejectDialog({ open: false, invoiceId: null, reason: '' })}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <DialogTitle>Reject Invoice & Return to Draft</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Please provide a reason so the team can fix the issues.
+          </Typography>
+          <TextField
+            fullWidth
+            multiline
+            rows={3}
+            label="Rejection reason"
+            value={rejectDialog.reason}
+            onChange={(e) => setRejectDialog((d) => ({ ...d, reason: e.target.value }))}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={() => setRejectDialog({ open: false, invoiceId: null, reason: '' })}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleRejectConfirm}
+            disabled={!rejectDialog.reason.trim()}
+          >
+            Reject & Return to Draft
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Approval Toast */}
+      <Snackbar
+        open={approvalToast.open}
+        autoHideDuration={4000}
+        onClose={() => setApprovalToast((t) => ({ ...t, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setApprovalToast((t) => ({ ...t, open: false }))}
+          severity={approvalToast.severity}
+          sx={{ width: '100%' }}
+        >
+          {approvalToast.message}
+        </Alert>
+      </Snackbar>
+    </MainLayout>
   );
 };
 

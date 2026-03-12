@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import InvoiceList from './components/InvoiceList';
 import AddEditInvoice from './components/AddEditInvoice';
 import CustomerList from './components/CustomerList';
+import AddEditCustomer from './components/AddEditCustomer';
 import ProductList from './components/ProductList';
 import AddEditProduct from './components/AddEditProduct';
 import StockAdjustment from './components/StockAdjustment';
@@ -17,6 +18,32 @@ import Features from './pages/Features';
 import Contact from './pages/Contact';
 import ThemeExample from './components/ThemeExample';
 import BankAccounts from './pages/BankAccounts';
+import BankReconciliation from './pages/BankReconciliation';
+import PortalInvoiceView from './pages/PortalInvoiceView';
+import ComingSoon from './pages/ComingSoon';
+import Profile from './pages/Profile';
+import QuoteList from './components/QuoteList';
+import AddEditQuote from './components/AddEditQuote';
+import ConvertQuote from './components/ConvertQuote';
+import RecurringProfileList from './components/RecurringProfileList';
+import AddEditRecurringProfile from './components/AddEditRecurringProfile';
+import SalesOrderList from './components/SalesOrderList';
+import AddEditSalesOrder from './components/AddEditSalesOrder';
+import VendorList from './components/VendorList';
+import AddEditVendor from './components/AddEditVendor';
+import PurchaseOrderList from './components/PurchaseOrderList';
+import AddEditPurchaseOrder from './components/AddEditPurchaseOrder';
+import BillList from './components/BillList';
+import AddEditBill from './components/AddEditBill';
+import ExpenseList from './components/ExpenseList';
+import AddEditExpense from './components/AddEditExpense';
+import Reports from './pages/Reports';
+import ProfitAndLoss from './pages/ProfitAndLoss';
+import ARAgingReport from './pages/ARAgingReport';
+import BalanceSheet from './pages/BalanceSheet';
+import CashFlow from './pages/CashFlow';
+import UserManagement from './pages/UserManagement';
+import PendingApprovals from './pages/PendingApprovals';
 
 const AppRoutes = () => {
   return (
@@ -32,7 +59,36 @@ const AppRoutes = () => {
         <Route path="/invoices" element={<InvoiceList />} />
         <Route path="/invoices/add" element={<AddEditInvoice />} />
         <Route path="/invoices/edit/:id" element={<AddEditInvoice />} />
+        <Route path="/quotes" element={<QuoteList />} />
+        <Route path="/quotes/add" element={<AddEditQuote />} />
+        <Route path="/quotes/edit/:id" element={<AddEditQuote />} />
+        <Route path="/quotes/convert/:id/:type" element={<ConvertQuote />} />
+        <Route path="/recurring-profiles" element={<RecurringProfileList />} />
+        <Route path="/recurring-profiles/add" element={<AddEditRecurringProfile />} />
+        <Route path="/recurring-profiles/edit/:id" element={<AddEditRecurringProfile />} />
+        <Route path="/sales-orders" element={<SalesOrderList />} />
+        <Route path="/sales-orders/add" element={<AddEditSalesOrder />} />
+        <Route path="/sales-orders/edit/:id" element={<AddEditSalesOrder />} />
+        <Route path="/vendors" element={<VendorList />} />
+        <Route path="/vendors/add" element={<AddEditVendor />} />
+        <Route path="/vendors/edit/:id" element={<AddEditVendor />} />
+        <Route path="/purchase-orders" element={<PurchaseOrderList />} />
+        <Route path="/purchase-orders/add" element={<AddEditPurchaseOrder />} />
+        <Route path="/purchase-orders/edit/:id" element={<AddEditPurchaseOrder />} />
+        <Route path="/bills" element={<BillList />} />
+        <Route path="/bills/add" element={<AddEditBill />} />
+        <Route path="/bills/edit/:id" element={<AddEditBill />} />
+        <Route path="/expenses" element={<ExpenseList />} />
+        <Route path="/expenses/add" element={<AddEditExpense />} />
+        <Route path="/expenses/edit/:id" element={<AddEditExpense />} />
+        <Route path="/reports" element={<Reports />} />
+        <Route path="/reports/profit-loss" element={<ProfitAndLoss />} />
+        <Route path="/reports/ar-aging" element={<ARAgingReport />} />
+        <Route path="/reports/balance-sheet" element={<BalanceSheet />} />
+        <Route path="/reports/cash-flow" element={<CashFlow />} />
         <Route path="/customers" element={<CustomerList />} />
+        <Route path="/customers/add" element={<AddEditCustomer />} />
+        <Route path="/customers/edit/:id" element={<AddEditCustomer />} />
         <Route path="/customer/login" element={<CustomerLogin />} />
         <Route path="/customer/dashboard" element={<CustomerDashboard />} />
         <Route path="/customer/invoices/:id" element={<CustomerInvoiceDetail />} />
@@ -41,6 +97,21 @@ const AppRoutes = () => {
         <Route path="/products/edit/:id" element={<AddEditProduct />} />
         <Route path="/stock-adjustment" element={<StockAdjustment />} />
         <Route path="/bank-accounts" element={<BankAccounts />} />
+        <Route path="/bank-reconciliation" element={<BankReconciliation />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/settings/users" element={<UserManagement />} />
+        <Route path="/approvals" element={<PendingApprovals />} />
+
+        {/* Public Invoice Portal — no auth required */}
+        <Route path="/portal/invoice/:token" element={<PortalInvoiceView />} />
+
+        {/* Coming Soon Pages */}
+        <Route path="/api-docs" element={<ComingSoon />} />
+        <Route path="/support" element={<ComingSoon />} />
+        <Route path="/privacy" element={<ComingSoon />} />
+        <Route path="/terms" element={<ComingSoon />} />
+        <Route path="/cookies" element={<ComingSoon />} />
+        <Route path="/pricing" element={<ComingSoon />} />
       </Routes>
     </Router>
   );

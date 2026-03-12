@@ -48,9 +48,19 @@ export const AuthProvider = ({ children }) => {
         return authService.register(credentials);
     };
 
+    /** Convenience role helpers — safe to call even if user is null */
+    const userRole = user?.role ?? null;
+    const isAdmin = userRole === 'Admin';
+    const isManager = userRole === 'Manager' || isAdmin;
+    const canApprove = ['Admin', 'Manager', 'Accountant'].includes(userRole);
+
     const value = {
         user,
         isAuthenticated: !!user,
+        userRole,
+        isAdmin,
+        isManager,
+        canApprove,
         login,
         logout,
         register,

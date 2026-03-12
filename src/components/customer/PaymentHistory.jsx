@@ -107,7 +107,8 @@ const PaymentHistory = ({ payments }) => {
             borderRadius: '12px',
             backgroundColor: 'rgba(255, 255, 255, 0.9)',
             boxShadow: 'none',
-            border: '1px solid rgba(224, 224, 224, 0.3)'
+            border: '1px solid rgba(224, 224, 224, 0.3)',
+            overflowX: 'hidden'
           }}
         >
           <Table>

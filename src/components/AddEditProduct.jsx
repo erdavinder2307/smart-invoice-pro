@@ -104,7 +104,8 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
   const navigate = useNavigate();
   const [form, setForm] = useState(initialForm);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [serverError, setServerError] = useState('');
+  const [errors, setErrors] = useState({});
   const [vendors, setVendors] = useState([]);
   const [showInventoryFields, setShowInventoryFields] = useState(false);
   const [showTaxRateEditor, setShowTaxRateEditor] = useState(false);
@@ -134,13 +135,15 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
             purchase_account: res.data?.purchase_account || 'Cost of Goods Sold',
           }));
         })
-        .catch(() => setError('Failed to fetch product details'))
+        .catch(() => setServerError('Failed to fetch product details'))
         .finally(() => setLoading(false));
     }
   }, [productId]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    // Clear field error when user starts typing
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
     setForm((prev) => {
       const nextValue = type === 'checkbox' ? checked : value;
       const updates = { [name]: nextValue };
@@ -161,20 +164,51 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
     });
   };
 
+  const MAX_PRICE = 99999999;
+
   const validateForm = () => {
-    if (!form.name.trim()) return 'Item name is required';
-    if (!form.unit.trim()) return 'Unit is required';
-    if (form.sales_enabled && (form.price === '' || Number(form.price) < 0)) return 'Valid selling price is required';
-    if (form.purchase_enabled && (form.purchase_rate === '' || Number(form.purchase_rate) < 0)) return 'Valid cost price is required';
-    if (form.tax_preference === 'taxable' && (form.tax_rate === '' || Number(form.tax_rate) < 0)) return 'Valid tax rate is required';
-    return null;
+    const newErrors = {};
+    if (!form.name.trim()) {
+      newErrors.name = 'Item name is required';
+    } else if (form.name.trim().length > 255) {
+      newErrors.name = 'Item name must be 255 characters or fewer';
+    }
+    if (!form.unit.trim()) {
+      newErrors.unit = 'Unit is required';
+    }
+    if (form.sales_enabled) {
+      if (form.price === '' || form.price === null) {
+        newErrors.price = 'Selling price is required';
+      } else if (Number(form.price) < 0) {
+        newErrors.price = 'Selling price cannot be negative';
+      } else if (Number(form.price) > MAX_PRICE) {
+        newErrors.price = `Selling price cannot exceed ₹${MAX_PRICE.toLocaleString('en-IN')}`;
+      }
+    }
+    if (form.purchase_enabled) {
+      if (form.purchase_rate === '' || form.purchase_rate === null) {
+        newErrors.purchase_rate = 'Cost price is required';
+      } else if (Number(form.purchase_rate) < 0) {
+        newErrors.purchase_rate = 'Cost price cannot be negative';
+      } else if (Number(form.purchase_rate) > MAX_PRICE) {
+        newErrors.purchase_rate = `Cost price cannot exceed ₹${MAX_PRICE.toLocaleString('en-IN')}`;
+      }
+    }
+    if (form.tax_preference === 'taxable' && (form.tax_rate === '' || Number(form.tax_rate) < 0)) {
+      newErrors.tax_rate = 'Valid tax rate is required';
+    }
+    return newErrors;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    const validationError = validateForm();
-    if (validationError) return setError(validationError);
+    setServerError('');
+    const newErrors = validateForm();
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    setErrors({});
 
     const payload = {
       ...form,
@@ -191,8 +225,15 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
       else await createProduct(payload);
       if (onSuccess) onSuccess();
       navigate('/products');
-    } catch {
-      setError('Failed to save product');
+    } catch (err) {
+      const apiError = err.response?.data?.error || 'Failed to save product';
+      const apiField = err.response?.data?.field;
+      // Map server-side field errors to inline field errors
+      if (apiField === 'name') {
+        setErrors((prev) => ({ ...prev, name: apiError }));
+      } else {
+        setServerError(apiError);
+      }
     } finally {
       setLoading(false);
     }
@@ -212,9 +253,9 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
     <MainLayout showBreadcrumbs={false}>
       <Box sx={{ bgcolor: '#f7f8fb', minHeight: '100vh', pb: 6 }}>
         <Container maxWidth="xl" sx={{ pt: 2 }}>
-          {error && (
-            <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2, borderRadius: '4px' }}>
-              {error}
+          {serverError && (
+            <Alert severity="error" onClose={() => setServerError('')} sx={{ mb: 2, borderRadius: '4px' }}>
+              {serverError}
             </Alert>
           )}
 
@@ -256,6 +297,9 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
                     size="small"
                     fullWidth
                     required
+                    error={!!errors.name}
+                    helperText={errors.name || ''}
+                    inputProps={{ maxLength: 255 }}
                     sx={fieldSx}
                   />
                 </Box>
@@ -332,7 +376,9 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
                         size="small"
                         fullWidth
                         disabled={!form.sales_enabled}
-                        inputProps={{ min: 0, step: 0.01 }}
+                        error={!!errors.price}
+                        helperText={errors.price || ''}
+                        inputProps={{ min: 0, max: 99999999, step: 0.01 }}
                         InputProps={{
                           startAdornment: (
                             <InputAdornment position="start">
@@ -362,6 +408,7 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
                         multiline
                         rows={3}
                         disabled={!form.sales_enabled}
+                        inputProps={{ maxLength: 1000 }}
                         sx={fieldSx}
                       />
                     </Box>
@@ -397,7 +444,9 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
                         size="small"
                         fullWidth
                         disabled={!form.purchase_enabled}
-                        inputProps={{ min: 0, step: 0.01 }}
+                        error={!!errors.purchase_rate}
+                        helperText={errors.purchase_rate || ''}
+                        inputProps={{ min: 0, max: 99999999, step: 0.01 }}
                         InputProps={{
                           startAdornment: (
                             <InputAdornment position="start">
@@ -427,6 +476,7 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
                         multiline
                         rows={3}
                         disabled={!form.purchase_enabled}
+                        inputProps={{ maxLength: 1000 }}
                         sx={fieldSx}
                       />
                     </Box>

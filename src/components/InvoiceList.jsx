@@ -94,6 +94,7 @@ const InvoiceList = () => {
   const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [selectedInvoices, setSelectedInvoices] = useState([]);
+  const [activeInvoiceId, setActiveInvoiceId] = useState(null);
   const [payNowOpen, setPayNowOpen] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState('');
   const [linkCopied, setLinkCopied] = useState(false);
@@ -124,6 +125,11 @@ const InvoiceList = () => {
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
+
+  const activeInvoice = invoices.find((invoice) => invoice.id === activeInvoiceId) || null;
+  const activeCustomer = activeInvoice
+    ? customers.find((customer) => customer.id === activeInvoice.customer_id)
+    : null;
 
   // Calculate summary metrics
   const totalOutstanding = invoices
@@ -169,6 +175,18 @@ const InvoiceList = () => {
     axios.get(createApiUrl("/api/invoices/next-number")).then(res => setForm(f => ({ ...f, invoice_number: res.data.invoice_number }))).catch(() => { });
   }, []);
 
+  useEffect(() => {
+    if (!filteredInvoices.length) {
+      setActiveInvoiceId(null);
+      return;
+    }
+
+    const activeExists = filteredInvoices.some((invoice) => invoice.id === activeInvoiceId);
+    if (!activeExists) {
+      setActiveInvoiceId(filteredInvoices[0].id);
+    }
+  }, [filteredInvoices, activeInvoiceId]);
+
   // Calculate fields
   useEffect(() => {
     const total_tax = Number(form.cgst_amount || 0) + Number(form.sgst_amount || 0) + Number(form.igst_amount || 0);
@@ -201,6 +219,10 @@ const InvoiceList = () => {
   const handleActionMenuOpen = (event, invoice) => {
     setActionMenuAnchor(event.currentTarget);
     setSelectedInvoice(invoice);
+  };
+
+  const handleSelectInvoice = (invoice) => {
+    setActiveInvoiceId(invoice.id);
   };
 
   const handleActionMenuClose = () => {
@@ -357,6 +379,8 @@ const InvoiceList = () => {
     { key: "actions", label: "Actions", align: "center" },
   ];
 
+  const formatCurrency = (value) => `₹${Number(value || 0).toLocaleString()}`;
+
 
   return (
     <MainLayout>
@@ -496,98 +520,242 @@ const InvoiceList = () => {
           </Fade>
         )}
 
-        {/* Main Invoice Table */}
-        <StandardDataTable
-          columns={invoiceColumns}
-          rows={paginatedInvoices}
-          loading={loading}
-          emptyMessage={searchTerm || statusFilter !== "All" ? "No invoices found" : "No invoices yet"}
-          pagination={{
-            rowsPerPageOptions: [10, 25, 50],
-            count: filteredInvoices.length,
-            rowsPerPage,
-            page,
-            onPageChange: handleChangePage,
-            onRowsPerPageChange: handleChangeRowsPerPage,
-          }}
-          renderRow={(invoice) => {
-            const customer = customers.find((c) => c.id === invoice.customer_id);
-            return (
-              <TableRow
-                key={invoice.id}
-                hover
-                sx={{
-                  "&:hover": { bgcolor: "grey.50" },
-                  cursor: "pointer"
+        <Grid container spacing={2.2}>
+          <Grid item xs={12} lg={5}>
+            <Paper
+              elevation={0}
+              sx={{
+                borderRadius: 3,
+                border: "1px solid",
+                borderColor: "grey.200",
+                overflow: "hidden",
+                height: "100%",
+              }}
+            >
+              <Box sx={{ px: 2, py: 1.5, borderBottom: "1px solid", borderColor: "grey.200", bgcolor: "grey.50" }}>
+                <Typography variant="subtitle1" fontWeight={700}>Invoices</Typography>
+                <Typography variant="caption" color="text.secondary">Click any invoice to preview details</Typography>
+              </Box>
+
+              <StandardDataTable
+                columns={invoiceColumns}
+                rows={paginatedInvoices}
+                loading={loading}
+                emptyMessage={searchTerm || statusFilter !== "All" ? "No invoices found" : "No invoices yet"}
+                pagination={{
+                  rowsPerPageOptions: [10, 25, 50],
+                  count: filteredInvoices.length,
+                  rowsPerPage,
+                  page,
+                  onPageChange: handleChangePage,
+                  onRowsPerPageChange: handleChangeRowsPerPage,
                 }}
-              >
-                <TableCell padding="checkbox">
-                  <Checkbox
-                    checked={selectedInvoices.includes(invoice.id)}
-                    onChange={() => handleSelectOne(invoice.id)}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Typography variant="body2">{invoice.issue_date || "—"}</Typography>
-                </TableCell>
-                <TableCell>
-                  <Typography variant="body2" fontWeight={600}>
-                    {invoice.invoice_number}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <Typography variant="body2" color="text.secondary">
-                    {invoice.order_number || "—"}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <Typography variant="body2">
-                    {customer ? customer.name : `Customer #${invoice.customer_id}`}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <StatusBadge status={invoice.status || "Draft"} />
-                  {invoice.status === 'Pending Approval' && (
-                    <Chip
-                      label="Pending"
-                      size="small"
-                      color="warning"
-                      icon={<HourglassEmptyIcon />}
-                      sx={{ ml: 0.5, fontSize: '0.7rem' }}
-                    />
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Typography variant="body2">{invoice.due_date || "—"}</Typography>
-                </TableCell>
-                <TableCell align="right">
-                  <Typography variant="body2" fontWeight={600}>
-                    ₹{invoice.total_amount?.toLocaleString() || "0"}
-                  </Typography>
-                </TableCell>
-                <TableCell align="right">
-                  <Typography
-                    variant="body2"
-                    fontWeight={600}
-                    color={invoice.balance_due > 0 ? "error.main" : "success.main"}
-                  >
-                    ₹{invoice.balance_due?.toLocaleString() || "0"}
-                  </Typography>
-                </TableCell>
-                <TableCell align="center">
-                  <Tooltip title="Actions">
-                    <IconButton
-                      size="small"
-                      onClick={(e) => handleActionMenuOpen(e, invoice)}
+                renderRow={(invoice) => {
+                  const customer = customers.find((c) => c.id === invoice.customer_id);
+                  const isActive = invoice.id === activeInvoiceId;
+
+                  return (
+                    <TableRow
+                      key={invoice.id}
+                      hover
+                      onClick={() => handleSelectInvoice(invoice)}
+                      sx={{
+                        "&:hover": { bgcolor: "grey.50" },
+                        cursor: "pointer",
+                        bgcolor: isActive ? "rgba(26, 115, 232, 0.08)" : "transparent",
+                      }}
                     >
-                      <MoreVertIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                </TableCell>
-              </TableRow>
-            );
-          }}
-        />
+                      <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedInvoices.includes(invoice.id)}
+                          onChange={() => handleSelectOne(invoice.id)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">{invoice.issue_date || "—"}</Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight={600}>
+                          {invoice.invoice_number}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" color="text.secondary">
+                          {invoice.order_number || "—"}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {customer ? customer.name : `Customer #${invoice.customer_id}`}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={invoice.status || "Draft"} />
+                        {invoice.status === 'Pending Approval' && (
+                          <Chip
+                            label="Pending"
+                            size="small"
+                            color="warning"
+                            icon={<HourglassEmptyIcon />}
+                            sx={{ ml: 0.5, fontSize: '0.7rem' }}
+                          />
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">{invoice.due_date || "—"}</Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="body2" fontWeight={600}>
+                          ₹{invoice.total_amount?.toLocaleString() || "0"}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography
+                          variant="body2"
+                          fontWeight={600}
+                          color={invoice.balance_due > 0 ? "error.main" : "success.main"}
+                        >
+                          ₹{invoice.balance_due?.toLocaleString() || "0"}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="center" onClick={(e) => e.stopPropagation()}>
+                        <Tooltip title="Actions">
+                          <IconButton
+                            size="small"
+                            onClick={(e) => handleActionMenuOpen(e, invoice)}
+                          >
+                            <MoreVertIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  );
+                }}
+              />
+            </Paper>
+          </Grid>
+
+          <Grid item xs={12} lg={7}>
+            <Paper
+              elevation={0}
+              sx={{
+                borderRadius: 3,
+                border: "1px solid",
+                borderColor: "grey.200",
+                minHeight: 620,
+                overflow: "hidden",
+              }}
+            >
+              {!activeInvoice ? (
+                <Box sx={{ p: 5, textAlign: "center" }}>
+                  <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>No Invoice Selected</Typography>
+                  <Typography variant="body2" color="text.secondary">Choose an invoice from the left list to see details here.</Typography>
+                </Box>
+              ) : (
+                <>
+                  <Box sx={{ px: 3, py: 2, borderBottom: "1px solid", borderColor: "grey.200", bgcolor: "grey.50" }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
+                      <Box>
+                        <Typography variant="h6" sx={{ fontWeight: 700 }}>{activeInvoice.invoice_number || `INV-${activeInvoice.id}`}</Typography>
+                        <Typography variant="body2" color="text.secondary">{activeCustomer?.name || `Customer #${activeInvoice.customer_id}`}</Typography>
+                      </Box>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <StatusBadge status={activeInvoice.status || "Draft"} />
+                        <Button size="small" variant="outlined" onClick={() => handleEdit(activeInvoice)} sx={{ textTransform: "none" }}>
+                          Edit
+                        </Button>
+                        <Button size="small" variant="outlined" onClick={() => handleDownloadPDF(activeInvoice)} sx={{ textTransform: "none" }}>
+                          PDF
+                        </Button>
+                      </Box>
+                    </Box>
+                  </Box>
+
+                  <Box sx={{ p: 3 }}>
+                    <Grid container spacing={2} sx={{ mb: 2.5 }}>
+                      <Grid item xs={12} sm={4}>
+                        <Typography variant="caption" color="text.secondary">Invoice Date</Typography>
+                        <Typography variant="body2" fontWeight={600}>{activeInvoice.issue_date || "—"}</Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={4}>
+                        <Typography variant="caption" color="text.secondary">Due Date</Typography>
+                        <Typography variant="body2" fontWeight={600}>{activeInvoice.due_date || "—"}</Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={4}>
+                        <Typography variant="caption" color="text.secondary">Payment Terms</Typography>
+                        <Typography variant="body2" fontWeight={600}>{activeInvoice.payment_terms || "—"}</Typography>
+                      </Grid>
+                    </Grid>
+
+                    <Paper variant="outlined" sx={{ borderRadius: 2, mb: 2.5 }}>
+                      <Box sx={{ display: "grid", gridTemplateColumns: "1.8fr 1fr 1fr", px: 2, py: 1, bgcolor: "grey.50", borderBottom: "1px solid", borderColor: "grey.200" }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>Item</Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textAlign: "right" }}>Qty</Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textAlign: "right" }}>Amount</Typography>
+                      </Box>
+
+                      {(activeInvoice.items || []).length ? (
+                        activeInvoice.items.map((item, index) => (
+                          <Box
+                            key={`${activeInvoice.id}-${index}`}
+                            sx={{
+                              display: "grid",
+                              gridTemplateColumns: "1.8fr 1fr 1fr",
+                              px: 2,
+                              py: 1.1,
+                              borderBottom: index === activeInvoice.items.length - 1 ? "none" : "1px solid",
+                              borderColor: "grey.100",
+                            }}
+                          >
+                            <Typography variant="body2">{item.name || "Untitled Item"}</Typography>
+                            <Typography variant="body2" sx={{ textAlign: "right" }}>{item.quantity || 0}</Typography>
+                            <Typography variant="body2" sx={{ textAlign: "right", fontWeight: 600 }}>{formatCurrency(item.amount || (item.quantity || 0) * (item.rate || 0))}</Typography>
+                          </Box>
+                        ))
+                      ) : (
+                        <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 2 }}>
+                          No line items available for preview.
+                        </Typography>
+                      )}
+                    </Paper>
+
+                    <Grid container spacing={2.5}>
+                      <Grid item xs={12} md={7}>
+                        <Typography variant="caption" color="text.secondary">Notes</Typography>
+                        <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", mt: 0.5 }}>
+                          {activeInvoice.notes || "No customer notes"}
+                        </Typography>
+                      </Grid>
+
+                      <Grid item xs={12} md={5}>
+                        <Paper variant="outlined" sx={{ borderRadius: 2, p: 1.8 }}>
+                          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                            <Typography variant="body2" color="text.secondary">Subtotal</Typography>
+                            <Typography variant="body2" fontWeight={600}>{formatCurrency(activeInvoice.subtotal)}</Typography>
+                          </Box>
+                          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                            <Typography variant="body2" color="text.secondary">Tax</Typography>
+                            <Typography variant="body2" fontWeight={600}>{formatCurrency(activeInvoice.total_tax)}</Typography>
+                          </Box>
+                          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                            <Typography variant="body2" color="text.secondary">Paid</Typography>
+                            <Typography variant="body2" fontWeight={600}>{formatCurrency(activeInvoice.amount_paid)}</Typography>
+                          </Box>
+                          <Box sx={{ display: "flex", justifyContent: "space-between", pt: 1, borderTop: "1px solid", borderColor: "grey.200" }}>
+                            <Typography variant="subtitle2" fontWeight={700}>Balance Due</Typography>
+                            <Typography variant="subtitle2" fontWeight={700} color={Number(activeInvoice.balance_due || 0) > 0 ? "error.main" : "success.main"}>
+                              {formatCurrency(activeInvoice.balance_due || activeInvoice.total_amount)}
+                            </Typography>
+                          </Box>
+                        </Paper>
+                      </Grid>
+                    </Grid>
+                  </Box>
+                </>
+              )}
+            </Paper>
+          </Grid>
+        </Grid>
       </Container>
 
       {/* Action Menu */}

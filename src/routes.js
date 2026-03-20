@@ -99,6 +99,7 @@ const AppRoutes = () => {
         <Route path="/bank-accounts" element={<BankAccounts />} />
         <Route path="/bank-reconciliation" element={<BankReconciliation />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/settings" element={<UserManagement />} />
         <Route path="/settings/users" element={<UserManagement />} />
         <Route path="/approvals" element={<PendingApprovals />} />
 

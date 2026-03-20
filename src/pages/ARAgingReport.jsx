@@ -58,7 +58,8 @@ const ARAgingReport = () => {
   const [reportData, setReportData] = useState(null);
   const [asOfDate, setAsOfDate] = useState(new Date().toISOString().split('T')[0]);
 
-  const userId = localStorage.getItem('user_id');
+  const userStr = localStorage.getItem('user');
+  const userId = userStr ? JSON.parse(userStr).id : null;
 
   const fetchReport = async () => {
     if (!userId) {

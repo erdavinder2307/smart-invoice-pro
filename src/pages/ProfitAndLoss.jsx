@@ -75,7 +75,7 @@ const ProfitAndLoss = () => {
     setError('');
 
     try {
-      const response = await axios.get(createApiUrl('/reports/profit-loss'), {
+      const response = await axios.get(createApiUrl('/api/reports/profit-loss'), {
         params: {
           user_id: userId,
           start_date: startDate,

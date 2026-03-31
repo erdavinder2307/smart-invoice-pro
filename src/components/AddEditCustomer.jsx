@@ -34,6 +34,8 @@ import {
 } from '@mui/icons-material';
 import MainLayout from './Layout/MainLayout';
 import { C, fieldSx, selectSx, menuItemSx, ZohoRow, FieldLabel, AppSelect } from './common/formStyles';
+import FormInput from './common/FormInput';
+import FormSelect from './common/FormSelect';
 import { createApiUrl } from '../config/api';
 import axios from 'axios';
 
@@ -690,34 +692,38 @@ const AddEditCustomer = () => {
               </ZohoRow>
 
               {/* Company Name */}
-              <ZohoRow label="Company Name" required={form.customer_type === 'business'}>
-                <TextField
-                  name="company_name" value={form.company_name} onChange={handleChange}
-                  size="small" fullWidth
-                  error={!!errors.company_name} helperText={errors.company_name}
-                  sx={fieldSx}
-                />
-              </ZohoRow>
+              <FormInput
+                label="Company Name"
+                required={form.customer_type === 'business'}
+                name="company_name"
+                value={form.company_name}
+                onChange={handleChange}
+                error={!!errors.company_name}
+                helperText={errors.company_name}
+              />
 
               {/* Display Name */}
-              <ZohoRow label="Display Name" required>
-                <TextField
-                  name="display_name" value={form.display_name} onChange={handleChange}
-                  size="small" fullWidth placeholder="Select or type to add"
-                  error={!!errors.display_name} helperText={errors.display_name}
-                  sx={fieldSx}
-                />
-              </ZohoRow>
+              <FormInput
+                label="Display Name"
+                required
+                name="display_name"
+                value={form.display_name}
+                onChange={handleChange}
+                placeholder="Select or type to add"
+                error={!!errors.display_name}
+                helperText={errors.display_name}
+              />
 
               {/* Email Address */}
-              <ZohoRow label="Email Address">
-                <TextField
-                  name="email" value={form.email} onChange={handleChange} type="email"
-                  size="small" fullWidth
-                  error={!!errors.email} helperText={errors.email}
-                  sx={fieldSx}
-                />
-              </ZohoRow>
+              <FormInput
+                label="Email Address"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                type="email"
+                error={!!errors.email}
+                helperText={errors.email}
+              />
 
               {/* Phone | Mobile */}
               <ZohoRow label="Phone" hint="Work phone and mobile" alignStart>
@@ -741,17 +747,21 @@ const AddEditCustomer = () => {
               </ZohoRow>
 
               {/* Customer Language */}
-              <ZohoRow label="Customer Language" hint="Language used for customer communications">
-                <Box sx={{ width: 220 }}>
-                  <AppSelect name="language" value={form.language} onChange={handleChange}>
-                    <MenuItem value="en" sx={menuItemSx}>English</MenuItem>
-                    <MenuItem value="hi" sx={menuItemSx}>Hindi</MenuItem>
-                    <MenuItem value="ta" sx={menuItemSx}>Tamil</MenuItem>
-                    <MenuItem value="te" sx={menuItemSx}>Telugu</MenuItem>
-                    <MenuItem value="mr" sx={menuItemSx}>Marathi</MenuItem>
-                  </AppSelect>
-                </Box>
-              </ZohoRow>
+              <FormSelect
+                label="Customer Language"
+                hint="Language used for customer communications"
+                name="language"
+                value={form.language}
+                onChange={handleChange}
+                width={220}
+                options={[
+                  { value: 'en', label: 'English' },
+                  { value: 'hi', label: 'Hindi' },
+                  { value: 'ta', label: 'Tamil' },
+                  { value: 'te', label: 'Telugu' },
+                  { value: 'mr', label: 'Marathi' },
+                ]}
+              />
 
               {/* Communication Channels */}
               <ZohoRow label="Communication Channels" noDivider>

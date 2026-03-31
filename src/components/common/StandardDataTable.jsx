@@ -53,8 +53,8 @@ const StandardDataTable = ({
         </Box>
       )}
 
-      <TableContainer sx={{ width: "100%", overflowX: "auto" }}>
-        <Table stickyHeader size="small" sx={{ width: "100%", minWidth: 700 }}>
+      <TableContainer sx={{ width: "100%", overflowX: "hidden" }}>
+        <Table stickyHeader size="small" sx={{ width: "100%", tableLayout: "fixed" }}>
           <TableHead>
             {renderHeader ? (
               renderHeader()

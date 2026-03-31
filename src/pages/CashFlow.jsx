@@ -309,8 +309,8 @@ const CashFlow = () => {
                 Cash Flow from Operating Activities
               </Typography>
               <Divider sx={{ mb: 2 }} />
-              <TableContainer>
-                <Table>
+              <TableContainer sx={{ overflowX: "hidden" }}>
+                <Table sx={{ tableLayout: "fixed" }}>
                   <TableHead>
                     <TableRow>
                       <TableCell><strong>Activity</strong></TableCell>

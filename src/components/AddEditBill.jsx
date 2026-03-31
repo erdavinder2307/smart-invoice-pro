@@ -2,30 +2,18 @@ import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { createApiUrl } from "../config/api";
 import {
-  Box,
-  Button,
-  TextField,
-  MenuItem,
-  Typography,
-  CircularProgress,
-  Alert,
-  Container,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton,
-  Paper,
-  Tabs,
-  Tab,
+  Box, Button, TextField, Typography, CircularProgress, Alert, Container,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  IconButton, Paper, Tabs, Tab,
 } from "@mui/material";
 import { useParams, useNavigate } from "react-router-dom";
 import MainLayout from "./Layout/MainLayout";
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { C, ZohoRow, AppSelect, fieldSx, menuItemSx, footerSx, cancelBtnSx, saveBtnSx } from './common/formStyles';
+import { C, fieldSx, footerSx, cancelBtnSx, saveBtnSx } from './common/formStyles';
+import FormInput from './common/FormInput';
+import FormSelect from './common/FormSelect';
+import FormDatePicker from './common/FormDatePicker';
 
 const TabPanel = ({ children, value, index }) => (
   <Box hidden={value !== index} sx={{ pt: 3 }}>
@@ -252,47 +240,17 @@ const AddEditBill = () => {
                 </Typography>
               </Box>
 
-              <ZohoRow label="Bill Number" required>
-                <TextField
-                  name="bill_number" value={form.bill_number} onChange={handleChange}
-                  size="small" required sx={{ ...fieldSx, maxWidth: 240 }}
-                />
-              </ZohoRow>
+              <FormInput label="Bill Number" required name="bill_number" value={form.bill_number} onChange={handleChange}
+                sx={{ maxWidth: 240 }} />
 
-              <ZohoRow label="Vendor" required>
-                <Box sx={{ width: 300 }}>
-                  <AppSelect name="vendor_id" value={form.vendor_id} onChange={handleChange} required>
-                    {vendors.map(v => (
-                      <MenuItem key={v.id} value={v.id} sx={menuItemSx}>{v.vendor_name}</MenuItem>
-                    ))}
-                  </AppSelect>
-                </Box>
-              </ZohoRow>
+              <FormSelect label="Vendor" required name="vendor_id" value={form.vendor_id} onChange={handleChange}
+                options={vendors.map(v => ({ value: v.id, label: v.vendor_name }))} width={300} />
 
-              <ZohoRow label="Bill Date" required>
-                <TextField
-                  name="bill_date" value={form.bill_date} onChange={handleChange}
-                  type="date" size="small" required
-                  sx={{ ...fieldSx, maxWidth: 200 }}
-                  InputLabelProps={{ shrink: true }}
-                />
-              </ZohoRow>
+              <FormDatePicker label="Bill Date" required name="bill_date" value={form.bill_date} onChange={handleChange} />
 
-              <ZohoRow label="Due Date">
-                <TextField
-                  name="due_date" value={form.due_date} onChange={handleChange}
-                  type="date" size="small"
-                  sx={{ ...fieldSx, maxWidth: 200 }}
-                  InputLabelProps={{ shrink: true }}
-                />
-              </ZohoRow>
+              <FormDatePicker label="Due Date" name="due_date" value={form.due_date} onChange={handleChange} />
 
-              <ZohoRow label="Subject" noDivider>
-                <TextField
-                  name="subject" value={form.subject} onChange={handleChange}
-                  size="small" fullWidth sx={fieldSx}
-                />
-              </ZohoRow>
+              <FormInput label="Subject" noDivider name="subject" value={form.subject} onChange={handleChange} />
             </Box>
 
             {/* ══ ITEMS & EXPENSES (TABS) ═══════════════════════════════ */}
@@ -474,24 +432,11 @@ const AddEditBill = () => {
                 </Typography>
               </Box>
 
-              <ZohoRow label="Payment Status">
-                <Box sx={{ width: 220 }}>
-                  <AppSelect name="payment_status" value={form.payment_status} onChange={handleChange}>
-                    {['Unpaid', 'Partially Paid', 'Paid', 'Overdue'].map(s => (
-                      <MenuItem key={s} value={s} sx={menuItemSx}>{s}</MenuItem>
-                    ))}
-                  </AppSelect>
-                </Box>
-              </ZohoRow>
+              <FormSelect label="Payment Status" name="payment_status" value={form.payment_status} onChange={handleChange}
+                options={['Unpaid', 'Partially Paid', 'Paid', 'Overdue'].map(s => ({ value: s, label: s }))} width={220} />
 
-              <ZohoRow label="Notes" noDivider alignStart>
-                <TextField
-                  name="notes" value={form.notes} onChange={handleChange}
-                  size="small" fullWidth multiline rows={3}
-                  placeholder="Add any internal notes about this bill…"
-                  sx={fieldSx}
-                />
-              </ZohoRow>
+              <FormInput label="Notes" noDivider name="notes" value={form.notes} onChange={handleChange}
+                multiline rows={3} placeholder="Add any internal notes about this bill…" />
             </Box>
 
             {/* ══ FOOTER ════════════════════════════════════════════════ */}

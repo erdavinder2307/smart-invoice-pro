@@ -214,8 +214,8 @@ const PaymentsMade = () => {
               {reportData.payments.length === 0 ? (
                 <Typography color="text.secondary">No payments in this period.</Typography>
               ) : (
-                <TableContainer>
-                  <Table size="small">
+                <TableContainer sx={{ overflowX: "hidden" }}>
+                  <Table size="small" sx={{ tableLayout: "fixed" }}>
                     <TableHead>
                       <TableRow>
                         <TableCell><strong>Date</strong></TableCell>

@@ -10,7 +10,6 @@ import {
     Box,
     Button,
     Typography,
-    Paper,
     Table,
     TableBody,
     TableCell,
@@ -38,15 +37,14 @@ import {
     FormControl,
     InputLabel,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
 import AddIcon from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
-import VisibilityIcon from '@mui/icons-material/Visibility';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useTheme } from "@mui/material/styles";
+import EmptyState from '../components/common/EmptyState';
 
 const BankAccounts = () => {
     const [bankAccounts, setBankAccounts] = useState([]);
@@ -57,7 +55,6 @@ const BankAccounts = () => {
     const [editForm, setEditForm] = useState({ bank_name: '', account_name: '', account_type: '' });
     const [editLoading, setEditLoading] = useState(false);
     const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-    const navigate = useNavigate();
     const theme = useTheme();
     const { user } = useAuth();
 
@@ -101,10 +98,6 @@ const BankAccounts = () => {
     useEffect(() => {
         fetchBankAccounts();
     }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
-
-    const handleView = (account) => {
-        navigate(`/bank-accounts/${account.id}`);
-    };
 
     const handleImportStatement = (account) => {
         // Placeholder for future implementation
@@ -347,40 +340,23 @@ const BankAccounts = () => {
                                         </TableRow>
                                     ) : filteredAccounts.length === 0 && !searchTerm ? (
                                         <TableRow>
-                                            <TableCell colSpan={6} align="center" sx={{ py: 10 }}>
-                                                <AccountBalanceIcon sx={{ fontSize: 64, color: 'grey.300', mb: 2 }} />
-                                                <Typography variant="h5" color="text.secondary" gutterBottom fontWeight={600}>
-                                                    No bank accounts yet
-                                                </Typography>
-                                                <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                                                    Get started by adding your first bank account
-                                                </Typography>
-                                                <Button
-                                                    variant="contained"
-                                                    startIcon={<AddIcon />}
-                                                    onClick={() => alert('Add account functionality - Coming soon!')}
-                                                    sx={{
-                                                        borderRadius: 2,
-                                                        px: 3,
-                                                        py: 1.2,
-                                                        fontWeight: 600,
-                                                        textTransform: 'none',
-                                                    }}
-                                                >
-                                                    Add Your First Account
-                                                </Button>
+                                            <TableCell colSpan={6}>
+                                                <EmptyState
+                                                    icon={<AccountBalanceIcon />}
+                                                    title="No bank accounts yet"
+                                                    subtitle="Get started by adding your first bank account"
+                                                    action={{ label: 'Add Your First Account', onClick: () => alert('Add account functionality - Coming soon!') }}
+                                                />
                                             </TableCell>
                                         </TableRow>
                                     ) : filteredAccounts.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
-                                                <AccountBalanceIcon sx={{ fontSize: 48, color: 'grey.300', mb: 2 }} />
-                                                <Typography variant="h6" color="text.secondary" gutterBottom>
-                                                    No accounts found
-                                                </Typography>
-                                                <Typography variant="body2" color="text.secondary">
-                                                    Try adjusting your search criteria
-                                                </Typography>
+                                            <TableCell colSpan={6}>
+                                                <EmptyState
+                                                    icon={<AccountBalanceIcon />}
+                                                    title="No accounts found"
+                                                    subtitle="Try adjusting your search criteria"
+                                                />
                                             </TableCell>
                                         </TableRow>
                                     ) : (

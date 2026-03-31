@@ -30,16 +30,16 @@ import HistoryIcon from '@mui/icons-material/History';
 import RefreshIcon from '@mui/icons-material/Refresh';
 
 import { useAuth } from '../context/AuthContext';
-import { useInvoicePreferences, PREFS_DEFAULTS, previewInvoiceNumber } from '../context/InvoicePreferencesContext';
+import { useInvoicePreferences, PREFS_DEFAULTS } from '../context/InvoicePreferencesContext';
 import {
   C,
   ZohoRow,
   fieldSx,
   footerSx,
   saveBtnSx,
-  AppSelect,
-  menuItemSx,
 } from '../components/common/formStyles';
+import FormInput from '../components/common/FormInput';
+import FormSelect from '../components/common/FormSelect';
 import { updateInvoicePreferences } from '../services/invoicePreferencesService';
 
 // ── Settings sub-nav ──────────────────────────────────────────────────────────
@@ -173,7 +173,7 @@ const EMPTY = {
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function InvoicePreferences() {
   const { isAdmin } = useAuth();
-  const { prefs: ctxPrefs, setPrefs: setCtxPrefs, refreshPrefs } = useInvoicePreferences();
+  const { prefs: ctxPrefs, setPrefs: setCtxPrefs } = useInvoicePreferences();
   const navigate = useNavigate();
 
   const [form, setForm]     = useState(EMPTY);
@@ -317,54 +317,40 @@ export default function InvoicePreferences() {
                     />
                   </ZohoRow>
 
-                  <ZohoRow
+                  <FormInput
                     label="Prefix"
                     hint='Text before the number, e.g. "INV-"'
-                  >
-                    <TextField
-                      size="small"
-                      value={form.invoice_prefix}
-                      onChange={(e) => set('invoice_prefix', e.target.value)}
-                      inputProps={{ maxLength: 20 }}
-                      error={!!fieldErrors.invoice_prefix}
-                      helperText={fieldErrors.invoice_prefix || ' '}
-                      sx={{ ...fieldSx, width: 200 }}
-                    />
-                  </ZohoRow>
+                    value={form.invoice_prefix}
+                    onChange={(e) => set('invoice_prefix', e.target.value)}
+                    inputProps={{ maxLength: 20 }}
+                    error={!!fieldErrors.invoice_prefix}
+                    helperText={fieldErrors.invoice_prefix || ' '}
+                    sx={{ width: 200 }}
+                  />
 
-                  <ZohoRow
+                  <FormInput
                     label="Suffix"
                     hint='Optional text after the number, e.g. "-2026"'
-                  >
-                    <TextField
-                      size="small"
-                      value={form.invoice_suffix}
-                      onChange={(e) => set('invoice_suffix', e.target.value)}
-                      inputProps={{ maxLength: 20 }}
-                      placeholder="(none)"
-                      error={!!fieldErrors.invoice_suffix}
-                      helperText={fieldErrors.invoice_suffix || ' '}
-                      sx={{ ...fieldSx, width: 200 }}
-                    />
-                  </ZohoRow>
+                    value={form.invoice_suffix}
+                    onChange={(e) => set('invoice_suffix', e.target.value)}
+                    inputProps={{ maxLength: 20 }}
+                    placeholder="(none)"
+                    error={!!fieldErrors.invoice_suffix}
+                    helperText={fieldErrors.invoice_suffix || ' '}
+                    sx={{ width: 200 }}
+                  />
 
-                  <ZohoRow
+                  <FormInput
                     label="Next Number"
                     hint="The counter that will be assigned to the next new invoice."
-                  >
-                    <Box>
-                      <TextField
-                        size="small"
-                        type="number"
-                        value={form.next_invoice_number}
-                        onChange={(e) => set('next_invoice_number', e.target.value === '' ? '' : Number(e.target.value))}
-                        inputProps={{ min: 1, step: 1, style: { fontFamily: 'monospace' } }}
-                        error={!!fieldErrors.next_invoice_number}
-                        helperText={fieldErrors.next_invoice_number || ' '}
-                        sx={{ ...fieldSx, width: 140 }}
-                      />
-                    </Box>
-                  </ZohoRow>
+                    type="number"
+                    value={form.next_invoice_number}
+                    onChange={(e) => set('next_invoice_number', e.target.value === '' ? '' : Number(e.target.value))}
+                    inputProps={{ min: 1, step: 1, style: { fontFamily: 'monospace' } }}
+                    error={!!fieldErrors.next_invoice_number}
+                    helperText={fieldErrors.next_invoice_number || ' '}
+                    sx={{ width: 140 }}
+                  />
 
                   <ZohoRow
                     label="Zero-padding Width"
@@ -396,20 +382,14 @@ export default function InvoicePreferences() {
                 <Box sx={{ px: 3, borderTop: `1px solid ${C.divider}` }}>
                   <SectionHeader>Payment Terms</SectionHeader>
 
-                  <ZohoRow
+                  <FormSelect
                     label="Default Payment Terms"
                     hint="Applied to new invoices when no term is specified."
-                  >
-                    <AppSelect
-                      value={form.default_payment_terms}
-                      onChange={(e) => set('default_payment_terms', e.target.value)}
-                      sx={{ width: 200 }}
-                    >
-                      {PAYMENT_TERMS_OPTIONS.map((t) => (
-                        <option key={t} value={t} style={menuItemSx}>{t}</option>
-                      ))}
-                    </AppSelect>
-                  </ZohoRow>
+                    value={form.default_payment_terms}
+                    onChange={(e) => set('default_payment_terms', e.target.value)}
+                    width={200}
+                    options={PAYMENT_TERMS_OPTIONS.map((t) => ({ value: t, label: t }))}
+                  />
 
                   <ZohoRow
                     label="Default Due Days"
@@ -436,42 +416,28 @@ export default function InvoicePreferences() {
                 <Box sx={{ px: 3, borderTop: `1px solid ${C.divider}` }}>
                   <SectionHeader>Default Content</SectionHeader>
 
-                  <ZohoRow
+                  <FormInput
                     label="Customer Notes"
                     hint="Pre-filled in the Notes field of every new invoice."
-                    alignStart
-                  >
-                    <TextField
-                      multiline
-                      rows={3}
-                      fullWidth
-                      size="small"
-                      value={form.default_notes}
-                      onChange={(e) => set('default_notes', e.target.value)}
-                      inputProps={{ maxLength: 2000 }}
-                      placeholder="e.g. Thank you for your business."
-                      sx={fieldSx}
-                    />
-                  </ZohoRow>
+                    multiline
+                    rows={3}
+                    value={form.default_notes}
+                    onChange={(e) => set('default_notes', e.target.value)}
+                    inputProps={{ maxLength: 2000 }}
+                    placeholder="e.g. Thank you for your business."
+                  />
 
-                  <ZohoRow
+                  <FormInput
                     label="Terms & Conditions"
                     hint="Pre-filled in the Terms & Conditions field of every new invoice."
-                    alignStart
                     noDivider
-                  >
-                    <TextField
-                      multiline
-                      rows={3}
-                      fullWidth
-                      size="small"
-                      value={form.default_terms}
-                      onChange={(e) => set('default_terms', e.target.value)}
-                      inputProps={{ maxLength: 2000 }}
-                      placeholder="e.g. Payment due within 30 days."
-                      sx={fieldSx}
-                    />
-                  </ZohoRow>
+                    multiline
+                    rows={3}
+                    value={form.default_terms}
+                    onChange={(e) => set('default_terms', e.target.value)}
+                    inputProps={{ maxLength: 2000 }}
+                    placeholder="e.g. Payment due within 30 days."
+                  />
                 </Box>
 
                 {/* ══ FOOTER ═════════════════════════════════════════════════ */}

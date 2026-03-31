@@ -269,8 +269,8 @@ const ARAgingReport = () => {
                 Aging Summary
               </Typography>
               <Divider sx={{ mb: 2 }} />
-              <TableContainer>
-                <Table>
+              <TableContainer sx={{ overflowX: "hidden" }}>
+                <Table sx={{ tableLayout: "fixed" }}>
                   <TableHead>
                     <TableRow>
                       <TableCell><strong>Age Bracket</strong></TableCell>
@@ -318,8 +318,8 @@ const ARAgingReport = () => {
                 Top Customers by Outstanding Balance
               </Typography>
               <Divider sx={{ mb: 2 }} />
-              <TableContainer>
-                <Table>
+              <TableContainer sx={{ overflowX: "hidden" }}>
+                <Table sx={{ tableLayout: "fixed" }}>
                   <TableHead>
                     <TableRow>
                       <TableCell><strong>Customer</strong></TableCell>
@@ -363,8 +363,8 @@ const ARAgingReport = () => {
                     </Box>
                   </AccordionSummary>
                   <AccordionDetails>
-                    <TableContainer>
-                      <Table size="small">
+                    <TableContainer sx={{ overflowX: "hidden" }}>
+                      <Table size="small" sx={{ tableLayout: "fixed" }}>
                         <TableHead>
                           <TableRow>
                             <TableCell>Invoice #</TableCell>

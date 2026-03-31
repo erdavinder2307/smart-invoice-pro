@@ -279,8 +279,8 @@ export default function UserManagement() {
             <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}><CircularProgress size={32} /></Box>
           ) : (
             <Paper elevation={0} sx={{ border: `1px solid ${C.border}`, borderRadius: "4px", bgcolor: C.white }}>
-              <TableContainer>
-                <Table size="small">
+              <TableContainer sx={{ overflowX: "hidden" }}>
+                <Table size="small" sx={{ tableLayout: "fixed" }}>
                   <TableHead>
                     <TableRow sx={{ bgcolor: C.sectionBg, "& th": { fontWeight: 600, fontSize: "0.75rem", color: C.hint, borderBottom: `1px solid ${C.border}` } }}>
                       <TableCell sx={{ pl: 2 }}>User</TableCell>

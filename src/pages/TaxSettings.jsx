@@ -44,7 +44,7 @@ import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 
-import { C, fieldSx, footerSx, saveBtnSx } from "../components/common/formStyles";
+import { C, fieldSx, saveBtnSx } from "../components/common/formStyles";
 import {
   getTaxRates,
   createTaxRate,
@@ -100,16 +100,6 @@ const SETTINGS_NAV = [
     path: "/settings/audit-log",
     icon: <HistoryIcon sx={{ fontSize: 18 }} />,
   },
-];
-
-const INDIAN_STATES = [
-  "Andaman & Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar",
-  "Chandigarh", "Chhattisgarh", "Dadra & Nagar Haveli", "Daman & Diu", "Delhi",
-  "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jammu & Kashmir", "Jharkhand",
-  "Karnataka", "Kerala", "Ladakh", "Lakshadweep", "Madhya Pradesh", "Maharashtra",
-  "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Puducherry", "Punjab",
-  "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh",
-  "Uttarakhand", "West Bengal",
 ];
 
 const EMPTY_RATE = { name: "", rate: "", type: "GST", is_default: false };
@@ -533,8 +523,8 @@ const TaxSettings = () => {
                       </Typography>
                     </Box>
                   ) : (
-                    <TableContainer>
-                      <Table size="small">
+                    <TableContainer sx={{ overflowX: "hidden" }}>
+                      <Table size="small" sx={{ tableLayout: "fixed" }}>
                         <TableHead>
                           <TableRow sx={{ bgcolor: "#f8fafc" }}>
                             {["Name", "Rate", "Type", "CGST", "SGST", "IGST", ""].map((h) => (

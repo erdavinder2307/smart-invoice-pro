@@ -27,6 +27,7 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import axios from "axios";
 import { createApiUrl } from "../config/api";
 import { useAuth } from "../context/AuthContext";
+import EmptyState from "../components/common/EmptyState";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmt = (amount) =>
@@ -205,12 +206,12 @@ export default function PendingApprovals() {
             <CircularProgress />
           </Box>
         ) : allItems.length === 0 ? (
-          <Paper elevation={1} sx={{ p: 4, textAlign: "center" }}>
-            <CheckCircleIcon sx={{ fontSize: 48, color: "success.main", mb: 1 }} />
-            <Typography variant="h6">All caught up!</Typography>
-            <Typography variant="body2" color="text.secondary">
-              No items are waiting for approval.
-            </Typography>
+          <Paper elevation={1} sx={{ overflow: 'hidden' }}>
+            <EmptyState
+              icon={<CheckCircleIcon sx={{ color: 'success.main' }} />}
+              title="All caught up!"
+              subtitle="No items are waiting for approval."
+            />
           </Paper>
         ) : (
           <>

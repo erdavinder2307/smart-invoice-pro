@@ -18,9 +18,10 @@ const FormInput = ({
   alignStart,
   error,
   helperText,
+  sx: sxOverride,
   ...textFieldProps
 }) => {
-  const errorFieldSx = error
+  const baseSx = error
     ? {
         ...fieldSx,
         '& .MuiOutlinedInput-root': {
@@ -30,6 +31,8 @@ const FormInput = ({
         },
       }
     : fieldSx;
+
+  const mergedSx = sxOverride ? { ...baseSx, ...sxOverride } : baseSx;
 
   return (
     <ZohoRow
@@ -42,7 +45,7 @@ const FormInput = ({
       <TextField
         size="small"
         fullWidth
-        sx={errorFieldSx}
+        sx={mergedSx}
         error={error}
         helperText={helperText}
         {...textFieldProps}

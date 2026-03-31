@@ -356,8 +356,8 @@ export default function AuditLogPage() {
 
           {/* Table */}
           <Paper variant="outlined">
-            <TableContainer>
-              <Table size="small">
+            <TableContainer sx={{ overflowX: "hidden" }}>
+              <Table size="small" sx={{ tableLayout: "fixed" }}>
                 <TableHead>
                   <TableRow sx={{ bgcolor: "#f5f5f5" }}>
                     <TableCell><b>Date / Time</b></TableCell>

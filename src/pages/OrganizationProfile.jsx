@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import MainLayout from "../components/Layout/MainLayout";
 import {
-  Autocomplete,
   Box,
   Button,
   CircularProgress,
@@ -12,7 +11,6 @@ import {
   DialogContent,
   DialogTitle,
   Paper,
-  TextField,
   Typography,
   List,
   ListItemButton,
@@ -37,10 +35,11 @@ import { useAuth } from "../context/AuthContext";
 import {
   C,
   ZohoRow,
-  fieldSx,
   footerSx,
   saveBtnSx,
 } from "../components/common/formStyles";
+import FormInput from "../components/common/FormInput";
+import FormSelect from "../components/common/FormSelect";
 import {
   getOrgProfile,
   updateOrgProfile,
@@ -879,125 +878,55 @@ export default function OrganizationProfile() {
                 >
                   <SectionHeader>Organization Details</SectionHeader>
 
-                  <ZohoRow label="Organization Name" required>
-                    <TextField
-                      fullWidth
-                      size="small"
-                      value={form.organization_name}
-                      onChange={(e) =>
-                        setField("organization_name", e.target.value)
-                      }
-                      error={!!errors.organization_name}
-                      helperText={errors.organization_name}
-                      placeholder="e.g. Acme Corp"
-                      sx={fieldSx}
-                    />
-                  </ZohoRow>
+                  <FormInput
+                    label="Organization Name"
+                    required
+                    value={form.organization_name}
+                    onChange={(e) => setField("organization_name", e.target.value)}
+                    error={!!errors.organization_name}
+                    helperText={errors.organization_name}
+                    placeholder="e.g. Acme Corp"
+                  />
 
-                  <ZohoRow label="Industry">
-                    <Box sx={{ maxWidth: 360 }}>
-                      <Autocomplete
-                        fullWidth
-                        options={INDUSTRIES}
-                        value={form.industry || null}
-                        onChange={(_, next) => setField("industry", next || "")}
-                        autoHighlight
-                        openOnFocus
-                        selectOnFocus
-                        clearOnBlur
-                        handleHomeEndKeys
-                        forcePopupIcon
-                        isOptionEqualToValue={(option, val) => option === val}
-                        ListboxProps={{
-                          sx: {
-                            "& .MuiAutocomplete-option": {
-                              fontSize: "0.875rem",
-                              minHeight: 36,
-                              alignItems: "center",
-                            },
-                          },
-                        }}
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            size="small"
-                            placeholder="Select or search industry"
-                            sx={fieldSx}
-                          />
-                        )}
-                      />
-                    </Box>
-                  </ZohoRow>
+                  <FormSelect
+                    label="Industry"
+                    searchable
+                    name="industry"
+                    value={form.industry}
+                    onChange={(e) => setField("industry", e.target.value)}
+                    placeholder="Select or search industry"
+                    options={INDUSTRIES.map((i) => ({ value: i, label: i }))}
+                  />
 
-                  <ZohoRow label="Country" required>
-                    <Box sx={{ maxWidth: 360 }}>
-                      <Autocomplete
-                        fullWidth
-                        options={COUNTRIES}
-                        value={form.country || null}
-                        onChange={(_, next) => setField("country", next || "")}
-                        autoHighlight
-                        openOnFocus
-                        selectOnFocus
-                        clearOnBlur
-                        handleHomeEndKeys
-                        forcePopupIcon
-                        isOptionEqualToValue={(option, val) => option === val}
-                        ListboxProps={{
-                          sx: {
-                            "& .MuiAutocomplete-option": {
-                              fontSize: "0.875rem",
-                              minHeight: 36,
-                              alignItems: "center",
-                            },
-                          },
-                        }}
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            size="small"
-                            placeholder="Select or search country"
-                            error={!!errors.country}
-                            helperText={errors.country}
-                            sx={fieldSx}
-                          />
-                        )}
-                      />
-                    </Box>
-                  </ZohoRow>
+                  <FormSelect
+                    label="Country"
+                    required
+                    searchable
+                    name="country"
+                    value={form.country}
+                    onChange={(e) => setField("country", e.target.value)}
+                    placeholder="Select or search country"
+                    error={!!errors.country}
+                    helperText={errors.country}
+                    options={COUNTRIES.map((c) => ({ value: c, label: c }))}
+                  />
 
-                  <ZohoRow
+                  <FormInput
                     label="GSTIN"
                     hint="e.g. 22AAAAA0000A1Z5 (15 characters)"
-                  >
-                    <TextField
-                      fullWidth
-                      size="small"
-                      value={form.gstin}
-                      onChange={(e) =>
-                        setField(
-                          "gstin",
-                          e.target.value.toUpperCase().replace(/\s+/g, "")
-                        )
-                      }
-                      placeholder="22AAAAA0000A1Z5"
-                      inputProps={{ maxLength: 15 }}
-                      sx={fieldSx}
-                    />
-                  </ZohoRow>
+                    value={form.gstin}
+                    onChange={(e) => setField("gstin", e.target.value.toUpperCase().replace(/\s+/g, ""))}
+                    placeholder="22AAAAA0000A1Z5"
+                    inputProps={{ maxLength: 15 }}
+                  />
 
-                  <ZohoRow label="Website URL" noDivider>
-                    <TextField
-                      fullWidth
-                      size="small"
-                      value={form.website_url}
-                      onChange={(e) =>
-                        setField("website_url", e.target.value)
-                      }
-                      placeholder="https://example.com"
-                      sx={fieldSx}
-                    />
-                  </ZohoRow>
+                  <FormInput
+                    label="Website URL"
+                    noDivider
+                    value={form.website_url}
+                    onChange={(e) => setField("website_url", e.target.value)}
+                    placeholder="https://example.com"
+                  />
                 </Box>
 
                 {/* ══ ADDRESS ════════════════════════════════════════════════ */}
@@ -1009,64 +938,41 @@ export default function OrganizationProfile() {
                 >
                   <SectionHeader>Address</SectionHeader>
 
-                  <ZohoRow label="Address Line 1">
-                    <TextField
-                      fullWidth
-                      size="small"
-                      value={form.address.line1}
-                      onChange={(e) =>
-                        setAddressField("line1", e.target.value)
-                      }
-                      placeholder="Street address"
-                      sx={fieldSx}
-                    />
-                  </ZohoRow>
+                  <FormInput
+                    label="Address Line 1"
+                    value={form.address.line1}
+                    onChange={(e) => setAddressField("line1", e.target.value)}
+                    placeholder="Street address"
+                  />
 
-                  <ZohoRow label="Address Line 2">
-                    <TextField
-                      fullWidth
-                      size="small"
-                      value={form.address.line2}
-                      onChange={(e) =>
-                        setAddressField("line2", e.target.value)
-                      }
-                      placeholder="Apartment, suite, floor, etc."
-                      sx={fieldSx}
-                    />
-                  </ZohoRow>
+                  <FormInput
+                    label="Address Line 2"
+                    value={form.address.line2}
+                    onChange={(e) => setAddressField("line2", e.target.value)}
+                    placeholder="Apartment, suite, floor, etc."
+                  />
 
-                  <ZohoRow label="City">
-                    <TextField
-                      size="small"
-                      value={form.address.city}
-                      onChange={(e) =>
-                        setAddressField("city", e.target.value)
-                      }
-                      sx={{ ...fieldSx, maxWidth: 280 }}
-                    />
-                  </ZohoRow>
+                  <FormInput
+                    label="City"
+                    value={form.address.city}
+                    onChange={(e) => setAddressField("city", e.target.value)}
+                    sx={{ maxWidth: 280 }}
+                  />
 
-                  <ZohoRow label="State / Province">
-                    <TextField
-                      size="small"
-                      value={form.address.state}
-                      onChange={(e) =>
-                        setAddressField("state", e.target.value)
-                      }
-                      sx={{ ...fieldSx, maxWidth: 280 }}
-                    />
-                  </ZohoRow>
+                  <FormInput
+                    label="State / Province"
+                    value={form.address.state}
+                    onChange={(e) => setAddressField("state", e.target.value)}
+                    sx={{ maxWidth: 280 }}
+                  />
 
-                  <ZohoRow label="Postal / PIN Code" noDivider>
-                    <TextField
-                      size="small"
-                      value={form.address.pincode}
-                      onChange={(e) =>
-                        setAddressField("pincode", e.target.value)
-                      }
-                      sx={{ ...fieldSx, maxWidth: 180 }}
-                    />
-                  </ZohoRow>
+                  <FormInput
+                    label="Postal / PIN Code"
+                    noDivider
+                    value={form.address.pincode}
+                    onChange={(e) => setAddressField("pincode", e.target.value)}
+                    sx={{ maxWidth: 180 }}
+                  />
                 </Box>
 
                 {/* ══ CONTACT INFO ═══════════════════════════════════════════ */}
@@ -1078,31 +984,22 @@ export default function OrganizationProfile() {
                 >
                   <SectionHeader>Contact Info</SectionHeader>
 
-                  <ZohoRow
+                  <FormInput
                     label="Phone"
                     hint="Include country code, e.g. +91-9876543210"
-                  >
-                    <TextField
-                      size="small"
-                      value={form.address.phone}
-                      onChange={(e) =>
-                        setAddressField("phone", e.target.value)
-                      }
-                      placeholder="+91-9876543210"
-                      sx={{ ...fieldSx, maxWidth: 280 }}
-                    />
-                  </ZohoRow>
+                    value={form.address.phone}
+                    onChange={(e) => setAddressField("phone", e.target.value)}
+                    placeholder="+91-9876543210"
+                    sx={{ maxWidth: 280 }}
+                  />
 
-                  <ZohoRow label="Fax" noDivider>
-                    <TextField
-                      size="small"
-                      value={form.address.fax}
-                      onChange={(e) =>
-                        setAddressField("fax", e.target.value)
-                      }
-                      sx={{ ...fieldSx, maxWidth: 280 }}
-                    />
-                  </ZohoRow>
+                  <FormInput
+                    label="Fax"
+                    noDivider
+                    value={form.address.fax}
+                    onChange={(e) => setAddressField("fax", e.target.value)}
+                    sx={{ maxWidth: 280 }}
+                  />
                 </Box>
 
                 {/* ══ FOOTER ════════════════════════════════════════════════ */}

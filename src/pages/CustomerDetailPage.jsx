@@ -29,6 +29,7 @@ import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import PaymentsIcon from "@mui/icons-material/Payments";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import FormatListNumberedIcon from "@mui/icons-material/FormatListNumbered";
+import EmptyState from "../components/common/EmptyState";
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat("en-IN", {
@@ -350,14 +351,12 @@ const CustomerDetailPage = () => {
               </Box>
               <Divider />
               {invoices.length === 0 ? (
-                <Box sx={{ py: 8, textAlign: "center" }}>
-                  <ReceiptLongIcon sx={{ fontSize: 40, color: "#d1d5db", mb: 1 }} />
-                  <Typography sx={{ fontSize: "0.9rem", color: "#6b7280" }}>
-                    No invoices yet
-                  </Typography>
-                </Box>
+                <EmptyState
+                  icon={<ReceiptLongIcon />}
+                  title="No invoices yet"
+                />
               ) : (
-                <TableContainer>
+                <TableContainer sx={{ overflowX: "hidden" }}>
                   <Table size="small" sx={{ tableLayout: "fixed" }}>
                     <TableHead>
                       <TableRow sx={{ bgcolor: "#fafbfc" }}>

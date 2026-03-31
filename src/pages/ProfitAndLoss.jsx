@@ -358,8 +358,8 @@ const ProfitAndLoss = () => {
                 Detailed Statement
               </Typography>
               <Divider sx={{ mb: 2 }} />
-              <TableContainer>
-                <Table>
+              <TableContainer sx={{ overflowX: "hidden" }}>
+                <Table sx={{ tableLayout: "fixed" }}>
                   <TableHead>
                     <TableRow>
                       <TableCell><strong>Account</strong></TableCell>

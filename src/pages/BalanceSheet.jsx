@@ -291,8 +291,8 @@ const BalanceSheet = () => {
                     ASSETS
                   </Typography>
                   <Divider sx={{ mb: 2 }} />
-                  <TableContainer>
-                    <Table>
+                  <TableContainer sx={{ overflowX: "hidden" }}>
+                    <Table sx={{ tableLayout: "fixed" }}>
                       <TableHead>
                         <TableRow>
                           <TableCell><strong>Current Assets</strong></TableCell>
@@ -337,8 +337,8 @@ const BalanceSheet = () => {
                     LIABILITIES
                   </Typography>
                   <Divider sx={{ mb: 2 }} />
-                  <TableContainer>
-                    <Table>
+                  <TableContainer sx={{ overflowX: "hidden" }}>
+                    <Table sx={{ tableLayout: "fixed" }}>
                       <TableHead>
                         <TableRow>
                           <TableCell><strong>Current Liabilities</strong></TableCell>
@@ -371,8 +371,8 @@ const BalanceSheet = () => {
                     EQUITY
                   </Typography>
                   <Divider sx={{ mb: 2 }} />
-                  <TableContainer>
-                    <Table>
+                  <TableContainer sx={{ overflowX: "hidden" }}>
+                    <Table sx={{ tableLayout: "fixed" }}>
                       <TableHead>
                         <TableRow>
                           <TableCell><strong>Owner's Equity</strong></TableCell>

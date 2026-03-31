@@ -208,8 +208,8 @@ const SalesSummary = () => {
                     </BarChart>
                   </ResponsiveContainer>
 
-                  <TableContainer sx={{ mt: 2 }}>
-                    <Table size="small">
+                  <TableContainer sx={{ mt: 2, overflowX: "hidden" }}>
+                    <Table size="small" sx={{ tableLayout: "fixed" }}>
                       <TableHead>
                         <TableRow>
                           <TableCell><strong>Customer</strong></TableCell>

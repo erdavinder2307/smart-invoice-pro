@@ -5,9 +5,11 @@ import { createApiUrl } from '../config/api';
 import MainLayout from './Layout/MainLayout';
 import {
   Alert, Box, Button, CircularProgress, Container,
-  MenuItem, Paper, TextField, Typography,
+  Paper, Typography,
 } from '@mui/material';
-import { C, ZohoRow, AppSelect, fieldSx, menuItemSx, footerSx, cancelBtnSx, saveBtnSx } from './common/formStyles';
+import { C, footerSx, cancelBtnSx, saveBtnSx } from './common/formStyles';
+import FormInput from './common/FormInput';
+import FormSelect from './common/FormSelect';
 
 const INITIAL_FORM = {
   vendor_name: '', contact_person: '', email: '',
@@ -83,33 +85,13 @@ const AddEditVendor = () => {
                 </Typography>
               </Box>
 
-              <ZohoRow label="Vendor Name" required>
-                <TextField
-                  name="vendor_name" value={form.vendor_name} onChange={handleChange}
-                  size="small" fullWidth required sx={fieldSx}
-                />
-              </ZohoRow>
+              <FormInput label="Vendor Name" required name="vendor_name" value={form.vendor_name} onChange={handleChange} />
 
-              <ZohoRow label="Contact Person">
-                <TextField
-                  name="contact_person" value={form.contact_person} onChange={handleChange}
-                  size="small" fullWidth sx={fieldSx}
-                />
-              </ZohoRow>
+              <FormInput label="Contact Person" name="contact_person" value={form.contact_person} onChange={handleChange} />
 
-              <ZohoRow label="Email Address" required>
-                <TextField
-                  name="email" value={form.email} onChange={handleChange}
-                  type="email" size="small" fullWidth required sx={fieldSx}
-                />
-              </ZohoRow>
+              <FormInput label="Email Address" required name="email" value={form.email} onChange={handleChange} type="email" />
 
-              <ZohoRow label="Phone">
-                <TextField
-                  name="phone" value={form.phone} onChange={handleChange}
-                  size="small" fullWidth sx={fieldSx}
-                />
-              </ZohoRow>
+              <FormInput label="Phone" name="phone" value={form.phone} onChange={handleChange} />
             </Box>
 
             {/* ══ ADDRESS & TAX ════════════════════════════════════════════ */}
@@ -120,21 +102,13 @@ const AddEditVendor = () => {
                 </Typography>
               </Box>
 
-              <ZohoRow label="Address" alignStart>
-                <TextField
-                  name="address" value={form.address} onChange={handleChange}
-                  size="small" fullWidth multiline rows={2} sx={fieldSx}
-                />
-              </ZohoRow>
+              <FormInput label="Address" alignStart name="address" value={form.address} onChange={handleChange} multiline rows={2} />
 
-              <ZohoRow label="GST Number" noDivider>
-                <TextField
-                  name="gst_number" value={form.gst_number} onChange={handleChange}
-                  size="small" sx={{ ...fieldSx, maxWidth: 320 }}
-                  placeholder="e.g. 27AABCU9603R1ZX"
-                  inputProps={{ style: { textTransform: 'uppercase' } }}
-                />
-              </ZohoRow>
+              <FormInput label="GST Number" noDivider name="gst_number" value={form.gst_number} onChange={handleChange}
+                placeholder="e.g. 27AABCU9603R1ZX"
+                inputProps={{ style: { textTransform: 'uppercase' } }}
+                sx={{ maxWidth: 320 }}
+              />
             </Box>
 
             {/* ══ PAYMENT & STATUS ════════════════════════════════════════ */}
@@ -145,33 +119,19 @@ const AddEditVendor = () => {
                 </Typography>
               </Box>
 
-              <ZohoRow label="Payment Terms">
-                <Box sx={{ width: 240 }}>
-                  <AppSelect name="payment_terms" value={form.payment_terms} onChange={handleChange}>
-                    {['Net 15', 'Net 30', 'Net 45', 'Net 60', 'Due on Receipt'].map(t => (
-                      <MenuItem key={t} value={t} sx={menuItemSx}>{t}</MenuItem>
-                    ))}
-                  </AppSelect>
-                </Box>
-              </ZohoRow>
+              <FormSelect label="Payment Terms" name="payment_terms" value={form.payment_terms} onChange={handleChange}
+                options={['Net 15', 'Net 30', 'Net 45', 'Net 60', 'Due on Receipt'].map(t => ({ value: t, label: t }))}
+                width={240}
+              />
 
-              <ZohoRow label="Status">
-                <Box sx={{ width: 180 }}>
-                  <AppSelect name="status" value={form.status} onChange={handleChange}>
-                    <MenuItem value="Active" sx={menuItemSx}>Active</MenuItem>
-                    <MenuItem value="Inactive" sx={menuItemSx}>Inactive</MenuItem>
-                  </AppSelect>
-                </Box>
-              </ZohoRow>
+              <FormSelect label="Status" name="status" value={form.status} onChange={handleChange}
+                options={[{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }]}
+                width={180}
+              />
 
-              <ZohoRow label="Notes" noDivider alignStart>
-                <TextField
-                  name="notes" value={form.notes} onChange={handleChange}
-                  size="small" fullWidth multiline rows={3}
-                  placeholder="Add any internal notes about this vendor…"
-                  sx={fieldSx}
-                />
-              </ZohoRow>
+              <FormInput label="Notes" noDivider name="notes" value={form.notes} onChange={handleChange}
+                multiline rows={3} placeholder="Add any internal notes about this vendor…"
+              />
             </Box>
 
             {/* ══ FOOTER ═════════════════════════════════════════════════ */}

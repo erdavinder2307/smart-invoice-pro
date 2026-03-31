@@ -41,6 +41,7 @@ import {
   footerSx,
   saveBtnSx,
 } from "../components/common/formStyles";
+import FormInput from "../components/common/FormInput";
 import { getBranding, updateBranding } from "../services/brandingService";
 import { uploadOrgLogo } from "../services/organizationProfileService";
 
@@ -237,7 +238,6 @@ function ColorField({ label, value, onChange }) {
 // ── Live invoice preview ──────────────────────────────────────────────────────
 function InvoicePreview({ primary, secondary, accent, orgName, logoUrl, showLogo }) {
   const pri = primary  || BRANDING_DEFAULTS.primary_color;
-  const sec = secondary || BRANDING_DEFAULTS.secondary_color;
   const acc = accent   || BRANDING_DEFAULTS.accent_color;
   const name = orgName || "Your Company";
 
@@ -374,7 +374,7 @@ const EMPTY_FORM = {
 // ── Page component ────────────────────────────────────────────────────────────
 export default function BrandingSettings() {
   const { isAdmin } = useAuth();
-  const { branding: ctxBranding, setBranding: setCtxBranding, refreshBranding } = useBranding();
+  const { branding: ctxBranding, setBranding: setCtxBranding } = useBranding();
   const navigate = useNavigate();
 
   const [form, setForm]       = useState(EMPTY_FORM);
@@ -727,22 +727,16 @@ export default function BrandingSettings() {
                   <Box sx={{ px: 3, borderTop: `1px solid ${C.divider}` }}>
                     <SectionHeader>Email Header</SectionHeader>
 
-                    <ZohoRow
+                    <FormInput
                       label="Email Header Logo URL"
                       hint="Override the logo URL used in outgoing invoice emails. Leave blank to use the organization logo."
                       noDivider
-                    >
-                      <TextField
-                        fullWidth
-                        size="small"
-                        value={form.email_header_logo_url}
-                        onChange={(e) =>
-                          setForm((prev) => ({ ...prev, email_header_logo_url: e.target.value }))
-                        }
-                        placeholder="https://cdn.example.com/logo.png"
-                        sx={fieldSx}
-                      />
-                    </ZohoRow>
+                      value={form.email_header_logo_url}
+                      onChange={(e) =>
+                        setForm((prev) => ({ ...prev, email_header_logo_url: e.target.value }))
+                      }
+                      placeholder="https://cdn.example.com/logo.png"
+                    />
                   </Box>
 
                   {/* ══ FOOTER ══════════════════════════════════════════════ */}

@@ -25,6 +25,9 @@ import {
 import { useParams, useNavigate } from "react-router-dom";
 import MainLayout from "./Layout/MainLayout";
 import { C, ZohoRow, AppSelect, fieldSx, menuItemSx, footerSx, cancelBtnSx, saveBtnSx } from './common/formStyles';
+import FormInput from './common/FormInput';
+import FormSelect from './common/FormSelect';
+import FormDatePicker from './common/FormDatePicker';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
@@ -221,29 +224,13 @@ const AddEditRecurringProfile = () => {
             </ZohoRow>
 
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, columnGap: 2, py: 2, borderBottom: `1px solid ${C.divider}` }}>
-              <ZohoRow label="Profile Name" required noDivider>
-                <TextField name="profile_name" value={form.profile_name} onChange={handleChange} size="small" required sx={{ ...fieldSx, width: 240 }} />
-              </ZohoRow>
+              <FormInput label="Profile Name" required noDivider name="profile_name" value={form.profile_name} onChange={handleChange}
+                sx={{ width: 240 }} />
 
-              <ZohoRow label="Repeat Every" required noDivider>
-                <Box sx={{ width: 240 }}>
-                  <AppSelect name="frequency" value={form.frequency} onChange={handleChange}>
-                    {frequencyOptions.map((f) => <MenuItem key={f} value={f} sx={menuItemSx}>{f}</MenuItem>)}
-                  </AppSelect>
-                </Box>
-              </ZohoRow>
+              <FormSelect label="Repeat Every" required noDivider name="frequency" value={form.frequency} onChange={handleChange}
+                options={frequencyOptions.map(f => ({ value: f, label: f }))} width={240} />
 
-              <ZohoRow label="Start On" required noDivider>
-                <TextField
-                  name="start_date"
-                  type="date"
-                  value={form.start_date}
-                  onChange={handleChange}
-                  size="small"
-                  required
-                  sx={{ ...fieldSx, width: 240 }}
-                />
-              </ZohoRow>
+              <FormDatePicker label="Start On" required noDivider name="start_date" value={form.start_date} onChange={handleChange} />
 
               <ZohoRow label="Ends On" noDivider>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
@@ -269,21 +256,11 @@ const AddEditRecurringProfile = () => {
                 </Box>
               </ZohoRow>
 
-              <ZohoRow label="Payment Terms" noDivider>
-                <Box sx={{ width: 240 }}>
-                  <AppSelect name="payment_terms" value={form.payment_terms} onChange={handleChange}>
-                    {paymentTermsOptions.map((term) => <MenuItem key={term} value={term} sx={menuItemSx}>{term}</MenuItem>)}
-                  </AppSelect>
-                </Box>
-              </ZohoRow>
+              <FormSelect label="Payment Terms" noDivider name="payment_terms" value={form.payment_terms} onChange={handleChange}
+                options={paymentTermsOptions.map(t => ({ value: t, label: t }))} width={240} />
 
-              <ZohoRow label="Status" noDivider>
-                <Box sx={{ width: 240 }}>
-                  <AppSelect name="status" value={form.status} onChange={handleChange}>
-                    {statusOptions.map((s) => <MenuItem key={s} value={s} sx={menuItemSx}>{s}</MenuItem>)}
-                  </AppSelect>
-                </Box>
-              </ZohoRow>
+              <FormSelect label="Status" noDivider name="status" value={form.status} onChange={handleChange}
+                options={statusOptions.map(s => ({ value: s, label: s }))} width={240} />
             </Box>
 
             <Box sx={{ py: 3, borderBottom: `1px solid ${C.divider}` }}>

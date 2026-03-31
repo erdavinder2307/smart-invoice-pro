@@ -34,6 +34,8 @@ import {
   menuItemSx,
   saveBtnSx,
 } from './common/formStyles';
+import FormInput from './common/FormInput';
+import FormSelect from './common/FormSelect';
 
 const unitOptions = ['pcs', 'kg', 'litre', 'box', 'pack', 'hrs', 'set'];
 const taxPreferenceOptions = [
@@ -287,61 +289,55 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
                 </RadioGroup>
               </ZohoRow>
 
-              <ZohoRow label="Name" required>
-                <Box sx={{ width: 360, maxWidth: '100%' }}>
-                  <TextField
-                    name="name"
-                    value={form.name}
-                    onChange={handleChange}
-                    size="small"
-                    fullWidth
-                    required
-                    error={!!errors.name}
-                    helperText={errors.name || ''}
-                    inputProps={{ maxLength: 255 }}
-                    sx={fieldSx}
-                  />
-                </Box>
-              </ZohoRow>
+              <FormInput
+                label="Name"
+                required
+                name="name"
+                value={form.name}
+                onChange={handleChange}
+                error={!!errors.name}
+                helperText={errors.name || ''}
+                inputProps={{ maxLength: 255 }}
+                sx={{ width: 360, maxWidth: '100%' }}
+              />
 
-              <ZohoRow label="Unit" hint="Unit used while selling or purchasing this item">
-                <Box sx={{ width: 260, maxWidth: '100%' }}>
-                  <AppSelect name="unit" value={form.unit} onChange={handleChange} displayEmpty>
-                    <MenuItem value="" sx={{ ...menuItemSx, color: C.hint }}>Select unit</MenuItem>
-                    {unitOptions.map((unit) => <MenuItem key={unit} value={unit} sx={menuItemSx}>{unit}</MenuItem>)}
-                  </AppSelect>
-                </Box>
-              </ZohoRow>
+              <FormSelect
+                label="Unit"
+                hint="Unit used while selling or purchasing this item"
+                name="unit"
+                value={form.unit}
+                onChange={handleChange}
+                displayEmpty
+                placeholder="Select unit"
+                width={260}
+                options={unitOptions.map((unit) => ({ value: unit, label: unit }))}
+              />
 
-              <ZohoRow label="HSN Code">
-                <Box sx={{ width: 260, maxWidth: '100%' }}>
-                  <TextField
-                    name="hsn_sac"
-                    value={form.hsn_sac}
-                    onChange={handleChange}
-                    size="small"
-                    fullWidth
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <SearchIcon sx={{ fontSize: 15, color: C.primary }} />
-                        </InputAdornment>
-                      ),
-                    }}
-                    sx={fieldSx}
-                  />
-                </Box>
-              </ZohoRow>
+              <FormInput
+                label="HSN Code"
+                name="hsn_sac"
+                value={form.hsn_sac}
+                onChange={handleChange}
+                sx={{ width: 260, maxWidth: '100%' }}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <SearchIcon sx={{ fontSize: 15, color: C.primary }} />
+                    </InputAdornment>
+                  ),
+                }}
+              />
 
-              <ZohoRow label="Tax Preference" required noDivider>
-                <Box sx={{ width: 260, maxWidth: '100%' }}>
-                  <AppSelect name="tax_preference" value={form.tax_preference} onChange={handleChange}>
-                    {taxPreferenceOptions.map((option) => (
-                      <MenuItem key={option.value} value={option.value} sx={menuItemSx}>{option.label}</MenuItem>
-                    ))}
-                  </AppSelect>
-                </Box>
-              </ZohoRow>
+              <FormSelect
+                label="Tax Preference"
+                required
+                noDivider
+                name="tax_preference"
+                value={form.tax_preference}
+                onChange={handleChange}
+                width={260}
+                options={taxPreferenceOptions}
+              />
             </Box>
 
             <Box sx={{ px: 3, py: 2, borderTop: `1px solid ${C.divider}` }}>

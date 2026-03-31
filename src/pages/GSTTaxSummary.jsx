@@ -187,8 +187,8 @@ const GSTTaxSummary = () => {
                   {reportData.tax_breakdown.length === 0 ? (
                     <Typography color="text.secondary">No taxable invoices in this period.</Typography>
                   ) : (
-                    <TableContainer>
-                      <Table>
+                    <TableContainer sx={{ overflowX: "hidden" }}>
+                      <Table sx={{ tableLayout: "fixed" }}>
                         <TableHead>
                           <TableRow>
                             <TableCell><strong>GST Rate</strong></TableCell>

@@ -8,7 +8,6 @@ import {
   CircularProgress,
   Container,
   IconButton,
-  InputAdornment,
   MenuItem,
   Paper,
   Radio,

@@ -20,6 +20,7 @@ import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNone
 import DoneAllIcon from '@mui/icons-material/DoneAll';
 import MainLayout from '../components/Layout/MainLayout';
 import SectionHeader from '../components/common/SectionHeader';
+import EmptyState from '../components/common/EmptyState';
 import { useNotifications } from '../context/NotificationContext';
 
 const FILTERS = [
@@ -116,15 +117,11 @@ const NotificationsPage = () => {
               <CircularProgress size={28} />
             </Box>
           ) : filtered.length === 0 ? (
-            <Box sx={{ py: 7, textAlign: 'center' }}>
-              <NotificationsNoneOutlinedIcon sx={{ fontSize: 48, color: 'grey.400', mb: 1 }} />
-              <Typography variant="h6" color="text.secondary">
-                No notifications
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Activity will appear here as you use the app.
-              </Typography>
-            </Box>
+            <EmptyState
+              icon={<NotificationsNoneOutlinedIcon />}
+              title="No notifications"
+              subtitle="Activity will appear here as you use the app."
+            />
           ) : (
             <List disablePadding>
               {filtered.map((n, idx) => (

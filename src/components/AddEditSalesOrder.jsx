@@ -5,7 +5,6 @@ import {
   Box,
   Button,
   TextField,
-  MenuItem,
   Checkbox,
   FormControlLabel,
   Typography,
@@ -25,7 +24,10 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import MainLayout from "./Layout/MainLayout";
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { C, ZohoRow, AppSelect, fieldSx, menuItemSx, footerSx, cancelBtnSx, saveBtnSx } from './common/formStyles';
+import { C, ZohoRow, fieldSx, footerSx, cancelBtnSx, saveBtnSx } from './common/formStyles';
+import FormInput from './common/FormInput';
+import FormSelect from './common/FormSelect';
+import FormDatePicker from './common/FormDatePicker';
 
 const statusOptions = ["Draft", "Confirmed", "Closed", "Invoiced", "Cancelled"];
 
@@ -194,40 +196,18 @@ const AddEditSalesOrder = () => {
                 </Typography>
               </Box>
 
-              <ZohoRow label="SO Number" required>
-                <TextField
-                  name="so_number" value={form.so_number} onChange={handleChange}
-                  size="small" required disabled={!!id} sx={{ ...fieldSx, maxWidth: 240 }}
-                />
-              </ZohoRow>
+              <FormInput label="SO Number" required name="so_number" value={form.so_number} onChange={handleChange}
+                disabled={!!id} sx={{ maxWidth: 240 }} />
 
-              <ZohoRow label="Customer" required>
-                <Box sx={{ width: 300 }}>
-                  <AppSelect name="customer_id" value={form.customer_id} onChange={handleChange} required>
-                    {customers.map(c => (
-                      <MenuItem key={c.id} value={c.id} sx={menuItemSx}>{c.name || c.display_name || 'Unknown Customer'}</MenuItem>
-                    ))}
-                  </AppSelect>
-                </Box>
-              </ZohoRow>
+              <FormSelect label="Customer" required name="customer_id" value={form.customer_id} onChange={handleChange}
+                options={customers.map(c => ({ value: c.id, label: c.name || c.display_name || 'Unknown Customer' }))}
+                width={300} />
 
-              <ZohoRow label="Status" required>
-                <Box sx={{ width: 220 }}>
-                  <AppSelect name="status" value={form.status} onChange={handleChange} required>
-                    {statusOptions.map(s => (
-                      <MenuItem key={s} value={s} sx={menuItemSx}>{s}</MenuItem>
-                    ))}
-                  </AppSelect>
-                </Box>
-              </ZohoRow>
+              <FormSelect label="Status" required name="status" value={form.status} onChange={handleChange}
+                options={statusOptions.map(s => ({ value: s, label: s }))} width={220} />
 
-              <ZohoRow label="Subject" noDivider>
-                <TextField
-                  name="subject" value={form.subject} onChange={handleChange}
-                  size="small" fullWidth sx={fieldSx}
-                  placeholder="e.g., Office equipment order"
-                />
-              </ZohoRow>
+              <FormInput label="Subject" noDivider name="subject" value={form.subject} onChange={handleChange}
+                placeholder="e.g., Office equipment order" />
             </Box>
 
             {/* ══ DATES & TERMS ═════════════════════════════════════ */}
@@ -238,41 +218,15 @@ const AddEditSalesOrder = () => {
                 </Typography>
               </Box>
 
-              <ZohoRow label="Order Date" required>
-                <TextField
-                  name="order_date" value={form.order_date} onChange={handleChange}
-                  type="date" size="small" required
-                  sx={{ ...fieldSx, maxWidth: 200 }}
-                  InputLabelProps={{ shrink: true }}
-                />
-              </ZohoRow>
+              <FormDatePicker label="Order Date" required name="order_date" value={form.order_date} onChange={handleChange} />
 
-              <ZohoRow label="Delivery Date">
-                <TextField
-                  name="delivery_date" value={form.delivery_date || ''} onChange={handleChange}
-                  type="date" size="small"
-                  sx={{ ...fieldSx, maxWidth: 200 }}
-                  InputLabelProps={{ shrink: true }}
-                />
-              </ZohoRow>
+              <FormDatePicker label="Delivery Date" name="delivery_date" value={form.delivery_date || ''} onChange={handleChange} />
 
-              <ZohoRow label="Payment Terms">
-                <TextField
-                  name="payment_terms" value={form.payment_terms} onChange={handleChange}
-                  size="small" fullWidth
-                  placeholder="e.g., Net 30"
-                  sx={fieldSx}
-                />
-              </ZohoRow>
+              <FormInput label="Payment Terms" name="payment_terms" value={form.payment_terms} onChange={handleChange}
+                placeholder="e.g., Net 30" />
 
-              <ZohoRow label="Salesperson" noDivider>
-                <TextField
-                  name="salesperson" value={form.salesperson || ''} onChange={handleChange}
-                  size="small" fullWidth
-                  placeholder="Enter salesperson name"
-                  sx={fieldSx}
-                />
-              </ZohoRow>
+              <FormInput label="Salesperson" noDivider name="salesperson" value={form.salesperson || ''} onChange={handleChange}
+                placeholder="Enter salesperson name" />
             </Box>
 
             {/* ══ TAX INFORMATION ════════════════════════════════════ */}
@@ -480,23 +434,11 @@ const AddEditSalesOrder = () => {
                 </Typography>
               </Box>
 
-              <ZohoRow label="Customer Notes" alignStart>
-                <TextField
-                  name="notes" value={form.notes} onChange={handleChange}
-                  size="small" fullWidth multiline rows={2}
-                  placeholder="Thank you for your business!"
-                  sx={fieldSx}
-                />
-              </ZohoRow>
+              <FormInput label="Customer Notes" name="notes" value={form.notes} onChange={handleChange}
+                multiline rows={2} placeholder="Thank you for your business!" />
 
-              <ZohoRow label="Terms & Conditions" noDivider alignStart>
-                <TextField
-                  name="terms_conditions" value={form.terms_conditions} onChange={handleChange}
-                  size="small" fullWidth multiline rows={2}
-                  placeholder="Enter terms and conditions"
-                  sx={fieldSx}
-                />
-              </ZohoRow>
+              <FormInput label="Terms & Conditions" noDivider name="terms_conditions" value={form.terms_conditions} onChange={handleChange}
+                multiline rows={2} placeholder="Enter terms and conditions" />
             </Box>
 
             {/* ══ FOOTER ════════════════════════════════════════════════ */}

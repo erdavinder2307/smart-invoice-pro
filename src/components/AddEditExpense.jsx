@@ -12,6 +12,9 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import { C, ZohoRow, AppSelect, fieldSx, menuItemSx, footerSx, cancelBtnSx, saveBtnSx } from './common/formStyles';
+import FormInput from './common/FormInput';
+import FormSelect from './common/FormSelect';
+import FormDatePicker from './common/FormDatePicker';
 
 const CATEGORIES = [
   'Office Supplies', 'Travel', 'Utilities', 'Marketing', 'Software',
@@ -133,31 +136,13 @@ const AddEditExpense = () => {
                 </Typography>
               </Box>
 
-              <ZohoRow label="Vendor / Payee" required>
-                <TextField
-                  name="vendor_name" value={form.vendor_name} onChange={handleChange}
-                  size="small" fullWidth required
-                  placeholder="e.g. Amazon, Uber, Office Depot"
-                  sx={fieldSx}
-                />
-              </ZohoRow>
+              <FormInput label="Vendor / Payee" required name="vendor_name" value={form.vendor_name} onChange={handleChange}
+                placeholder="e.g. Amazon, Uber, Office Depot" />
 
-              <ZohoRow label="Date" required>
-                <TextField
-                  name="date" value={form.date} onChange={handleChange}
-                  type="date" size="small" required
-                  InputLabelProps={{ shrink: true }}
-                  sx={{ ...fieldSx, maxWidth: 220 }}
-                />
-              </ZohoRow>
+              <FormDatePicker label="Date" required name="date" value={form.date} onChange={handleChange} />
 
-              <ZohoRow label="Category" required>
-                <Box sx={{ width: 280 }}>
-                  <AppSelect name="category" value={form.category} onChange={handleChange}>
-                    {CATEGORIES.map(c => <MenuItem key={c} value={c} sx={menuItemSx}>{c}</MenuItem>)}
-                  </AppSelect>
-                </Box>
-              </ZohoRow>
+              <FormSelect label="Category" required name="category" value={form.category} onChange={handleChange}
+                options={CATEGORIES.map(c => ({ value: c, label: c }))} width={280} />
 
               <ZohoRow label="Amount" required>
                 <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
@@ -175,14 +160,8 @@ const AddEditExpense = () => {
                 </Box>
               </ZohoRow>
 
-              <ZohoRow label="Notes" noDivider alignStart>
-                <TextField
-                  name="notes" value={form.notes} onChange={handleChange}
-                  size="small" fullWidth multiline rows={3}
-                  placeholder="Add any additional notes about this expense…"
-                  sx={fieldSx}
-                />
-              </ZohoRow>
+              <FormInput label="Notes" noDivider name="notes" value={form.notes} onChange={handleChange}
+                multiline rows={3} placeholder="Add any additional notes about this expense…" />
             </Box>
 
             {/* ══ RECEIPT UPLOAD ══════════════════════════════════════════ */}

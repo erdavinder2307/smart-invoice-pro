@@ -17,19 +17,14 @@ import {
   IconButton,
   InputAdornment,
   MenuItem,
-  Paper,
   Select,
-  Table,
-  TableBody,
   TableCell,
-  TableContainer,
-  TableHead,
-  TablePagination,
   TableRow,
   TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
+import StandardDataTable from "./common/StandardDataTable";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
@@ -263,316 +258,227 @@ const ProductList = () => {
             </Button>
           </Box>
 
-          <Paper
-            elevation={0}
-            sx={{
-              border: "1px solid #e5e7eb",
-              borderRadius: "10px",
-              overflow: "hidden",
-              bgcolor: "#fff",
-            }}
-          >
-            <Box
-              sx={{
-                px: 2,
-                py: 1.25,
-                borderBottom: "1px solid #edf0f3",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 2,
-                flexWrap: "wrap",
-              }}
-            >
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, minHeight: 36 }}>
-                {selectedProducts.length > 0 && (
-                  <Typography sx={{ fontSize: "0.8125rem", color: "#5f6368" }}>
-                    {selectedProducts.length} selected
-                  </Typography>
-                )}
-              </Box>
-
-              <TextField
-                size="small"
-                placeholder="Search in Items"
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon sx={{ fontSize: 18, color: "#9aa0a6" }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  width: { xs: "100%", md: 280 },
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: "8px",
-                    bgcolor: "#fbfcfe",
-                    fontSize: "0.875rem",
-                    "& fieldset": { borderColor: "#e3e7ee" },
-                    "&:hover fieldset": { borderColor: "#cfd6df" },
-                    "&.Mui-focused fieldset": { borderColor: "#4f8df7" },
-                  },
-                }}
-              />
-            </Box>
-
-            {error && (
-              <Fade in={!!error}>
-                <Alert severity="error" onClose={() => setError("")} sx={{ m: 2, borderRadius: 2 }}>
-                  {error}
-                </Alert>
-              </Fade>
-            )}
-
-            <TableContainer sx={{ width: "100%", overflowX: "hidden" }}>
-              <Table size="small" sx={{ width: "100%", tableLayout: "fixed" }}>
-                <TableHead>
-                  <TableRow sx={{ bgcolor: "#fafbfc" }}>
-                    <TableCell padding="checkbox" sx={{ borderBottomColor: "#edf0f3", width: 44 }}>
-                      <Checkbox
-                        indeterminate={someVisibleSelected && !allVisibleSelected}
-                        checked={allVisibleSelected}
-                        onChange={handleSelectAll}
-                        sx={{ color: "#b6bdc7" }}
-                      />
-                    </TableCell>
-                    {[
-                      { label: "NAME", width: "17%" },
-                      { label: "PURCHASE DESCRIPTION", width: "18%" },
-                      { label: "PURCHASE RATE", width: "11%", align: "right" },
-                      { label: "DESCRIPTION", width: "18%" },
-                      { label: "RATE", width: "10%", align: "right" },
-                      { label: "HSN/SAC", width: "10%" },
-                      { label: "USAGE UNIT", width: "8%" },
-                      { label: "STOCK", width: "8%", align: "right" },
-                      { label: "", width: 72, align: "center" },
-                    ].map((column, index) => (
-                      <TableCell
-                        key={`${column.label}-${index}`}
-                        align={column.align || "left"}
-                        sx={{
-                          width: column.width,
-                          maxWidth: column.width,
-                          borderBottomColor: "#edf0f3",
-                          py: 1.2,
-                          color: "#8b95a7",
-                          fontSize: "0.68rem",
-                          letterSpacing: "0.05em",
-                          fontWeight: 700,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {column.label}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                </TableHead>
-
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={10} align="center" sx={{ py: 8, borderBottom: 0 }}>
-                        <CircularProgress size={24} />
-                      </TableCell>
-                    </TableRow>
-                  ) : paginatedProducts.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={10} align="center" sx={{ py: 8, borderBottom: 0 }}>
-                        <Typography sx={{ fontSize: "0.9rem", color: "#6b7280" }}>
-                          {searchTerm ? "No items matched your search." : "No items available."}
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    paginatedProducts.map((product) => {
-                      const isSelected = selectedProducts.includes(product.id);
-                      const availableQty = getAvailableQuantity(product);
-                      const stockBucket = getStockBucket(product);
-                      const purchaseRate = product.purchase_rate ?? 0;
-                      const rate = product.price ?? 0;
-
-                      return (
-                        <TableRow
-                          key={product.id}
-                          hover
-                          selected={isSelected}
-                          sx={{
-                            "& td": { borderBottomColor: "#edf0f3", py: 1.5 },
-                            "&:hover": { bgcolor: "#fafcff" },
-                          }}
-                        >
-                          <TableCell padding="checkbox">
-                            <Checkbox
-                              checked={isSelected}
-                              onChange={() => handleSelectOne(product.id)}
-                              sx={{ color: "#b6bdc7" }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Typography
-                              title={product.name || "Untitled Item"}
-                              onClick={() => navigate(`/products/edit/${product.id}`)}
-                              sx={{
-                                display: "block",
-                                width: "100%",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                                fontSize: "0.825rem",
-                                fontWeight: 600,
-                                color: "#2563eb",
-                                cursor: "pointer",
-                                "&:hover": { textDecoration: "underline" },
-                              }}
-                            >
-                              {product.name || "Untitled Item"}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography
-                              title={product.purchase_description || product.category || "-"}
-                              sx={{
-                                fontSize: "0.8125rem",
-                                color: "#2b3340",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {product.purchase_description || product.category || "-"}
-                            </Typography>
-                          </TableCell>
-                          <TableCell align="right">
-                            <Typography sx={{ fontSize: "0.8125rem", color: "#2b3340" }}>
-                              {formatCurrency(purchaseRate)}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography
-                              title={product.description || "-"}
-                              sx={{
-                                fontSize: "0.8125rem",
-                                color: "#2b3340",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {product.description || "-"}
-                            </Typography>
-                          </TableCell>
-                          <TableCell align="right">
-                            <Typography sx={{ fontSize: "0.8125rem", color: "#2b3340" }}>
-                              {formatCurrency(rate)}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography
-                              title={product.hsn_sac || "-"}
-                              sx={{
-                                fontSize: "0.8125rem",
-                                color: "#2b3340",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {product.hsn_sac || "-"}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography
-                              title={product.unit || "-"}
-                              sx={{
-                                fontSize: "0.8125rem",
-                                color: "#2b3340",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {product.unit || "-"}
-                            </Typography>
-                          </TableCell>
-                          <TableCell align="right">
-                            <Typography
-                              sx={{
-                                fontSize: "0.8125rem",
-                                fontWeight: 500,
-                                color: stockBucket === "Out of Stock" ? "#dc2626" : stockBucket === "Low Stock" ? "#b45309" : "#2b3340",
-                              }}
-                            >
-                              {availableQty}
-                            </Typography>
-                          </TableCell>
-                          <TableCell align="center">
-                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0.15 }}>
-                              <Tooltip title="Edit item">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => navigate(`/products/edit/${product.id}`)}
-                                  sx={{ color: "#5f87e7" }}
-                                >
-                                  <EditIcon sx={{ fontSize: 17 }} />
-                                </IconButton>
-                              </Tooltip>
-                              {product.preferred_vendor_id && (
-                                <Tooltip title="Restock item">
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => handleRestock(product)}
-                                    sx={{ color: "#16a34a" }}
-                                  >
-                                    <ShoppingCartIcon sx={{ fontSize: 17 }} />
-                                  </IconButton>
-                                </Tooltip>
-                              )}
-                              <Tooltip title="Delete item">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => setConfirmDeleteId(product.id)}
-                                  sx={{ color: "#ef4444" }}
-                                >
-                                  <DeleteIcon sx={{ fontSize: 17 }} />
-                                </IconButton>
-                              </Tooltip>
-                            </Box>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-
-            <Box sx={{ borderTop: "1px solid #edf0f3" }}>
-              <TablePagination
-                rowsPerPageOptions={[10, 25, 50]}
-                component="div"
-                count={filteredProducts.length}
-                rowsPerPage={rowsPerPage}
-                page={page}
-                onPageChange={handleChangePage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-                sx={{
-                  ".MuiTablePagination-toolbar": {
-                    minHeight: 52,
+          <StandardDataTable
+            columns={[
+              { key: 'checkbox', label: '', width: 44 },
+              { key: 'name', label: 'NAME', width: '17%' },
+              { key: 'purchase_description', label: 'PURCHASE DESCRIPTION', width: '18%' },
+              { key: 'purchase_rate', label: 'PURCHASE RATE', align: 'right', width: '11%' },
+              { key: 'description', label: 'DESCRIPTION', width: '18%' },
+              { key: 'rate', label: 'RATE', align: 'right', width: '10%' },
+              { key: 'hsn_sac', label: 'HSN/SAC', width: '10%' },
+              { key: 'unit', label: 'USAGE UNIT', width: '8%' },
+              { key: 'stock', label: 'STOCK', align: 'right', width: '8%' },
+              { key: 'actions', label: '', align: 'center', width: 72 },
+            ]}
+            rows={paginatedProducts}
+            loading={loading}
+            emptyTitle={searchTerm ? "No items matched your search." : "No items available."}
+            toolbar={
+              <>
+                <Box
+                  sx={{
                     px: 2,
-                  },
-                  ".MuiTablePagination-selectLabel, .MuiTablePagination-displayedRows": {
-                    fontSize: "0.75rem",
-                    color: "#5f6368",
-                  },
-                  ".MuiTablePagination-select": {
-                    fontSize: "0.75rem",
-                  },
-                }}
-              />
-            </Box>
-          </Paper>
+                    py: 1.25,
+                    borderBottom: "1px solid #edf0f3",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 2,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, minHeight: 36 }}>
+                    {selectedProducts.length > 0 && (
+                      <Typography sx={{ fontSize: "0.8125rem", color: "#5f6368" }}>
+                        {selectedProducts.length} selected
+                      </Typography>
+                    )}
+                  </Box>
+
+                  <TextField
+                    size="small"
+                    placeholder="Search in Items"
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <SearchIcon sx={{ fontSize: 18, color: "#9aa0a6" }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={{
+                      width: { xs: "100%", md: 280 },
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: "8px",
+                        bgcolor: "#fbfcfe",
+                        fontSize: "0.875rem",
+                        "& fieldset": { borderColor: "#e3e7ee" },
+                        "&:hover fieldset": { borderColor: "#cfd6df" },
+                        "&.Mui-focused fieldset": { borderColor: "#4f8df7" },
+                      },
+                    }}
+                  />
+                </Box>
+
+                {error && (
+                  <Fade in={!!error}>
+                    <Alert severity="error" onClose={() => setError("")} sx={{ m: 2, borderRadius: 2 }}>
+                      {error}
+                    </Alert>
+                  </Fade>
+                )}
+              </>
+            }
+            renderHeader={() => (
+              <TableRow sx={{ bgcolor: "#fafbfc" }}>
+                <TableCell padding="checkbox" sx={{ borderBottomColor: "#edf0f3", width: 44 }}>
+                  <Checkbox
+                    indeterminate={someVisibleSelected && !allVisibleSelected}
+                    checked={allVisibleSelected}
+                    onChange={handleSelectAll}
+                    sx={{ color: "#b6bdc7" }}
+                  />
+                </TableCell>
+                {[
+                  { label: "NAME", width: "17%" },
+                  { label: "PURCHASE DESCRIPTION", width: "18%" },
+                  { label: "PURCHASE RATE", width: "11%", align: "right" },
+                  { label: "DESCRIPTION", width: "18%" },
+                  { label: "RATE", width: "10%", align: "right" },
+                  { label: "HSN/SAC", width: "10%" },
+                  { label: "USAGE UNIT", width: "8%" },
+                  { label: "STOCK", width: "8%", align: "right" },
+                  { label: "", width: 72, align: "center" },
+                ].map((column, index) => (
+                  <TableCell
+                    key={`${column.label}-${index}`}
+                    align={column.align || "left"}
+                    sx={{
+                      width: column.width,
+                      maxWidth: column.width,
+                      borderBottomColor: "#edf0f3",
+                      py: 1.2,
+                      color: "#8b95a7",
+                      fontSize: "0.68rem",
+                      letterSpacing: "0.05em",
+                      fontWeight: 700,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {column.label}
+                  </TableCell>
+                ))}
+              </TableRow>
+            )}
+            renderRow={(product) => {
+              const isSelected = selectedProducts.includes(product.id);
+              const availableQty = getAvailableQuantity(product);
+              const stockBucket = getStockBucket(product);
+              const purchaseRate = product.purchase_rate ?? 0;
+              const rate = product.price ?? 0;
+              return (
+                <TableRow
+                  key={product.id}
+                  hover
+                  selected={isSelected}
+                  sx={{
+                    "& td": { borderBottomColor: "#edf0f3", py: 1.5 },
+                    "&:hover": { bgcolor: "#fafcff" },
+                  }}
+                >
+                  <TableCell padding="checkbox">
+                    <Checkbox
+                      checked={isSelected}
+                      onChange={() => handleSelectOne(product.id)}
+                      sx={{ color: "#b6bdc7" }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Typography
+                      title={product.name || "Untitled Item"}
+                      onClick={() => navigate(`/products/edit/${product.id}`)}
+                      sx={{
+                        display: "block",
+                        width: "100%",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        fontSize: "0.825rem",
+                        fontWeight: 600,
+                        color: "#2563eb",
+                        cursor: "pointer",
+                        "&:hover": { textDecoration: "underline" },
+                      }}
+                    >
+                      {product.name || "Untitled Item"}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography title={product.purchase_description || product.category || "-"} sx={{ fontSize: "0.8125rem", color: "#2b3340", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {product.purchase_description || product.category || "-"}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Typography sx={{ fontSize: "0.8125rem", color: "#2b3340" }}>{formatCurrency(purchaseRate)}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography title={product.description || "-"} sx={{ fontSize: "0.8125rem", color: "#2b3340", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {product.description || "-"}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Typography sx={{ fontSize: "0.8125rem", color: "#2b3340" }}>{formatCurrency(rate)}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography title={product.hsn_sac || "-"} sx={{ fontSize: "0.8125rem", color: "#2b3340", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {product.hsn_sac || "-"}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography title={product.unit || "-"} sx={{ fontSize: "0.8125rem", color: "#2b3340", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {product.unit || "-"}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Typography sx={{ fontSize: "0.8125rem", fontWeight: 500, color: stockBucket === "Out of Stock" ? "#dc2626" : stockBucket === "Low Stock" ? "#b45309" : "#2b3340" }}>
+                      {availableQty}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="center">
+                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0.15 }}>
+                      <Tooltip title="Edit item">
+                        <IconButton size="small" onClick={() => navigate(`/products/edit/${product.id}`)} sx={{ color: "#5f87e7" }}>
+                          <EditIcon sx={{ fontSize: 17 }} />
+                        </IconButton>
+                      </Tooltip>
+                      {product.preferred_vendor_id && (
+                        <Tooltip title="Restock item">
+                          <IconButton size="small" onClick={() => handleRestock(product)} sx={{ color: "#16a34a" }}>
+                            <ShoppingCartIcon sx={{ fontSize: 17 }} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      <Tooltip title="Delete item">
+                        <IconButton size="small" onClick={() => setConfirmDeleteId(product.id)} sx={{ color: "#ef4444" }}>
+                          <DeleteIcon sx={{ fontSize: 17 }} />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              );
+            }}
+            pagination={{
+              rowsPerPageOptions: [10, 25, 50],
+              count: filteredProducts.length,
+              rowsPerPage,
+              page,
+              onPageChange: handleChangePage,
+              onRowsPerPageChange: handleChangeRowsPerPage,
+            }}
+          />
         </Box>
       </Container>
 

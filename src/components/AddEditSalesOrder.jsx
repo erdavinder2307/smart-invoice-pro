@@ -5,20 +5,12 @@ import {
   Box,
   Button,
   TextField,
-  Select,
   MenuItem,
-  InputLabel,
-  FormControl,
   Checkbox,
   FormControlLabel,
   Typography,
-  Grid,
   CircularProgress,
   Alert,
-  Card,
-  CardContent,
-  Avatar,
-  Fade,
   Container,
   Table,
   TableBody,
@@ -27,20 +19,13 @@ import {
   TableHead,
   TableRow,
   IconButton,
-  Tooltip,
+  Paper,
 } from "@mui/material";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import MainLayout from "./Layout/MainLayout";
-import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
-import PersonIcon from '@mui/icons-material/Person';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
-import NotesIcon from '@mui/icons-material/Notes';
-import SaveIcon from '@mui/icons-material/Save';
-import CancelIcon from '@mui/icons-material/Cancel';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
-import LocalShippingIcon from '@mui/icons-material/LocalShipping';
+import { C, ZohoRow, AppSelect, fieldSx, menuItemSx, footerSx, cancelBtnSx, saveBtnSx } from './common/formStyles';
 
 const statusOptions = ["Draft", "Confirmed", "Closed", "Invoiced", "Cancelled"];
 
@@ -67,6 +52,7 @@ const initialForm = {
 const AddEditSalesOrder = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const soId = id;
   const [form, setForm] = useState(initialForm);
   const [customers, setCustomers] = useState([]);
@@ -78,21 +64,31 @@ const AddEditSalesOrder = () => {
     axios.get(createApiUrl("/api/customers")).then(res => {
       setCustomers(res.data);
       if (!soId) {
+        const cloneSourceId = location.state?.cloneFrom?.id;
         // Fetch next SO number
         axios.get(createApiUrl("/api/sales-orders/next-number")).then(nextRes => {
           const today = new Date().toISOString().slice(0, 10);
-          setForm(prev => ({ 
-            ...prev, 
-            so_number: nextRes.data.next_number,
-            order_date: today
-          }));
+          const nextNumber = nextRes.data.next_number || 'SO-001';
+          if (cloneSourceId) {
+            axios.get(createApiUrl(`/api/sales-orders/${cloneSourceId}`)).then(cloneRes => {
+              const src = cloneRes.data;
+              setForm(prev => ({
+                ...prev,
+                ...src,
+                id: undefined,
+                so_number: nextNumber,
+                order_date: today,
+                status: 'Draft',
+              }));
+            }).catch(() => {
+              setForm(prev => ({ ...prev, so_number: nextNumber, order_date: today }));
+            });
+          } else {
+            setForm(prev => ({ ...prev, so_number: nextNumber, order_date: today }));
+          }
         }).catch(() => {
           const today = new Date().toISOString().slice(0, 10);
-          setForm(prev => ({ 
-            ...prev, 
-            so_number: "SO-001",
-            order_date: today
-          }));
+          setForm(prev => ({ ...prev, so_number: "SO-001", order_date: today }));
         });
       } else {
         // Fetch existing sales order
@@ -107,6 +103,7 @@ const AddEditSalesOrder = () => {
       setError("Failed to load customers");
       console.error(err);
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [soId]);
 
   // Calculate totals
@@ -174,457 +171,350 @@ const AddEditSalesOrder = () => {
   };
 
   return (
-    <MainLayout>
-      <Container maxWidth="lg" sx={{ py: 3 }}>
-        {/* Header Section */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 4 }}>
-          <Avatar sx={{
-            bgcolor: 'primary.main',
-            width: 64,
-            height: 64,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-          }}>
-            <ShoppingCartIcon sx={{ fontSize: 32 }} />
-          </Avatar>
-          <Box>
-            <Typography variant="h4" fontWeight={700} color="text.primary">
-              {soId ? "Edit Sales Order" : "Create New Sales Order"}
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              {soId ? "Update the sales order details" : "Create a new sales order for your customer"}
-            </Typography>
-          </Box>
-        </Box>
+    <MainLayout title={id ? 'Edit Sales Order' : 'New Sales Order'}>
+      <Box sx={{ bgcolor: C.pageBg, minHeight: '100vh', pb: 6 }}>
+        <Container maxWidth="lg" sx={{ pt: 3 }}>
 
-        {error && (
-          <Fade in={!!error}>
-            <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }} onClose={() => setError("")}>
+          {error && (
+            <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2, borderRadius: '4px' }}>
               {error}
             </Alert>
-          </Fade>
-        )}
+          )}
 
-        <form onSubmit={handleSubmit}>
-          {/* Basic Information */}
-          <Card sx={{ mb: 3, borderRadius: 3, border: '1px solid', borderColor: 'grey.200' }}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h6" fontWeight={600} gutterBottom sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <PersonIcon color="primary" />
-                Basic Information
-              </Typography>
-              <Grid container spacing={2.5}>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    label="SO Number"
-                    name="so_number"
-                    value={form.so_number}
-                    onChange={handleChange}
-                    fullWidth
-                    required
-                    disabled={!!soId}
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <FormControl fullWidth required>
-                    <InputLabel>Customer</InputLabel>
-                    <Select
-                      name="customer_id"
-                      value={form.customer_id}
+          <Paper
+            component="form" onSubmit={handleSubmit}
+            elevation={0}
+            sx={{ bgcolor: C.white, border: `1px solid ${C.border}`, borderRadius: '4px', overflow: 'hidden' }}
+          >
+            {/* ══ BASIC INFORMATION ══════════════════════════════════ */}
+            <Box sx={{ px: 3 }}>
+              <Box sx={{ py: 1.5, borderBottom: `1px solid ${C.divider}` }}>
+                <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>
+                  Basic Information
+                </Typography>
+              </Box>
+
+              <ZohoRow label="SO Number" required>
+                <TextField
+                  name="so_number" value={form.so_number} onChange={handleChange}
+                  size="small" required disabled={!!id} sx={{ ...fieldSx, maxWidth: 240 }}
+                />
+              </ZohoRow>
+
+              <ZohoRow label="Customer" required>
+                <Box sx={{ width: 300 }}>
+                  <AppSelect name="customer_id" value={form.customer_id} onChange={handleChange} required>
+                    {customers.map(c => (
+                      <MenuItem key={c.id} value={c.id} sx={menuItemSx}>{c.name || c.display_name || 'Unknown Customer'}</MenuItem>
+                    ))}
+                  </AppSelect>
+                </Box>
+              </ZohoRow>
+
+              <ZohoRow label="Status" required>
+                <Box sx={{ width: 220 }}>
+                  <AppSelect name="status" value={form.status} onChange={handleChange} required>
+                    {statusOptions.map(s => (
+                      <MenuItem key={s} value={s} sx={menuItemSx}>{s}</MenuItem>
+                    ))}
+                  </AppSelect>
+                </Box>
+              </ZohoRow>
+
+              <ZohoRow label="Subject" noDivider>
+                <TextField
+                  name="subject" value={form.subject} onChange={handleChange}
+                  size="small" fullWidth sx={fieldSx}
+                  placeholder="e.g., Office equipment order"
+                />
+              </ZohoRow>
+            </Box>
+
+            {/* ══ DATES & TERMS ═════════════════════════════════════ */}
+            <Box sx={{ px: 3, borderTop: `1px solid ${C.divider}` }}>
+              <Box sx={{ py: 1.5, borderBottom: `1px solid ${C.divider}` }}>
+                <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>
+                  Dates & Terms
+                </Typography>
+              </Box>
+
+              <ZohoRow label="Order Date" required>
+                <TextField
+                  name="order_date" value={form.order_date} onChange={handleChange}
+                  type="date" size="small" required
+                  sx={{ ...fieldSx, maxWidth: 200 }}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </ZohoRow>
+
+              <ZohoRow label="Delivery Date">
+                <TextField
+                  name="delivery_date" value={form.delivery_date || ''} onChange={handleChange}
+                  type="date" size="small"
+                  sx={{ ...fieldSx, maxWidth: 200 }}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </ZohoRow>
+
+              <ZohoRow label="Payment Terms">
+                <TextField
+                  name="payment_terms" value={form.payment_terms} onChange={handleChange}
+                  size="small" fullWidth
+                  placeholder="e.g., Net 30"
+                  sx={fieldSx}
+                />
+              </ZohoRow>
+
+              <ZohoRow label="Salesperson" noDivider>
+                <TextField
+                  name="salesperson" value={form.salesperson || ''} onChange={handleChange}
+                  size="small" fullWidth
+                  placeholder="Enter salesperson name"
+                  sx={fieldSx}
+                />
+              </ZohoRow>
+            </Box>
+
+            {/* ══ TAX INFORMATION ════════════════════════════════════ */}
+            <Box sx={{ px: 3, borderTop: `1px solid ${C.divider}` }}>
+              <Box sx={{ py: 1.5, borderBottom: `1px solid ${C.divider}` }}>
+                <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>
+                  Tax Information
+                </Typography>
+              </Box>
+
+              <ZohoRow label="GST Applicable" noDivider>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      name="is_gst_applicable"
+                      checked={form.is_gst_applicable}
                       onChange={handleChange}
-                      label="Customer"
-                      sx={{ borderRadius: 2, textAlign: 'left', '& .MuiSelect-select': { textAlign: 'left' } }}
-                    >
-                      {customers.map((c) => (
-                        <MenuItem key={c.id} value={c.id}>
-                          {c.name || c.display_name || "Unknown Customer"}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <FormControl fullWidth required>
-                    <InputLabel>Status</InputLabel>
-                    <Select
-                      name="status"
-                      value={form.status}
-                      onChange={handleChange}
-                      label="Status"
-                      sx={{ borderRadius: 2, textAlign: 'left', '& .MuiSelect-select': { textAlign: 'left' } }}
-                    >
-                      {statusOptions.map((s) => (
-                        <MenuItem key={s} value={s}>
-                          {s}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    label="Subject"
-                    name="subject"
-                    value={form.subject}
-                    onChange={handleChange}
-                    fullWidth
-                    placeholder="e.g., Office equipment order"
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                  />
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
+                      color="primary"
+                    />
+                  }
+                  label=""
+                />
+              </ZohoRow>
 
-          {/* Dates & Terms */}
-          <Card sx={{ mb: 3, borderRadius: 3, border: '1px solid', borderColor: 'grey.200' }}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h6" fontWeight={600} gutterBottom sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <CalendarTodayIcon color="primary" />
-                Dates & Terms
-              </Typography>
-              <Grid container spacing={2.5}>
-                <Grid item xs={12} md={4}>
-                  <TextField
-                    label="Order Date"
-                    name="order_date"
-                    value={form.order_date}
-                    onChange={handleChange}
-                    type="date"
-                    fullWidth
-                    required
-                    InputLabelProps={{ shrink: true }}
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                  />
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <TextField
-                    label="Delivery Date (Optional)"
-                    name="delivery_date"
-                    value={form.delivery_date || ""}
-                    onChange={handleChange}
-                    type="date"
-                    fullWidth
-                    InputLabelProps={{ shrink: true }}
-                    InputProps={{
-                      startAdornment: <LocalShippingIcon sx={{ mr: 1, color: 'action.active' }} />
-                    }}
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                  />
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <TextField
-                    label="Payment Terms"
-                    name="payment_terms"
-                    value={form.payment_terms}
-                    onChange={handleChange}
-                    fullWidth
-                    placeholder="e.g., Net 30"
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    label="Salesperson"
-                    name="salesperson"
-                    value={form.salesperson}
-                    onChange={handleChange}
-                    fullWidth
-                    placeholder="Enter salesperson name"
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                  />
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
+              {form.is_gst_applicable && (
+                <Box>
+                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', py: 1.25, minHeight: 52, borderBottom: `1px solid ${C.divider}` }}>
+                    <Box sx={{ width: 180, minWidth: 180, flexShrink: 0, pr: 2 }}>
+                      <Typography variant="body2" sx={{ fontSize: '0.8125rem', color: C.label }}>CGST Amount</Typography>
+                    </Box>
+                    <TextField
+                      name="cgst_amount" value={form.cgst_amount} onChange={handleChange}
+                      type="number" size="small"
+                      sx={{ ...fieldSx, width: 150 }}
+                      inputProps={{ min: 0, step: 0.01 }}
+                    />
+                  </Box>
 
-          {/* Tax Information */}
-          <Card sx={{ mb: 3, borderRadius: 3, border: '1px solid', borderColor: 'grey.200' }}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h6" fontWeight={600} gutterBottom sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <AttachMoneyIcon color="primary" />
-                Tax Information
-              </Typography>
-              <Grid container spacing={2.5}>
-                <Grid item xs={12}>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        name="is_gst_applicable"
-                        checked={form.is_gst_applicable}
-                        onChange={handleChange}
-                        color="primary"
-                      />
-                    }
-                    label="GST Applicable"
-                  />
-                </Grid>
-                {form.is_gst_applicable && (
-                  <>
-                    <Grid item xs={12} md={4}>
-                      <TextField
-                        label="CGST Amount"
-                        name="cgst_amount"
-                        value={form.cgst_amount}
-                        onChange={handleChange}
-                        type="number"
-                        fullWidth
-                        inputProps={{ min: 0, step: 0.01 }}
-                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                      />
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                      <TextField
-                        label="SGST Amount"
-                        name="sgst_amount"
-                        value={form.sgst_amount}
-                        onChange={handleChange}
-                        type="number"
-                        fullWidth
-                        inputProps={{ min: 0, step: 0.01 }}
-                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                      />
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                      <TextField
-                        label="IGST Amount"
-                        name="igst_amount"
-                        value={form.igst_amount}
-                        onChange={handleChange}
-                        type="number"
-                        fullWidth
-                        inputProps={{ min: 0, step: 0.01 }}
-                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                      />
-                    </Grid>
-                  </>
-                )}
-              </Grid>
-            </CardContent>
-          </Card>
+                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', py: 1.25, minHeight: 52, borderBottom: `1px solid ${C.divider}` }}>
+                    <Box sx={{ width: 180, minWidth: 180, flexShrink: 0, pr: 2 }}>
+                      <Typography variant="body2" sx={{ fontSize: '0.8125rem', color: C.label }}>SGST Amount</Typography>
+                    </Box>
+                    <TextField
+                      name="sgst_amount" value={form.sgst_amount} onChange={handleChange}
+                      type="number" size="small"
+                      sx={{ ...fieldSx, width: 150 }}
+                      inputProps={{ min: 0, step: 0.01 }}
+                    />
+                  </Box>
 
-          {/* Line Items */}
-          <Card sx={{ mb: 3, borderRadius: 3, border: '1px solid', borderColor: 'grey.200' }}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h6" fontWeight={600} gutterBottom sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <ShoppingCartIcon color="primary" />
-                Line Items
-              </Typography>
-              <TableContainer sx={{ borderRadius: 2, border: '1px solid', borderColor: 'grey.200', overflowX: 'hidden' }}>
+                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', py: 1.25, minHeight: 52 }}>
+                    <Box sx={{ width: 180, minWidth: 180, flexShrink: 0, pr: 2 }}>
+                      <Typography variant="body2" sx={{ fontSize: '0.8125rem', color: C.label }}>IGST Amount</Typography>
+                    </Box>
+                    <TextField
+                      name="igst_amount" value={form.igst_amount} onChange={handleChange}
+                      type="number" size="small"
+                      sx={{ ...fieldSx, width: 150 }}
+                      inputProps={{ min: 0, step: 0.01 }}
+                    />
+                  </Box>
+                </Box>
+              )}
+            </Box>
+
+            {/* ══ LINE ITEMS ════════════════════════════════════════ */}
+            <Box sx={{ px: 3, borderTop: `1px solid ${C.divider}` }}>
+              <Box sx={{ py: 1.5, borderBottom: `1px solid ${C.divider}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>Line Items</Typography>
+                <Button startIcon={<AddIcon />} onClick={() => {
+                  setForm({
+                    ...form,
+                    items: [...(form.items || []), { item_name: "", quantity: 1, rate: 0, discount: 0, tax: 0, amount: 0 }]
+                  });
+                }} size="small" sx={{ textTransform: 'none' }}>
+                  Add Item
+                </Button>
+              </Box>
+              <TableContainer>
                 <Table size="small">
-                  <TableHead sx={{ bgcolor: 'grey.50' }}>
+                  <TableHead>
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 700, minWidth: 200 }}>Item Details</TableCell>
-                      <TableCell align="center" sx={{ fontWeight: 700 }}>Qty</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Rate (₹)</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Discount</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Tax %</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 700 }}>Amount (₹)</TableCell>
-                      <TableCell align="center" sx={{ fontWeight: 700, width: 40 }}>Action</TableCell>
+                      <TableCell>Item Details</TableCell>
+                      <TableCell align="center">Qty</TableCell>
+                      <TableCell>Rate (₹)</TableCell>
+                      <TableCell>Discount</TableCell>
+                      <TableCell>Tax %</TableCell>
+                      <TableCell align="right">Amount (₹)</TableCell>
+                      <TableCell align="center" />
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {form.items?.map((item, idx) => (
-                      <TableRow key={idx} sx={{ '&:hover': { bgcolor: 'grey.50' } }}>
+                      <TableRow key={idx}>
                         <TableCell>
                           <TextField
-                            size="small"
-                            placeholder="Enter item name or description"
+                            size="small" fullWidth
+                            placeholder="Enter item name"
                             value={item.item_name || ""}
                             onChange={(e) => {
                               const newItems = [...form.items];
                               newItems[idx].item_name = e.target.value;
                               setForm({ ...form, items: newItems });
                             }}
-                            fullWidth
+                            sx={fieldSx}
                           />
                         </TableCell>
                         <TableCell align="center">
                           <TextField
-                            size="small"
-                            type="number"
-                            value={item.quantity}
+                            size="small" type="number" value={item.quantity}
                             onChange={(e) => {
                               const newItems = [...form.items];
                               newItems[idx].quantity = parseInt(e.target.value) || 0;
                               setForm({ ...form, items: newItems });
                             }}
                             inputProps={{ min: 0 }}
-                            sx={{ width: 80 }}
+                            sx={{ ...fieldSx, width: 80 }}
                           />
                         </TableCell>
                         <TableCell>
                           <TextField
-                            size="small"
-                            type="number"
-                            value={item.rate}
+                            size="small" type="number" value={item.rate}
                             onChange={(e) => {
                               const newItems = [...form.items];
                               newItems[idx].rate = parseFloat(e.target.value) || 0;
                               setForm({ ...form, items: newItems });
                             }}
                             inputProps={{ min: 0, step: 0.01 }}
-                            sx={{ width: 100 }}
+                            sx={{ ...fieldSx, width: 100 }}
                           />
                         </TableCell>
                         <TableCell>
                           <TextField
-                            size="small"
-                            type="number"
-                            value={item.discount}
+                            size="small" type="number" value={item.discount}
                             onChange={(e) => {
                               const newItems = [...form.items];
                               newItems[idx].discount = parseFloat(e.target.value) || 0;
                               setForm({ ...form, items: newItems });
                             }}
                             inputProps={{ min: 0, step: 0.01 }}
-                            sx={{ width: 100 }}
+                            sx={{ ...fieldSx, width: 100 }}
                           />
                         </TableCell>
                         <TableCell>
                           <TextField
-                            size="small"
-                            type="number"
-                            value={item.tax}
+                            size="small" type="number" value={item.tax}
                             onChange={(e) => {
                               const newItems = [...form.items];
                               newItems[idx].tax = parseFloat(e.target.value) || 0;
                               setForm({ ...form, items: newItems });
                             }}
                             inputProps={{ min: 0, max: 100, step: 0.1 }}
-                            sx={{ width: 80 }}
+                            sx={{ ...fieldSx, width: 80 }}
                           />
                         </TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 600, color: 'primary.main' }}>
-                          ₹{((item.quantity * item.rate - item.discount) * (1 + item.tax / 100)).toFixed(2)}
+                        <TableCell align="right">
+                          <Typography variant="body2" fontWeight={600}>
+                            ₹{((item.quantity * item.rate - item.discount) * (1 + item.tax / 100)).toFixed(2)}
+                          </Typography>
                         </TableCell>
                         <TableCell align="center">
-                          <Tooltip title="Delete">
-                            <IconButton
-                              size="small"
-                              onClick={() => {
-                                const newItems = form.items.filter((_, i) => i !== idx);
-                                 setForm({ ...form, items: newItems.length > 0 ? newItems : [{ item_name: "", quantity: 1, rate: 0, discount: 0, tax: 0, amount: 0 }] });
-                              }}
-                              sx={{ color: 'error.main' }}
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              const newItems = form.items.filter((_, i) => i !== idx);
+                              setForm({ ...form, items: newItems.length > 0 ? newItems : [{ item_name: "", quantity: 1, rate: 0, discount: 0, tax: 0, amount: 0 }] });
+                            }}
+                            color="error"
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               </TableContainer>
-              <Button
-                startIcon={<AddIcon />}
-                onClick={() => {
-                  setForm({
-                    ...form,
-                    items: [...(form.items || []), { item_name: "", quantity: 1, rate: 0, discount: 0, tax: 0, amount: 0 }]
-                  });
-                }}
-                sx={{ mt: 2, borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
-                variant="outlined"
-              >
-                Add Line Item
-              </Button>
-            </CardContent>
-          </Card>
+            </Box>
 
-          {/* Notes & Terms */}
-          <Card sx={{ mb: 3, borderRadius: 3, border: '1px solid', borderColor: 'grey.200' }}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h6" fontWeight={600} gutterBottom sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <NotesIcon color="primary" />
-                Notes & Terms
-              </Typography>
-              <Grid container spacing={2.5}>
-                <Grid item xs={12}>
-                  <TextField
-                    label="Customer Notes"
-                    name="notes"
-                    value={form.notes}
-                    onChange={handleChange}
-                    fullWidth
-                    multiline
-                    rows={2}
-                    placeholder="Thank you for your business!"
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    label="Terms & Conditions"
-                    name="terms_conditions"
-                    value={form.terms_conditions}
-                    onChange={handleChange}
-                    fullWidth
-                    multiline
-                    rows={2}
-                    placeholder="Enter terms and conditions"
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                  />
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-
-          {/* Summary */}
-          <Card sx={{ mb: 3, borderRadius: 3, border: '1px solid', borderColor: 'grey.200', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-            <CardContent sx={{ p: 3 }}>
-              <Grid container spacing={2}>
-                <Grid item xs={6}>
-                  <Typography variant="h6" sx={{ color: 'white', fontWeight: 600 }}>Subtotal:</Typography>
-                </Grid>
-                <Grid item xs={6} sx={{ textAlign: 'right' }}>
-                  <Typography variant="h6" sx={{ color: 'white', fontWeight: 600 }}>
-                    ₹{form.subtotal.toFixed(2)}
-                  </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="h6" sx={{ color: 'white', fontWeight: 600 }}>Total Tax:</Typography>
-                </Grid>
-                <Grid item xs={6} sx={{ textAlign: 'right' }}>
-                  <Typography variant="h6" sx={{ color: 'white', fontWeight: 600 }}>
-                    ₹{form.total_tax.toFixed(2)}
-                  </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="h5" sx={{ color: 'white', fontWeight: 700 }}>Total Amount:</Typography>
-                </Grid>
-                <Grid item xs={6} sx={{ textAlign: 'right' }}>
-                  <Typography variant="h5" sx={{ color: 'white', fontWeight: 700 }}>
+            {/* ══ TOTALS SUMMARY ════════════════════════════════════════ */}
+            <Box sx={{ px: 3, py: 2, borderTop: `1px solid ${C.divider}`, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+              <Box sx={{ maxWidth: 400, ml: 'auto' }}>
+                <Box display="flex" justifyContent="space-between" mb={1}>
+                  <Typography sx={{ color: '#fff', fontWeight: 600 }}>Subtotal:</Typography>
+                  <Typography sx={{ color: '#fff', fontWeight: 600 }}>₹{form.subtotal.toFixed(2)}</Typography>
+                </Box>
+                <Box display="flex" justifyContent="space-between" mb={1}>
+                  <Typography sx={{ color: '#fff', fontWeight: 600 }}>Total Tax:</Typography>
+                  <Typography sx={{ color: '#fff', fontWeight: 600 }}>₹{form.total_tax.toFixed(2)}</Typography>
+                </Box>
+                <Box display="flex" justifyContent="space-between" mt={2} pt={2} sx={{ borderTop: '2px solid rgba(255,255,255,0.3)' }}>
+                  <Typography sx={{ fontSize: '1.125rem', fontWeight: 700, color: '#fff' }}>Total Amount:</Typography>
+                  <Typography sx={{ fontSize: '1.125rem', fontWeight: 700, color: '#fff' }}>
                     ₹{form.total_amount.toFixed(2)}
                   </Typography>
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
+                </Box>
+              </Box>
+            </Box>
 
-          {/* Action Buttons */}
-          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-            <Button
-              variant="outlined"
-              startIcon={<CancelIcon />}
-              onClick={() => navigate("/sales-orders")}
-              sx={{ borderRadius: 2, px: 4, py: 1.5, textTransform: 'none', fontWeight: 600 }}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="contained"
-              type="submit"
-              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
-              disabled={loading}
-              sx={{ borderRadius: 2, px: 4, py: 1.5, textTransform: 'none', fontWeight: 600, boxShadow: 3 }}
-            >
-              {loading ? "Saving..." : (soId ? "Update Sales Order" : "Create Sales Order")}
-            </Button>
-          </Box>
-        </form>
-      </Container>
+            {/* ══ NOTES & TERMS ═════════════════════════════════════ */}
+            <Box sx={{ px: 3, borderTop: `1px solid ${C.divider}` }}>
+              <Box sx={{ py: 1.5, borderBottom: `1px solid ${C.divider}` }}>
+                <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>
+                  Notes & Terms
+                </Typography>
+              </Box>
+
+              <ZohoRow label="Customer Notes" alignStart>
+                <TextField
+                  name="notes" value={form.notes} onChange={handleChange}
+                  size="small" fullWidth multiline rows={2}
+                  placeholder="Thank you for your business!"
+                  sx={fieldSx}
+                />
+              </ZohoRow>
+
+              <ZohoRow label="Terms & Conditions" noDivider alignStart>
+                <TextField
+                  name="terms_conditions" value={form.terms_conditions} onChange={handleChange}
+                  size="small" fullWidth multiline rows={2}
+                  placeholder="Enter terms and conditions"
+                  sx={fieldSx}
+                />
+              </ZohoRow>
+            </Box>
+
+            {/* ══ FOOTER ════════════════════════════════════════════════ */}
+            <Box sx={footerSx}>
+              <Button variant="outlined" onClick={() => navigate('/sales-orders')} disabled={loading} sx={cancelBtnSx}>
+                Cancel
+              </Button>
+              <Button
+                type="submit" variant="contained" disabled={loading}
+                startIcon={loading ? <CircularProgress size={14} color="inherit" /> : null}
+                sx={saveBtnSx}
+              >
+                {loading ? 'Saving…' : id ? 'Update' : 'Save'}
+              </Button>
+            </Box>
+          </Paper>
+        </Container>
+      </Box>
     </MainLayout>
   );
 };

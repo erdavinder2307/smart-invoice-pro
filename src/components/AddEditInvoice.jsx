@@ -26,7 +26,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import MainLayout from './Layout/MainLayout';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -125,6 +125,7 @@ const CellField = ({ value, onChange, type = 'number', width = 90, inputProps, p
 const AddEditInvoice = ({ onSuccess, onCancel }) => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const invoiceId = id;
   const { prefs } = useInvoicePreferences();
   const [form, setForm] = useState(initialForm);
@@ -185,20 +186,42 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
             }
             return issueDate;
           };
+          const cloneSourceId = location.state?.cloneFrom?.id;
           try {
             const nextNumberResponse = await axios.get(createApiUrl('/api/invoices/next-number'));
             if (!active) return;
+            const nextNumber = nextNumberResponse.data?.next_invoice_number || 'INV-00001';
 
-            setForm((prev) => ({
-              ...prev,
-              invoice_number:   nextNumberResponse.data?.next_invoice_number || 'INV-00001',
-              issue_date:       today,
-              due_date:         calcDueDate(today),
-              payment_terms:    prefs.default_payment_terms || 'Net 30',
-              notes:            prefs.default_notes         || '',
-              terms_conditions: prefs.default_terms         || '',
-              status: 'Draft',
-            }));
+            if (cloneSourceId) {
+              const cloneResponse = await axios.get(createApiUrl(`/api/invoices/${cloneSourceId}`));
+              if (!active) return;
+              const src = cloneResponse.data;
+              setForm((prev) => ({
+                ...prev,
+                ...src,
+                id: undefined,
+                invoice_number: nextNumber,
+                issue_date: today,
+                due_date: calcDueDate(today),
+                amount_paid: 0,
+                balance_due: src.total_amount || 0,
+                status: 'Draft',
+                items: Array.isArray(src.items) && src.items.length
+                  ? src.items.map((item) => ({ ...initialForm.items[0], ...item }))
+                  : [...initialForm.items],
+              }));
+            } else {
+              setForm((prev) => ({
+                ...prev,
+                invoice_number:   nextNumber,
+                issue_date:       today,
+                due_date:         calcDueDate(today),
+                payment_terms:    prefs.default_payment_terms || 'Net 30',
+                notes:            prefs.default_notes         || '',
+                terms_conditions: prefs.default_terms         || '',
+                status: 'Draft',
+              }));
+            }
           } catch {
             if (!active) return;
             setForm((prev) => ({

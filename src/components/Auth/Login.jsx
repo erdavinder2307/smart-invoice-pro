@@ -38,7 +38,7 @@ import Footer from '../Layout/Footer';
 import { useAuth } from "../../context/AuthContext";
 
 const LoginPage = () => {
-  const { login, register } = useAuth();
+  const { login, register, sessionExpired } = useAuth();
   const [credentials, setCredentials] = useState({ username: "", password: "", confirmPassword: "" });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -111,7 +111,7 @@ const LoginPage = () => {
 
         // Only send username and password to the API
         const { username, password } = credentials;
-        const response = await register({ username, password });
+        await register({ username, password });
         setSuccess("Account created successfully! You can now sign in.");
         setIsSignup(false);
         setCredentials({ username: "", password: "", confirmPassword: "" });
@@ -123,7 +123,7 @@ const LoginPage = () => {
           hasSpecialChar: false
         });
       } else {
-        const token = await login(credentials);
+        await login(credentials);
         navigate("/dashboard");
       }
     } catch (err) {
@@ -251,6 +251,13 @@ const LoginPage = () => {
                     </motion.div>
 
                     {/* Alerts */}
+                    {sessionExpired && !error && (
+                      <motion.div variants={fadeInUp}>
+                        <Alert severity="warning" sx={{ mb: 3, borderRadius: 2 }}>
+                          Session expired. Please login again.
+                        </Alert>
+                      </motion.div>
+                    )}
                     {error && (
                       <motion.div variants={fadeInUp}>
                         <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>

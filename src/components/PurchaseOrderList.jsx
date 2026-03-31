@@ -8,13 +8,8 @@ import {
   Box,
   Button,
   Typography,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
   TableRow,
+  TableCell,
   CircularProgress,
   Alert,
   InputAdornment,
@@ -33,18 +28,24 @@ import {
   Container,
   FormControl,
   Select,
-  TablePagination,
+  Checkbox,
+  FormControlLabel,
+  Snackbar,
   Tooltip
 } from "@mui/material";
+import StandardDataTable from "./common/StandardDataTable";
 import { useNavigate } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import EmailIcon from "@mui/icons-material/Email";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import ReceiptIcon from "@mui/icons-material/Receipt";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 
 const PurchaseOrderList = () => {
   const navigate = useNavigate();
@@ -57,6 +58,8 @@ const PurchaseOrderList = () => {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
   const [selectedPO, setSelectedPO] = useState(null);
+  const [emailDialog, setEmailDialog] = useState({ open: false, po: null, to: '', message: '', attachPdf: false, sending: false });
+  const [toast, setToast] = useState({ open: false, message: '' });
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
@@ -90,6 +93,47 @@ const PurchaseOrderList = () => {
       setError(error.response?.data?.error || "Failed to delete purchase order");
     }
     setLoading(false);
+  };
+
+  const handleDownloadPDF = async (po) => {
+    handleActionMenuClose();
+    try {
+      const res = await axios.get(createApiUrl(`/api/purchase-orders/${po.id}/pdf`), { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${po.po_number || 'purchase-order'}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      setError('Failed to download PDF.');
+    }
+  };
+
+  const handleEmailOpen = (po) => {
+    setEmailDialog({ open: true, po, to: '', message: '', attachPdf: false, sending: false });
+    handleActionMenuClose();
+  };
+
+  const handleEmailSend = async () => {
+    const { po, to, message, attachPdf } = emailDialog;
+    if (!to) return;
+    setEmailDialog((d) => ({ ...d, sending: true }));
+    try {
+      await axios.post(createApiUrl(`/api/purchase-orders/${po.id}/send-email`), {
+        recipient_email: to,
+        message,
+        attach_pdf: attachPdf,
+      });
+      setEmailDialog({ open: false, po: null, to: '', message: '', attachPdf: false, sending: false });
+      setToast({ open: true, message: 'Purchase order emailed successfully.' });
+      fetchData();
+    } catch {
+      setEmailDialog((d) => ({ ...d, sending: false }));
+      setError('Failed to send email.');
+    }
   };
 
   const handleConvertToBill = async () => {
@@ -293,127 +337,78 @@ const PurchaseOrderList = () => {
         )}
 
         {/* Main Table */}
-        <Paper sx={{ borderRadius: 3, border: "1px solid", borderColor: "grey.200", overflow: "hidden" }}>
-          {loading ? (
-            <Box sx={{ display: "flex", justifyContent: "center", p: 6 }}>
-              <CircularProgress />
-            </Box>
-          ) : (
-            <>
-              <TableContainer sx={{ overflowX: "hidden" }}>
-                <Table>
-                  <TableHead sx={{ bgcolor: "grey.50" }}>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 700 }}>PO #</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Vendor</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Subject</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Order Date</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Delivery Date</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Amount</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-                      <TableCell align="center" sx={{ fontWeight: 700 }}>Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {paginatedPOs.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={8} align="center" sx={{ py: 8 }}>
-                          <ShoppingCartIcon sx={{ fontSize: 48, color: "grey.300", mb: 2 }} />
-                          <Typography variant="h6" color="text.secondary" gutterBottom>
-                            {searchTerm || statusFilter !== "All" ? "No purchase orders found" : "No purchase orders yet"}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {searchTerm || statusFilter !== "All"
-                              ? "Try adjusting your search or filters"
-                              : "Click 'New Purchase Order' to create your first PO"}
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      paginatedPOs.map((po) => {
-                        const vendor = vendors.find(v => v.id === po.vendor_id);
-                        return (
-                          <TableRow key={po.id} hover sx={{ "&:hover": { bgcolor: "grey.50" } }}>
-                            <TableCell>
-                              <Typography variant="body2" fontWeight={600}>
-                                {po.po_number}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2">
-                                {vendor ? vendor.vendor_name : "Unknown Vendor"}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2">{po.subject || "-"}</Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2">
-                                {new Date(po.order_date).toLocaleDateString()}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2">
-                                {po.delivery_date ? new Date(po.delivery_date).toLocaleDateString() : "-"}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2" fontWeight={600}>
-                                ₹{po.total_amount?.toLocaleString() || "0"}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <StatusBadge status={po.status} />
-                            </TableCell>
-                            <TableCell align="center">
-                              <Box display="flex" gap={0.5} justifyContent="center">
-                                <Tooltip title="Edit">
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => navigate(`/purchase-orders/edit/${po.id}`)}
-                                    sx={{ color: "primary.main" }}
-                                  >
-                                    <EditIcon fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                                <Tooltip title="More">
-                                  <IconButton
-                                    size="small"
-                                    onClick={(e) => handleActionMenuClick(e, po)}
-                                  >
-                                    <MoreVertIcon fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                                <Tooltip title="Delete">
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => setConfirmDeleteId(po.id)}
-                                    sx={{ color: "error.main" }}
-                                  >
-                                    <DeleteIcon fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                              </Box>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-              <TablePagination
-                rowsPerPageOptions={[10, 25, 50]}
-                component="div"
-                count={filteredPOs.length}
-                rowsPerPage={rowsPerPage}
-                page={page}
-                onPageChange={handleChangePage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-              />
-            </>
-          )}
-        </Paper>
+        <StandardDataTable
+          columns={[
+            { key: 'po_number', label: 'PO #' },
+            { key: 'vendor', label: 'Vendor' },
+            { key: 'subject', label: 'Subject' },
+            { key: 'order_date', label: 'Order Date' },
+            { key: 'delivery_date', label: 'Delivery Date' },
+            { key: 'amount', label: 'Amount' },
+            { key: 'status', label: 'Status' },
+            { key: 'actions', label: 'Actions', align: 'center' },
+          ]}
+          rows={paginatedPOs}
+          loading={loading}
+          emptyIcon={<ShoppingCartIcon sx={{ fontSize: 48 }} />}
+          emptyTitle={searchTerm || statusFilter !== "All" ? "No purchase orders found" : "No purchase orders yet"}
+          emptySubtitle={searchTerm || statusFilter !== "All" ? "Try adjusting your search or filters" : "Click 'New Purchase Order' to create your first PO"}
+          renderRow={(po) => {
+            const vendor = vendors.find(v => v.id === po.vendor_id);
+            return (
+              <TableRow key={po.id} hover>
+                <TableCell>
+                  <Typography variant="body2" fontWeight={600}>{po.po_number}</Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2">{vendor ? vendor.vendor_name : "Unknown Vendor"}</Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2">{po.subject || "-"}</Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2">{new Date(po.order_date).toLocaleDateString()}</Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2">{po.delivery_date ? new Date(po.delivery_date).toLocaleDateString() : "-"}</Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2" fontWeight={600}>₹{po.total_amount?.toLocaleString() || "0"}</Typography>
+                </TableCell>
+                <TableCell>
+                  <StatusBadge status={po.status} />
+                </TableCell>
+                <TableCell align="center">
+                  <Box display="flex" gap={0.5} justifyContent="center">
+                    <Tooltip title="Edit">
+                      <IconButton size="small" onClick={() => navigate(`/purchase-orders/edit/${po.id}`)} sx={{ color: 'primary.main' }}>
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="More">
+                      <IconButton size="small" onClick={(e) => handleActionMenuClick(e, po)}>
+                        <MoreVertIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete">
+                      <IconButton size="small" onClick={() => setConfirmDeleteId(po.id)} sx={{ color: 'error.main' }}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                </TableCell>
+              </TableRow>
+            );
+          }}
+          pagination={{
+            rowsPerPageOptions: [10, 25, 50],
+            count: filteredPOs.length,
+            rowsPerPage,
+            page,
+            onPageChange: handleChangePage,
+            onRowsPerPageChange: handleChangeRowsPerPage,
+          }}
+        />
       </Container>
 
       {/* Action Menu */}
@@ -422,6 +417,22 @@ const PurchaseOrderList = () => {
         open={Boolean(actionMenuAnchor)}
         onClose={handleActionMenuClose}
       >
+        <MenuItem onClick={() => handleDownloadPDF(selectedPO)} sx={{py: 1.25}}>
+          <ListItemIcon><PictureAsPdfIcon fontSize="small" color="success" /></ListItemIcon>
+          <ListItemText>Download PDF</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => handleEmailOpen(selectedPO)} sx={{py: 1.25}}>
+          <ListItemIcon><EmailIcon fontSize="small" color="primary" /></ListItemIcon>
+          <ListItemText>Send Email</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => { navigate(`/purchase-orders/edit/${selectedPO?.id}`); handleActionMenuClose(); }}>
+          <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>Edit</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => { navigate('/purchase-orders/add', { state: { cloneFrom: selectedPO } }); handleActionMenuClose(); }}>
+          <ListItemIcon><ContentCopyIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>Duplicate</ListItemText>
+        </MenuItem>
         <MenuItem onClick={handleConvertToBill}>
           <ListItemIcon>
             <ReceiptIcon fontSize="small" />
@@ -475,6 +486,40 @@ const PurchaseOrderList = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Email dialog */}
+      <Dialog open={emailDialog.open} onClose={() => setEmailDialog((d) => ({ ...d, open: false }))} maxWidth="sm" fullWidth>
+        <DialogTitle>Email Purchase Order {emailDialog.po?.po_number}</DialogTitle>
+        <DialogContent sx={{ pt: '12px !important', display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <TextField
+            label="Recipient Email" fullWidth size="small" type="email"
+            value={emailDialog.to}
+            onChange={(e) => setEmailDialog((d) => ({ ...d, to: e.target.value }))}
+          />
+          <TextField
+            label="Message (optional)" fullWidth size="small" multiline rows={3}
+            value={emailDialog.message}
+            onChange={(e) => setEmailDialog((d) => ({ ...d, message: e.target.value }))}
+          />
+          <FormControlLabel
+            control={<Checkbox checked={emailDialog.attachPdf} onChange={(e) => setEmailDialog((d) => ({ ...d, attachPdf: e.target.checked }))} />}
+            label="Attach PDF"
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setEmailDialog((d) => ({ ...d, open: false }))} disabled={emailDialog.sending}>Cancel</Button>
+          <Button variant="contained" onClick={handleEmailSend} disabled={emailDialog.sending || !emailDialog.to}>
+            {emailDialog.sending ? 'Sending…' : 'Send'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar
+        open={toast.open}
+        autoHideDuration={4000}
+        onClose={() => setToast({ open: false, message: '' })}
+        message={toast.message}
+      />
     </MainLayout>
   );
 };

@@ -215,6 +215,95 @@ export const exportARAgingExcel = (data, asOfDate) => {
 };
 
 // ─── Balance Sheet ───────────────────────────────────────────────────────────
+export const exportAPAgingPDF = (data, asOfDate) => {
+  const doc = createPdf('A/P Aging Report', `As of: ${asOfDate}`);
+
+  autoTable(doc, {
+    startY: 30,
+    head: [['Age Bracket', 'Count', 'Total Amount', '% of Total']],
+    body: Object.entries(data.aging_buckets).map(([bucket, d]) => {
+      const pct = data.total_outstanding > 0
+        ? ((d.total / data.total_outstanding) * 100).toFixed(1)
+        : '0.0';
+      return [
+        bucket === 'current' ? 'Current' : `${bucket} Days`,
+        d.count,
+        `$${d.total.toLocaleString()}`,
+        `${pct}%`,
+      ];
+    }),
+    foot: [['Total', data.total_bills, `$${data.total_outstanding.toLocaleString()}`, '100%']],
+    headStyles: { fillColor: [244, 67, 54] },
+    footStyles: { fillColor: [220, 220, 220], textColor: [0, 0, 0], fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [245, 245, 245] },
+  });
+
+  if (data.vendor_summary?.length > 0) {
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 8,
+      head: [['Vendor', 'Outstanding Balance']],
+      body: data.vendor_summary.slice(0, 20).map(v => [
+        v.vendor_name,
+        `$${v.total_outstanding.toLocaleString()}`,
+      ]),
+      headStyles: { fillColor: [255, 152, 0] },
+    });
+  }
+
+  savePdf(doc, `ap-aging-${asOfDate}.pdf`);
+};
+
+export const exportAPAgingExcel = (data, asOfDate) => {
+  const wb = XLSX.utils.book_new();
+
+  const summaryRows = [
+    ['A/P Aging Report'],
+    [`As of: ${asOfDate}`],
+    [`Generated: ${new Date().toLocaleString()}`],
+    [],
+    ['Age Bracket', 'Count', 'Total Amount', '% of Total'],
+    ...Object.entries(data.aging_buckets).map(([bucket, d]) => {
+      const pct = data.total_outstanding > 0
+        ? ((d.total / data.total_outstanding) * 100).toFixed(1)
+        : '0.0';
+      return [bucket === 'current' ? 'Current' : `${bucket} Days`, d.count, d.total, `${pct}%`];
+    }),
+    ['Total', data.total_bills, data.total_outstanding, '100%'],
+  ];
+  const ws1 = XLSX.utils.aoa_to_sheet(summaryRows);
+  XLSX.utils.book_append_sheet(wb, ws1, 'Aging Summary');
+
+  if (data.vendor_summary?.length > 0) {
+    const vendorRows = [
+      ['Vendor', 'Outstanding Balance'],
+      ...data.vendor_summary.map(v => [v.vendor_name, v.total_outstanding]),
+    ];
+    const ws2 = XLSX.utils.aoa_to_sheet(vendorRows);
+    XLSX.utils.book_append_sheet(wb, ws2, 'Vendor Summary');
+  }
+
+  Object.entries(data.aging_buckets).forEach(([bucket, d]) => {
+    if (d.bills?.length > 0) {
+      const rows = [
+        ['Bill #', 'Vendor', 'Bill Date', 'Due Date', 'Days Overdue', 'Balance Due'],
+        ...d.bills.map(b => [
+          b.bill_number,
+          b.vendor_name,
+          b.bill_date,
+          b.due_date,
+          b.days_overdue,
+          b.balance_due,
+        ]),
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      XLSX.utils.book_append_sheet(wb, ws, bucket === 'current' ? 'Current' : `${bucket} Days`);
+    }
+  });
+
+  XLSX.writeFile(wb, `ap-aging-${asOfDate}.xlsx`);
+};
+
+// ─── Balance Sheet ───────────────────────────────────────────────────────────
 export const exportBalanceSheetPDF = (data, asOfDate) => {
   const doc = createPdf('Balance Sheet', `As of: ${asOfDate}`);
 

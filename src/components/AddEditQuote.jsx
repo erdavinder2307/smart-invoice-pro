@@ -23,7 +23,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import MainLayout from './Layout/MainLayout';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -118,6 +118,7 @@ const ActionTextButton = ({ children, ...props }) => (
 const AddEditQuote = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const quoteId = id;
   const [form, setForm] = useState(initialForm);
   const [customers, setCustomers] = useState([]);
@@ -161,15 +162,36 @@ const AddEditQuote = () => {
         } else {
           const today = new Date().toISOString().slice(0, 10);
           const expiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+          const cloneSourceId = location.state?.cloneFrom?.id;
           try {
             const nextNumberResponse = await axios.get(createApiUrl('/api/quotes/next-number'));
             if (!active) return;
-            setForm((prev) => ({
-              ...prev,
-              quote_number: nextNumberResponse.data?.next_number || 'QT-000001',
-              issue_date: today,
-              expiry_date: expiry,
-            }));
+            const nextNumber = nextNumberResponse.data?.next_number || 'QT-000001';
+
+            if (cloneSourceId) {
+              const cloneResponse = await axios.get(createApiUrl(`/api/quotes/${cloneSourceId}`));
+              if (!active) return;
+              const src = cloneResponse.data;
+              setForm((prev) => ({
+                ...prev,
+                ...src,
+                id: undefined,
+                quote_number: nextNumber,
+                issue_date: today,
+                expiry_date: expiry,
+                status: 'Draft',
+                items: Array.isArray(src.items) && src.items.length
+                  ? src.items.map((item) => ({ ...EMPTY_ITEM, ...item }))
+                  : [EMPTY_ITEM],
+              }));
+            } else {
+              setForm((prev) => ({
+                ...prev,
+                quote_number: nextNumber,
+                issue_date: today,
+                expiry_date: expiry,
+              }));
+            }
           } catch {
             if (!active) return;
             setForm((prev) => ({ ...prev, quote_number: 'QT-000001', issue_date: today, expiry_date: expiry }));

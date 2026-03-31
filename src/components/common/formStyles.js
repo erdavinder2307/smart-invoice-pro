@@ -7,7 +7,6 @@ import {
     Box,
     Divider,
     FormControl,
-    MenuItem,
     Select,
     Tooltip,
     Typography,

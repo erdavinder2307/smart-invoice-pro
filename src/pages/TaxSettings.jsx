@@ -37,6 +37,8 @@ import DescriptionIcon from "@mui/icons-material/Description";
 import PeopleIcon from "@mui/icons-material/People";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
+import ExtensionIcon from "@mui/icons-material/Extension";
+import HistoryIcon from "@mui/icons-material/History";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
@@ -87,6 +89,16 @@ const SETTINGS_NAV = [
     label: "Automation",
     path: "/settings/automation",
     icon: <NotificationsActiveIcon sx={{ fontSize: 18 }} />,
+  },
+  {
+    label: "Integrations",
+    path: "/settings/integrations",
+    icon: <ExtensionIcon sx={{ fontSize: 18 }} />,
+  },
+  {
+    label: "Audit Log",
+    path: "/settings/audit-log",
+    icon: <HistoryIcon sx={{ fontSize: 18 }} />,
   },
 ];
 

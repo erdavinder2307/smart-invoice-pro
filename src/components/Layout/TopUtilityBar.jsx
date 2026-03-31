@@ -1,13 +1,17 @@
-import React from "react";
-import { Box, InputBase, IconButton, Tooltip, Avatar, Typography } from "@mui/material";
+import React, { useState } from "react";
+import { Box, InputBase, IconButton, Tooltip, Avatar, Typography, Badge } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsOutlinedIcon from "@mui/icons-material/NotificationsOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
+import NotificationDropdown from "../Notifications/NotificationDropdown";
+import { useNotifications } from "../../context/NotificationContext";
 
 const TopUtilityBar = ({ searchPlaceholder = "Search invoices, customers, products...", onSearchChange }) => {
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
   const username = storedUser.username || "User";
   const initials = username.charAt(0).toUpperCase();
+  const { unreadCount } = useNotifications();
+  const [notifAnchor, setNotifAnchor] = useState(null);
 
   return (
     <Box
@@ -48,10 +52,13 @@ const TopUtilityBar = ({ searchPlaceholder = "Search invoices, customers, produc
 
       <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
         <Tooltip title="Notifications">
-          <IconButton color="inherit">
-            <NotificationsOutlinedIcon fontSize="small" />
+          <IconButton color="inherit" onClick={(e) => setNotifAnchor(e.currentTarget)}>
+            <Badge badgeContent={unreadCount > 0 ? unreadCount : null} color="error" max={99}>
+              <NotificationsOutlinedIcon fontSize="small" />
+            </Badge>
           </IconButton>
         </Tooltip>
+        <NotificationDropdown anchorEl={notifAnchor} onClose={() => setNotifAnchor(null)} />
         <Tooltip title="Settings">
           <IconButton color="inherit">
             <SettingsOutlinedIcon fontSize="small" />

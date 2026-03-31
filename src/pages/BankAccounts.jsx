@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import {
     getBankAccounts,
+    updateBankAccount,
+    deleteBankAccount,
 } from "../services/bankAccountService";
 import MainLayout from "../components/Layout/MainLayout";
 import { useAuth } from "../context/AuthContext";
@@ -27,6 +29,14 @@ import {
     Grid,
     Tooltip,
     IconButton,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    MenuItem,
+    Select,
+    FormControl,
+    InputLabel,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import AddIcon from '@mui/icons-material/Add';
@@ -34,6 +44,8 @@ import SearchIcon from '@mui/icons-material/Search';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { useTheme } from "@mui/material/styles";
 
 const BankAccounts = () => {
@@ -41,6 +53,10 @@ const BankAccounts = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
+    const [editAccount, setEditAccount] = useState(null);
+    const [editForm, setEditForm] = useState({ bank_name: '', account_name: '', account_type: '' });
+    const [editLoading, setEditLoading] = useState(false);
+    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
     const navigate = useNavigate();
     const theme = useTheme();
     const { user } = useAuth();
@@ -93,6 +109,41 @@ const BankAccounts = () => {
     const handleImportStatement = (account) => {
         // Placeholder for future implementation
         alert(`Import statement for ${account.bank_name} - Coming soon!`);
+    };
+
+    const handleEditOpen = (account) => {
+        setEditAccount(account);
+        setEditForm({
+            bank_name: account.bank_name || '',
+            account_name: account.account_name || '',
+            account_type: account.account_type || '',
+        });
+    };
+
+    const handleEditSave = async () => {
+        if (!editAccount) return;
+        setEditLoading(true);
+        try {
+            await updateBankAccount(editAccount.id, editForm, user?.id);
+            setEditAccount(null);
+            await fetchBankAccounts();
+        } catch {
+            setError('Failed to update bank account.');
+        } finally {
+            setEditLoading(false);
+        }
+    };
+
+    const handleDelete = async (id) => {
+        setLoading(true);
+        try {
+            await deleteBankAccount(id, user?.id);
+            setConfirmDeleteId(null);
+            await fetchBankAccounts();
+        } catch {
+            setError('Failed to delete bank account.');
+            setLoading(false);
+        }
     };
 
     return (
@@ -391,21 +442,17 @@ const BankAccounts = () => {
                                                     </TableCell>
                                                     <TableCell align="center">
                                                         <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-                                                            <Tooltip title="View Details">
+                                                            <Tooltip title="Edit">
                                                                 <IconButton
                                                                     size="small"
-                                                                    onClick={() => handleView(account)}
+                                                                    onClick={() => handleEditOpen(account)}
                                                                     sx={{
                                                                         color: 'primary.main',
                                                                         bgcolor: 'primary.50',
-                                                                        '&:hover': {
-                                                                            bgcolor: 'primary.100',
-                                                                            transform: 'scale(1.1)'
-                                                                        },
-                                                                        transition: 'all 0.2s ease'
+                                                                        '&:hover': { bgcolor: 'primary.100' },
                                                                     }}
                                                                 >
-                                                                    <VisibilityIcon fontSize="small" />
+                                                                    <EditIcon fontSize="small" />
                                                                 </IconButton>
                                                             </Tooltip>
                                                             <Tooltip title="Import Statement">
@@ -415,14 +462,23 @@ const BankAccounts = () => {
                                                                     sx={{
                                                                         color: 'success.main',
                                                                         bgcolor: 'success.50',
-                                                                        '&:hover': {
-                                                                            bgcolor: 'success.100',
-                                                                            transform: 'scale(1.1)'
-                                                                        },
-                                                                        transition: 'all 0.2s ease'
+                                                                        '&:hover': { bgcolor: 'success.100' },
                                                                     }}
                                                                 >
                                                                     <UploadFileIcon fontSize="small" />
+                                                                </IconButton>
+                                                            </Tooltip>
+                                                            <Tooltip title="Delete">
+                                                                <IconButton
+                                                                    size="small"
+                                                                    onClick={() => setConfirmDeleteId(account.id)}
+                                                                    sx={{
+                                                                        color: 'error.main',
+                                                                        bgcolor: 'error.50',
+                                                                        '&:hover': { bgcolor: 'error.100' },
+                                                                    }}
+                                                                >
+                                                                    <DeleteIcon fontSize="small" />
                                                                 </IconButton>
                                                             </Tooltip>
                                                         </Box>
@@ -437,6 +493,58 @@ const BankAccounts = () => {
                     </CardContent>
                 </Card>
             </Box>
+            {/* Edit Dialog */}
+            <Dialog open={!!editAccount} onClose={() => setEditAccount(null)} maxWidth="xs" fullWidth>
+                <DialogTitle>Edit Bank Account</DialogTitle>
+                <DialogContent sx={{ pt: '12px !important', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <TextField
+                        label="Bank Name"
+                        fullWidth
+                        size="small"
+                        value={editForm.bank_name}
+                        onChange={(e) => setEditForm((f) => ({ ...f, bank_name: e.target.value }))}
+                    />
+                    <TextField
+                        label="Account Name"
+                        fullWidth
+                        size="small"
+                        value={editForm.account_name}
+                        onChange={(e) => setEditForm((f) => ({ ...f, account_name: e.target.value }))}
+                    />
+                    <FormControl fullWidth size="small">
+                        <InputLabel>Account Type</InputLabel>
+                        <Select
+                            label="Account Type"
+                            value={editForm.account_type}
+                            onChange={(e) => setEditForm((f) => ({ ...f, account_type: e.target.value }))}
+                        >
+                            {['savings', 'current', 'credit', 'cash'].map((t) => (
+                                <MenuItem key={t} value={t} sx={{ textTransform: 'capitalize' }}>{t}</MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button onClick={() => setEditAccount(null)} disabled={editLoading}>Cancel</Button>
+                    <Button variant="contained" onClick={handleEditSave} disabled={editLoading}>
+                        {editLoading ? 'Saving…' : 'Save'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={!!confirmDeleteId} onClose={() => setConfirmDeleteId(null)} maxWidth="xs" fullWidth>
+                <DialogTitle>Delete Bank Account</DialogTitle>
+                <DialogContent>
+                    <Typography>Are you sure you want to delete this bank account? This action cannot be undone.</Typography>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button onClick={() => setConfirmDeleteId(null)}>Cancel</Button>
+                    <Button variant="contained" color="error" onClick={() => handleDelete(confirmDeleteId)}>
+                        Delete
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </MainLayout>
     );
 };

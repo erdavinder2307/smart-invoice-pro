@@ -9,13 +9,8 @@ import {
   Button,
   Typography,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
   TableRow,
-  CircularProgress,
+  TableCell,
   Alert,
   InputAdornment,
   TextField,
@@ -33,16 +28,22 @@ import {
   Container,
   FormControl,
   Select,
-  TablePagination
+  Checkbox,
+  FormControlLabel,
+  Snackbar,
 } from "@mui/material";
+import StandardDataTable from "./common/StandardDataTable";
 import { useNavigate } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import EmailIcon from "@mui/icons-material/Email";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import ReceiptIcon from "@mui/icons-material/Receipt";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import PendingIcon from "@mui/icons-material/Pending";
@@ -58,6 +59,8 @@ const SalesOrderList = () => {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
   const [selectedSalesOrder, setSelectedSalesOrder] = useState(null);
+  const [emailDialog, setEmailDialog] = useState({ open: false, so: null, to: '', message: '', attachPdf: false, sending: false });
+  const [toast, setToast] = useState({ open: false, message: '' });
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const navigate = useNavigate();
@@ -147,6 +150,47 @@ const SalesOrderList = () => {
   const handleActionMenuClose = () => {
     setActionMenuAnchor(null);
     setSelectedSalesOrder(null);
+  };
+
+  const handleDownloadPDF = async (so) => {
+    handleActionMenuClose();
+    try {
+      const res = await axios.get(createApiUrl(`/api/sales-orders/${so.id}/pdf`), { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${so.so_number || 'sales-order'}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      setError('Failed to download PDF.');
+    }
+  };
+
+  const handleEmailOpen = (so) => {
+    setEmailDialog({ open: true, so, to: '', message: '', attachPdf: false, sending: false });
+    handleActionMenuClose();
+  };
+
+  const handleEmailSend = async () => {
+    const { so, to, message, attachPdf } = emailDialog;
+    if (!to) return;
+    setEmailDialog((d) => ({ ...d, sending: true }));
+    try {
+      await axios.post(createApiUrl(`/api/sales-orders/${so.id}/send-email`), {
+        recipient_email: to,
+        message,
+        attach_pdf: attachPdf,
+      });
+      setEmailDialog({ open: false, so: null, to: '', message: '', attachPdf: false, sending: false });
+      setToast({ open: true, message: 'Sales order emailed successfully.' });
+      fetchSalesOrders();
+    } catch {
+      setEmailDialog((d) => ({ ...d, sending: false }));
+      setError('Failed to send email.');
+    }
   };
 
   const handleConvertToInvoice = async () => {
@@ -357,106 +401,62 @@ const SalesOrderList = () => {
             </Paper>
 
             {/* Table */}
-            <Paper sx={{ borderRadius: 3, border: "1px solid", borderColor: "grey.200", overflow: "hidden" }}>
-              {loading ? (
-                <Box sx={{ display: "flex", justifyContent: "center", p: 6 }}>
-                  <CircularProgress />
-                </Box>
-              ) : (
-                <>
-                  <TableContainer sx={{ overflowX: "hidden" }}>
-                    <Table>
-                      <TableHead sx={{ bgcolor: "grey.50" }}>
-                        <TableRow>
-                          <TableCell sx={{ fontWeight: 700 }}>SO #</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Customer</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Subject</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Order Date</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Delivery Date</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Amount</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 700 }}>Actions</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {paginatedSalesOrders.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
-                              <Typography color="text.secondary">No sales orders found</Typography>
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          paginatedSalesOrders.map((so) => (
-                            <TableRow
-                              key={so.id}
-                              sx={{
-                                "&:hover": { bgcolor: "grey.50" },
-                                cursor: "pointer"
-                              }}
-                              onClick={() => handleEdit(so)}
-                            >
-                              <TableCell>
-                                <Typography variant="body2" fontWeight={600}>
-                                  {so.so_number}
-                                </Typography>
-                              </TableCell>
-                              <TableCell>
-                                <Typography variant="body2">
-                                  {getCustomerName(so)}
-                                </Typography>
-                              </TableCell>
-                              <TableCell>
-                                <Typography variant="body2" noWrap sx={{ maxWidth: 200 }}>
-                                  {so.subject || "-"}
-                                </Typography>
-                              </TableCell>
-                              <TableCell>
-                                <Typography variant="body2">
-                                  {new Date(so.order_date).toLocaleDateString()}
-                                </Typography>
-                              </TableCell>
-                              <TableCell>
-                                <Typography variant="body2">
-                                  {so.delivery_date ? new Date(so.delivery_date).toLocaleDateString() : "-"}
-                                </Typography>
-                              </TableCell>
-                              <TableCell>
-                                <Typography variant="body2" fontWeight={600} color="primary">
-                                  ₹{so.total_amount?.toLocaleString() || "0"}
-                                </Typography>
-                              </TableCell>
-                              <TableCell>
-                                <StatusBadge status={so.status} color={getStatusColor(so.status)} />
-                              </TableCell>
-                              <TableCell align="center">
-                                <IconButton
-                                  size="small"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleActionMenuOpen(e, so);
-                                  }}
-                                >
-                                  <MoreVertIcon />
-                                </IconButton>
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                  <TablePagination
-                    component="div"
-                    count={filteredSalesOrders.length}
-                    page={page}
-                    onPageChange={handleChangePage}
-                    rowsPerPage={rowsPerPage}
-                    onRowsPerPageChange={handleChangeRowsPerPage}
-                    rowsPerPageOptions={[5, 10, 25, 50]}
-                  />
-                </>
+            <StandardDataTable
+              columns={[
+                { key: 'so_number', label: 'SO #' },
+                { key: 'customer', label: 'Customer' },
+                { key: 'subject', label: 'Subject' },
+                { key: 'order_date', label: 'Order Date' },
+                { key: 'delivery_date', label: 'Delivery Date' },
+                { key: 'amount', label: 'Amount' },
+                { key: 'status', label: 'Status' },
+                { key: 'actions', label: 'Actions', align: 'center' },
+              ]}
+              rows={paginatedSalesOrders}
+              loading={loading}
+              emptyIcon={<ShoppingCartIcon sx={{ fontSize: 48 }} />}
+              emptyTitle="No sales orders found"
+              emptySubtitle="Create a sales order to track customer purchases"
+              onRowClick={(so) => handleEdit(so)}
+              renderRow={(so) => (
+                <TableRow key={so.id} hover sx={{ cursor: 'pointer' }} onClick={() => handleEdit(so)}>
+                  <TableCell>
+                    <Typography variant="body2" fontWeight={600}>{so.so_number}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">{getCustomerName(so)}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" noWrap sx={{ maxWidth: 200 }}>{so.subject || "-"}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">{new Date(so.order_date).toLocaleDateString()}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">{so.delivery_date ? new Date(so.delivery_date).toLocaleDateString() : "-"}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" fontWeight={600} color="primary">₹{so.total_amount?.toLocaleString() || "0"}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge status={so.status} color={getStatusColor(so.status)} />
+                  </TableCell>
+                  <TableCell align="center">
+                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleActionMenuOpen(e, so); }}>
+                      <MoreVertIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
               )}
-            </Paper>
+              pagination={{
+                rowsPerPageOptions: [5, 10, 25, 50],
+                count: filteredSalesOrders.length,
+                rowsPerPage,
+                page,
+                onPageChange: handleChangePage,
+                onRowsPerPageChange: handleChangeRowsPerPage,
+              }}
+            />
           </Box>
         </Fade>
       </Container>
@@ -467,11 +467,25 @@ const SalesOrderList = () => {
         open={Boolean(actionMenuAnchor)}
         onClose={handleActionMenuClose}
       >
+        <MenuItem onClick={() => handleDownloadPDF(selectedSalesOrder)} sx={{py: 1.25}}>
+          <ListItemIcon><PictureAsPdfIcon fontSize="small" color="success" /></ListItemIcon>
+          <ListItemText>Download PDF</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => handleEmailOpen(selectedSalesOrder)} sx={{py: 1.25}}>
+          <ListItemIcon><EmailIcon fontSize="small" color="primary" /></ListItemIcon>
+          <ListItemText>Send Email</ListItemText>
+        </MenuItem>
         <MenuItem onClick={() => { handleEdit(selectedSalesOrder); handleActionMenuClose(); }}>
           <ListItemIcon>
             <EditIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText>Edit</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => { navigate('/sales-orders/add', { state: { cloneFrom: selectedSalesOrder } }); handleActionMenuClose(); }}>
+          <ListItemIcon>
+            <ContentCopyIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Duplicate</ListItemText>
         </MenuItem>
         <MenuItem onClick={handleConvertToInvoice} disabled={selectedSalesOrder?.status === "Invoiced"}>
           <ListItemIcon>
@@ -506,6 +520,40 @@ const SalesOrderList = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Email dialog */}
+      <Dialog open={emailDialog.open} onClose={() => setEmailDialog((d) => ({ ...d, open: false }))} maxWidth="sm" fullWidth>
+        <DialogTitle>Email Sales Order {emailDialog.so?.so_number}</DialogTitle>
+        <DialogContent sx={{ pt: '12px !important', display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <TextField
+            label="Recipient Email" fullWidth size="small" type="email"
+            value={emailDialog.to}
+            onChange={(e) => setEmailDialog((d) => ({ ...d, to: e.target.value }))}
+          />
+          <TextField
+            label="Message (optional)" fullWidth size="small" multiline rows={3}
+            value={emailDialog.message}
+            onChange={(e) => setEmailDialog((d) => ({ ...d, message: e.target.value }))}
+          />
+          <FormControlLabel
+            control={<Checkbox checked={emailDialog.attachPdf} onChange={(e) => setEmailDialog((d) => ({ ...d, attachPdf: e.target.checked }))} />}
+            label="Attach PDF"
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setEmailDialog((d) => ({ ...d, open: false }))} disabled={emailDialog.sending}>Cancel</Button>
+          <Button variant="contained" onClick={handleEmailSend} disabled={emailDialog.sending || !emailDialog.to}>
+            {emailDialog.sending ? 'Sending…' : 'Send'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar
+        open={toast.open}
+        autoHideDuration={4000}
+        onClose={() => setToast({ open: false, message: '' })}
+        message={toast.message}
+      />
     </MainLayout>
   );
 };

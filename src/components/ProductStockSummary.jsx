@@ -16,7 +16,6 @@ import {
   Chip,
   Button,
   IconButton,
-  LinearProgress
 } from "@mui/material";
 import {
   Inventory,

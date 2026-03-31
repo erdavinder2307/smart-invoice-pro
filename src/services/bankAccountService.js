@@ -59,3 +59,32 @@ export const getBankAccountById = async (id, userId) => {
         throw error;
     }
 };
+
+export const updateBankAccount = async (id, accountData, userId) => {
+    try {
+        const headers = userId ? { 'X-User-Id': userId } : getUserHeaders();
+        const response = await axios.put(
+            createApiUrl(`/api/bank-accounts/${id}`),
+            accountData,
+            { headers }
+        );
+        return response.data;
+    } catch (error) {
+        console.error('Error updating bank account:', error);
+        throw error;
+    }
+};
+
+export const deleteBankAccount = async (id, userId) => {
+    try {
+        const headers = userId ? { 'X-User-Id': userId } : getUserHeaders();
+        const response = await axios.delete(
+            createApiUrl(`/api/bank-accounts/${id}`),
+            { headers }
+        );
+        return response.data;
+    } catch (error) {
+        console.error('Error deleting bank account:', error);
+        throw error;
+    }
+};

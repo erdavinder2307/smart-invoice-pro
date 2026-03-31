@@ -17,8 +17,6 @@ import {
   Divider,
   Avatar,
   Chip,
-  Card,
-  CardContent,
   InputAdornment,
   Table,
   TableBody,
@@ -26,17 +24,11 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  IconButton,
-  Tooltip,
-  Badge,
-  Stack,
   Autocomplete,
   Popper,
 } from "@mui/material";
 import {
   Inventory as InventoryIcon,
-  TrendingUp as TrendingUpIcon,
-  TrendingDown as TrendingDownIcon,
   Assignment as AssignmentIcon,
   History as HistoryIcon,
   CheckCircle as CheckCircleIcon,
@@ -121,7 +113,7 @@ const StockAdjustment = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
-  const [recentAdjustments, setRecentAdjustments] = useState([]);
+  const [, setRecentAdjustments] = useState([]);
 
   const locations = ["Main Warehouse", "Store Front", "Secondary Storage", "Transit"];
 

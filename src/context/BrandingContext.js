@@ -55,7 +55,7 @@ function adjustLightness(hex, shift) {
 
 export function BrandingProvider({ children }) {
   const [branding, setBranding] = useState(BRANDING_DEFAULTS);
-  const [loaded, setLoaded]     = useState(false);
+  const [, setLoaded]     = useState(false);
 
   const refreshBranding = useCallback(async () => {
     try {

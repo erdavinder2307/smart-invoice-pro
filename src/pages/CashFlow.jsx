@@ -71,7 +71,7 @@ const CashFlow = () => {
     setError('');
 
     try {
-      const response = await axios.get(createApiUrl('/reports/cash-flow'), {
+      const response = await axios.get(createApiUrl('/api/reports/cash-flow'), {
         params: {
           user_id: userId,
           start_date: startDate,

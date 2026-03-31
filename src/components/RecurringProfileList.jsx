@@ -9,13 +9,8 @@ import {
   Button,
   Typography,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
   TableRow,
-  CircularProgress,
+  TableCell,
   Alert,
   InputAdornment,
   TextField,
@@ -33,9 +28,9 @@ import {
   Container,
   FormControl,
   Select,
-  TablePagination,
   Chip,
 } from "@mui/material";
+import StandardDataTable from "./common/StandardDataTable";
 import { useNavigate } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
@@ -337,111 +332,67 @@ const RecurringProfileList = () => {
             </Paper>
 
             {/* Table */}
-            <Paper sx={{ borderRadius: 3, border: "1px solid", borderColor: "grey.200", overflow: "hidden" }}>
-              {loading ? (
-                <Box sx={{ display: "flex", justifyContent: "center", p: 6 }}>
-                  <CircularProgress />
-                </Box>
-              ) : (
-                <>
-                  <TableContainer sx={{ overflowX: "hidden" }}>
-                    <Table>
-                      <TableHead sx={{ bgcolor: "grey.50" }}>
-                        <TableRow>
-                          <TableCell sx={{ fontWeight: 700 }}>Profile Name</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Customer</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Frequency</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Next Run</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Last Run</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Generated</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 700 }}>Actions</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {paginatedProfiles.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
-                              <Typography color="text.secondary">No recurring profiles found</Typography>
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          paginatedProfiles.map((profile) => (
-                            <TableRow
-                              key={profile.id}
-                              sx={{
-                                "&:hover": { bgcolor: "grey.50" },
-                                cursor: "pointer"
-                              }}
-                              onClick={() => handleEdit(profile)}
-                            >
-                              <TableCell>
-                                <Typography variant="body2" fontWeight={600}>
-                                  {profile.profile_name}
-                                </Typography>
-                              </TableCell>
-                              <TableCell>
-                                <Typography variant="body2">
-                                  {getCustomerName(profile.customer_id)}
-                                </Typography>
-                              </TableCell>
-                              <TableCell>
-                                <Chip
-                                  icon={getFrequencyIcon(profile.frequency)}
-                                  label={profile.frequency}
-                                  size="small"
-                                  color="primary"
-                                  variant="outlined"
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Typography variant="body2">
-                                  {profile.next_run_date ? new Date(profile.next_run_date).toLocaleDateString() : "-"}
-                                </Typography>
-                              </TableCell>
-                              <TableCell>
-                                <Typography variant="body2" color="text.secondary">
-                                  {profile.last_run_date ? new Date(profile.last_run_date).toLocaleDateString() : "Never"}
-                                </Typography>
-                              </TableCell>
-                              <TableCell>
-                                <Typography variant="body2" fontWeight={600}>
-                                  {profile.occurrences_created || 0}
-                                  {profile.occurrence_limit ? ` / ${profile.occurrence_limit}` : ''}
-                                </Typography>
-                              </TableCell>
-                              <TableCell>
-                                <StatusBadge status={profile.status} color={getStatusColor(profile.status)} />
-                              </TableCell>
-                              <TableCell align="center">
-                                <IconButton
-                                  size="small"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleActionMenuOpen(e, profile);
-                                  }}
-                                >
-                                  <MoreVertIcon />
-                                </IconButton>
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                  <TablePagination
-                    component="div"
-                    count={filteredProfiles.length}
-                    page={page}
-                    onPageChange={handleChangePage}
-                    rowsPerPage={rowsPerPage}
-                    onRowsPerPageChange={handleChangeRowsPerPage}
-                    rowsPerPageOptions={[5, 10, 25, 50]}
-                  />
-                </>
+            <StandardDataTable
+              columns={[
+                { key: 'profile_name', label: 'Profile Name' },
+                { key: 'customer', label: 'Customer' },
+                { key: 'frequency', label: 'Frequency' },
+                { key: 'next_run', label: 'Next Run' },
+                { key: 'last_run', label: 'Last Run' },
+                { key: 'generated', label: 'Generated' },
+                { key: 'status', label: 'Status' },
+                { key: 'actions', label: 'Actions', align: 'center' },
+              ]}
+              rows={paginatedProfiles}
+              loading={loading}
+              emptyIcon={<EventRepeatIcon sx={{ fontSize: 48 }} />}
+              emptyTitle="No recurring profiles found"
+              emptySubtitle="Create a recurring profile to automate invoice generation"
+              onRowClick={(profile) => handleEdit(profile)}
+              renderRow={(profile) => (
+                <TableRow
+                  key={profile.id}
+                  hover
+                  sx={{ cursor: 'pointer' }}
+                  onClick={() => handleEdit(profile)}
+                >
+                  <TableCell>
+                    <Typography variant="body2" fontWeight={600}>{profile.profile_name}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">{getCustomerName(profile.customer_id)}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Chip icon={getFrequencyIcon(profile.frequency)} label={profile.frequency} size="small" color="primary" variant="outlined" />
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">{profile.next_run_date ? new Date(profile.next_run_date).toLocaleDateString() : "-"}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color="text.secondary">{profile.last_run_date ? new Date(profile.last_run_date).toLocaleDateString() : "Never"}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" fontWeight={600}>{profile.occurrences_created || 0}{profile.occurrence_limit ? ` / ${profile.occurrence_limit}` : ''}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge status={profile.status} color={getStatusColor(profile.status)} />
+                  </TableCell>
+                  <TableCell align="center">
+                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleActionMenuOpen(e, profile); }}>
+                      <MoreVertIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
               )}
-            </Paper>
+              pagination={{
+                rowsPerPageOptions: [5, 10, 25, 50],
+                count: filteredProfiles.length,
+                rowsPerPage,
+                page,
+                onPageChange: handleChangePage,
+                onRowsPerPageChange: handleChangeRowsPerPage,
+              }}
+            />
           </Box>
         </Fade>
       </Container>

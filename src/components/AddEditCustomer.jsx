@@ -11,7 +11,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Divider,
   FormControl,
   FormControlLabel,
   Grid,
@@ -24,7 +23,6 @@ import {
   Tab,
   Tabs,
   TextField,
-  Tooltip,
   Typography,
   Alert,
 } from '@mui/material';
@@ -35,6 +33,7 @@ import {
   Add as AddIcon,
 } from '@mui/icons-material';
 import MainLayout from './Layout/MainLayout';
+import { C, fieldSx, selectSx, menuItemSx, ZohoRow, FieldLabel, AppSelect } from './common/formStyles';
 import { createApiUrl } from '../config/api';
 import axios from 'axios';
 
@@ -115,175 +114,12 @@ const INIT = {
   reporting_tags: '', remarks: '',
 };
 
-// ─── design tokens ─────────────────────────────────────────────────────────
-const C = {
-  border: '#e0e0e0',
-  divider: '#ebebeb',
-  label: '#3d3d3d',
-  hint: '#8c8c8c',
-  primary: '#1a73e8',
-  pageBg: '#ffffff',
-  white: '#fff',
-  red: '#d93025',
-  sectionBg: '#fafbfc',
-};
-
-// ─── SHARED sx objects ─────────────────────────────────────────────────────
-// Applied identically to every TextField and Select to guarantee consistent height,
-// border-radius, font-size, and focus colour across the entire form.
-const fieldSx = {
-  '& .MuiOutlinedInput-root': {
-    borderRadius: '4px',
-    backgroundColor: C.white,
-    fontSize: '0.875rem',
-    transition: 'all 0.2s ease',
-    '& fieldset': { borderColor: C.border },
-    '&:hover': { backgroundColor: '#fcfdff' },
-    '&:hover fieldset': { borderColor: '#9aa0a6' },
-    '&.Mui-focused': { boxShadow: '0 0 0 3px rgba(26,115,232,0.12)' },
-    '&.Mui-focused fieldset': { borderColor: C.primary, borderWidth: '1px' },
-  },
-  '& .MuiInputLabel-root': { fontSize: '0.875rem', color: C.hint },
-  '& .MuiInputLabel-root.Mui-focused': { color: C.primary },
-  '& .MuiInputBase-input': { fontSize: '0.875rem', py: '7px', px: '10px' },
-  '& .MuiFormHelperText-root': { fontSize: '0.75rem', mx: 0 },
-};
-
-// Select uses FormControl wrapper — these styles go on the Select itself
-const selectSx = {
-  borderRadius: '4px',
-  backgroundColor: C.white,
-  fontSize: '0.875rem',
-  transition: 'all 0.2s ease',
-  textAlign: 'left',
-  '& .MuiOutlinedInput-notchedOutline': { borderColor: C.border },
-  '&:hover': { backgroundColor: '#fcfdff' },
-  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#9aa0a6' },
-  '&.Mui-focused': { boxShadow: '0 0 0 3px rgba(26,115,232,0.12)' },
-  '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: C.primary, borderWidth: '1px' },
-  '& .MuiSelect-select': { py: '7px', px: '10px', fontSize: '0.875rem', textAlign: 'left' },
-};
-
-const menuItemSx = { fontSize: '0.875rem' };
 
 const splitStreetLines = street => {
   const [line1 = '', ...rest] = String(street || '').split(/\r?\n/);
   return { line1, line2: rest.join(' ').trim() };
 };
 
-// ─── REUSABLE PRIMITIVES ───────────────────────────────────────────────────
-
-/**
- * ZohoRow — fundamental layout unit for the Primary Contact section.
- *
- * Uses a FIXED 180px label column (not percentage-based) so ALL field
- * left-edges are pixel-perfectly aligned regardless of label text length:
- *
- *   "Primary Contact ⓘ"  |  [Salutation ▾] [First Name] [Last Name]
- *   "Company Name *"     |  [                                      ]
- *   "Display Name *"     |  [                                      ]
- *   "Email Address"      |  [                                      ]
- */
-const LABEL_WIDTH = 180; // px — fixed, never changes
-
-const ZohoRow = ({ label, required, hint, children, noDivider, alignStart }) => (
-  <>
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: alignStart ? 'flex-start' : 'center',
-        py: 1.25,
-        minHeight: 52,
-      }}
-    >
-      {/* Fixed-width label column */}
-      <Box
-        sx={{
-          width: LABEL_WIDTH,
-          minWidth: LABEL_WIDTH,
-          flexShrink: 0,
-          pr: 2,
-          pt: alignStart ? '8px' : 0,
-        }}
-      >
-        <Typography
-          variant="body2"
-          component="label"
-          sx={{
-            fontSize: '0.8125rem',
-            color: C.label,
-            display: 'flex',
-            alignItems: 'center',
-            textAlign: 'left',
-            gap: 0.5,
-            lineHeight: 1.5,
-            userSelect: 'none',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {label}
-          {required && <Box component="span" sx={{ color: C.red, ml: '1px' }}>*</Box>}
-          {hint && (
-            <Tooltip title={hint} placement="top" arrow>
-              <InfoIcon sx={{ fontSize: 13, color: C.hint, cursor: 'default', flexShrink: 0 }} />
-            </Tooltip>
-          )}
-        </Typography>
-      </Box>
-      {/* Field column — takes all remaining width */}
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        {children}
-      </Box>
-    </Box>
-    {!noDivider && <Divider sx={{ borderColor: C.divider }} />}
-  </>
-);
-
-/**
- * FieldLabel — used ABOVE fields inside tabs (Other Details, Address, etc.)
- * consistent font-size, colour, required marker, and optional hint icon.
- */
-const FieldLabel = ({ children, required, hint }) => (
-  <Typography
-    variant="body2"
-    component="label"
-    sx={{
-      display: 'block',
-      mb: '5px',
-      fontSize: '0.8125rem',
-      fontWeight: 500,
-      color: C.label,
-      textAlign: 'left',
-      lineHeight: 1.4,
-    }}
-  >
-    {children}
-    {required && <Box component="span" sx={{ color: C.red, ml: '2px' }}>*</Box>}
-    {hint && (
-      <Tooltip title={hint} placement="top" arrow>
-        <InfoIcon sx={{ fontSize: 13, color: C.hint, cursor: 'default', ml: '3px', verticalAlign: 'middle' }} />
-      </Tooltip>
-    )}
-  </Typography>
-);
-
-/**
- * AppSelect — MUI FormControl + InputLabel + Select wrapped together so every
- * <Select> in the form has identical structure.  Pass `noLabel` for plain dropdowns.
- */
-const AppSelect = ({ name, value, onChange, children, disabled, displayEmpty, size = 'small', fullWidth = true }) => (
-  <FormControl size={size} fullWidth={fullWidth} disabled={disabled}>
-    <Select
-      name={name}
-      value={value}
-      onChange={onChange}
-      displayEmpty={displayEmpty}
-      sx={selectSx}
-    >
-      {children}
-    </Select>
-  </FormControl>
-);
 
 const SearchableTextSelect = ({
   name,
@@ -774,7 +610,7 @@ const AddEditCustomer = () => {
   // ─── render ─────────────────────────────────────────────────────────────
   return (
     <MainLayout title={customerId ? 'Edit Customer' : 'New Customer'}>
-      <Box sx={{ bgcolor: C.pageBg, minHeight: '100vh', pb: 6 }}>
+      <Box sx={{ bgcolor: '#fff', minHeight: '100vh', pb: 6 }}>
         <Container maxWidth={false} sx={{ pt: 2, px: 2.5 }}>
           <Box sx={{ maxWidth: 1020 }}>
 

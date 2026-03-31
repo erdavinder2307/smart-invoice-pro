@@ -35,7 +35,6 @@ import {
   saveBtnSx,
 } from './common/formStyles';
 
-const categoryOptions = ['Electronics', 'Grocery', 'Clothing', 'Stationery', 'Other'];
 const unitOptions = ['pcs', 'kg', 'litre', 'box', 'pack', 'hrs', 'set'];
 const taxPreferenceOptions = [
   { value: 'taxable', label: 'Taxable' },

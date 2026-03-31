@@ -65,7 +65,7 @@ const BalanceSheet = () => {
     setError('');
 
     try {
-      const response = await axios.get(createApiUrl('/reports/balance-sheet'), {
+      const response = await axios.get(createApiUrl('/api/reports/balance-sheet'), {
         params: {
           user_id: userId,
           as_of_date: asOfDate

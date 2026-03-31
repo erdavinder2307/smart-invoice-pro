@@ -8,13 +8,8 @@ import {
   Box,
   Button,
   Typography,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
   TableRow,
+  TableCell,
   CircularProgress,
   Alert,
   InputAdornment,
@@ -30,9 +25,9 @@ import {
   FormControl,
   Select,
   MenuItem,
-  TablePagination,
   Tooltip
 } from "@mui/material";
+import StandardDataTable from "./common/StandardDataTable";
 import { useNavigate } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
@@ -261,132 +256,81 @@ const BillList = () => {
         )}
 
         {/* Main Table */}
-        <Paper sx={{ borderRadius: 3, border: "1px solid", borderColor: "grey.200", overflow: "hidden" }}>
-          {loading ? (
-            <Box sx={{ display: "flex", justifyContent: "center", p: 6 }}>
-              <CircularProgress />
-            </Box>
-          ) : (
-            <>
-              <TableContainer sx={{ overflowX: "hidden" }}>
-                <Table>
-                  <TableHead sx={{ bgcolor: "grey.50" }}>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 700 }}>Bill #</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Vendor</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Subject</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Bill Date</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Due Date</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Amount</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Paid</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Balance</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-                      <TableCell align="center" sx={{ fontWeight: 700 }}>Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {paginatedBills.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={10} align="center" sx={{ py: 8 }}>
-                          <ReceiptIcon sx={{ fontSize: 48, color: "grey.300", mb: 2 }} />
-                          <Typography variant="h6" color="text.secondary" gutterBottom>
-                            {searchTerm || statusFilter !== "All" ? "No bills found" : "No bills yet"}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {searchTerm || statusFilter !== "All"
-                              ? "Try adjusting your search or filters"
-                              : "Click 'New Bill' to create your first bill"}
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      paginatedBills.map((bill) => {
-                        const vendor = vendors.find(v => v.id === bill.vendor_id);
-                        return (
-                          <TableRow key={bill.id} hover sx={{ "&:hover": { bgcolor: "grey.50" } }}>
-                            <TableCell>
-                              <Typography variant="body2" fontWeight={600}>
-                                {bill.bill_number}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2">
-                                {vendor ? vendor.vendor_name : "Unknown Vendor"}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2">{bill.subject || "-"}</Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2">
-                                {new Date(bill.bill_date).toLocaleDateString()}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2">
-                                {bill.due_date ? new Date(bill.due_date).toLocaleDateString() : "-"}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2" fontWeight={600}>
-                                ₹{bill.total_amount?.toLocaleString() || "0"}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2" color="success.main">
-                                ₹{bill.amount_paid?.toLocaleString() || "0"}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2" color="error.main">
-                                ₹{bill.balance_due?.toLocaleString() || "0"}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <StatusBadge status={bill.payment_status} />
-                            </TableCell>
-                            <TableCell align="center">
-                              <Box display="flex" gap={0.5} justifyContent="center">
-                                <Tooltip title="Edit">
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => navigate(`/bills/edit/${bill.id}`)}
-                                    sx={{ color: "primary.main" }}
-                                  >
-                                    <EditIcon fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                                <Tooltip title="Delete">
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => setConfirmDeleteId(bill.id)}
-                                    sx={{ color: "error.main" }}
-                                    disabled={bill.payment_status === "Paid"}
-                                  >
-                                    <DeleteIcon fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                              </Box>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-              <TablePagination
-                rowsPerPageOptions={[10, 25, 50]}
-                component="div"
-                count={filteredBills.length}
-                rowsPerPage={rowsPerPage}
-                page={page}
-                onPageChange={handleChangePage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-              />
-            </>
-          )}
-        </Paper>
+        <StandardDataTable
+          columns={[
+            { key: 'bill_number', label: 'Bill #' },
+            { key: 'vendor', label: 'Vendor' },
+            { key: 'subject', label: 'Subject' },
+            { key: 'bill_date', label: 'Bill Date' },
+            { key: 'due_date', label: 'Due Date' },
+            { key: 'amount', label: 'Amount' },
+            { key: 'paid', label: 'Paid' },
+            { key: 'balance', label: 'Balance' },
+            { key: 'status', label: 'Status' },
+            { key: 'actions', label: 'Actions', align: 'center' },
+          ]}
+          rows={paginatedBills}
+          loading={loading}
+          emptyIcon={<ReceiptIcon sx={{ fontSize: 48 }} />}
+          emptyTitle={searchTerm || statusFilter !== "All" ? "No bills found" : "No bills yet"}
+          emptySubtitle={searchTerm || statusFilter !== "All" ? "Try adjusting your search or filters" : "Click 'New Bill' to create your first bill"}
+          renderRow={(bill) => {
+            const vendor = vendors.find(v => v.id === bill.vendor_id);
+            return (
+              <TableRow key={bill.id} hover>
+                <TableCell>
+                  <Typography variant="body2" fontWeight={600}>{bill.bill_number}</Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2">{vendor ? vendor.vendor_name : "Unknown Vendor"}</Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2">{bill.subject || "-"}</Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2">{new Date(bill.bill_date).toLocaleDateString()}</Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2">{bill.due_date ? new Date(bill.due_date).toLocaleDateString() : "-"}</Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2" fontWeight={600}>₹{bill.total_amount?.toLocaleString() || "0"}</Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2" color="success.main">₹{bill.amount_paid?.toLocaleString() || "0"}</Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2" color="error.main">₹{bill.balance_due?.toLocaleString() || "0"}</Typography>
+                </TableCell>
+                <TableCell>
+                  <StatusBadge status={bill.payment_status} />
+                </TableCell>
+                <TableCell align="center">
+                  <Box display="flex" gap={0.5} justifyContent="center">
+                    <Tooltip title="Edit">
+                      <IconButton size="small" onClick={() => navigate(`/bills/edit/${bill.id}`)} sx={{ color: 'primary.main' }}>
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete">
+                      <IconButton size="small" onClick={() => setConfirmDeleteId(bill.id)} sx={{ color: 'error.main' }} disabled={bill.payment_status === "Paid"}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                </TableCell>
+              </TableRow>
+            );
+          }}
+          pagination={{
+            rowsPerPageOptions: [10, 25, 50],
+            count: filteredBills.length,
+            rowsPerPage,
+            page,
+            onPageChange: handleChangePage,
+            onRowsPerPageChange: handleChangeRowsPerPage,
+          }}
+        />
       </Container>
 
       {/* Delete Confirmation Dialog */}

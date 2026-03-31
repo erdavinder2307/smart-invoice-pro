@@ -39,6 +39,8 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
+import ExtensionIcon from "@mui/icons-material/Extension";
+import HistoryIcon from "@mui/icons-material/History";
 
 import { C, fieldSx } from "../components/common/formStyles";
 import { useAuth } from "../context/AuthContext";
@@ -59,9 +61,9 @@ const SETTINGS_NAV = [
   { label: "User Management",      path: "/settings/users",                icon: <PeopleIcon sx={{ fontSize: 18 }} /> },
   { label: "Roles",                path: "/settings/roles",                icon: <AdminPanelSettingsIcon sx={{ fontSize: 18 }} /> },
   { label: "Automation",           path: "/settings/automation",           icon: <NotificationsActiveIcon sx={{ fontSize: 18 }} /> },
+  { label: "Integrations",         path: "/settings/integrations",         icon: <ExtensionIcon sx={{ fontSize: 18 }} /> },
+  { label: "Audit Log",             path: "/settings/audit-log",             icon: <HistoryIcon sx={{ fontSize: 18 }} /> },
 ];
-
-// The canonical action columns shown in the matrix
 const ACTIONS = ["view", "create", "edit", "delete"];
 const ACTION_LABELS = { view: "View", create: "Create", edit: "Edit", delete: "Delete" };
 

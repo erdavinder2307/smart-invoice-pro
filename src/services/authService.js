@@ -5,14 +5,16 @@ const API_URL = createApiUrl('/api');
 
 const login = async (credentials) => {
   const response = await axios.post(`${API_URL}/auth/login`, credentials);
-  const { token, user } = response.data;
+  const { token, access_token, refresh_token, user } = response.data;
 
-  // Store both token and user information
-  localStorage.setItem('token', token);
+  const accessToken = access_token || token;
+
+  localStorage.setItem('token', accessToken);
+  localStorage.setItem('refresh_token', refresh_token);
   localStorage.setItem('user', JSON.stringify(user));
 
-  axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-  return token;
+  axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+  return accessToken;
 };
 
 const register = async (credentials) => {
@@ -21,23 +23,48 @@ const register = async (credentials) => {
 };
 
 const logout = async () => {
-  const token = localStorage.getItem('token');
+  const refreshToken = localStorage.getItem('refresh_token');
   try {
-    await axios.post(`${API_URL}/auth/logout`, {}, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    await axios.post(
+      `${API_URL}/auth/logout`,
+      { refresh_token: refreshToken },
+      { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+    );
   } catch (error) {
-    console.error('Logout error:', error);
+    // Ignore logout API errors — clear local state regardless
   }
   localStorage.removeItem('token');
+  localStorage.removeItem('refresh_token');
   localStorage.removeItem('user');
   delete axios.defaults.headers.common['Authorization'];
+};
+
+const refreshAccessToken = async () => {
+  const refreshToken = localStorage.getItem('refresh_token');
+  if (!refreshToken) throw new Error('No refresh token');
+
+  const response = await axios.post(
+    `${API_URL}/auth/refresh`,
+    { refresh_token: refreshToken },
+    { _skipAuthRetry: true }
+  );
+
+  const { access_token, token, refresh_token } = response.data;
+  const newAccessToken = access_token || token;
+
+  localStorage.setItem('token', newAccessToken);
+  if (refresh_token) {
+    localStorage.setItem('refresh_token', refresh_token);
+  }
+  axios.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
+  return newAccessToken;
 };
 
 const authService = {
   login,
   register,
   logout,
+  refreshAccessToken,
 };
 
 export default authService;

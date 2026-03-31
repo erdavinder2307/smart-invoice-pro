@@ -24,7 +24,7 @@ import {
 } from "@mui/material";
 import { useParams, useNavigate } from "react-router-dom";
 import MainLayout from "./Layout/MainLayout";
-import { C, AppSelect, fieldSx, menuItemSx, footerSx, cancelBtnSx, saveBtnSx } from './common/formStyles';
+import { C, ZohoRow, AppSelect, fieldSx, menuItemSx, footerSx, cancelBtnSx, saveBtnSx } from './common/formStyles';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
@@ -56,14 +56,7 @@ const initialForm = {
   items: [{ name: "", quantity: 1, rate: 0, discount: 0, tax: 0, amount: 0 }],
 };
 
-const rowLabelSx = {
-  width: 170,
-  minWidth: 170,
-  pr: 2,
-  fontSize: '0.8125rem',
-  color: '#2d3748',
-  lineHeight: 1.4,
-};
+
 
 const itemAmount = (item) => ((item.quantity * item.rate - item.discount) * (1 + item.tax / 100));
 
@@ -213,9 +206,8 @@ const AddEditRecurringProfile = () => {
             </Box>
 
             <Box sx={{ px: 0.5 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', py: 2, borderBottom: `1px solid ${C.divider}` }}>
-              <Typography sx={{ ...rowLabelSx, color: '#e53935' }}>Customer Name*</Typography>
-              <Box sx={{ flex: 1, maxWidth: 600, display: 'flex', gap: 0.8 }}>
+            <ZohoRow label="Customer Name" required>
+              <Box sx={{ maxWidth: 600, display: 'flex', gap: 0.8 }}>
                 <AppSelect name="customer_id" value={form.customer_id} onChange={handleChange} displayEmpty>
                   <MenuItem value="" sx={{ ...menuItemSx, color: C.hint }}>Select Customer</MenuItem>
                   {customers.map((c) => (
@@ -226,25 +218,22 @@ const AddEditRecurringProfile = () => {
                   <SearchIcon sx={{ fontSize: 18, color: '#516173' }} />
                 </IconButton>
               </Box>
-            </Box>
+            </ZohoRow>
 
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, columnGap: 2, rowGap: 1.2, py: 2, borderBottom: `1px solid ${C.divider}` }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
-                <Typography sx={{ ...rowLabelSx, color: '#e53935' }}>Profile Name*</Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, columnGap: 2, py: 2, borderBottom: `1px solid ${C.divider}` }}>
+              <ZohoRow label="Profile Name" required noDivider>
                 <TextField name="profile_name" value={form.profile_name} onChange={handleChange} size="small" required sx={{ ...fieldSx, width: 240 }} />
-              </Box>
+              </ZohoRow>
 
-              <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
-                <Typography sx={{ ...rowLabelSx, color: '#e53935' }}>Repeat Every*</Typography>
+              <ZohoRow label="Repeat Every" required noDivider>
                 <Box sx={{ width: 240 }}>
                   <AppSelect name="frequency" value={form.frequency} onChange={handleChange}>
                     {frequencyOptions.map((f) => <MenuItem key={f} value={f} sx={menuItemSx}>{f}</MenuItem>)}
                   </AppSelect>
                 </Box>
-              </Box>
+              </ZohoRow>
 
-              <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
-                <Typography sx={{ ...rowLabelSx, color: '#e53935' }}>Start On*</Typography>
+              <ZohoRow label="Start On" required noDivider>
                 <TextField
                   name="start_date"
                   type="date"
@@ -254,48 +243,47 @@ const AddEditRecurringProfile = () => {
                   required
                   sx={{ ...fieldSx, width: 240 }}
                 />
-              </Box>
+              </ZohoRow>
 
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2, minWidth: 0 }}>
-                <Typography sx={rowLabelSx}>Ends On</Typography>
-                <TextField
-                  name="end_date"
-                  type="date"
-                  value={form.end_date}
-                  onChange={handleChange}
-                  size="small"
-                  sx={{ ...fieldSx, width: 160 }}
-                />
-                <Typography sx={{ fontSize: '0.8125rem', color: '#374151', minWidth: 100 }}>Occurrence Limit</Typography>
-                <TextField
-                  name="occurrence_limit"
-                  type="number"
-                  value={form.occurrence_limit}
-                  onChange={handleChange}
-                  size="small"
-                  placeholder=""
-                  inputProps={{ min: 1 }}
-                  sx={{ ...fieldSx, width: 120 }}
-                />
-              </Box>
+              <ZohoRow label="Ends On" noDivider>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
+                  <TextField
+                    name="end_date"
+                    type="date"
+                    value={form.end_date}
+                    onChange={handleChange}
+                    size="small"
+                    sx={{ ...fieldSx, width: 160 }}
+                  />
+                  <Typography sx={{ fontSize: '0.8125rem', color: '#374151', minWidth: 100 }}>Occurrence Limit</Typography>
+                  <TextField
+                    name="occurrence_limit"
+                    type="number"
+                    value={form.occurrence_limit}
+                    onChange={handleChange}
+                    size="small"
+                    placeholder=""
+                    inputProps={{ min: 1 }}
+                    sx={{ ...fieldSx, width: 120 }}
+                  />
+                </Box>
+              </ZohoRow>
 
-              <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
-                <Typography sx={rowLabelSx}>Payment Terms</Typography>
+              <ZohoRow label="Payment Terms" noDivider>
                 <Box sx={{ width: 240 }}>
                   <AppSelect name="payment_terms" value={form.payment_terms} onChange={handleChange}>
                     {paymentTermsOptions.map((term) => <MenuItem key={term} value={term} sx={menuItemSx}>{term}</MenuItem>)}
                   </AppSelect>
                 </Box>
-              </Box>
+              </ZohoRow>
 
-              <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
-                <Typography sx={rowLabelSx}>Status</Typography>
+              <ZohoRow label="Status" noDivider>
                 <Box sx={{ width: 240 }}>
                   <AppSelect name="status" value={form.status} onChange={handleChange}>
                     {statusOptions.map((s) => <MenuItem key={s} value={s} sx={menuItemSx}>{s}</MenuItem>)}
                   </AppSelect>
                 </Box>
-              </Box>
+              </ZohoRow>
             </Box>
 
             <Box sx={{ py: 3, borderBottom: `1px solid ${C.divider}` }}>

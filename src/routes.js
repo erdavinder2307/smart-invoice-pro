@@ -40,8 +40,13 @@ import AddEditExpense from './components/AddEditExpense';
 import Reports from './pages/Reports';
 import ProfitAndLoss from './pages/ProfitAndLoss';
 import ARAgingReport from './pages/ARAgingReport';
+import APAgingReport from './pages/APAgingReport';
 import BalanceSheet from './pages/BalanceSheet';
 import CashFlow from './pages/CashFlow';
+import SalesSummary from './pages/SalesSummary';
+import GSTTaxSummary from './pages/GSTTaxSummary';
+import PaymentsReceived from './pages/PaymentsReceived';
+import PaymentsMade from './pages/PaymentsMade';
 import UserManagement from './pages/UserManagement';
 import RoleManagement from './pages/RoleManagement';
 import PendingApprovals from './pages/PendingApprovals';
@@ -50,6 +55,10 @@ import BrandingSettings from './pages/BrandingSettings';
 import InvoicePreferences from './pages/InvoicePreferences';
 import TaxSettings from './pages/TaxSettings';
 import AutomationSettings from './pages/AutomationSettings';
+import IntegrationSettings from './pages/IntegrationSettings';
+import NotificationsPage from './pages/NotificationsPage';
+import AuditLogPage from './pages/AuditLogPage';
+import CustomerDetailPage from './pages/CustomerDetailPage';
 
 const AppRoutes = () => {
   return (
@@ -90,11 +99,17 @@ const AppRoutes = () => {
         <Route path="/reports" element={<Reports />} />
         <Route path="/reports/profit-loss" element={<ProfitAndLoss />} />
         <Route path="/reports/ar-aging" element={<ARAgingReport />} />
+        <Route path="/reports/ap-aging" element={<APAgingReport />} />
         <Route path="/reports/balance-sheet" element={<BalanceSheet />} />
         <Route path="/reports/cash-flow" element={<CashFlow />} />
+        <Route path="/reports/sales-summary" element={<SalesSummary />} />
+        <Route path="/reports/gst-tax-summary" element={<GSTTaxSummary />} />
+        <Route path="/reports/payments-received" element={<PaymentsReceived />} />
+        <Route path="/reports/payments-made" element={<PaymentsMade />} />
         <Route path="/customers" element={<CustomerList />} />
         <Route path="/customers/add" element={<AddEditCustomer />} />
         <Route path="/customers/edit/:id" element={<AddEditCustomer />} />
+        <Route path="/customers/:id" element={<CustomerDetailPage />} />
         <Route path="/customer/login" element={<CustomerLogin />} />
         <Route path="/customer/dashboard" element={<CustomerDashboard />} />
         <Route path="/customer/invoices/:id" element={<CustomerInvoiceDetail />} />
@@ -113,6 +128,9 @@ const AppRoutes = () => {
         <Route path="/settings/taxes" element={<TaxSettings />} />
         <Route path="/settings/roles" element={<RoleManagement />} />
         <Route path="/settings/automation" element={<AutomationSettings />} />
+        <Route path="/settings/integrations" element={<IntegrationSettings />} />
+        <Route path="/settings/audit-log" element={<AuditLogPage />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/approvals" element={<PendingApprovals />} />
 
         {/* Public Invoice Portal — no auth required */}

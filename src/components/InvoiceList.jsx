@@ -60,6 +60,7 @@ import ThumbUpAltIcon from '@mui/icons-material/ThumbUpAlt';
 import ThumbDownAltIcon from '@mui/icons-material/ThumbDownAlt';
 import SendIcon from '@mui/icons-material/Send';
 import EmailIcon from '@mui/icons-material/Email';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import PayNowModal from "./PayNowModal";
 import { useAuth } from "../context/AuthContext";
 
@@ -894,6 +895,18 @@ const InvoiceList = () => {
           }
         }}
       >
+        <MenuItem
+          onClick={() => {
+            navigate('/invoices/add', { state: { cloneFrom: selectedInvoice } });
+            handleActionMenuClose();
+          }}
+          sx={{ py: 1.25 }}
+        >
+          <ListItemIcon>
+            <ContentCopyIcon fontSize="small" color="action" />
+          </ListItemIcon>
+          <ListItemText primary="Duplicate" secondary="Copy as new draft" />
+        </MenuItem>
         <MenuItem
           onClick={() => {
             handleEdit(selectedInvoice);

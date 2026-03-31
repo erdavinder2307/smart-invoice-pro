@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import MainLayout from '../components/Layout/MainLayout';
 import axios from 'axios';
 import { createApiUrl } from '../config/api';
-import { exportARAgingPDF, exportARAgingExcel } from '../utils/reportExport';
+import { exportAPAgingPDF, exportAPAgingExcel } from '../utils/reportExport';
 import {
   Box,
   Container,
@@ -51,12 +51,13 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import WarningIcon from '@mui/icons-material/Warning';
 import ErrorIcon from '@mui/icons-material/Error';
 
-const ARAgingReport = () => {
+const APAgingReport = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [reportData, setReportData] = useState(null);
   const [asOfDate, setAsOfDate] = useState(new Date().toISOString().split('T')[0]);
+  const [exportAnchor, setExportAnchor] = useState(null);
 
   const userStr = localStorage.getItem('user');
   const userId = userStr ? JSON.parse(userStr).id : null;
@@ -66,22 +67,15 @@ const ARAgingReport = () => {
       setError('User not authenticated');
       return;
     }
-
     setLoading(true);
     setError('');
-
     try {
-      const response = await axios.get(createApiUrl('/api/reports/aging'), {
-        params: {
-          user_id: userId,
-          as_of_date: asOfDate
-        }
+      const response = await axios.get(createApiUrl('/api/reports/ap-aging'), {
+        params: { user_id: userId, as_of_date: asOfDate }
       });
-
       setReportData(response.data);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to fetch report');
-      console.error('Error fetching A/R aging report:', err);
     } finally {
       setLoading(false);
     }
@@ -92,34 +86,31 @@ const ARAgingReport = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const [exportAnchor, setExportAnchor] = useState(null);
-
   const handleExportPDF = () => {
-    if (reportData) exportARAgingPDF(reportData, asOfDate);
+    if (reportData) exportAPAgingPDF(reportData, asOfDate);
     setExportAnchor(null);
   };
   const handleExportExcel = () => {
-    if (reportData) exportARAgingExcel(reportData, asOfDate);
+    if (reportData) exportAPAgingExcel(reportData, asOfDate);
     setExportAnchor(null);
   };
 
-  // Prepare data for chart
   const chartData = reportData ? [
-    { name: 'Current', value: reportData.aging_buckets.current.total, color: '#4CAF50' },
-    { name: '1-30 Days', value: reportData.aging_buckets['1-30'].total, color: '#2196F3' },
+    { name: 'Current',    value: reportData.aging_buckets.current.total, color: '#4CAF50' },
+    { name: '1-30 Days',  value: reportData.aging_buckets['1-30'].total,  color: '#2196F3' },
     { name: '31-60 Days', value: reportData.aging_buckets['31-60'].total, color: '#FF9800' },
     { name: '61-90 Days', value: reportData.aging_buckets['61-90'].total, color: '#F44336' },
-    { name: '90+ Days', value: reportData.aging_buckets['90+'].total, color: '#9C27B0' }
+    { name: '90+ Days',   value: reportData.aging_buckets['90+'].total,   color: '#9C27B0' }
   ] : [];
 
   const getSeverityColor = (bucket) => {
     switch (bucket) {
       case 'current': return 'success';
-      case '1-30': return 'info';
-      case '31-60': return 'warning';
-      case '61-90': return 'error';
-      case '90+': return 'error';
-      default: return 'default';
+      case '1-30':    return 'info';
+      case '31-60':   return 'warning';
+      case '61-90':   return 'error';
+      case '90+':     return 'error';
+      default:        return 'default';
     }
   };
 
@@ -132,7 +123,7 @@ const ARAgingReport = () => {
             <ArrowBackIcon />
           </IconButton>
           <Typography variant="h4" fontWeight="bold" sx={{ flexGrow: 1 }}>
-            📅 Accounts Receivable Aging
+            📅 Accounts Payable Aging
           </Typography>
           <Button
             variant="contained"
@@ -168,12 +159,7 @@ const ARAgingReport = () => {
               />
             </Grid>
             <Grid item xs={12} md={4}>
-              <Button
-                variant="contained"
-                fullWidth
-                onClick={fetchReport}
-                disabled={loading}
-              >
+              <Button variant="contained" fullWidth onClick={fetchReport} disabled={loading}>
                 {loading ? <CircularProgress size={24} /> : 'Generate Report'}
               </Button>
             </Grid>
@@ -189,11 +175,7 @@ const ARAgingReport = () => {
           </Grid>
         </Paper>
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-          </Alert>
-        )}
+        {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 8 }}>
@@ -201,19 +183,17 @@ const ARAgingReport = () => {
           </Box>
         ) : reportData ? (
           <>
-            {/* Summary Card */}
+            {/* Summary Cards */}
             <Grid container spacing={3} sx={{ mb: 3 }}>
               <Grid item xs={12} md={8}>
                 <Card sx={{ height: '100%' }}>
                   <CardContent>
-                    <Typography variant="h6" gutterBottom>
-                      Total Outstanding
-                    </Typography>
-                    <Typography variant="h3" fontWeight="bold" color="primary">
+                    <Typography variant="h6" gutterBottom>Total Outstanding Payables</Typography>
+                    <Typography variant="h3" fontWeight="bold" color="error.main">
                       ${reportData.total_outstanding.toLocaleString()}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      Across {reportData.total_invoices} unpaid invoice{reportData.total_invoices !== 1 ? 's' : ''}
+                      Across {reportData.total_bills} unpaid bill{reportData.total_bills !== 1 ? 's' : ''}
                     </Typography>
                   </CardContent>
                 </Card>
@@ -223,9 +203,7 @@ const ARAgingReport = () => {
                   <CardContent>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                       <WarningIcon color="error" sx={{ mr: 1 }} />
-                      <Typography variant="h6" color="error.main">
-                        Overdue
-                      </Typography>
+                      <Typography variant="h6" color="error.main">Overdue</Typography>
                     </Box>
                     <Typography variant="h4" fontWeight="bold" color="error.main">
                       ${(
@@ -235,7 +213,7 @@ const ARAgingReport = () => {
                       ).toLocaleString()}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      Requires immediate attention
+                      Requires immediate payment
                     </Typography>
                   </CardContent>
                 </Card>
@@ -244,9 +222,7 @@ const ARAgingReport = () => {
 
             {/* Aging Chart */}
             <Paper sx={{ p: 3, mb: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Aging Distribution
-              </Typography>
+              <Typography variant="h6" gutterBottom>Aging Distribution</Typography>
               <Divider sx={{ mb: 2 }} />
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={chartData}>
@@ -265,9 +241,7 @@ const ARAgingReport = () => {
 
             {/* Aging Summary Table */}
             <Paper sx={{ p: 3, mb: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Aging Summary
-              </Typography>
+              <Typography variant="h6" gutterBottom>Aging Summary</Typography>
               <Divider sx={{ mb: 2 }} />
               <TableContainer>
                 <Table>
@@ -303,7 +277,7 @@ const ARAgingReport = () => {
                     })}
                     <TableRow sx={{ bgcolor: 'grey.100', '& td': { fontWeight: 'bold' } }}>
                       <TableCell>Total</TableCell>
-                      <TableCell align="center">{reportData.total_invoices}</TableCell>
+                      <TableCell align="center">{reportData.total_bills}</TableCell>
                       <TableCell align="right">${reportData.total_outstanding.toLocaleString()}</TableCell>
                       <TableCell align="right">100%</TableCell>
                     </TableRow>
@@ -312,26 +286,24 @@ const ARAgingReport = () => {
               </TableContainer>
             </Paper>
 
-            {/* Customer Summary */}
+            {/* Vendor Summary */}
             <Paper sx={{ p: 3, mb: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Top Customers by Outstanding Balance
-              </Typography>
+              <Typography variant="h6" gutterBottom>Top Vendors by Outstanding Balance</Typography>
               <Divider sx={{ mb: 2 }} />
               <TableContainer>
                 <Table>
                   <TableHead>
                     <TableRow>
-                      <TableCell><strong>Customer</strong></TableCell>
+                      <TableCell><strong>Vendor</strong></TableCell>
                       <TableCell align="right"><strong>Outstanding Amount</strong></TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {reportData.customer_summary.slice(0, 10).map((customer) => (
-                      <TableRow key={customer.customer_id}>
-                        <TableCell>{customer.customer_name}</TableCell>
+                    {reportData.vendor_summary.slice(0, 10).map((vendor, idx) => (
+                      <TableRow key={vendor.vendor_id || idx}>
+                        <TableCell>{vendor.vendor_name}</TableCell>
                         <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                          ${customer.total_outstanding.toLocaleString()}
+                          ${vendor.total_outstanding.toLocaleString()}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -340,10 +312,8 @@ const ARAgingReport = () => {
               </TableContainer>
             </Paper>
 
-            {/* Detailed Invoices by Bracket */}
-            <Typography variant="h6" gutterBottom>
-              Detailed Invoice Breakdown
-            </Typography>
+            {/* Detailed Bills by Bracket */}
+            <Typography variant="h6" gutterBottom>Detailed Bill Breakdown</Typography>
             {Object.entries(reportData.aging_buckets).map(([bucket, data]) => (
               data.count > 0 && (
                 <Accordion key={bucket} sx={{ mb: 1 }}>
@@ -355,11 +325,9 @@ const ARAgingReport = () => {
                         size="small"
                       />
                       <Typography sx={{ flexGrow: 1 }}>
-                        {data.count} invoice{data.count !== 1 ? 's' : ''}
+                        {data.count} bill{data.count !== 1 ? 's' : ''}
                       </Typography>
-                      <Typography fontWeight="bold">
-                        ${data.total.toLocaleString()}
-                      </Typography>
+                      <Typography fontWeight="bold">${data.total.toLocaleString()}</Typography>
                     </Box>
                   </AccordionSummary>
                   <AccordionDetails>
@@ -367,25 +335,25 @@ const ARAgingReport = () => {
                       <Table size="small">
                         <TableHead>
                           <TableRow>
-                            <TableCell>Invoice #</TableCell>
-                            <TableCell>Customer</TableCell>
-                            <TableCell>Issue Date</TableCell>
+                            <TableCell>Bill #</TableCell>
+                            <TableCell>Vendor</TableCell>
+                            <TableCell>Bill Date</TableCell>
                             <TableCell>Due Date</TableCell>
                             <TableCell align="right">Days Overdue</TableCell>
                             <TableCell align="right">Balance Due</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {data.invoices.map((invoice) => (
-                            <TableRow key={invoice.invoice_id}>
-                              <TableCell>{invoice.invoice_number}</TableCell>
-                              <TableCell>{invoice.customer_name}</TableCell>
-                              <TableCell>{invoice.issue_date}</TableCell>
-                              <TableCell>{invoice.due_date}</TableCell>
+                          {data.bills.map((bill) => (
+                            <TableRow key={bill.bill_id}>
+                              <TableCell>{bill.bill_number}</TableCell>
+                              <TableCell>{bill.vendor_name}</TableCell>
+                              <TableCell>{bill.bill_date}</TableCell>
+                              <TableCell>{bill.due_date}</TableCell>
                               <TableCell align="right">
-                                {invoice.days_overdue > 0 ? (
+                                {bill.days_overdue > 0 ? (
                                   <Chip
-                                    label={`${invoice.days_overdue} days`}
+                                    label={`${bill.days_overdue} days`}
                                     color="error"
                                     size="small"
                                     icon={<ErrorIcon />}
@@ -395,7 +363,7 @@ const ARAgingReport = () => {
                                 )}
                               </TableCell>
                               <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                                ${invoice.balance_due.toLocaleString()}
+                                ${bill.balance_due.toLocaleString()}
                               </TableCell>
                             </TableRow>
                           ))}
@@ -419,4 +387,4 @@ const ARAgingReport = () => {
   );
 };
 
-export default ARAgingReport;
+export default APAgingReport;

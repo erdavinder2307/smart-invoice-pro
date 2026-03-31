@@ -127,7 +127,7 @@ const testTheme = createTheme({
  * @param {object} options.brandValue - Override default branding context
  * @param {object} options.notifValue - Override default notification context
  * @param {object} options.prefValue  - Override default invoice prefs context
- * @param {...any} options.renderOptions - Passed through to RTL render()
+ * @param {object} [options.renderOptions] - Additional options passed through to RTL render()
  */
 export function renderWithProviders(
   ui,

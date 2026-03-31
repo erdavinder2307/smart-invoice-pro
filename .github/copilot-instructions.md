@@ -8,7 +8,7 @@ React-based SPA frontend for Smart Invoice Pro, using MUI for UI components, axi
 
 - **Framework**: React 19 with Create React App (react-scripts 5.0.1)
 - **UI Library**: MUI 7 (@mui/material, @mui/icons-material, @mui/x-data-grid)
-- **Routing**: react-router-dom 7+ (BrowserRouter with ~156 routes in `src/routes.js`)
+- **Routing**: react-router-dom 7+ (BrowserRouter with ~160 routes in `src/routes.js`)
 - **HTTP Client**: axios with request/response interceptors in `src/index.js`
 - **State**: 5 React Context providers nested in `src/index.js`
 - **Animation**: framer-motion
@@ -27,6 +27,81 @@ AuthProvider > BrandingProvider > InvoicePreferencesProvider > PermissionProvide
 - **InvoicePreferencesContext** — `useInvoicePreferences()`: invoice numbering defaults
 - **PermissionContext** — `usePermission()`: `can(module, action)` helper, PERMISSION_MODULES
 - **NotificationContext** — `useNotifications()`: 60s polling, markRead, markAllAsRead
+
+## Super Admin Module
+
+The admin panel lives in `src/admin/` — fully isolated from the main app with its own auth, routing, layout, and services.
+
+### Admin Folder Structure
+
+```
+src/admin/
+  components/
+    AdminHeader.jsx      — Dark-themed app bar with logout
+    AdminSidebar.jsx     — Permanent drawer nav
+    AdminLayout.jsx      — Header + Sidebar + content wrapper
+  pages/
+    Login.jsx            — Standalone admin login
+    Dashboard.jsx        — System stats cards
+    Tenants.jsx          — Tenant management table
+    Users.jsx            — User management + password reset
+    FeatureFlags.jsx     — Per-tenant feature toggles
+  routes/
+    AdminProtectedRoute.jsx — Route guard (checks admin_token + is_super_admin)
+    AdminRoutes.jsx         — All /admin/* route definitions
+  services/
+    adminAuthService.js  — Login/logout/token management (separate from user auth)
+    adminApiService.js   — All admin API calls with admin-specific auth header
+```
+
+### Admin Routes
+
+| Path | Page | Protected |
+|------|------|-----------|
+| `/admin/login` | Login | No |
+| `/admin/dashboard` | Dashboard | Yes |
+| `/admin/tenants` | Tenants | Yes |
+| `/admin/users` | Users | Yes |
+| `/admin/feature-flags` | FeatureFlags | Yes |
+
+Admin routes are mounted in `src/routes.js` via `<Route path="/admin/*" element={<AdminRoutes />} />`.
+
+### Admin Authentication (ISOLATED)
+
+Admin auth uses **separate** localStorage keys — never mixed with regular user auth:
+
+| Key | Purpose |
+|-----|---------|
+| `admin_token` | JWT access token |
+| `admin_refresh_token` | Refresh token |
+| `admin_user` | Serialized user object (must have `is_super_admin: true`) |
+
+```jsx
+// CORRECT — use adminAuthService for admin pages
+import adminAuthService from '../services/adminAuthService';
+const token = adminAuthService.getToken();
+const isAuth = adminAuthService.isAuthenticated();
+
+// WRONG — never use regular auth for admin
+import { useAuth } from '../../context/AuthContext'; // DON'T DO THIS in admin module
+const token = localStorage.getItem('token');         // DON'T DO THIS — wrong key
+```
+
+### Admin API Service
+
+All admin API calls go through `src/admin/services/adminApiService.js`. It uses `adminAuthService.getToken()` for the Authorization header.
+
+```jsx
+// CORRECT — import from admin service
+import { listTenants, updateTenantStatus } from '../services/adminApiService';
+
+// WRONG — don't use regular services or axios directly in admin pages
+import axios from 'axios';
+```
+
+### Admin Route Guard
+
+`AdminProtectedRoute` checks `adminAuthService.isAuthenticated()` (verifies both token exists AND `is_super_admin === true`). Redirects to `/admin/login` if not authorized.
 
 ## Key Conventions
 
@@ -132,7 +207,7 @@ src/__tests__/
   components/     — Component rendering & interaction tests
   context/        — Context provider & hook tests
   config/         — Configuration tests
-  admin/          — Admin panel tests
+  admin/          — Admin module tests (auth, API, components, routes)
 ```
 
 #### Service Test Pattern
@@ -200,6 +275,72 @@ describe('MyComponent', () => {
 9. **Test error states** — Verify error messages appear on API failures
 10. **Test auth-gated UI** — Verify admin-only elements are hidden for non-admin users
 
+#### Admin Module Test Patterns
+
+Admin tests live in `src/__tests__/admin/`. Key files:
+
+| Test File | What It Tests |
+|-----------|---------------|
+| `adminAuthService.test.js` | Login, logout, token storage, `is_super_admin` validation |
+| `adminApiService.test.js` | All admin API endpoints, auth header isolation |
+| `AdminProtectedRoute.test.jsx` | Route guard renders/redirects correctly |
+| `AdminLogin.test.jsx` | Form validation, login flow, error/loading states |
+| `AdminSidebar.test.jsx` | Menu items render correctly |
+
+##### Admin Auth Service Test Pattern
+
+```jsx
+import axios from 'axios';
+import adminAuthService from '../../admin/services/adminAuthService';
+
+jest.mock('axios');
+beforeEach(() => {
+  jest.clearAllMocks();
+  localStorage.clear();
+});
+
+describe('adminAuthService', () => {
+  it('stores admin_token on successful super admin login', async () => {
+    axios.post.mockResolvedValue({
+      data: {
+        token: 'admin-jwt',
+        user: { id: '1', username: 'admin', is_super_admin: true },
+      },
+    });
+    await adminAuthService.login({ email: 'admin@test.com', password: 'pass' });
+    expect(localStorage.getItem('admin_token')).toBe('admin-jwt');
+  });
+
+  it('rejects non-super-admin users', async () => {
+    axios.post.mockResolvedValue({
+      data: { token: 'jwt', user: { id: '2', is_super_admin: false } },
+    });
+    await expect(adminAuthService.login({ email: 'user@test.com', password: 'pass' }))
+      .rejects.toThrow('Access denied');
+    expect(localStorage.getItem('admin_token')).toBeNull();
+  });
+});
+```
+
+##### Admin Component Test Pattern
+
+Admin components do NOT use `useAuth` context — they use `adminAuthService` directly. Mock it accordingly:
+
+```jsx
+import adminAuthService from '../../admin/services/adminAuthService';
+
+jest.mock('../../admin/services/adminAuthService', () => ({
+  __esModule: true,
+  default: {
+    isAuthenticated: jest.fn(() => true),
+    getToken: jest.fn(() => 'admin-jwt'),
+    getUser: jest.fn(() => ({ id: '1', is_super_admin: true })),
+    login: jest.fn(),
+    logout: jest.fn(),
+  },
+}));
+```
+
 ### Coverage Thresholds
 
 Coverage thresholds are enforced in `package.json`:
@@ -210,6 +351,14 @@ Coverage thresholds are enforced in `package.json`:
 | `src/context/` | 50% | 40% | 50% |
 | `src/config/` | 50% | — | 50% |
 
+### Coverage Targets for Admin Module
+
+| Directory | Min Statements | Min Functions | Min Lines |
+|-----------|---------------|---------------|----------|
+| `src/admin/services/` | 80% | 80% | 80% |
+| `src/admin/routes/` | 60% | 60% | 60% |
+| `src/admin/pages/` | 40% | 40% | 40% |
+
 ## Common Pitfalls
 
 1. **ESM modules**: axios and react-router-dom are ESM — `transformIgnorePatterns` in package.json handles this
@@ -219,3 +368,6 @@ Coverage thresholds are enforced in `package.json`:
 5. **Context hook mocking**: When a test overrides `useAuth.mockReturnValue()`, it persists across tests — always reset in `beforeEach`
 6. **Chart components**: Canvas and recharts need mock context (already in setupTests.js)
 7. **framer-motion components**: Globally mocked in setupTests.js to render plain HTML elements
+8. **Admin auth isolation**: Admin module uses `admin_token`/`admin_user` localStorage keys — never `token`/`user`. Tests must mock `adminAuthService`, not `useAuth`
+9. **Admin routes**: Admin routes are nested under `/admin/*` via `<AdminRoutes />`. Do NOT add admin pages to the main `routes.js` — add them to `src/admin/routes/AdminRoutes.jsx`
+10. **Admin API headers**: `adminApiService.js` builds its own Authorization header from `adminAuthService.getToken()` — it does NOT use the axios interceptor from `src/index.js`

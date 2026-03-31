@@ -17,7 +17,6 @@ import {
   Grid,
   IconButton,
   InputAdornment,
-  InputLabel,
   MenuItem,
   Radio,
   RadioGroup,
@@ -79,10 +78,6 @@ const EMPTY_CP = {
 const isValidEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
 const isValidGST = v => !v || /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(v.toUpperCase());
 const isValidPAN = v => !v || /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(v.toUpperCase());
-const genPwd = () => {
-  const c = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%';
-  return Array.from({ length: 12 }, () => c[Math.floor(Math.random() * c.length)]).join('');
-};
 
 // ─── initial form state ─────────────────────────────────────────────────────
 const INIT = {
@@ -715,7 +710,7 @@ const AddEditCustomer = () => {
       delete payload.shipping_street2;
       if (customerId) await axios.put(createApiUrl(`/api/customers/${customerId}`), payload);
       else await axios.post(createApiUrl('/api/customers'), payload);
-      navigate('/customers');
+      navigate('/customers', { state: { successMessage: customerId ? 'Customer updated successfully.' : 'Customer created successfully.' } });
     } catch (err) {
       setApiError(err.response?.data?.error || 'Failed to save customer. Please try again.');
     } finally { setSaving(false); }

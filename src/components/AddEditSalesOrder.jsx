@@ -61,8 +61,7 @@ const initialForm = {
   terms_conditions: "",
   is_gst_applicable: false,
   subject: "",
-  salesperson: "",
-  items: [{ quantity: 1, rate: 0, discount: 0, tax: 0, amount: 0 }],
+  items: [{ item_name: "", description: "", quantity: 1, rate: 0, discount: 0, tax: 0, amount: 0 }],
 };
 
 const AddEditSalesOrder = () => {
@@ -151,11 +150,20 @@ const AddEditSalesOrder = () => {
       return;
     }
 
+    // Attach complete customer info
+    const customer = customers.find(c => c.id === form.customer_id);
+    const payload = {
+      ...form,
+      customer_name: customer ? (customer.name || customer.display_name || "") : "",
+      customer_email: customer?.email || "",
+      customer_phone: customer?.phone || customer?.mobile || ""
+    };
+
     try {
       if (soId) {
-        await axios.put(createApiUrl(`/api/sales-orders/${soId}`), form);
+        await axios.put(createApiUrl(`/api/sales-orders/${soId}`), payload);
       } else {
-        await axios.post(createApiUrl("/api/sales-orders"), form);
+        await axios.post(createApiUrl("/api/sales-orders"), payload);
       }
       navigate("/sales-orders");
     } catch (err) {
@@ -229,7 +237,7 @@ const AddEditSalesOrder = () => {
                     >
                       {customers.map((c) => (
                         <MenuItem key={c.id} value={c.id}>
-                          {c.name}
+                          {c.name || c.display_name || "Unknown Customer"}
                         </MenuItem>
                       ))}
                     </Select>
@@ -406,6 +414,7 @@ const AddEditSalesOrder = () => {
                 <Table size="small">
                   <TableHead sx={{ bgcolor: 'grey.50' }}>
                     <TableRow>
+                      <TableCell sx={{ fontWeight: 700, minWidth: 200 }}>Item Details</TableCell>
                       <TableCell align="center" sx={{ fontWeight: 700 }}>Qty</TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>Rate (₹)</TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>Discount</TableCell>
@@ -417,6 +426,19 @@ const AddEditSalesOrder = () => {
                   <TableBody>
                     {form.items?.map((item, idx) => (
                       <TableRow key={idx} sx={{ '&:hover': { bgcolor: 'grey.50' } }}>
+                        <TableCell>
+                          <TextField
+                            size="small"
+                            placeholder="Enter item name or description"
+                            value={item.item_name || ""}
+                            onChange={(e) => {
+                              const newItems = [...form.items];
+                              newItems[idx].item_name = e.target.value;
+                              setForm({ ...form, items: newItems });
+                            }}
+                            fullWidth
+                          />
+                        </TableCell>
                         <TableCell align="center">
                           <TextField
                             size="small"
@@ -482,7 +504,7 @@ const AddEditSalesOrder = () => {
                               size="small"
                               onClick={() => {
                                 const newItems = form.items.filter((_, i) => i !== idx);
-                                setForm({ ...form, items: newItems.length > 0 ? newItems : [{ quantity: 1, rate: 0, discount: 0, tax: 0, amount: 0 }] });
+                                 setForm({ ...form, items: newItems.length > 0 ? newItems : [{ item_name: "", quantity: 1, rate: 0, discount: 0, tax: 0, amount: 0 }] });
                               }}
                               sx={{ color: 'error.main' }}
                             >
@@ -500,7 +522,7 @@ const AddEditSalesOrder = () => {
                 onClick={() => {
                   setForm({
                     ...form,
-                    items: [...(form.items || []), { quantity: 1, rate: 0, discount: 0, tax: 0, amount: 0 }]
+                    items: [...(form.items || []), { item_name: "", quantity: 1, rate: 0, discount: 0, tax: 0, amount: 0 }]
                   });
                 }}
                 sx={{ mt: 2, borderRadius: 2, textTransform: 'none', fontWeight: 600 }}

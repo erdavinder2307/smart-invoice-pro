@@ -43,7 +43,13 @@ import ARAgingReport from './pages/ARAgingReport';
 import BalanceSheet from './pages/BalanceSheet';
 import CashFlow from './pages/CashFlow';
 import UserManagement from './pages/UserManagement';
+import RoleManagement from './pages/RoleManagement';
 import PendingApprovals from './pages/PendingApprovals';
+import OrganizationProfile from './pages/OrganizationProfile';
+import BrandingSettings from './pages/BrandingSettings';
+import InvoicePreferences from './pages/InvoicePreferences';
+import TaxSettings from './pages/TaxSettings';
+import AutomationSettings from './pages/AutomationSettings';
 
 const AppRoutes = () => {
   return (
@@ -101,6 +107,12 @@ const AppRoutes = () => {
         <Route path="/profile" element={<Profile />} />
         <Route path="/settings" element={<UserManagement />} />
         <Route path="/settings/users" element={<UserManagement />} />
+        <Route path="/settings/organization-profile" element={<OrganizationProfile />} />
+        <Route path="/settings/branding" element={<BrandingSettings />} />
+        <Route path="/settings/invoice-preferences" element={<InvoicePreferences />} />
+        <Route path="/settings/taxes" element={<TaxSettings />} />
+        <Route path="/settings/roles" element={<RoleManagement />} />
+        <Route path="/settings/automation" element={<AutomationSettings />} />
         <Route path="/approvals" element={<PendingApprovals />} />
 
         {/* Public Invoice Portal — no auth required */}

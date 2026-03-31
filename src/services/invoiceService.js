@@ -22,3 +22,13 @@ export const deleteInvoice = async (id) => {
   const response = await axios.delete(`${API_URL}/${id}`);
   return response.data;
 };
+
+export const sendInvoiceEmail = async (id, payload) => {
+  const response = await axios.post(`${API_URL}/${id}/send-email`, payload);
+  return response.data;
+};
+
+export const recordPayment = async (id, payload) => {
+  const response = await axios.post(`${API_URL}/${id}/record-payment`, payload);
+  return response.data;
+};

@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { getProfile, updateProfile } from "../services/profileService";
+import { getReminderSettings, saveReminderSettings } from "../services/reminderService";
 import {
     Box,
     Button,
     TextField,
     Typography,
-    Paper,
     Grid,
     CircularProgress,
     Alert,
@@ -20,7 +20,11 @@ import {
     MenuItem,
     FormControl,
     InputLabel,
-    Divider
+    Chip,
+    Switch,
+    FormControlLabel,
+    Snackbar,
+    Stack,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "../components/Layout/MainLayout";
@@ -32,14 +36,11 @@ import {
     Email as EmailIcon,
     Phone as PhoneIcon,
     LocationOn as LocationOnIcon,
-    Receipt as ReceiptIcon,
-    Language as LanguageIcon,
-    AccessTime as AccessTimeIcon,
     Person as PersonIcon,
-    PhotoCamera,
     AccountCircle as AccountCircleIcon,
     Settings as SettingsIcon,
-    Cancel as CancelIcon
+    Cancel as CancelIcon,
+    NotificationsActive as NotificationsActiveIcon,
 } from "@mui/icons-material";
 
 
@@ -51,6 +52,40 @@ const Profile = () => {
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
     const [activeTab, setActiveTab] = useState(0);
+
+    // Reminder settings state
+    const [reminders, setReminders] = useState({
+        reminders_enabled: true,
+        before_due_days: [3],
+        after_due_days: [1, 3, 7],
+    });
+    const [reminderSaving, setReminderSaving] = useState(false);
+    const [reminderToast, setReminderToast] = useState({ open: false, message: '', severity: 'success' });
+
+    const BEFORE_OPTIONS = [1, 2, 3, 5, 7, 10, 14];
+    const AFTER_OPTIONS  = [1, 2, 3, 5, 7, 10, 14, 21, 30];
+
+    const toggleDay = (field, day) => {
+        setReminders(prev => {
+            const current = prev[field] || [];
+            const next = current.includes(day)
+                ? current.filter(d => d !== day)
+                : [...current, day].sort((a, b) => a - b);
+            return { ...prev, [field]: next };
+        });
+    };
+
+    const handleSaveReminders = async () => {
+        setReminderSaving(true);
+        try {
+            await saveReminderSettings(reminders);
+            setReminderToast({ open: true, message: 'Reminder settings saved successfully.', severity: 'success' });
+        } catch (err) {
+            setReminderToast({ open: true, message: 'Failed to save reminder settings.', severity: 'error' });
+        } finally {
+            setReminderSaving(false);
+        }
+    };
 
     const [form, setForm] = useState({
         name: "",
@@ -73,7 +108,10 @@ const Profile = () => {
         const fetchProfile = async () => {
             try {
                 setLoading(true);
-                const data = await getProfile();
+                const [data, reminderData] = await Promise.all([
+                    getProfile(),
+                    getReminderSettings().catch(() => null),
+                ]);
                 setForm({
                     name: data.name || "",
                     email: data.email || "",
@@ -85,6 +123,13 @@ const Profile = () => {
                     default_currency: data.default_currency || "INR",
                     date_format: data.date_format || "DD/MM/YYYY",
                 });
+                if (reminderData) {
+                    setReminders({
+                        reminders_enabled: reminderData.reminders_enabled ?? true,
+                        before_due_days:   reminderData.before_due_days ?? [3],
+                        after_due_days:    reminderData.after_due_days  ?? [1, 3, 7],
+                    });
+                };
             } catch (err) {
                 setError("Failed to load profile");
             } finally {
@@ -137,6 +182,7 @@ const Profile = () => {
     }
 
     return (
+        <>
         <MainLayout title="My Profile" subtitle="Manage your account and business information">
             <Box sx={{ maxWidth: 1000, mx: 'auto' }}>
                 {/* Main Content Card */}
@@ -212,6 +258,7 @@ const Profile = () => {
                                 <Tab label="Basic Info" icon={<PersonIcon />} iconPosition="start" />
                                 <Tab label="Business Info" icon={<BusinessIcon />} iconPosition="start" />
                                 <Tab label="Preferences" icon={<SettingsIcon />} iconPosition="start" />
+                                <Tab label="Payment Reminders" icon={<NotificationsActiveIcon />} iconPosition="start" />
                             </Tabs>
                         </Box>
 
@@ -469,6 +516,88 @@ const Profile = () => {
                                 </Card>
                             )}
 
+                            {/* Tab Panel 3: Payment Reminders */}
+                            {activeTab === 3 && (
+                                <Card sx={{ mb: 3, borderRadius: 3, border: '1px solid', borderColor: 'grey.200' }}>
+                                    <CardContent sx={{ p: 3 }}>
+                                        <Typography variant="h6" fontWeight={600} gutterBottom sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <NotificationsActiveIcon color="primary" />
+                                            Payment Reminders
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                                            Automatically email customers about upcoming and overdue invoices.
+                                        </Typography>
+
+                                        <FormControlLabel
+                                            control={
+                                                <Switch
+                                                    checked={reminders.reminders_enabled}
+                                                    onChange={(e) => setReminders(p => ({ ...p, reminders_enabled: e.target.checked }))}
+                                                    color="primary"
+                                                />
+                                            }
+                                            label={
+                                                <Typography fontWeight={600}>
+                                                    {reminders.reminders_enabled ? 'Reminders Enabled' : 'Reminders Disabled'}
+                                                </Typography>
+                                            }
+                                            sx={{ mb: 3 }}
+                                        />
+
+                                        <Box sx={{ opacity: reminders.reminders_enabled ? 1 : 0.45, pointerEvents: reminders.reminders_enabled ? 'auto' : 'none' }}>
+                                            <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Before Due Date</Typography>
+                                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>Send a reminder N days before the invoice is due.</Typography>
+                                            <Stack direction="row" flexWrap="wrap" gap={1} sx={{ mb: 3 }}>
+                                                {BEFORE_OPTIONS.map(d => (
+                                                    <Chip
+                                                        key={d}
+                                                        label={`${d} day${d !== 1 ? 's' : ''}`}
+                                                        onClick={() => toggleDay('before_due_days', d)}
+                                                        color={reminders.before_due_days.includes(d) ? 'primary' : 'default'}
+                                                        variant={reminders.before_due_days.includes(d) ? 'filled' : 'outlined'}
+                                                        clickable
+                                                    />
+                                                ))}
+                                            </Stack>
+
+                                            <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>After Due Date (Overdue)</Typography>
+                                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>Send a follow-up reminder N days after the invoice is overdue.</Typography>
+                                            <Stack direction="row" flexWrap="wrap" gap={1}>
+                                                {AFTER_OPTIONS.map(d => (
+                                                    <Chip
+                                                        key={d}
+                                                        label={`${d} day${d !== 1 ? 's' : ''}`}
+                                                        onClick={() => toggleDay('after_due_days', d)}
+                                                        color={reminders.after_due_days.includes(d) ? 'error' : 'default'}
+                                                        variant={reminders.after_due_days.includes(d) ? 'filled' : 'outlined'}
+                                                        clickable
+                                                    />
+                                                ))}
+                                            </Stack>
+                                        </Box>
+
+                                        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
+                                            <Button
+                                                variant="contained"
+                                                startIcon={reminderSaving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
+                                                onClick={handleSaveReminders}
+                                                disabled={reminderSaving}
+                                                sx={{
+                                                    borderRadius: 2,
+                                                    px: 3,
+                                                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                                    '&:hover': { background: 'linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%)' },
+                                                    textTransform: 'none',
+                                                    fontWeight: 600,
+                                                }}
+                                            >
+                                                {reminderSaving ? 'Saving…' : 'Save Reminder Settings'}
+                                            </Button>
+                                        </Box>
+                                    </CardContent>
+                                </Card>
+                            )}
+
                             {/* Action Buttons */}
                             <Box display="flex" gap={2} justifyContent="flex-end" mt={3}>
                                 <Button
@@ -514,6 +643,22 @@ const Profile = () => {
                 </Card>
             </Box>
         </MainLayout>
+
+        <Snackbar
+            open={reminderToast.open}
+            autoHideDuration={4000}
+            onClose={() => setReminderToast(t => ({ ...t, open: false }))}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+            <Alert
+                onClose={() => setReminderToast(t => ({ ...t, open: false }))}
+                severity={reminderToast.severity}
+                sx={{ width: '100%' }}
+            >
+                {reminderToast.message}
+            </Alert>
+        </Snackbar>
+        </>
     );
 };
 

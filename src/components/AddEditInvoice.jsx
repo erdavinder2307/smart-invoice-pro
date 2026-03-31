@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { createInvoice, updateInvoice } from '../services/invoiceService';
 import { createApiUrl } from '../config/api';
+import { useInvoicePreferences } from '../context/InvoicePreferencesContext';
+import { getTaxRates, calculateInvoiceTax } from '../services/taxService';
 import {
   Alert,
   Autocomplete,
@@ -32,7 +34,14 @@ import SearchIcon from '@mui/icons-material/Search';
 import { C, AppSelect, fieldSx, menuItemSx, footerSx, cancelBtnSx, saveBtnSx } from './common/formStyles';
 
 const paymentTermsOptions = ['Due on Receipt', 'Net 15', 'Net 30', 'Net 45'];
-const taxOptions = [0, 5, 12, 18, 28];
+// taxOptions now loaded from API; these are fallback values used until API loads
+const FALLBACK_TAX_OPTIONS = [
+  { id: '0', name: 'Exempt (0%)', rate: 0 },
+  { id: '5', name: 'GST 5%', rate: 5 },
+  { id: '12', name: 'GST 12%', rate: 12 },
+  { id: '18', name: 'GST 18%', rate: 18 },
+  { id: '28', name: 'GST 28%', rate: 28 },
+];
 const tdsTaxOptions = [
   'Salary [as per slab] (Sec 192)',
   'Interest on securities [10%] (Sec 193)',
@@ -117,6 +126,7 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const invoiceId = id;
+  const { prefs } = useInvoicePreferences();
   const [form, setForm] = useState(initialForm);
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -129,6 +139,8 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
   const [tdsTaxOption, setTdsTaxOption] = useState('');
   const [tcsTaxOption, setTcsTaxOption] = useState('');
   const formRef = useRef(null);
+  const [taxRates, setTaxRates] = useState(FALLBACK_TAX_OPTIONS);
+  const [gstBreakdown, setGstBreakdown] = useState({ cgst: 0, sgst: 0, igst: 0, tax_type: 'NONE' });
 
   const activeWithholdingOptions = tdsMode === 'tds' ? tdsTaxOptions : tcsTaxOptions;
   const activeWithholdingValue = tdsMode === 'tds' ? tdsTaxOption : tcsTaxOption;
@@ -139,10 +151,16 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
     const load = async () => {
       try {
         setPageLoading(true);
-        const customersResponse = await axios.get(createApiUrl('/api/customers'));
+        const [customersResponse, taxRatesData] = await Promise.all([
+          axios.get(createApiUrl('/api/customers')),
+          getTaxRates().catch(() => null),
+        ]);
         if (!active) return;
 
         setCustomers(Array.isArray(customersResponse.data) ? customersResponse.data : []);
+        if (Array.isArray(taxRatesData) && taxRatesData.length > 0) {
+          setTaxRates(taxRatesData.map((r) => ({ id: r.id, name: r.name, rate: r.rate })));
+        }
 
         if (invoiceId) {
           const invoiceResponse = await axios.get(createApiUrl(`/api/invoices/${invoiceId}`));
@@ -157,26 +175,40 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
           }));
         } else {
           const today = new Date().toISOString().slice(0, 10);
+          // Calculate due date from preferences
+          const calcDueDate = (issueDate) => {
+            const d = Number(prefs.default_due_days);
+            if (d > 0) {
+              const dt = new Date(issueDate);
+              dt.setDate(dt.getDate() + d);
+              return dt.toISOString().slice(0, 10);
+            }
+            return issueDate;
+          };
           try {
             const nextNumberResponse = await axios.get(createApiUrl('/api/invoices/next-number'));
             if (!active) return;
 
             setForm((prev) => ({
               ...prev,
-              invoice_number: nextNumberResponse.data?.next_invoice_number || 'INV-000001',
-              issue_date: today,
-              due_date: today,
-              payment_terms: 'Due on Receipt',
+              invoice_number:   nextNumberResponse.data?.next_invoice_number || 'INV-00001',
+              issue_date:       today,
+              due_date:         calcDueDate(today),
+              payment_terms:    prefs.default_payment_terms || 'Net 30',
+              notes:            prefs.default_notes         || '',
+              terms_conditions: prefs.default_terms         || '',
               status: 'Draft',
             }));
           } catch {
             if (!active) return;
             setForm((prev) => ({
               ...prev,
-              invoice_number: 'INV-000001',
-              issue_date: today,
-              due_date: today,
-              payment_terms: 'Due on Receipt',
+              invoice_number:   'INV-00001',
+              issue_date:       today,
+              due_date:         calcDueDate(today),
+              payment_terms:    prefs.default_payment_terms || 'Net 30',
+              notes:            prefs.default_notes         || '',
+              terms_conditions: prefs.default_terms         || '',
               status: 'Draft',
             }));
           }
@@ -229,6 +261,44 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
       };
     });
   }, [adjustment, form.amount_paid, form.cgst_amount, form.igst_amount, form.is_gst_applicable, form.items, form.sgst_amount]);
+
+  // ── Live GST breakdown from server ────────────────────────────────────────
+  useEffect(() => {
+    if (!form.is_gst_applicable || !form.customer_id) {
+      setGstBreakdown({ cgst: 0, sgst: 0, igst: 0, tax_type: 'NONE' });
+      return;
+    }
+    let active = true;
+    const debounce = setTimeout(async () => {
+      try {
+        const result = await calculateInvoiceTax({
+          items: form.items,
+          customerId: form.customer_id,
+          isGstApplicable: true,
+        });
+        if (!active) return;
+        setGstBreakdown({
+          cgst: result.cgst_amount || 0,
+          sgst: result.sgst_amount || 0,
+          igst: result.igst_amount || 0,
+          tax_type: result.tax_type || 'NONE',
+        });
+        // Sync the breakdown values into form so they are submitted correctly
+        setForm((prev) => ({
+          ...prev,
+          cgst_amount: result.cgst_amount || 0,
+          sgst_amount: result.sgst_amount || 0,
+          igst_amount: result.igst_amount || 0,
+        }));
+      } catch {
+        // Silently ignore — totals will still be correct from client-side calc
+      }
+    }, 600);
+    return () => {
+      active = false;
+      clearTimeout(debounce);
+    };
+  }, [form.customer_id, form.items, form.is_gst_applicable]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -367,10 +437,12 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                     <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
                       <Typography sx={{ ...rowLabelSx, color: '#e53935' }}>Invoice#*</Typography>
                       <TextField
+                        name="invoice_number"
                         value={form.invoice_number}
+                        onChange={handleChange}
                         size="small"
-                        InputProps={{ readOnly: true }}
-                        sx={{ ...fieldSx, width: 240, '& .MuiOutlinedInput-root': { bgcolor: '#f8fafc' } }}
+                        InputProps={{ readOnly: prefs.auto_generate_invoice_number }}
+                        sx={{ ...fieldSx, width: 240, '& .MuiOutlinedInput-root': { bgcolor: prefs.auto_generate_invoice_number ? '#f8fafc' : C.white } }}
                       />
                     </Box>
 
@@ -520,8 +592,8 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                                   value={Number(item.tax) || 0}
                                   onChange={(e) => updateItem(idx, 'tax', Number(e.target.value) || 0)}
                                 >
-                                  {taxOptions.map((tax) => (
-                                    <MenuItem key={tax} value={tax} sx={menuItemSx}>{tax}%</MenuItem>
+                                  {taxRates.map((t) => (
+                                    <MenuItem key={t.id || t.rate} value={t.rate} sx={menuItemSx}>{t.name}</MenuItem>
                                   ))}
                                 </AppSelect>
                               </TableCell>
@@ -594,6 +666,26 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                           <Typography sx={{ fontSize: '0.84rem', color: '#1f2937', fontWeight: 600 }}>Sub Total</Typography>
                           <Typography sx={{ fontSize: '0.84rem', color: '#111827', fontWeight: 700 }}>{Number(form.subtotal || 0).toFixed(2)}</Typography>
                         </Box>
+
+                        {/* ── GST Breakdown ── */}
+                        {form.is_gst_applicable && gstBreakdown.tax_type === 'CGST_SGST' && (
+                          <>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                              <Typography sx={{ fontSize: '0.8rem', color: '#6b7280' }}>CGST</Typography>
+                              <Typography sx={{ fontSize: '0.8rem', color: '#374151' }}>+ {Number(gstBreakdown.cgst || 0).toFixed(2)}</Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                              <Typography sx={{ fontSize: '0.8rem', color: '#6b7280' }}>SGST</Typography>
+                              <Typography sx={{ fontSize: '0.8rem', color: '#374151' }}>+ {Number(gstBreakdown.sgst || 0).toFixed(2)}</Typography>
+                            </Box>
+                          </>
+                        )}
+                        {form.is_gst_applicable && gstBreakdown.tax_type === 'IGST' && (
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                            <Typography sx={{ fontSize: '0.8rem', color: '#6b7280' }}>IGST</Typography>
+                            <Typography sx={{ fontSize: '0.8rem', color: '#374151' }}>+ {Number(gstBreakdown.igst || 0).toFixed(2)}</Typography>
+                          </Box>
+                        )}
 
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                           <RadioGroup row value={tdsMode} onChange={(e) => setTdsMode(e.target.value)}>

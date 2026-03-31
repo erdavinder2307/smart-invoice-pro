@@ -1,12 +1,12 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { ThemeProvider } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
 import './index.css';
 import App from './App';
-import theme from './theme';
 import reportWebVitals from './reportWebVitals';
 import { AuthProvider } from './context/AuthContext';
+import { BrandingProvider } from './context/BrandingContext';
+import { InvoicePreferencesProvider } from './context/InvoicePreferencesContext';
+import { PermissionProvider } from './context/PermissionContext';
 import axios from 'axios';
 
 // Add a request interceptor to automatically attach the JWT token to all requests
@@ -26,12 +26,15 @@ axios.interceptors.request.use(
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <AuthProvider>
-        <App />
-      </AuthProvider>
-    </ThemeProvider>
+    <AuthProvider>
+      <BrandingProvider>
+        <InvoicePreferencesProvider>
+          <PermissionProvider>
+            <App />
+          </PermissionProvider>
+        </InvoicePreferencesProvider>
+      </BrandingProvider>
+    </AuthProvider>
   </React.StrictMode>
 );
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import {
   Alert,
@@ -19,6 +19,7 @@ import {
   MenuItem,
   Paper,
   Select,
+  Snackbar,
   Table,
   TableBody,
   TableCell,
@@ -71,6 +72,7 @@ const normalizeCustomer = (customer) => {
 
 const CustomerList = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [customers, setCustomers] = useState([]);
   const [error, setError] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
@@ -78,6 +80,7 @@ const CustomerList = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("Active");
   const [selectedCustomers, setSelectedCustomers] = useState([]);
+  const [toast, setToast] = useState({ open: false, message: "" });
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
@@ -98,6 +101,13 @@ const CustomerList = () => {
   useEffect(() => {
     fetchCustomers();
   }, []);
+
+  useEffect(() => {
+    if (location.state?.successMessage) {
+      setToast({ open: true, message: location.state.successMessage });
+      window.history.replaceState({}, "");
+    }
+  }, [location.state]);
 
   useEffect(() => {
     setPage(0);
@@ -594,6 +604,21 @@ const CustomerList = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={toast.open}
+        autoHideDuration={4000}
+        onClose={() => setToast({ open: false, message: "" })}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          severity="success"
+          onClose={() => setToast({ open: false, message: "" })}
+          sx={{ width: "100%" }}
+        >
+          {toast.message}
+        </Alert>
+      </Snackbar>
     </MainLayout>
   );
 };

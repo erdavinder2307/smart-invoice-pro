@@ -91,12 +91,12 @@ const SalesOrderList = () => {
 
   const filteredSalesOrders = salesOrders.filter((so) => {
     const customer = customers.find((c) => c.id === so.customer_id);
-    const customerName = customer ? customer.name : "";
+    const customerName = so.customer_name || (customer ? (customer.name || customer.display_name) : "") || "";
 
     const matchesSearch =
-      so.so_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (so.so_number || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      so.subject?.toLowerCase().includes(searchTerm.toLowerCase());
+      (so.subject || "").toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus = statusFilter === "All" || so.status === statusFilter;
 
@@ -153,9 +153,13 @@ const SalesOrderList = () => {
     if (!selectedSalesOrder) return;
     
     try {
-      // Get next invoice number
+      // Get next invoice number (API returns 'next_invoice_number')
       const nextNumberResponse = await axios.get(createApiUrl("/api/invoices/next-number"));
-      const invoiceNumber = nextNumberResponse.data.next_number;
+      const invoiceNumber = nextNumberResponse.data.next_invoice_number || nextNumberResponse.data.next_number;
+      if (!invoiceNumber) {
+        setError("Failed to generate invoice number. Please try again.");
+        return;
+      }
       
       // Convert to invoice
       await axios.post(
@@ -209,9 +213,10 @@ const SalesOrderList = () => {
     setPage(0);
   };
 
-  const getCustomerName = (customerId) => {
-    const customer = customers.find((c) => c.id === customerId);
-    return customer ? customer.name : "Unknown";
+  const getCustomerName = (so) => {
+    if (so.customer_name) return so.customer_name;
+    const customer = customers.find((c) => c.id === so.customer_id);
+    return customer ? (customer.name || customer.display_name || "Unknown") : "Unknown";
   };
 
   const getStatusColor = (status) => {
@@ -397,7 +402,7 @@ const SalesOrderList = () => {
                               </TableCell>
                               <TableCell>
                                 <Typography variant="body2">
-                                  {getCustomerName(so.customer_id)}
+                                  {getCustomerName(so)}
                                 </Typography>
                               </TableCell>
                               <TableCell>

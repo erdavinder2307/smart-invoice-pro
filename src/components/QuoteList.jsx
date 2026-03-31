@@ -94,7 +94,7 @@ const QuoteList = () => {
 
   const customerMap = useMemo(() => {
     const map = new Map();
-    customers.forEach((customer) => map.set(String(customer.id), customer.name || ""));
+    customers.forEach((customer) => map.set(String(customer.id), customer.name || customer.display_name || ""));
     return map;
   }, [customers]);
 
@@ -177,8 +177,8 @@ const QuoteList = () => {
     setPage(0);
   };
 
-  const getCustomerName = (customerId) => {
-    return customerMap.get(String(customerId)) || "Unknown";
+  const getCustomerName = (quote) => {
+    return quote.customer_name || customerMap.get(String(quote.customer_id)) || "Unknown";
   };
 
   const formatDate = (dateValue) => {
@@ -433,7 +433,7 @@ const QuoteList = () => {
 
                             <TableCell>{quote.reference_number || "-"}</TableCell>
 
-                            <TableCell>{getCustomerName(quote.customer_id)}</TableCell>
+                            <TableCell>{getCustomerName(quote)}</TableCell>
 
                             <TableCell>
                               <Box

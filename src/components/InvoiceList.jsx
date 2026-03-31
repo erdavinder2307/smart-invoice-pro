@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getInvoices, deleteInvoice } from "../services/invoiceService";
+import { getInvoices, deleteInvoice, sendInvoiceEmail, recordPayment } from "../services/invoiceService";
 import { createApiUrl } from "../config/api";
 import "./InvoiceList.css";
 import MainLayout from "./Layout/MainLayout";
@@ -35,8 +35,10 @@ import {
   ListItemText,
   Container,
   FormControl,
+  InputLabel,
   Select,
-  Snackbar
+  Snackbar,
+  FormControlLabel
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
@@ -57,6 +59,7 @@ import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
 import ThumbUpAltIcon from '@mui/icons-material/ThumbUpAlt';
 import ThumbDownAltIcon from '@mui/icons-material/ThumbDownAlt';
 import SendIcon from '@mui/icons-material/Send';
+import EmailIcon from '@mui/icons-material/Email';
 import PayNowModal from "./PayNowModal";
 import { useAuth } from "../context/AuthContext";
 
@@ -98,6 +101,10 @@ const InvoiceList = () => {
   const [payNowOpen, setPayNowOpen] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState('');
   const [linkCopied, setLinkCopied] = useState(false);
+  const [emailDialog, setEmailDialog] = useState({ open: false, invoice: null, recipientEmail: '', subject: '', message: '', attachPdf: false });
+  const [emailSending, setEmailSending] = useState(false);
+  const [paymentDialog, setPaymentDialog] = useState({ open: false, invoice: null, amount: '', paymentDate: new Date().toISOString().split('T')[0], paymentMode: 'Bank Transfer', reference: '' });
+  const [paymentSubmitting, setPaymentSubmitting] = useState(false);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   // Approval-specific state
@@ -110,10 +117,12 @@ const InvoiceList = () => {
     const customer = customers.find((c) => c.id === invoice.customer_id);
     const customerName = customer ? customer.name : "";
 
+    const lowerSearch = searchTerm.toLowerCase();
     const matchesSearch =
-      invoice.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.invoice_type?.toLowerCase().includes(searchTerm.toLowerCase());
+      (invoice.invoice_number || "").toLowerCase().includes(lowerSearch) ||
+      (customerName || "").toLowerCase().includes(lowerSearch) ||
+      (invoice.invoice_type || "").toLowerCase().includes(lowerSearch) ||
+      (invoice.customer_name || "").toLowerCase().includes(lowerSearch);
 
     const matchesStatus = statusFilter === "All" || invoice.status === statusFilter;
 
@@ -300,6 +309,74 @@ const InvoiceList = () => {
     }
   };
 
+  const handleOpenEmailDialog = (invoice) => {
+    if (!invoice) return;
+    setEmailDialog({
+      open: true,
+      invoice,
+      recipientEmail: invoice.customer_email || '',
+      subject: `Invoice ${invoice.invoice_number || invoice.id} — Due ${invoice.due_date || ''}`,
+      message: '',
+      attachPdf: false,
+    });
+  };
+
+  const handleSendEmailSubmit = async () => {
+    const { invoice, recipientEmail, message, attachPdf } = emailDialog;
+    if (!recipientEmail.trim()) {
+      setApprovalToast({ open: true, message: 'Recipient email is required.', severity: 'error' });
+      return;
+    }
+    setEmailSending(true);
+    try {
+      await sendInvoiceEmail(invoice.id, { recipient_email: recipientEmail.trim(), message, attach_pdf: attachPdf });
+      setEmailDialog({ open: false, invoice: null, recipientEmail: '', subject: '', message: '', attachPdf: false });
+      setApprovalToast({ open: true, message: `Invoice emailed to ${recipientEmail} successfully.`, severity: 'success' });
+      fetchInvoices();
+    } catch (err) {
+      setApprovalToast({ open: true, message: err.response?.data?.error || 'Failed to send email. Please try again.', severity: 'error' });
+    } finally {
+      setEmailSending(false);
+    }
+  };
+
+  const handleOpenPaymentDialog = (invoice) => {
+    if (!invoice) return;
+    setPaymentDialog({
+      open: true,
+      invoice,
+      amount: invoice.balance_due > 0 ? String(invoice.balance_due) : '',
+      paymentDate: new Date().toISOString().split('T')[0],
+      paymentMode: 'Bank Transfer',
+      reference: '',
+    });
+  };
+
+  const handleRecordPaymentSubmit = async () => {
+    const { invoice, amount, paymentDate, paymentMode, reference } = paymentDialog;
+    const parsedAmount = parseFloat(amount);
+    if (!parsedAmount || parsedAmount <= 0) {
+      setApprovalToast({ open: true, message: 'Please enter a valid amount.', severity: 'error' });
+      return;
+    }
+    setPaymentSubmitting(true);
+    try {
+      const result = await recordPayment(invoice.id, {
+        amount: parsedAmount,
+        payment_date: paymentDate,
+        payment_mode: paymentMode,
+        reference,
+      });
+      setInvoices(prev => prev.map(inv => inv.id === invoice.id ? result.invoice : inv));
+      setPaymentDialog({ open: false, invoice: null, amount: '', paymentDate: new Date().toISOString().split('T')[0], paymentMode: 'Bank Transfer', reference: '' });
+      setApprovalToast({ open: true, message: `Payment of ₹${parsedAmount.toLocaleString()} recorded successfully.`, severity: 'success' });
+    } catch (err) {
+      setApprovalToast({ open: true, message: err.response?.data?.error || 'Failed to record payment. Please try again.', severity: 'error' });
+    } finally {
+      setPaymentSubmitting(false);
+    }
+  };
+
   const handleDownloadPDF = async (invoice) => {
     try {
       const response = await axios.post(
@@ -373,6 +450,7 @@ const InvoiceList = () => {
     { key: "order", label: "Order Number" },
     { key: "customer", label: "Customer Name" },
     { key: "status", label: "Status" },
+    { key: "email_status", label: "Email", align: "center" },
     { key: "due", label: "Due Date" },
     { key: "amount", label: "Amount", align: "right" },
     { key: "balance", label: "Balance Due", align: "right" },
@@ -601,6 +679,17 @@ const InvoiceList = () => {
                           />
                         )}
                       </TableCell>
+                      <TableCell align="center">
+                        {invoice.email_status === 'sent' ? (
+                          <Tooltip title={`Sent to ${invoice.last_sent_to || ''} on ${(invoice.email_sent_at || '').slice(0, 10)}`}>
+                            <Chip label="Sent" size="small" color="success" sx={{ fontSize: '0.65rem', height: 20 }} />
+                          </Tooltip>
+                        ) : invoice.email_status === 'failed' ? (
+                          <Chip label="Failed" size="small" color="error" sx={{ fontSize: '0.65rem', height: 20 }} />
+                        ) : (
+                          <Chip label="Not Sent" size="small" sx={{ fontSize: '0.65rem', height: 20, bgcolor: 'grey.200', color: 'text.secondary' }} />
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Typography variant="body2">{invoice.due_date || "—"}</Typography>
                       </TableCell>
@@ -666,6 +755,19 @@ const InvoiceList = () => {
                         </Button>
                         <Button size="small" variant="outlined" onClick={() => handleDownloadPDF(activeInvoice)} sx={{ textTransform: "none" }}>
                           PDF
+                        </Button>
+                        <Button size="small" variant="outlined" startIcon={<EmailIcon />} onClick={() => handleOpenEmailDialog(activeInvoice)} sx={{ textTransform: "none" }}>
+                          Email
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="contained"
+                          color="success"
+                          onClick={() => handleOpenPaymentDialog(activeInvoice)}
+                          disabled={activeInvoice.status === 'Paid' || activeInvoice.status === 'Cancelled'}
+                          sx={{ textTransform: "none", boxShadow: "none" }}
+                        >
+                          Record Payment
                         </Button>
                       </Box>
                     </Box>
@@ -750,6 +852,27 @@ const InvoiceList = () => {
                         </Paper>
                       </Grid>
                     </Grid>
+
+                    {(activeInvoice.payment_history || []).length > 0 && (
+                      <Box sx={{ mt: 3 }}>
+                        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>Payment History</Typography>
+                        <Paper variant="outlined" sx={{ borderRadius: 2 }}>
+                          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', px: 2, py: 1, bgcolor: 'grey.50', borderBottom: '1px solid', borderColor: 'grey.200' }}>
+                            {['Amount', 'Date', 'Mode', 'Reference'].map(h => (
+                              <Typography key={h} variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.65rem', letterSpacing: 0.3 }}>{h}</Typography>
+                            ))}
+                          </Box>
+                          {activeInvoice.payment_history.map((p, i) => (
+                            <Box key={p.id || i} sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', px: 2, py: 1.25, borderBottom: i < activeInvoice.payment_history.length - 1 ? '1px solid' : 'none', borderColor: 'grey.100', alignItems: 'center' }}>
+                              <Typography variant="body2" fontWeight={600} color="success.main">{formatCurrency(p.amount)}</Typography>
+                              <Typography variant="body2" color="text.secondary">{p.payment_date || '—'}</Typography>
+                              <Typography variant="body2" color="text.secondary">{p.payment_mode || '—'}</Typography>
+                              <Typography variant="body2" color="text.secondary">{p.reference || '—'}</Typography>
+                            </Box>
+                          ))}
+                        </Paper>
+                      </Box>
+                    )}
                   </Box>
                 </>
               )}
@@ -797,6 +920,20 @@ const InvoiceList = () => {
             <ListItemText primary="Pay Now" secondary="Online via Zoho Payments" />
           </MenuItem>
         )}
+        {selectedInvoice && selectedInvoice.status !== 'Paid' && selectedInvoice.status !== 'Cancelled' && (
+          <MenuItem
+            onClick={() => {
+              handleOpenPaymentDialog(selectedInvoice);
+              handleActionMenuClose();
+            }}
+            sx={{ py: 1.25 }}
+          >
+            <ListItemIcon>
+              <AttachMoneyIcon fontSize="small" color="success" />
+            </ListItemIcon>
+            <ListItemText primary="Record Payment" secondary="Log an offline payment" />
+          </MenuItem>
+        )}
         <MenuItem
           onClick={() => {
             handleDownloadPDF(selectedInvoice);
@@ -808,6 +945,18 @@ const InvoiceList = () => {
             <PictureAsPdfIcon fontSize="small" color="success" />
           </ListItemIcon>
           <ListItemText primary="Download PDF" />
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            handleOpenEmailDialog(selectedInvoice);
+            handleActionMenuClose();
+          }}
+          sx={{ py: 1.25 }}
+        >
+          <ListItemIcon>
+            <EmailIcon fontSize="small" color="primary" />
+          </ListItemIcon>
+          <ListItemText primary="Send Email" secondary="Email invoice to customer" />
         </MenuItem>
         <MenuItem
           onClick={() => {
@@ -1013,6 +1162,157 @@ const InvoiceList = () => {
           {approvalToast.message}
         </Alert>
       </Snackbar>
+
+      {/* Send Email Dialog */}
+      <Dialog
+        open={emailDialog.open}
+        onClose={() => !emailSending && setEmailDialog({ open: false, invoice: null, recipientEmail: '', subject: '', message: '', attachPdf: false })}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Typography variant="h6" fontWeight={700}>Send Invoice by Email</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {emailDialog.invoice?.invoice_number}
+          </Typography>
+        </DialogTitle>
+        <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 2.5 }}>
+          <TextField
+            label="To"
+            value={emailDialog.recipientEmail}
+            onChange={(e) => setEmailDialog((d) => ({ ...d, recipientEmail: e.target.value }))}
+            fullWidth
+            size="small"
+            required
+            type="email"
+            autoFocus
+          />
+          <TextField
+            label="Subject"
+            value={emailDialog.subject}
+            onChange={(e) => setEmailDialog((d) => ({ ...d, subject: e.target.value }))}
+            fullWidth
+            size="small"
+          />
+          <TextField
+            label="Message (optional)"
+            value={emailDialog.message}
+            onChange={(e) => setEmailDialog((d) => ({ ...d, message: e.target.value }))}
+            fullWidth
+            multiline
+            rows={3}
+            size="small"
+            placeholder="Add a personal note to the customer..."
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={emailDialog.attachPdf}
+                onChange={(e) => setEmailDialog((d) => ({ ...d, attachPdf: e.target.checked }))}
+                size="small"
+              />
+            }
+            label={<Typography variant="body2">Attach PDF invoice</Typography>}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+          <Button
+            onClick={() => setEmailDialog({ open: false, invoice: null, recipientEmail: '', subject: '', message: '', attachPdf: false })}
+            disabled={emailSending}
+            sx={{ textTransform: 'none' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={emailSending ? <CircularProgress size={16} color="inherit" /> : <EmailIcon />}
+            onClick={handleSendEmailSubmit}
+            disabled={emailSending || !emailDialog.recipientEmail.trim()}
+            sx={{ textTransform: 'none' }}
+          >
+            {emailSending ? 'Sending…' : 'Send Email'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Record Payment Dialog */}
+      <Dialog
+        open={paymentDialog.open}
+        onClose={() => !paymentSubmitting && setPaymentDialog({ open: false, invoice: null, amount: '', paymentDate: new Date().toISOString().split('T')[0], paymentMode: 'Bank Transfer', reference: '' })}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Typography variant="h6" fontWeight={700}>Record Payment</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {paymentDialog.invoice?.invoice_number} · Balance: {formatCurrency(paymentDialog.invoice?.balance_due || 0)}
+          </Typography>
+        </DialogTitle>
+        <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 2.5 }}>
+          <TextField
+            label="Amount"
+            type="number"
+            value={paymentDialog.amount}
+            onChange={(e) => setPaymentDialog((d) => ({ ...d, amount: e.target.value }))}
+            fullWidth
+            size="small"
+            required
+            autoFocus
+            inputProps={{ min: 0.01, step: '0.01' }}
+            InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }}
+          />
+          <TextField
+            label="Payment Date"
+            type="date"
+            value={paymentDialog.paymentDate}
+            onChange={(e) => setPaymentDialog((d) => ({ ...d, paymentDate: e.target.value }))}
+            fullWidth
+            size="small"
+            required
+            InputLabelProps={{ shrink: true }}
+          />
+          <FormControl size="small" fullWidth>
+            <InputLabel>Payment Mode</InputLabel>
+            <Select
+              value={paymentDialog.paymentMode}
+              onChange={(e) => setPaymentDialog((d) => ({ ...d, paymentMode: e.target.value }))}
+              label="Payment Mode"
+            >
+              {['Bank Transfer', 'Cash', 'UPI', 'Cheque', 'Credit Card', 'Debit Card', 'Other'].map((m) => (
+                <MenuItem key={m} value={m}>{m}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <TextField
+            label="Reference / Transaction ID (optional)"
+            value={paymentDialog.reference}
+            onChange={(e) => setPaymentDialog((d) => ({ ...d, reference: e.target.value }))}
+            fullWidth
+            size="small"
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+          <Button
+            onClick={() => setPaymentDialog({ open: false, invoice: null, amount: '', paymentDate: new Date().toISOString().split('T')[0], paymentMode: 'Bank Transfer', reference: '' })}
+            disabled={paymentSubmitting}
+            sx={{ textTransform: 'none' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="success"
+            startIcon={paymentSubmitting ? <CircularProgress size={16} color="inherit" /> : <AttachMoneyIcon />}
+            onClick={handleRecordPaymentSubmit}
+            disabled={paymentSubmitting || !paymentDialog.amount}
+            sx={{ textTransform: 'none', boxShadow: 'none' }}
+          >
+            {paymentSubmitting ? 'Saving…' : 'Record Payment'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </MainLayout>
   );
 };

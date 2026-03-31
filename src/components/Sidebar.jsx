@@ -25,9 +25,14 @@ import { useTheme } from "@mui/material/styles";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
+import BrushIcon from "@mui/icons-material/Brush";
+import DescriptionIcon from "@mui/icons-material/Description";
 import PeopleIcon from "@mui/icons-material/People";
+import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
+import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import RequestQuoteIcon from "@mui/icons-material/RequestQuote";
 import ReceiptIcon from "@mui/icons-material/Receipt";
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import EventRepeatIcon from "@mui/icons-material/EventRepeat";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
@@ -105,8 +110,17 @@ const NAV_CONFIG = {
     id: 'settings',
     label: 'Settings',
     icon: <SettingsIcon />,
-    path: '/settings/users',
     adminOnly: true,
+    expandable: true,
+    children: [
+      { id: 'org-profile', label: 'Organization Profile', icon: <BusinessIcon sx={{ fontSize: 20 }} />, path: '/settings/organization-profile' },
+      { id: 'branding', label: 'Branding', icon: <BrushIcon sx={{ fontSize: 20 }} />, path: '/settings/branding' },
+      { id: 'invoice-preferences', label: 'Invoice Preferences', icon: <DescriptionIcon sx={{ fontSize: 20 }} />, path: '/settings/invoice-preferences' },
+      { id: 'taxes', label: 'Taxes', icon: <ReceiptLongIcon sx={{ fontSize: 20 }} />, path: '/settings/taxes' },
+      { id: 'users', label: 'User Management', icon: <PeopleIcon sx={{ fontSize: 20 }} />, path: '/settings/users' },
+      { id: 'roles', label: 'Roles', icon: <AdminPanelSettingsIcon sx={{ fontSize: 20 }} />, path: '/settings/roles' },
+      { id: 'automation', label: 'Automation', icon: <NotificationsActiveIcon sx={{ fontSize: 20 }} />, path: '/settings/automation' },
+    ],
   },
 };
 
@@ -438,8 +452,8 @@ const Sidebar = () => {
             {/* Reports */}
             {renderNavItem(NAV_CONFIG.reports)}
 
-            {/* Settings (admin only) */}
-            {renderNavItem(NAV_CONFIG.settings)}
+            {/* Settings (admin only) - expandable */}
+            {isAdmin && renderExpandableSection('settings', NAV_CONFIG.settings)}
           </List>
         </Box>
 

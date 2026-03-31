@@ -59,6 +59,7 @@ import IntegrationSettings from './pages/IntegrationSettings';
 import NotificationsPage from './pages/NotificationsPage';
 import AuditLogPage from './pages/AuditLogPage';
 import CustomerDetailPage from './pages/CustomerDetailPage';
+import AdminRoutes from './admin/routes/AdminRoutes';
 
 const AppRoutes = () => {
   return (
@@ -143,6 +144,9 @@ const AppRoutes = () => {
         <Route path="/terms" element={<ComingSoon />} />
         <Route path="/cookies" element={<ComingSoon />} />
         <Route path="/pricing" element={<ComingSoon />} />
+
+        {/* Super Admin Module — fully isolated */}
+        <Route path="/admin/*" element={<AdminRoutes />} />
       </Routes>
     </Router>
   );

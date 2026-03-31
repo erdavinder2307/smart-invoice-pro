@@ -54,5 +54,32 @@
   "overrides": {
     "nth-check": "^2.0.1",
     "svgo": "^3.0.0"
+  },
+  "jest": {
+    "transformIgnorePatterns": [
+      "node_modules/(?!(axios|react-router|react-router-dom)/)"
+    ],
+    "moduleNameMapper": {
+      "\\.(css|less|scss)$": "<rootDir>/src/__mocks__/styleMock.js",
+      "^react-router-dom$": "<rootDir>/node_modules/react-router-dom/dist/index.js",
+      "^react-router$": "<rootDir>/node_modules/react-router/dist/development/index.js",
+      "^react-router/dom$": "<rootDir>/node_modules/react-router/dist/development/dom-export.js"
+    },
+    "coverageThreshold": {
+      "./src/services/": {
+        "statements": 80,
+        "functions": 80,
+        "lines": 80
+      },
+      "./src/context/": {
+        "statements": 50,
+        "functions": 40,
+        "lines": 50
+      },
+      "./src/config/": {
+        "statements": 50,
+        "lines": 50
+      }
+    }
   }
 }

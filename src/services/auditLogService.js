@@ -20,3 +20,15 @@ export const getAuditLogs = async (params = {}) => {
   const { data } = await axios.get(BASE, { params });
   return data;
 };
+
+export const getAuditLogDetailData = (log) => {
+  const before = log?.before ?? log?.changes?.before ?? null;
+  const after = log?.after ?? log?.changes?.after ?? null;
+  return {
+    ...log,
+    before,
+    after,
+    created_at: log?.created_at ?? log?.timestamp,
+    entity: log?.entity ?? log?.entity_type,
+  };
+};

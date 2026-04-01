@@ -176,6 +176,14 @@ export function renderWithProviders(
   return render(ui, { wrapper: Wrapper, ...renderOptions });
 }
 
+export function mockAuthContext(overrides = {}) {
+  return { ...mockAuthValue, ...overrides };
+}
+
+export function mockApiResponse(data, extra = {}) {
+  return { data, ...extra };
+}
+
 // Re-export everything from RTL so tests can import from one place
 export * from '@testing-library/react';
 export { default as userEvent } from '@testing-library/user-event';

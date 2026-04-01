@@ -131,6 +131,7 @@ const AppRoutes = () => {
         <Route path="/settings/automation" element={<AutomationSettings />} />
         <Route path="/settings/integrations" element={<IntegrationSettings />} />
         <Route path="/settings/audit-log" element={<AuditLogPage />} />
+        <Route path="/settings/audit-logs" element={<AuditLogPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/approvals" element={<PendingApprovals />} />
 

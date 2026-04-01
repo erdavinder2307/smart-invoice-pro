@@ -40,7 +40,7 @@ import HistoryIcon from "@mui/icons-material/History";
 import CloseIcon from "@mui/icons-material/Close";
 
 import { useAuth } from "../context/AuthContext";
-import { getAuditLogs } from "../services/auditLogService";
+import { getAuditLogs, getAuditLogDetailData } from "../services/auditLogService";
 
 // ── Settings sub-nav ──────────────────────────────────────────────────────────
 const SETTINGS_NAV = [
@@ -56,9 +56,23 @@ const SETTINGS_NAV = [
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const ACTION_COLORS = { create: "success", update: "info", delete: "error" };
+const ACTION_COLORS = {
+  CREATE: "success",
+  UPDATE: "info",
+  DELETE: "error",
+  LOGIN: "default",
+  LOGOUT: "default",
+  PAYMENT: "warning",
+};
 
-const ACTION_LABELS = { create: "Created", update: "Updated", delete: "Deleted" };
+const ACTION_LABELS = {
+  CREATE: "Created",
+  UPDATE: "Updated",
+  DELETE: "Deleted",
+  LOGIN: "Login",
+  LOGOUT: "Logout",
+  PAYMENT: "Payment",
+};
 
 const ENTITY_TYPE_OPTIONS = [
   { value: "", label: "All Types" },
@@ -70,9 +84,12 @@ const ENTITY_TYPE_OPTIONS = [
 
 const ACTION_OPTIONS = [
   { value: "", label: "All Actions" },
-  { value: "create", label: "Created" },
-  { value: "update", label: "Updated" },
-  { value: "delete", label: "Deleted" },
+  { value: "CREATE", label: "Created" },
+  { value: "UPDATE", label: "Updated" },
+  { value: "DELETE", label: "Deleted" },
+  { value: "LOGIN", label: "Login" },
+  { value: "LOGOUT", label: "Logout" },
+  { value: "PAYMENT", label: "Payment" },
 ];
 
 /**
@@ -133,33 +150,35 @@ function SettingsSubNav() {
 // ── Detail dialog ─────────────────────────────────────────────────────────────
 function AuditDetailDialog({ log, onClose }) {
   if (!log) return null;
-  const diff = computeDiff(log.changes?.before, log.changes?.after);
-  const hasBefore = !!log.changes?.before;
-  const hasAfter  = !!log.changes?.after;
+  const normalized = getAuditLogDetailData(log);
+  const diff = computeDiff(normalized.before, normalized.after);
+  const hasBefore = !!normalized.before;
+  const hasAfter = !!normalized.after;
+  const action = String(log.action || "").toUpperCase();
 
   return (
     <Dialog open onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <Box>
           <Chip
-            label={ACTION_LABELS[log.action] ?? log.action}
-            color={ACTION_COLORS[log.action] ?? "default"}
+            label={ACTION_LABELS[action] ?? action}
+            color={ACTION_COLORS[action] ?? "default"}
             size="small"
             sx={{ mr: 1, fontWeight: 600, textTransform: "capitalize" }}
           />
           <Typography component="span" variant="subtitle1" fontWeight={600}>
-            {log.entity_type} — {log.entity_id}
+            {normalized.entity} — {log.entity_id}
           </Typography>
         </Box>
         <IconButton onClick={onClose} size="small"><CloseIcon /></IconButton>
       </DialogTitle>
       <DialogContent dividers>
         <Typography variant="caption" color="text.secondary" display="block" mb={2}>
-          {log.timestamp ? new Date(log.timestamp).toLocaleString() : ""}
+          {normalized.created_at ? new Date(normalized.created_at).toLocaleString() : ""}
           {log.user_id ? ` · by ${log.user_id}` : ""}
         </Typography>
 
-        {log.action === "create" && hasAfter && (
+        {action === "CREATE" && hasAfter && (
           <>
             <Typography variant="subtitle2" gutterBottom>Created record</Typography>
             <TableContainer component={Paper} variant="outlined">
@@ -171,7 +190,7 @@ function AuditDetailDialog({ log, onClose }) {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {Object.entries(log.changes.after).map(([field, value]) => (
+                  {Object.entries(normalized.after).map(([field, value]) => (
                     <TableRow key={field}>
                       <TableCell sx={{ fontFamily: "monospace", fontSize: 13 }}>{field}</TableCell>
                       <TableCell sx={{ wordBreak: "break-all" }}>{formatValue(value)}</TableCell>
@@ -183,7 +202,7 @@ function AuditDetailDialog({ log, onClose }) {
           </>
         )}
 
-        {log.action === "delete" && hasBefore && (
+        {action === "DELETE" && hasBefore && (
           <>
             <Typography variant="subtitle2" gutterBottom>Deleted record (snapshot)</Typography>
             <TableContainer component={Paper} variant="outlined">
@@ -195,7 +214,7 @@ function AuditDetailDialog({ log, onClose }) {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {Object.entries(log.changes.before).map(([field, value]) => (
+                  {Object.entries(normalized.before).map(([field, value]) => (
                     <TableRow key={field}>
                       <TableCell sx={{ fontFamily: "monospace", fontSize: 13 }}>{field}</TableCell>
                       <TableCell sx={{ wordBreak: "break-all" }}>{formatValue(value)}</TableCell>
@@ -207,7 +226,7 @@ function AuditDetailDialog({ log, onClose }) {
           </>
         )}
 
-        {log.action === "update" && (
+        {action === "UPDATE" && (
           diff.length === 0 ? (
             <Alert severity="info">No field differences detected.</Alert>
           ) : (
@@ -389,17 +408,17 @@ export default function AuditLogPage() {
                         onClick={() => setSelectedLog(log)}
                       >
                         <TableCell sx={{ whiteSpace: "nowrap", fontSize: 13 }}>
-                          {log.timestamp ? new Date(log.timestamp).toLocaleString() : "—"}
+                          {(log.created_at || log.timestamp) ? new Date(log.created_at || log.timestamp).toLocaleString() : "—"}
                         </TableCell>
                         <TableCell>
                           <Chip
-                            label={ACTION_LABELS[log.action] ?? log.action}
-                            color={ACTION_COLORS[log.action] ?? "default"}
+                            label={ACTION_LABELS[String(log.action || "").toUpperCase()] ?? log.action}
+                            color={ACTION_COLORS[String(log.action || "").toUpperCase()] ?? "default"}
                             size="small"
                             sx={{ fontWeight: 600, textTransform: "capitalize", fontSize: 12 }}
                           />
                         </TableCell>
-                        <TableCell sx={{ textTransform: "capitalize", fontSize: 13 }}>{log.entity_type}</TableCell>
+                        <TableCell sx={{ textTransform: "capitalize", fontSize: 13 }}>{log.entity || log.entity_type}</TableCell>
                         <TableCell>
                           <Tooltip title={log.entity_id ?? ""}>
                             <Typography variant="body2" sx={{ fontFamily: "monospace", fontSize: 12, maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

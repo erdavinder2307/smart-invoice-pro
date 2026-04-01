@@ -6,6 +6,7 @@ import AdminDashboard from '../pages/Dashboard';
 import Tenants from '../pages/Tenants';
 import Users from '../pages/Users';
 import FeatureFlags from '../pages/FeatureFlags';
+import AuditLogs from '../pages/AuditLogs';
 
 const AdminRoutes = () => {
   return (
@@ -40,6 +41,14 @@ const AdminRoutes = () => {
         element={
           <AdminProtectedRoute>
             <FeatureFlags />
+          </AdminProtectedRoute>
+        }
+      />
+      <Route
+        path="audit-logs"
+        element={
+          <AdminProtectedRoute>
+            <AuditLogs />
           </AdminProtectedRoute>
         }
       />

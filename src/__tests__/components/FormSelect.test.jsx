@@ -44,4 +44,46 @@ describe('FormSelect', () => {
     });
     expect(screen.getByText('Status is required')).toBeInTheDocument();
   });
+
+  it('renders and selects options in regular dropdown mode', async () => {
+    const onChange = jest.fn();
+    renderSelect({
+      label: 'Status',
+      name: 'status',
+      value: '',
+      onChange,
+      options,
+      displayEmpty: true,
+      placeholder: 'Select status',
+    });
+
+    fireEvent.mouseDown(screen.getByRole('combobox'));
+    fireEvent.click(await screen.findByRole('option', { name: 'Active' }));
+
+    expect(onChange).toHaveBeenCalled();
+  });
+
+  it('supports searchable mode and updates selected value', async () => {
+    const onChange = jest.fn();
+    renderSelect({
+      label: 'Status',
+      name: 'status',
+      value: '',
+      onChange,
+      options,
+      searchable: true,
+      placeholder: 'Search status',
+    });
+
+    const input = screen.getByPlaceholderText('Search status');
+    fireEvent.change(input, { target: { value: 'Act' } });
+    fireEvent.click(await screen.findByRole('option', { name: 'Active' }));
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target: expect.objectContaining({ name: 'status', value: 'active' }),
+      }),
+      { value: 'active', label: 'Active' }
+    );
+  });
 });

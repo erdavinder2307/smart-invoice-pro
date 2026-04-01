@@ -23,6 +23,7 @@ describe('AdminSidebar', () => {
         expect.objectContaining({ text: 'Tenants', path: '/admin/tenants' }),
         expect.objectContaining({ text: 'Users', path: '/admin/users' }),
         expect.objectContaining({ text: 'Feature Flags', path: '/admin/feature-flags' }),
+        expect.objectContaining({ text: 'Audit Logs', path: '/admin/audit-logs' }),
       ])
     );
   });

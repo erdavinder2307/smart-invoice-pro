@@ -106,6 +106,14 @@ export const getSystemStats = async () => {
   return response.data;
 };
 
+export const getAdminAuditLogs = async (params = {}) => {
+  const response = await axios.get(`${API_URL}/admin/audit-logs`, {
+    headers: getHeaders(),
+    params,
+  });
+  return response.data;
+};
+
 const adminApiService = {
   listTenants,
   getTenant,
@@ -118,6 +126,7 @@ const adminApiService = {
   createFeatureFlags,
   updateFeatureFlags,
   getSystemStats,
+  getAdminAuditLogs,
 };
 
 export default adminApiService;

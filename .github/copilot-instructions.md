@@ -1,5 +1,7 @@
 # Smart Invoice Pro Frontend - Copilot Instructions
 
+> Additional mandatory frontend testing policy: see `.github/copilot-instructions-frontend.md`.
+
 ## Project Overview
 
 React-based SPA frontend for Smart Invoice Pro, using MUI for UI components, axios for API calls, and React Context for state management.

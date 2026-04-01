@@ -143,6 +143,21 @@ describe('adminApiService', () => {
     });
   });
 
+  describe('Audit Logs API', () => {
+    it('getAdminAuditLogs sends correct request', async () => {
+      axios.get.mockResolvedValue({ data: { logs: [], total: 0 } });
+      const result = await adminApiService.getAdminAuditLogs({ action: 'DELETE', page: 0, limit: 25 });
+      expect(axios.get).toHaveBeenCalledWith(
+        expect.stringContaining('/admin/audit-logs'),
+        expect.objectContaining({
+          headers: expect.objectContaining({ Authorization: 'Bearer test-admin-token' }),
+          params: { action: 'DELETE', page: 0, limit: 25 },
+        })
+      );
+      expect(result.logs).toEqual([]);
+    });
+  });
+
   describe('Auth isolation', () => {
     it('uses admin_token, not regular token', async () => {
       localStorage.setItem('token', 'regular-user-token');

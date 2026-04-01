@@ -17,6 +17,7 @@ import BusinessIcon from '@mui/icons-material/Business';
 import PeopleIcon from '@mui/icons-material/People';
 import FlagIcon from '@mui/icons-material/Flag';
 import BarChartIcon from '@mui/icons-material/BarChart';
+import HistoryIcon from '@mui/icons-material/History';
 
 const DRAWER_WIDTH = 240;
 
@@ -25,6 +26,7 @@ const MENU_ITEMS = [
   { text: 'Tenants', icon: <BusinessIcon />, path: '/admin/tenants' },
   { text: 'Users', icon: <PeopleIcon />, path: '/admin/users' },
   { text: 'Feature Flags', icon: <FlagIcon />, path: '/admin/feature-flags' },
+  { text: 'Audit Logs', icon: <HistoryIcon />, path: '/admin/audit-logs' },
   { text: 'System Stats', icon: <BarChartIcon />, path: '/admin/stats' },
 ];
 

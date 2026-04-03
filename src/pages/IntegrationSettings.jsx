@@ -534,7 +534,7 @@ export default function IntegrationSettings() {
               <SectionCard
                 icon={<BreakfastDiningIcon />}
                 title="Webhooks"
-                subtitle="Notify external services when events happen in Smart Invoice Pro."
+                subtitle="Notify external services when events happen in Solidev Books."
               >
                 {webhooks.length === 0 && (
                   <Typography sx={{ fontSize: "0.875rem", color: C.hint, mb: 2 }}>

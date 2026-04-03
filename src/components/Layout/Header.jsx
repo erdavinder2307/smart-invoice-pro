@@ -28,7 +28,6 @@ import {
 } from '@mui/material';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
-  Business,
   Login,
   Dashboard,
   Logout,
@@ -38,6 +37,7 @@ import {
   Menu as MenuIcon,
   Close as CloseIcon
 } from '@mui/icons-material';
+import Logo from '../common/Logo';
 import { useAuth } from '../../context/AuthContext';
 
 
@@ -170,17 +170,7 @@ const Header = () => {
               onClick={handleLogoClick}
               sx={{ display: 'flex', alignItems: 'center', flexGrow: 1, textDecoration: 'none', cursor: 'pointer' }}
             >
-              <Business sx={{ color: 'primary.main', mr: 1, fontSize: 32 }} />
-              <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: 700,
-                  color: 'text.primary',
-                  fontSize: isMobile ? '1rem' : '1.25rem'
-                }}
-              >
-                Smart Invoice Pro
-              </Typography>
+              <Logo size={isMobile ? 28 : 32} showText={true} textColor="inherit" />
             </Box>
 
             {/* Navigation Links (Desktop) */}
@@ -339,10 +329,7 @@ const Header = () => {
         {/* Drawer Header */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, pb: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Business sx={{ color: 'primary.main', fontSize: 28 }} />
-            <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1rem' }}>
-              Smart Invoice Pro
-            </Typography>
+            <Logo size={28} showText={true} textColor="inherit" />
           </Box>
           <IconButton onClick={() => setMobileDrawerOpen(false)} size="small">
             <CloseIcon />

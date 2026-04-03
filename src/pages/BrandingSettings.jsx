@@ -354,7 +354,7 @@ function InvoicePreview({ primary, secondary, accent, orgName, logoUrl, showLogo
         {/* Footer */}
         <Box sx={{ mt: 1.5, pt: 1, borderTop: `1px solid ${C.divider}` }}>
           <Typography sx={{ fontSize: "0.5625rem", color: C.hint, textAlign: "center" }}>
-            Thank you for your business · Smart Invoice Pro
+            Thank you for your business · Solidev Books
           </Typography>
         </Box>
       </Box>

@@ -109,7 +109,7 @@ const About = () => {
     {
       icon: <TrendingUp sx={{ fontSize: 48, color: 'warning.main' }} />,
       title: 'Scalability',
-      description: 'From freelancers to large enterprises, our platform grows with your business. Built on modern cloud architecture, Smart Invoice Pro can handle your expanding needs without compromising performance.'
+      description: 'From freelancers to large enterprises, our platform grows with your business. Built on modern cloud architecture, Solidev Books can handle your expanding needs without compromising performance.'
     }
   ];
 
@@ -197,7 +197,7 @@ const About = () => {
                 fontSize: { xs: '2rem', sm: '2.5rem', md: '3.5rem' }
               }}
             >
-              About Smart Invoice Pro
+              About Solidev Books
             </Typography>
             <Typography
               component={motion.p}
@@ -231,7 +231,7 @@ const About = () => {
                 Simplifying Business Finance
               </Typography>
               <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary', lineHeight: 1.8, fontSize: '1.1rem' }}>
-                Smart Invoice Pro is built with cutting-edge technologies to deliver a seamless
+                Solidev Books is built with cutting-edge technologies to deliver a seamless
                 bookkeeping and invoicing experience. Our mission is to help businesses save time,
                 reduce errors, and gain financial clarity through intelligent automation and
                 intuitive design.

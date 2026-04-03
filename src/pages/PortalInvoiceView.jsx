@@ -114,7 +114,7 @@ const PortalInvoiceView = () => {
               <ReceiptIcon sx={{ color: 'white', fontSize: 24 }} />
             </Box>
             <Box>
-              <Typography variant="h6" fontWeight={700} lineHeight={1.2}>Smart Invoice Pro</Typography>
+              <Typography variant="h6" fontWeight={700} lineHeight={1.2}>Solidev Books</Typography>
               <Typography variant="caption" color="text.secondary">Secure Invoice Portal</Typography>
             </Box>
           </Box>
@@ -340,7 +340,7 @@ const PortalInvoiceView = () => {
           {/* Footer */}
           <Box px={4} py={2} bgcolor="grey.50" borderTop="1px solid" borderColor="divider">
             <Typography variant="caption" color="text.secondary" display="block" textAlign="center">
-              This is a secure, read-only invoice view. Powered by Smart Invoice Pro.
+              This is a secure, read-only invoice view. Powered by Solidev Books.
             </Typography>
           </Box>
         </Paper>

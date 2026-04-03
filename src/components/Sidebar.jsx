@@ -48,6 +48,8 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import BusinessIcon from "@mui/icons-material/Business";
 
 import { useAuth } from "../context/AuthContext";
+import Logo from "./common/Logo";
+import { BRANDING } from "../config/branding";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -212,7 +214,7 @@ const Sidebar = () => {
   // ── User info ─────────────────────────────────────────────────────────────
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
   const username = storedUser.username || "Admin User";
-  const email = storedUser.email || "admin@smartinvoice.com";
+  const email = storedUser.email || "admin@solidevbooks.com";
   const initials = username.charAt(0).toUpperCase();
 
   // ── Logout handlers ───────────────────────────────────────────────────────
@@ -392,14 +394,14 @@ const Sidebar = () => {
             borderColor: "grey.800",
           }}
         >
-          <BusinessIcon sx={{ fontSize: 28, color: "primary.main", flexShrink: 0 }} />
+          <Logo size={28} showText={false} variant="light" />
           {!isCollapsed && (
             <Box>
               <Typography variant="subtitle1" fontWeight={700} color="common.white" lineHeight={1.2}>
-                Smart Invoice
+                {BRANDING.appName}
               </Typography>
               <Typography variant="caption" sx={{ color: "grey.500" }}>
-                Pro Edition
+                {BRANDING.tagline}
               </Typography>
             </Box>
           )}

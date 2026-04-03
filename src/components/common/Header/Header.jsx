@@ -1,10 +1,11 @@
 import React from "react";
 import "./Header.css";
+import Logo from "../Logo";
 
 const Header = () => {
   return (
     <header className="app-header">
-      <div className="app-name">Smart Invoice Pro</div>
+      <Logo size={32} showText={true} />
     </header>
   );
 };

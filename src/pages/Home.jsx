@@ -123,7 +123,7 @@ const Home = () => {
                       color: 'white'
                     }}
                   >
-                    Smart Invoice Pro – Simplifying Invoicing and Bookkeeping
+                    Solidev Books – Simplifying Invoicing and Bookkeeping
                   </Typography>
                 </motion.div>
                 <motion.div variants={fadeInUp}>
@@ -267,7 +267,7 @@ const Home = () => {
         >
           <Box sx={{ textAlign: 'center', mb: 8 }}>
             <Typography variant="h3" sx={{ fontWeight: 700, mb: 2, color: 'text.primary' }}>
-              Why Choose Smart Invoice Pro?
+              Why Choose Solidev Books?
             </Typography>
             <Typography variant="h6" sx={{ color: 'text.secondary', maxWidth: 700, mx: 'auto' }}>
               Everything you need to manage your business finances in one place, designed for simplicity and power.
@@ -354,7 +354,7 @@ const Home = () => {
                     Built for Modern Businesses
                   </Typography>
                   <Typography variant="body1" sx={{ mb: 4, color: 'text.secondary', lineHeight: 1.7, fontSize: '1.1rem' }}>
-                    Smart Invoice Pro combines the power of modern technology with intuitive design
+                    Solidev Books combines the power of modern technology with intuitive design
                     to deliver a seamless business management experience.
                   </Typography>
                 </motion.div>
@@ -442,7 +442,7 @@ const Home = () => {
               Ready to Transform Your Business?
             </Typography>
             <Typography variant="h6" sx={{ mb: 5, color: 'grey.400', maxWidth: 600, mx: 'auto' }}>
-              Join thousands of businesses already using Smart Invoice Pro to streamline their operations
+              Join thousands of businesses already using Solidev Books to streamline their operations
             </Typography>
             <Button
               component={motion.button}

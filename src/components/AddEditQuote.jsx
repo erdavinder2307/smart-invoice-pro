@@ -26,7 +26,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import MainLayout from './Layout/MainLayout';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
-import SearchIcon from '@mui/icons-material/Search';
+import CustomerSelect from './common/CustomerSelect';
 import {
   C,
   AppSelect,
@@ -342,7 +342,7 @@ const AddEditQuote = () => {
     <MainLayout showBreadcrumbs={false}>
       <Box sx={{ bgcolor: '#f7f8fb', minHeight: '100vh', pb: 9 }}>
         <Container maxWidth={false} sx={{ pt: 2, px: { xs: 2, md: 3 } }}>
-          <Box sx={{ maxWidth: 1040 }}>
+          <Box sx={{ width: '100%' }}>
             {error && (
               <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2, borderRadius: '4px' }}>
                 {error}
@@ -365,24 +365,14 @@ const AddEditQuote = () => {
                   <Typography sx={{ ...rowLabelSx, color: C.red }}>
                     Customer Name*
                   </Typography>
-                  <Box sx={{ display: 'flex', width: '100%', maxWidth: 490, gap: 0.75 }}>
-                    <Box sx={{ flex: 1 }}>
-                      <AppSelect name="customer_id" value={form.customer_id} onChange={handleChange} displayEmpty>
-                        <MenuItem value="" sx={{ ...menuItemSx, color: C.hint }}>Select or add a customer</MenuItem>
-                        {customers.map((customer) => (
-                          <MenuItem key={customer.id} value={customer.id} sx={menuItemSx}>
-                            {customer.display_name || customer.name}
-                          </MenuItem>
-                        ))}
-                      </AppSelect>
-                    </Box>
-                    <Button
-                      type="button"
-                      variant="contained"
-                      sx={{ minWidth: 32, width: 32, height: 32, px: 0, boxShadow: 'none', bgcolor: '#5b96f7', '&:hover': { boxShadow: 'none', bgcolor: '#4b86e6' } }}
-                    >
-                      <SearchIcon sx={{ fontSize: 16 }} />
-                    </Button>
+                  <Box sx={{ width: '100%', maxWidth: 490 }}>
+                    <CustomerSelect
+                      customers={customers}
+                      value={form.customer_id}
+                      onChange={handleChange}
+                      name="customer_id"
+                      required
+                    />
                   </Box>
                 </Box>
               </Box>
@@ -485,7 +475,7 @@ const AddEditQuote = () => {
                   </Button>
                 </Box>
 
-                <TableContainer sx={{ border: `1px solid ${C.border}`, borderRadius: '4px', overflowX: 'hidden' }}>
+                <TableContainer sx={{ border: `1px solid ${C.border}`, borderRadius: '4px', overflowX: 'auto' }}>
                   <Table size="small" sx={{ width: '100%', tableLayout: 'fixed' }}>
                     <TableHead>
                       <TableRow sx={{ bgcolor: '#f8f9fb' }}>

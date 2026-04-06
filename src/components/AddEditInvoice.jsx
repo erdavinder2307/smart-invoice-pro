@@ -402,7 +402,7 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
             ref={formRef}
             onSubmit={handleSubmit}
             autoComplete="off"
-            sx={{ bgcolor: '#fff', overflow: 'hidden' }}
+            sx={{ bgcolor: '#fff' }}
           >
             {pageLoading ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
@@ -539,7 +539,7 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                       </Box>
                     </Box>
 
-                    <TableContainer sx={{ border: `1px solid ${C.border}`, borderTop: 'none', overflowX: 'hidden' }}>
+                    <TableContainer sx={{ border: `1px solid ${C.border}`, borderTop: 'none', overflowX: 'auto' }}>
                       <Table size="small" sx={{ tableLayout: 'fixed', width: '100%' }}>
                         <TableHead>
                           <TableRow sx={{ bgcolor: '#fafbfd' }}>

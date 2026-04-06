@@ -73,6 +73,16 @@ const mockInvoicePreferencesValue = {
   loaded: true,
 };
 
+const mockSidebarValue = {
+  isCollapsed: false,
+  setIsCollapsed: jest.fn(),
+  toggleSidebar: jest.fn(),
+  mobileOpen: false,
+  setMobileOpen: jest.fn(),
+  toggleMobileDrawer: jest.fn(),
+  isMobile: false,
+};
+
 // ── Mock context modules ─────────────────────────────────────────────────────
 
 jest.mock('./context/AuthContext', () => ({
@@ -107,6 +117,12 @@ jest.mock('./context/InvoicePreferencesContext', () => ({
   InvoicePreferencesProvider: ({ children }) => children,
 }));
 
+jest.mock('./context/SidebarContext', () => ({
+  ...jest.requireActual('./context/SidebarContext'),
+  useSidebar: jest.fn(() => mockSidebarValue),
+  SidebarProvider: ({ children }) => children,
+}));
+
 // ── Theme ────────────────────────────────────────────────────────────────────
 
 const testTheme = createTheme({
@@ -127,6 +143,7 @@ const testTheme = createTheme({
  * @param {object} options.brandValue - Override default branding context
  * @param {object} options.notifValue - Override default notification context
  * @param {object} options.prefValue  - Override default invoice prefs context
+ * @param {object} options.sidebarValue - Override default sidebar context
  * @param {object} [options.renderOptions] - Additional options passed through to RTL render()
  */
 export function renderWithProviders(
@@ -138,6 +155,7 @@ export function renderWithProviders(
     brandValue,
     notifValue,
     prefValue,
+    sidebarValue,
     ...renderOptions
   } = {}
 ) {
@@ -161,6 +179,10 @@ export function renderWithProviders(
   if (prefValue) {
     const { useInvoicePreferences } = require('./context/InvoicePreferencesContext');
     useInvoicePreferences.mockReturnValue({ ...mockInvoicePreferencesValue, ...prefValue });
+  }
+  {
+    const { useSidebar } = require('./context/SidebarContext');
+    useSidebar.mockReturnValue({ ...mockSidebarValue, ...(sidebarValue || {}) });
   }
 
   function Wrapper({ children }) {
@@ -195,4 +217,5 @@ export {
   mockBrandingValue as defaultBranding,
   mockNotificationsValue as defaultNotifications,
   mockInvoicePreferencesValue as defaultInvoicePreferences,
+  mockSidebarValue as defaultSidebar,
 };

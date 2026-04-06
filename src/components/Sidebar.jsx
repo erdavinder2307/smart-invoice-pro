@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Drawer from "@mui/material/Drawer";
 import List from "@mui/material/List";
@@ -7,6 +7,7 @@ import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import Collapse from "@mui/material/Collapse";
+import Popover from "@mui/material/Popover";
 import Divider from "@mui/material/Divider";
 import Box from "@mui/material/Box";
 import Avatar from "@mui/material/Avatar";
@@ -21,121 +22,35 @@ import DialogContentText from "@mui/material/DialogContentText";
 import IconButton from "@mui/material/IconButton";
 import { useTheme } from "@mui/material/styles";
 
-// ── Icons ────────────────────────────────────────────────────────────────────
-import DashboardIcon from "@mui/icons-material/Dashboard";
-import Inventory2Icon from "@mui/icons-material/Inventory2";
-import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
-import BrushIcon from "@mui/icons-material/Brush";
-import DescriptionIcon from "@mui/icons-material/Description";
-import PeopleIcon from "@mui/icons-material/People";
-import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
-import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
-import RequestQuoteIcon from "@mui/icons-material/RequestQuote";
-import ReceiptIcon from "@mui/icons-material/Receipt";
-import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
-import EventRepeatIcon from "@mui/icons-material/EventRepeat";
-import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
-import LocalShippingIcon from "@mui/icons-material/LocalShipping";
-import AssignmentIcon from "@mui/icons-material/Assignment";
-import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
-import AssessmentIcon from "@mui/icons-material/Assessment";
-import SettingsIcon from "@mui/icons-material/Settings";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import LogoutIcon from "@mui/icons-material/Logout";
-import BusinessIcon from "@mui/icons-material/Business";
 
 import { useAuth } from "../context/AuthContext";
+import { useSidebar } from "../context/SidebarContext";
+import { NAV_CONFIG } from "../config/navConfig";
 import Logo from "./common/Logo";
 import { BRANDING } from "../config/branding";
 
 // ── Constants ────────────────────────────────────────────────────────────────
-// ── Constants ────────────────────────────────────────────────────────────────
 const DRAWER_EXPANDED = 256;
 const DRAWER_COLLAPSED = 72;
-
-// ── Navigation Configuration ─────────────────────────────────────────────────
-const NAV_CONFIG = {
-  dashboard: {
-    id: 'dashboard',
-    label: 'Dashboard',
-    icon: <DashboardIcon />,
-    path: '/dashboard',
-  },
-  items: {
-    id: 'items',
-    label: 'Items',
-    icon: <Inventory2Icon />,
-    path: '/products',
-  },
-  sales: {
-    id: 'sales',
-    label: 'Sales',
-    icon: <PointOfSaleIcon />,
-    expandable: true,
-    children: [
-      { id: 'customers', label: 'Customers', icon: <PeopleIcon />, path: '/customers' },
-      { id: 'quotes', label: 'Quotes', icon: <RequestQuoteIcon />, path: '/quotes' },
-      { id: 'invoices', label: 'Invoices', icon: <ReceiptIcon />, path: '/invoices' },
-      { id: 'recurring', label: 'Recurring Invoices', icon: <EventRepeatIcon />, path: '/recurring-profiles' },
-    ],
-  },
-  purchases: {
-    id: 'purchases',
-    label: 'Purchases',
-    icon: <ShoppingCartIcon />,
-    expandable: true,
-    children: [
-      { id: 'vendors', label: 'Vendors', icon: <LocalShippingIcon />, path: '/vendors' },
-      { id: 'purchase-orders', label: 'Purchase Orders', icon: <ShoppingCartIcon />, path: '/purchase-orders' },
-      { id: 'bills', label: 'Bills', icon: <AssignmentIcon />, path: '/bills' },
-    ],
-  },
-  banking: {
-    id: 'banking',
-    label: 'Banking',
-    icon: <AccountBalanceIcon />,
-    expandable: true,
-    children: [
-      { id: 'bank-accounts', label: 'Bank Accounts', icon: <AccountBalanceIcon />, path: '/bank-accounts' },
-    ],
-  },
-  reports: {
-    id: 'reports',
-    label: 'Reports',
-    icon: <AssessmentIcon />,
-    path: '/reports',
-  },
-  settings: {
-    id: 'settings',
-    label: 'Settings',
-    icon: <SettingsIcon />,
-    adminOnly: true,
-    expandable: true,
-    children: [
-      { id: 'org-profile', label: 'Organization Profile', icon: <BusinessIcon sx={{ fontSize: 20 }} />, path: '/settings/organization-profile' },
-      { id: 'branding', label: 'Branding', icon: <BrushIcon sx={{ fontSize: 20 }} />, path: '/settings/branding' },
-      { id: 'invoice-preferences', label: 'Invoice Preferences', icon: <DescriptionIcon sx={{ fontSize: 20 }} />, path: '/settings/invoice-preferences' },
-      { id: 'taxes', label: 'Taxes', icon: <ReceiptLongIcon sx={{ fontSize: 20 }} />, path: '/settings/taxes' },
-      { id: 'users', label: 'User Management', icon: <PeopleIcon sx={{ fontSize: 20 }} />, path: '/settings/users' },
-      { id: 'roles', label: 'Roles', icon: <AdminPanelSettingsIcon sx={{ fontSize: 20 }} />, path: '/settings/roles' },
-      { id: 'automation', label: 'Automation', icon: <NotificationsActiveIcon sx={{ fontSize: 20 }} />, path: '/settings/automation' },
-    ],
-  },
-};
 
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
   const { logout, isAdmin } = useAuth();
-
-  // ── Sidebar collapse state (persisted) ───────────────────────────────────
-  const [isCollapsed, setIsCollapsed] = useState(
-    () => localStorage.getItem("sidebarCollapsed") === "true"
-  );
+  const {
+    isCollapsed,
+    toggleSidebar,
+    mobileOpen,
+    setMobileOpen,
+    isMobile,
+  } = useSidebar();
+  const isDesktopCollapsed = !isMobile && isCollapsed;
 
   // ── Expanded sections state (persisted per section) ──────────────────────
   const [expandedSections, setExpandedSections] = useState(() => {
@@ -162,15 +77,10 @@ const Sidebar = () => {
 
   // ── Logout dialog ────────────────────────────────────────────────────────
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [popoverAnchor, setPopoverAnchor] = useState(null);
+  const [popoverKey, setPopoverKey] = useState(null);
 
-  const drawerWidth = isCollapsed ? DRAWER_COLLAPSED : DRAWER_EXPANDED;
-
-  // ── Toggle sidebar collapse ──────────────────────────────────────────────
-  const toggleSidebar = () => {
-    const next = !isCollapsed;
-    setIsCollapsed(next);
-    localStorage.setItem("sidebarCollapsed", String(next));
-  };
+  const drawerWidth = isDesktopCollapsed ? DRAWER_COLLAPSED : DRAWER_EXPANDED;
 
   // ── Toggle section expansion ─────────────────────────────────────────────
   const toggleSection = (sectionId) => {
@@ -198,18 +108,12 @@ const Sidebar = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
-  // ── Auto-collapse on small screens ───────────────────────────────────────
+  // ── Close transient navigation surfaces on route change ─────────────────
   useEffect(() => {
-    const onResize = () => {
-      if (window.innerWidth < 768 && !isCollapsed) {
-        setIsCollapsed(true);
-        localStorage.setItem("sidebarCollapsed", "true");
-      }
-    };
-    onResize();
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, [isCollapsed]);
+    setMobileOpen(false);
+    setPopoverAnchor(null);
+    setPopoverKey(null);
+  }, [location.pathname, setMobileOpen]);
 
   // ── User info ─────────────────────────────────────────────────────────────
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
@@ -220,16 +124,27 @@ const Sidebar = () => {
   // ── Logout handlers ───────────────────────────────────────────────────────
   const handleLogoutClick = () => setShowLogoutDialog(true);
   const handleLogoutCancel = () => setShowLogoutDialog(false);
-  const handleLogoutConfirm = () => { 
-    setShowLogoutDialog(false); 
-    logout(); 
-    navigate("/"); 
+  const handleLogoutConfirm = () => {
+    setShowLogoutDialog(false);
+    logout();
+    navigate("/");
+  };
+
+  const handlePopoverClose = () => {
+    setPopoverAnchor(null);
+    setPopoverKey(null);
+  };
+
+  const handleNavigate = (path) => {
+    handlePopoverClose();
+    setMobileOpen(false);
+    navigate(path);
   };
 
   // ── Check if path is active ───────────────────────────────────────────────
   const isPathActive = (path) => {
-    if (path === '/dashboard') {
-      return location.pathname === '/dashboard';
+    if (path === "/dashboard") {
+      return location.pathname === "/dashboard";
     }
     return location.pathname.startsWith(path);
   };
@@ -237,7 +152,7 @@ const Sidebar = () => {
   // ── Check if section has active child ─────────────────────────────────────
   const isSectionActive = (section) => {
     if (!section.expandable || !section.children) return false;
-    return section.children.some(child => isPathActive(child.path));
+    return section.children.some((child) => isPathActive(child.path));
   };
 
   // ── Drawer styles ─────────────────────────────────────────────────────────
@@ -256,19 +171,19 @@ const Sidebar = () => {
   };
 
   // ── Nav button styles ─────────────────────────────────────────────────────
-  const navButtonSx = (isActive, isChild = false) => ({
+  const navButtonSx = (isActive, isChild = false, forceExpanded = false) => ({
     borderRadius: 1.5,
-    py: 1.25,
-    px: isCollapsed ? 0 : (isChild ? 1.5 : 2),
-    pl: isCollapsed ? 0 : (isChild ? 3.5 : 2),
-    justifyContent: isCollapsed ? "center" : "flex-start",
+    py: isChild ? 1 : 1.25,
+    px: isDesktopCollapsed && !forceExpanded ? 0 : isChild ? 1.5 : 2,
+    pl: isDesktopCollapsed && !forceExpanded ? 0 : isChild ? 3.5 : 2,
+    justifyContent: isDesktopCollapsed && !forceExpanded ? "center" : "flex-start",
     minHeight: isChild ? 40 : 44,
     mb: 0.5,
     bgcolor: isActive ? "primary.main" : "transparent",
     color: isActive ? "common.white" : "rgba(255,255,255,0.7)",
     transition: "all 0.2s ease",
     "& .MuiListItemIcon-root": {
-      minWidth: isCollapsed ? 0 : (isChild ? 32 : 40),
+      minWidth: isDesktopCollapsed && !forceExpanded ? 0 : isChild ? 32 : 40,
       justifyContent: "center",
       color: isActive ? "common.white" : "rgba(255,255,255,0.65)",
     },
@@ -285,24 +200,26 @@ const Sidebar = () => {
   });
 
   // ── Render simple nav item ────────────────────────────────────────────────
-  const renderNavItem = (config, isChild = false) => {
+  const renderNavItem = (config, isChild = false, forceExpanded = false) => {
     if (config.adminOnly && !isAdmin) return null;
-    
+
+    const showLabels = forceExpanded || !isDesktopCollapsed;
+    const showTooltip = isDesktopCollapsed && !forceExpanded;
     const isActive = isPathActive(config.path);
-    
+
     const button = (
       <ListItemButton
-        onClick={() => navigate(config.path)}
-        sx={navButtonSx(isActive, isChild)}
+        onClick={() => handleNavigate(config.path)}
+        sx={navButtonSx(isActive, isChild, forceExpanded)}
       >
         <ListItemIcon>{config.icon}</ListItemIcon>
-        {!isCollapsed && <ListItemText primary={config.label} />}
+        {showLabels && <ListItemText primary={config.label} />}
       </ListItemButton>
     );
 
     return (
       <ListItem key={config.id} disablePadding>
-        {isCollapsed ? (
+        {showTooltip ? (
           <Tooltip title={config.label} placement="right" arrow>
             {button}
           </Tooltip>
@@ -312,36 +229,40 @@ const Sidebar = () => {
   };
 
   // ── Render expandable section ─────────────────────────────────────────────
-  const renderExpandableSection = (sectionKey, config) => {
+  const renderExpandableSection = (sectionKey, config, forceExpanded = false) => {
+    if (config.adminOnly && !isAdmin) return null;
+
+    const showLabels = forceExpanded || !isDesktopCollapsed;
+    const showTooltip = isDesktopCollapsed && !forceExpanded;
+    const usePopover = isDesktopCollapsed && !forceExpanded;
     const isExpanded = expandedSections[sectionKey] || false;
     const hasActiveChild = isSectionActive(config);
 
     const parentButton = (
       <ListItemButton
-        onClick={() => {
-          if (isCollapsed) {
-            // In collapsed mode, navigate to first child
-            if (config.children && config.children.length > 0) {
-              navigate(config.children[0].path);
-            }
+        onClick={(event) => {
+          if (usePopover) {
+            setPopoverAnchor(event.currentTarget);
+            setPopoverKey(sectionKey);
           } else {
             toggleSection(sectionKey);
           }
         }}
         sx={{
-          ...navButtonSx(hasActiveChild && isCollapsed, false),
-          mb: isCollapsed ? 0.5 : 0,
+          ...navButtonSx(hasActiveChild && usePopover, false, forceExpanded),
+          mb: usePopover ? 0.5 : 0,
         }}
       >
         <ListItemIcon>{config.icon}</ListItemIcon>
-        {!isCollapsed && (
+        {showLabels && (
           <>
             <ListItemText primary={config.label} />
-            {isExpanded ? (
-              <ExpandLessIcon sx={{ fontSize: 18, color: "rgba(255,255,255,0.65)" }} />
-            ) : (
-              <ExpandMoreIcon sx={{ fontSize: 18, color: "rgba(255,255,255,0.65)" }} />
-            )}
+            {!usePopover &&
+              (isExpanded ? (
+                <ExpandLessIcon sx={{ fontSize: 18, color: "rgba(255,255,255,0.65)" }} />
+              ) : (
+                <ExpandMoreIcon sx={{ fontSize: 18, color: "rgba(255,255,255,0.65)" }} />
+              ))}
           </>
         )}
       </ListItemButton>
@@ -349,17 +270,17 @@ const Sidebar = () => {
 
     return (
       <ListItem key={sectionKey} disablePadding sx={{ flexDirection: "column", alignItems: "stretch" }}>
-        {isCollapsed ? (
+        {showTooltip ? (
           <Tooltip title={config.label} placement="right" arrow>
             {parentButton}
           </Tooltip>
         ) : parentButton}
 
         {/* Children - only shown in expanded mode */}
-        {!isCollapsed && config.children && (
+        {!usePopover && showLabels && config.children && (
           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
             <List disablePadding>
-              {config.children.map(child => renderNavItem(child, true))}
+              {config.children.map((child) => renderNavItem(child, true, forceExpanded))}
             </List>
           </Collapse>
         )}
@@ -367,35 +288,23 @@ const Sidebar = () => {
     );
   };
 
-  return (
+  const renderNavContent = (forceExpanded = false) => (
     <>
-      <Drawer
-        variant="permanent"
-        sx={{
-          flexShrink: 0,
-          width: drawerWidth,
-          transition: theme.transitions.create("width", {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.standard,
-          }),
-          "& .MuiDrawer-paper": drawerPaperSx,
-        }}
-      >
-        {/* ── Brand / Logo ─────────────────────────────────────────────── */}
+      {!isMobile && (
         <Box
           sx={{
             display: "flex",
             alignItems: "center",
-            justifyContent: isCollapsed ? "center" : "flex-start",
+            justifyContent: isDesktopCollapsed ? "center" : "flex-start",
             gap: 1.5,
-            px: isCollapsed ? 1.5 : 2.5,
+            px: isDesktopCollapsed ? 1.5 : 2.5,
             py: 2.5,
             borderBottom: "1px solid",
             borderColor: "grey.800",
           }}
         >
           <Logo size={28} showText={false} variant="light" />
-          {!isCollapsed && (
+          {!isDesktopCollapsed && (
             <Box>
               <Typography variant="subtitle1" fontWeight={700} color="common.white" lineHeight={1.2}>
                 {BRANDING.appName}
@@ -406,19 +315,20 @@ const Sidebar = () => {
             </Box>
           )}
         </Box>
+      )}
 
-        {/* ── Collapse Toggle ───────────────────────────────────────────── */}
+      {!isMobile && (
         <Box
           sx={{
             display: "flex",
-            justifyContent: isCollapsed ? "center" : "flex-end",
+            justifyContent: isDesktopCollapsed ? "center" : "flex-end",
             px: 1,
             py: 0.75,
             borderBottom: "1px solid",
             borderColor: "grey.800",
           }}
         >
-          <Tooltip title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"} placement="right" arrow>
+          <Tooltip title={isDesktopCollapsed ? "Expand sidebar" : "Collapse sidebar"} placement="right" arrow>
             <IconButton
               onClick={toggleSidebar}
               size="small"
@@ -428,117 +338,183 @@ const Sidebar = () => {
                 borderRadius: 1.5,
               }}
             >
-              {isCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+              {isDesktopCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
             </IconButton>
           </Tooltip>
         </Box>
+      )}
 
-        {/* ── Navigation List ───────────────────────────────────────────── */}
-        <Box sx={{ flex: 1, py: 2, overflowY: "auto", overflowX: "hidden" }}>
-          <List sx={{ px: isCollapsed ? 1 : 1.5 }} disablePadding>
-            {/* Dashboard */}
-            {renderNavItem(NAV_CONFIG.dashboard)}
+      <Box sx={{ flex: 1, py: 2, overflowY: "auto", overflowX: "hidden" }}>
+        <List sx={{ px: isDesktopCollapsed && !forceExpanded ? 1 : 1.5 }} disablePadding>
+          {renderNavItem(NAV_CONFIG.dashboard, false, forceExpanded)}
+          {renderNavItem(NAV_CONFIG.items, false, forceExpanded)}
+          {renderExpandableSection("sales", NAV_CONFIG.sales, forceExpanded)}
+          {renderExpandableSection("purchases", NAV_CONFIG.purchases, forceExpanded)}
+          {renderExpandableSection("banking", NAV_CONFIG.banking, forceExpanded)}
+          {renderNavItem(NAV_CONFIG.reports, false, forceExpanded)}
+          {renderExpandableSection("settings", NAV_CONFIG.settings, forceExpanded)}
+        </List>
+      </Box>
 
-            {/* Items */}
-            {renderNavItem(NAV_CONFIG.items)}
-
-            {/* Sales - expandable */}
-            {renderExpandableSection('sales', NAV_CONFIG.sales)}
-
-            {/* Purchases - expandable */}
-            {renderExpandableSection('purchases', NAV_CONFIG.purchases)}
-
-            {/* Banking - expandable */}
-            {renderExpandableSection('banking', NAV_CONFIG.banking)}
-
-            {/* Reports */}
-            {renderNavItem(NAV_CONFIG.reports)}
-
-            {/* Settings (admin only) - expandable */}
-            {isAdmin && renderExpandableSection('settings', NAV_CONFIG.settings)}
-          </List>
-        </Box>
-
-        {/* ── User Profile + Logout ──────────────────────────────────────── */}
-        <Divider sx={{ borderColor: "grey.800" }} />
-        <Box sx={{ p: isCollapsed ? 1 : 2 }}>
-          {/* Profile row (expanded only) */}
-          {!isCollapsed && (
-            <Box
+      <Divider sx={{ borderColor: "grey.800" }} />
+      <Box sx={{ p: isDesktopCollapsed && !forceExpanded ? 1 : 2 }}>
+        {(!isDesktopCollapsed || forceExpanded) && (
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1.5,
+              mb: 1.5,
+              p: 1.5,
+              borderRadius: 2,
+              bgcolor: "grey.800",
+            }}
+          >
+            <Avatar
               sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 1.5,
-                mb: 1.5,
-                p: 1.5,
-                borderRadius: 2,
-                bgcolor: "grey.800",
+                width: 36,
+                height: 36,
+                bgcolor: "primary.main",
+                fontSize: "0.9rem",
+                fontWeight: 700,
+                flexShrink: 0,
               }}
             >
-              <Avatar
-                sx={{
-                  width: 36,
-                  height: 36,
-                  bgcolor: "primary.main",
-                  fontSize: "0.9rem",
-                  fontWeight: 700,
-                  flexShrink: 0,
-                }}
-              >
-                {initials}
-              </Avatar>
-              <Box sx={{ minWidth: 0 }}>
-                <Typography variant="body2" fontWeight={600} color="common.white" noWrap>
-                  {username}
-                </Typography>
-                <Typography variant="caption" sx={{ color: "grey.500" }} noWrap>
-                  {email}
-                </Typography>
-              </Box>
+              {initials}
+            </Avatar>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="body2" fontWeight={600} color="common.white" noWrap>
+                {username}
+              </Typography>
+              <Typography variant="caption" sx={{ color: "grey.500" }} noWrap>
+                {email}
+              </Typography>
             </Box>
-          )}
+          </Box>
+        )}
 
-          {/* Logout */}
-          {isCollapsed ? (
-            <Tooltip title="Sign out" placement="right" arrow>
-              <IconButton
-                onClick={handleLogoutClick}
-                sx={{
-                  width: "100%",
-                  borderRadius: 2,
-                  py: 1.25,
-                  color: "grey.500",
-                  "&:hover": { bgcolor: "error.900", color: "error.light" },
-                }}
-              >
-                <LogoutIcon />
-              </IconButton>
-            </Tooltip>
-          ) : (
-            <Button
-              variant="outlined"
-              fullWidth
-              startIcon={<LogoutIcon />}
+        {isDesktopCollapsed && !forceExpanded ? (
+          <Tooltip title="Sign out" placement="right" arrow>
+            <IconButton
               onClick={handleLogoutClick}
               sx={{
+                width: "100%",
                 borderRadius: 2,
-                py: 1,
-                fontWeight: 600,
-                textTransform: "none",
-                borderColor: "grey.700",
-                color: "grey.400",
-                "&:hover": {
-                  borderColor: "error.main",
-                  bgcolor: "error.900",
-                  color: "error.light",
-                },
+                py: 1.25,
+                color: "grey.500",
+                "&:hover": { bgcolor: "error.900", color: "error.light" },
               }}
             >
-              Sign out
-            </Button>
-          )}
-        </Box>
-      </Drawer>
+              <LogoutIcon />
+            </IconButton>
+          </Tooltip>
+        ) : (
+          <Button
+            variant="outlined"
+            fullWidth
+            startIcon={<LogoutIcon />}
+            onClick={handleLogoutClick}
+            sx={{
+              borderRadius: 2,
+              py: 1,
+              fontWeight: 600,
+              textTransform: "none",
+              borderColor: "grey.700",
+              color: "grey.400",
+              "&:hover": {
+                borderColor: "error.main",
+                bgcolor: "error.900",
+                color: "error.light",
+              },
+            }}
+          >
+            Sign out
+          </Button>
+        )}
+      </Box>
+    </>
+  );
+
+  return (
+    <>
+      {isMobile ? (
+        <Drawer
+          variant="temporary"
+          open={mobileOpen}
+          onClose={() => setMobileOpen(false)}
+          ModalProps={{ keepMounted: true }}
+          sx={{
+            display: { xs: "block", md: "none" },
+            "& .MuiDrawer-paper": {
+              ...drawerPaperSx,
+              width: DRAWER_EXPANDED,
+            },
+          }}
+        >
+          {renderNavContent(true)}
+        </Drawer>
+      ) : (
+        <Drawer
+          variant="permanent"
+          sx={{
+            flexShrink: 0,
+            width: drawerWidth,
+            transition: theme.transitions.create("width", {
+              easing: theme.transitions.easing.sharp,
+              duration: theme.transitions.duration.standard,
+            }),
+            "& .MuiDrawer-paper": drawerPaperSx,
+          }}
+        >
+          {renderNavContent(false)}
+        </Drawer>
+      )}
+
+      <Popover
+        open={Boolean(popoverAnchor) && Boolean(popoverKey)}
+        anchorEl={popoverAnchor}
+        onClose={handlePopoverClose}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "left" }}
+        PaperProps={{
+          sx: {
+            width: 260,
+            bgcolor: "grey.900",
+            color: "common.white",
+            border: "1px solid",
+            borderColor: "grey.700",
+            boxShadow: 8,
+            borderRadius: 2,
+            overflow: "hidden",
+          },
+        }}
+      >
+        {popoverKey && NAV_CONFIG[popoverKey]?.children && (
+          <>
+            <Box sx={{ px: 2, py: 1.5, borderBottom: "1px solid", borderColor: "grey.800" }}>
+              <Typography variant="subtitle2" fontWeight={700} color="common.white">
+                {NAV_CONFIG[popoverKey].label}
+              </Typography>
+            </Box>
+            <List sx={{ px: 1.5, py: 1 }} disablePadding>
+              {NAV_CONFIG[popoverKey].children.map((child) => {
+                const isActive = isPathActive(child.path);
+                return (
+                  <ListItem key={child.id} disablePadding>
+                    <ListItemButton
+                      onClick={() => handleNavigate(child.path)}
+                      sx={navButtonSx(isActive, true, true)}
+                    >
+                      <ListItemIcon>{child.icon}</ListItemIcon>
+                      <ListItemText primary={child.label} />
+                    </ListItemButton>
+                  </ListItem>
+                );
+              })}
+            </List>
+          </>
+        )}
+      </Popover>
 
       {/* ── Logout Confirmation Dialog ──────────────────────────────────────── */}
       <Dialog

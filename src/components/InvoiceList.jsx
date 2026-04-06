@@ -7,6 +7,8 @@ import StatusBadge from "./common/StatusBadge";
 import SummaryCard from "./common/SummaryCard";
 import SectionHeader from "./common/SectionHeader";
 import StandardDataTable, { CHECKBOX_COLUMN_WIDTH } from "./common/StandardDataTable";
+import ResponsiveDataView from "./common/ResponsiveDataView";
+import InvoiceCard from "./common/InvoiceCard";
 import axios from "axios";
 import {
   Box,
@@ -38,7 +40,9 @@ import {
   InputLabel,
   Select,
   Snackbar,
-  FormControlLabel
+  FormControlLabel,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
@@ -108,6 +112,8 @@ const InvoiceList = () => {
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   // Approval-specific state
   const [rejectDialog, setRejectDialog] = useState({ open: false, invoiceId: null, reason: '' });
   const [approvalToast, setApprovalToast] = useState({ open: false, message: '', severity: 'success' });
@@ -607,7 +613,19 @@ const InvoiceList = () => {
                 <Typography variant="caption" color="text.secondary">Click any invoice to preview details</Typography>
               </Box>
 
-              <StandardDataTable
+              <ResponsiveDataView
+                isMobile={isMobile}
+                renderCard={(invoice) => {
+                  const cardCustomer = customers.find((c) => c.id === invoice.customer_id);
+                  return (
+                    <InvoiceCard
+                      invoice={invoice}
+                      customerName={cardCustomer ? cardCustomer.name : `Customer #${invoice.customer_id}`}
+                      onEdit={() => handleEdit(invoice)}
+                      onActionMenu={(e) => handleActionMenuOpen(e, invoice)}
+                    />
+                  );
+                }}
                 columns={invoiceColumns}
                 rows={paginatedInvoices}
                 loading={loading}

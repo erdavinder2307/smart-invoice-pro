@@ -8,6 +8,7 @@ import { BrandingProvider } from './context/BrandingContext';
 import { InvoicePreferencesProvider } from './context/InvoicePreferencesContext';
 import { PermissionProvider } from './context/PermissionContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { SidebarProvider } from './context/SidebarContext';
 import axios from 'axios';
 import authService from './services/authService';
 
@@ -89,13 +90,15 @@ root.render(
   <React.StrictMode>
     <AuthProvider>
       <BrandingProvider>
-        <InvoicePreferencesProvider>
-          <PermissionProvider>
-            <NotificationProvider>
-              <App />
-            </NotificationProvider>
-          </PermissionProvider>
-        </InvoicePreferencesProvider>
+        <SidebarProvider>
+          <InvoicePreferencesProvider>
+            <PermissionProvider>
+              <NotificationProvider>
+                <App />
+              </NotificationProvider>
+            </PermissionProvider>
+          </InvoicePreferencesProvider>
+        </SidebarProvider>
       </BrandingProvider>
     </AuthProvider>
   </React.StrictMode>

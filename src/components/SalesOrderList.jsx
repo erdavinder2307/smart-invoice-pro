@@ -31,8 +31,12 @@ import {
   Checkbox,
   FormControlLabel,
   Snackbar,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import StandardDataTable from "./common/StandardDataTable";
+import ResponsiveDataView from "./common/ResponsiveDataView";
+import SalesOrderCard from "./common/SalesOrderCard";
 import { useNavigate } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
@@ -63,6 +67,8 @@ const SalesOrderList = () => {
   const [toast, setToast] = useState({ open: false, message: '' });
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const navigate = useNavigate();
 
   const fetchSalesOrders = async () => {
@@ -401,7 +407,17 @@ const SalesOrderList = () => {
             </Paper>
 
             {/* Table */}
-            <StandardDataTable
+            <ResponsiveDataView
+              isMobile={isMobile}
+              renderCard={(so) => (
+                <SalesOrderCard
+                  salesOrder={so}
+                  customerName={getCustomerName(so)}
+                  onEdit={() => handleEdit(so)}
+                  onActionMenu={(e) => { e.stopPropagation(); handleActionMenuOpen(e, so); }}
+                  getStatusColor={getStatusColor}
+                />
+              )}
               columns={[
                 { key: 'so_number', label: 'SO #' },
                 { key: 'customer', label: 'Customer' },

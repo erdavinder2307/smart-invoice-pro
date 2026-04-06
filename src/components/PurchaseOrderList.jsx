@@ -31,9 +31,13 @@ import {
   Checkbox,
   FormControlLabel,
   Snackbar,
-  Tooltip
+  Tooltip,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import StandardDataTable from "./common/StandardDataTable";
+import ResponsiveDataView from "./common/ResponsiveDataView";
+import PurchaseOrderCard from "./common/PurchaseOrderCard";
 import { useNavigate } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
@@ -62,6 +66,8 @@ const PurchaseOrderList = () => {
   const [toast, setToast] = useState({ open: false, message: '' });
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   useEffect(() => {
     fetchData();
@@ -337,7 +343,20 @@ const PurchaseOrderList = () => {
         )}
 
         {/* Main Table */}
-        <StandardDataTable
+        <ResponsiveDataView
+          isMobile={isMobile}
+          renderCard={(po) => {
+            const cardVendor = vendors.find(v => v.id === po.vendor_id);
+            return (
+              <PurchaseOrderCard
+                po={po}
+                vendorName={cardVendor ? cardVendor.vendor_name : "Unknown Vendor"}
+                onEdit={() => navigate(`/purchase-orders/edit/${po.id}`)}
+                onDelete={() => setConfirmDeleteId(po.id)}
+                onActionMenu={(e) => handleActionMenuClick(e, po)}
+              />
+            );
+          }}
           columns={[
             { key: 'po_number', label: 'PO #' },
             { key: 'vendor', label: 'Vendor' },

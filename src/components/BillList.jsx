@@ -25,9 +25,13 @@ import {
   FormControl,
   Select,
   MenuItem,
-  Tooltip
+  Tooltip,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import StandardDataTable from "./common/StandardDataTable";
+import ResponsiveDataView from "./common/ResponsiveDataView";
+import BillCard from "./common/BillCard";
 import { useNavigate } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
@@ -48,6 +52,8 @@ const BillList = () => {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   useEffect(() => {
     fetchData();
@@ -256,7 +262,19 @@ const BillList = () => {
         )}
 
         {/* Main Table */}
-        <StandardDataTable
+        <ResponsiveDataView
+          isMobile={isMobile}
+          renderCard={(bill) => {
+            const cardVendor = vendors.find(v => v.id === bill.vendor_id);
+            return (
+              <BillCard
+                bill={bill}
+                vendorName={cardVendor ? cardVendor.vendor_name : "Unknown Vendor"}
+                onEdit={() => navigate(`/bills/edit/${bill.id}`)}
+                onDelete={() => setConfirmDeleteId(bill.id)}
+              />
+            );
+          }}
           columns={[
             { key: 'bill_number', label: 'Bill #' },
             { key: 'vendor', label: 'Vendor' },

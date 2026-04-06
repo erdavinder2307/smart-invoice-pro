@@ -10,7 +10,6 @@ import {
   Typography,
   CircularProgress,
   Alert,
-  Container,
   Table,
   TableBody,
   TableCell,
@@ -24,6 +23,7 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import MainLayout from "./Layout/MainLayout";
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
+import CustomerSelect from './common/CustomerSelect';
 import { C, ZohoRow, fieldSx, footerSx, cancelBtnSx, saveBtnSx } from './common/formStyles';
 import FormInput from './common/FormInput';
 import FormSelect from './common/FormSelect';
@@ -175,7 +175,7 @@ const AddEditSalesOrder = () => {
   return (
     <MainLayout title={id ? 'Edit Sales Order' : 'New Sales Order'}>
       <Box sx={{ bgcolor: C.pageBg, minHeight: '100vh', pb: 6 }}>
-        <Container maxWidth="lg" sx={{ pt: 3 }}>
+        <Box sx={{ width: '100%', pt: 3 }}>
 
           {error && (
             <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2, borderRadius: '4px' }}>
@@ -199,9 +199,15 @@ const AddEditSalesOrder = () => {
               <FormInput label="SO Number" required name="so_number" value={form.so_number} onChange={handleChange}
                 disabled={!!id} sx={{ maxWidth: 240 }} />
 
-              <FormSelect label="Customer" required name="customer_id" value={form.customer_id} onChange={handleChange}
-                options={customers.map(c => ({ value: c.id, label: c.name || c.display_name || 'Unknown Customer' }))}
-                width={300} />
+              <ZohoRow label="Customer" required>
+                <CustomerSelect
+                  customers={customers}
+                  value={form.customer_id}
+                  onChange={handleChange}
+                  name="customer_id"
+                  required
+                />
+              </ZohoRow>
 
               <FormSelect label="Status" required name="status" value={form.status} onChange={handleChange}
                 options={statusOptions.map(s => ({ value: s, label: s }))} width={220} />
@@ -455,7 +461,7 @@ const AddEditSalesOrder = () => {
               </Button>
             </Box>
           </Paper>
-        </Container>
+        </Box>
       </Box>
     </MainLayout>
   );

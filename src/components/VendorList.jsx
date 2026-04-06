@@ -26,9 +26,13 @@ import {
   Select,
   FormControl,
   Container,
-  CircularProgress
+  CircularProgress,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import StandardDataTable from "./common/StandardDataTable";
+import ResponsiveDataView from "./common/ResponsiveDataView";
+import VendorCard from "./common/VendorCard";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -46,6 +50,8 @@ const VendorList = () => {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   useEffect(() => {
     fetchVendors();
@@ -235,7 +241,15 @@ const VendorList = () => {
         )}
 
         {/* Main Table */}
-        <StandardDataTable
+        <ResponsiveDataView
+          isMobile={isMobile}
+          renderCard={(vendor) => (
+            <VendorCard
+              vendor={vendor}
+              onEdit={() => navigate(`/vendors/edit/${vendor.id}`)}
+              onDelete={() => setConfirmDeleteId(vendor.id)}
+            />
+          )}
           columns={[
             { key: 'vendor_name', label: 'Vendor Name' },
             { key: 'contact_person', label: 'Contact Person' },

@@ -29,8 +29,12 @@ import {
   FormControl,
   Select,
   Chip,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import StandardDataTable from "./common/StandardDataTable";
+import ResponsiveDataView from "./common/ResponsiveDataView";
+import RecurringProfileCard from "./common/RecurringProfileCard";
 import { useNavigate } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
@@ -56,6 +60,8 @@ const RecurringProfileList = () => {
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const navigate = useNavigate();
 
   const fetchProfiles = async () => {
@@ -332,7 +338,18 @@ const RecurringProfileList = () => {
             </Paper>
 
             {/* Table */}
-            <StandardDataTable
+            <ResponsiveDataView
+              isMobile={isMobile}
+              renderCard={(profile) => (
+                <RecurringProfileCard
+                  profile={profile}
+                  customerName={getCustomerName(profile.customer_id)}
+                  onEdit={() => handleEdit(profile)}
+                  onActionMenu={(e) => { e.stopPropagation(); handleActionMenuOpen(e, profile); }}
+                  getStatusColor={getStatusColor}
+                  getFrequencyIcon={getFrequencyIcon}
+                />
+              )}
               columns={[
                 { key: 'profile_name', label: 'Profile Name' },
                 { key: 'customer', label: 'Customer' },

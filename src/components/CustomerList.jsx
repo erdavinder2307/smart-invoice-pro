@@ -24,8 +24,12 @@ import {
   TextField,
   Tooltip,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import StandardDataTable, { CHECKBOX_COLUMN_WIDTH } from "./common/StandardDataTable";
+import ResponsiveDataView from "./common/ResponsiveDataView";
+import CustomerCard from "./common/CustomerCard";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
@@ -78,6 +82,8 @@ const CustomerList = () => {
   const [toast, setToast] = useState({ open: false, message: "" });
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   const fetchCustomers = async () => {
     setLoading(true);
@@ -252,7 +258,16 @@ const CustomerList = () => {
             </Button>
           </Box>
 
-          <StandardDataTable
+          <ResponsiveDataView
+            isMobile={isMobile}
+            renderCard={(customer) => (
+              <CustomerCard
+                customer={customer}
+                onClick={() => navigate(`/customers/${customer.id}`)}
+                onEdit={() => navigate(`/customers/edit/${customer.id}`)}
+                onDelete={() => setConfirmDeleteId(customer.id)}
+              />
+            )}
             columns={[
               { key: 'checkbox', label: '', width: CHECKBOX_COLUMN_WIDTH },
               { key: 'name', label: 'NAME', width: '18%' },

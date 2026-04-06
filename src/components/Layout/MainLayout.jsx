@@ -7,6 +7,7 @@ import Typography from "@mui/material/Typography";
 import DashboardHeader from "../DashboardHeader";
 import TopUtilityBar from "./TopUtilityBar";
 import AppBreadcrumbs from "./AppBreadcrumbs";
+import { useSidebar } from "../../context/SidebarContext";
 
 const MainLayout = ({
     children,
@@ -16,6 +17,7 @@ const MainLayout = ({
     showUtilityBar = true,
     showBreadcrumbs = true,
 }) => {
+    const { toggleMobileDrawer } = useSidebar();
 
     return (
         <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "grey.50" }}>
@@ -24,7 +26,7 @@ const MainLayout = ({
                 {/* Top Utility Bar */}
                 {showUtilityBar && (
                     <Box sx={{ position: 'sticky', top: 0, zIndex: 1200 }}>
-                        <TopUtilityBar />
+                        <TopUtilityBar onMenuClick={toggleMobileDrawer} />
                     </Box>
                 )}
 
@@ -59,7 +61,7 @@ const MainLayout = ({
                 </Box>
 
                 {/* Main Content Area */}
-                <Box sx={{ flex: 1, bgcolor: "grey.50", overflowY: "auto" }}>
+                <Box sx={{ flex: 1, minWidth: 0, bgcolor: "grey.50", overflowY: "auto" }}>
                     <Container maxWidth={false} sx={{ px: { xs: 1.5, md: 2.5 }, py: 2 }}>
                         {children}
                     </Container>

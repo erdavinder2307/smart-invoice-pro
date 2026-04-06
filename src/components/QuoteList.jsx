@@ -26,8 +26,12 @@ import {
   TableRow,
   TextField,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import StandardDataTable, { CHECKBOX_COLUMN_WIDTH } from "./common/StandardDataTable";
+import ResponsiveDataView from "./common/ResponsiveDataView";
+import QuoteCard from "./common/QuoteCard";
 import { useNavigate } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -64,6 +68,8 @@ const QuoteList = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selectedIds, setSelectedIds] = useState([]);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const navigate = useNavigate();
 
   const fetchQuotes = async () => {
@@ -298,7 +304,16 @@ const QuoteList = () => {
           </Alert>
         )}
 
-        <StandardDataTable
+        <ResponsiveDataView
+          isMobile={isMobile}
+          renderCard={(quote) => (
+            <QuoteCard
+              quote={quote}
+              customerName={getCustomerName(quote)}
+              onEdit={() => handleEdit(quote)}
+              onActionMenu={(e) => { e.stopPropagation(); handleActionMenuOpen(e, quote); }}
+            />
+          )}
           columns={[
             { key: 'checkbox', label: '', width: CHECKBOX_COLUMN_WIDTH },
             { key: 'date', label: 'DATE' },

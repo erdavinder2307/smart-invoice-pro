@@ -956,14 +956,12 @@ export default function OrganizationProfile() {
                     label="City"
                     value={form.address.city}
                     onChange={(e) => setAddressField("city", e.target.value)}
-                    sx={{ maxWidth: 280 }}
                   />
 
                   <FormInput
                     label="State / Province"
                     value={form.address.state}
                     onChange={(e) => setAddressField("state", e.target.value)}
-                    sx={{ maxWidth: 280 }}
                   />
 
                   <FormInput
@@ -971,7 +969,6 @@ export default function OrganizationProfile() {
                     noDivider
                     value={form.address.pincode}
                     onChange={(e) => setAddressField("pincode", e.target.value)}
-                    sx={{ maxWidth: 180 }}
                   />
                 </Box>
 
@@ -990,7 +987,6 @@ export default function OrganizationProfile() {
                     value={form.address.phone}
                     onChange={(e) => setAddressField("phone", e.target.value)}
                     placeholder="+91-9876543210"
-                    sx={{ maxWidth: 280 }}
                   />
 
                   <FormInput
@@ -998,7 +994,6 @@ export default function OrganizationProfile() {
                     noDivider
                     value={form.address.fax}
                     onChange={(e) => setAddressField("fax", e.target.value)}
-                    sx={{ maxWidth: 280 }}
                   />
                 </Box>
 

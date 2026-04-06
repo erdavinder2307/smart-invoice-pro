@@ -27,9 +27,13 @@ import {
   MenuItem,
   Tooltip,
   Chip,
-  Avatar
+  Avatar,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import StandardDataTable from "./common/StandardDataTable";
+import ResponsiveDataView from "./common/ResponsiveDataView";
+import ExpenseCard from "./common/ExpenseCard";
 import { useNavigate } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
@@ -68,6 +72,8 @@ const ExpenseList = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   const fetchExpenses = useCallback(async () => {
     setLoading(true);
@@ -307,7 +313,15 @@ const ExpenseList = () => {
         )}
 
         {/* Main Table */}
-        <StandardDataTable
+        <ResponsiveDataView
+          isMobile={isMobile}
+          renderCard={(expense) => (
+            <ExpenseCard
+              expense={expense}
+              onEdit={() => navigate(`/expenses/edit/${expense.id}`)}
+              onDelete={() => setConfirmDeleteId(expense.id)}
+            />
+          )}
           columns={[
             { key: 'date', label: 'Date' },
             { key: 'vendor', label: 'Vendor/Payee' },

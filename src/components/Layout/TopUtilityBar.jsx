@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import { Box, InputBase, IconButton, Tooltip, Avatar, Typography, Badge } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
+import MenuIcon from "@mui/icons-material/Menu";
 import NotificationsOutlinedIcon from "@mui/icons-material/NotificationsOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import NotificationDropdown from "../Notifications/NotificationDropdown";
 import { useNotifications } from "../../context/NotificationContext";
 
-const TopUtilityBar = ({ searchPlaceholder = "Search invoices, customers, products...", onSearchChange }) => {
+const TopUtilityBar = ({ searchPlaceholder = "Search invoices, customers, products...", onSearchChange, onMenuClick }) => {
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
   const username = storedUser.username || "User";
   const initials = username.charAt(0).toUpperCase();
@@ -41,6 +42,14 @@ const TopUtilityBar = ({ searchPlaceholder = "Search invoices, customers, produc
           height: 36,
         }}
       >
+        <IconButton
+          color="inherit"
+          onClick={onMenuClick}
+          sx={{ display: { xs: "flex", md: "none" }, mr: 0.5 }}
+          aria-label="open navigation menu"
+        >
+          <MenuIcon fontSize="small" />
+        </IconButton>
         <SearchIcon sx={{ color: "text.secondary", fontSize: 18, mr: 1 }} />
         <InputBase
           placeholder={searchPlaceholder}

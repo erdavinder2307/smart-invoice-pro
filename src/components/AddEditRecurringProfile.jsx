@@ -30,7 +30,7 @@ import FormSelect from './common/FormSelect';
 import FormDatePicker from './common/FormDatePicker';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
-import SearchIcon from '@mui/icons-material/Search';
+import CustomerSelect from './common/CustomerSelect';
 
 const frequencyOptions = ["Daily", "Weekly", "Monthly", "Quarterly", "Yearly"];
 const statusOptions = ["Active", "Paused", "Expired", "Stopped"];
@@ -201,7 +201,7 @@ const AddEditRecurringProfile = () => {
             </Alert>
           )}
 
-          <Box component="form" onSubmit={handleSubmit} autoComplete="off" sx={{ bgcolor: '#fff', overflow: 'hidden' }}>
+          <Box component="form" onSubmit={handleSubmit} autoComplete="off" sx={{ bgcolor: '#fff' }}>
             <Box sx={{ px: 0.5, pt: 0.25, pb: 1.5, borderBottom: `1px solid ${C.divider}` }}>
               <Typography sx={{ fontSize: '2rem', fontWeight: 500, color: '#151a25', textAlign: 'left' }}>
                 {profileId ? 'Edit Recurring Invoice' : 'New Recurring Invoice'}
@@ -210,17 +210,13 @@ const AddEditRecurringProfile = () => {
 
             <Box sx={{ px: 0.5 }}>
             <ZohoRow label="Customer Name" required>
-              <Box sx={{ maxWidth: 600, display: 'flex', gap: 0.8 }}>
-                <AppSelect name="customer_id" value={form.customer_id} onChange={handleChange} displayEmpty>
-                  <MenuItem value="" sx={{ ...menuItemSx, color: C.hint }}>Select Customer</MenuItem>
-                  {customers.map((c) => (
-                    <MenuItem key={c.id} value={c.id} sx={menuItemSx}>{c.name}</MenuItem>
-                  ))}
-                </AppSelect>
-                <IconButton size="small" sx={{ border: '1px solid #d2d8e3', borderRadius: '4px', width: 34, height: 34 }}>
-                  <SearchIcon sx={{ fontSize: 18, color: '#516173' }} />
-                </IconButton>
-              </Box>
+              <CustomerSelect
+                customers={customers}
+                value={form.customer_id}
+                onChange={handleChange}
+                name="customer_id"
+                required
+              />
             </ZohoRow>
 
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, columnGap: 2, py: 2, borderBottom: `1px solid ${C.divider}` }}>
@@ -271,7 +267,7 @@ const AddEditRecurringProfile = () => {
                 </Box>
               </Box>
 
-              <TableContainer sx={{ border: `1px solid ${C.border}`, borderTop: 'none', overflowX: 'hidden' }}>
+              <TableContainer sx={{ border: `1px solid ${C.border}`, borderTop: 'none', overflowX: 'auto' }}>
                 <Table size="small" sx={{ tableLayout: 'fixed', width: '100%' }}>
                   <TableHead>
                     <TableRow sx={{ bgcolor: '#fafbfd' }}>

@@ -7,7 +7,13 @@ import {
   Button,
   CircularProgress,
   Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Drawer,
   FormControlLabel,
+  IconButton,
   List,
   ListItemButton,
   ListItemIcon,
@@ -21,6 +27,7 @@ import {
 } from "@mui/material";
 import BusinessIcon from "@mui/icons-material/Business";
 import BrushIcon from "@mui/icons-material/Brush";
+import CloseIcon from "@mui/icons-material/Close";
 import DescriptionIcon from "@mui/icons-material/Description";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import PeopleIcon from "@mui/icons-material/People";
@@ -31,6 +38,7 @@ import HistoryIcon from "@mui/icons-material/History";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import DeleteIcon from "@mui/icons-material/Delete";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 
 import { useAuth } from "../context/AuthContext";
 import { useBranding, BRANDING_DEFAULTS } from "../context/BrandingContext";
@@ -362,6 +370,262 @@ function InvoicePreview({ primary, secondary, accent, orgName, logoUrl, showLogo
   );
 }
 
+// ── 1:1 Crop Dialog ──────────────────────────────────────────────────────────
+const CROP_OUTPUT_PX = 512;
+const MIN_CROP_SIZE = 60;
+const SHADE = "rgba(0,0,0,0.55)";
+
+// Absolute-position props + cursor for each corner handle
+const CORNER_POS = {
+  tl: { top: -6,    left: -6,   cursor: "nw-resize" },
+  tr: { top: -6,    right: -6,  cursor: "ne-resize"  },
+  bl: { bottom: -6, left: -6,   cursor: "sw-resize"  },
+  br: { bottom: -6, right: -6,  cursor: "se-resize"  },
+};
+
+function CropDialog({ open, src, onClose, onCrop }) {
+  const imgRef = useRef(null);
+  const [box, setBox] = useState({ x: 0, y: 0, size: 0 });
+  const [ready, setReady] = useState(false);
+
+  const interaction = useRef(null);
+
+  useEffect(() => {
+    if (!open) {
+      setReady(false);
+      setBox({ x: 0, y: 0, size: 0 });
+      interaction.current = null;
+    }
+  }, [open, src]);
+
+  const initCrop = useCallback(() => {
+    const img = imgRef.current;
+    if (!img) return;
+    requestAnimationFrame(() => {
+      const w = img.clientWidth;
+      const h = img.clientHeight;
+      if (!w || !h) return;
+      const size = Math.floor(Math.min(w, h) * 0.85);
+      setBox({
+        x: Math.floor((w - size) / 2),
+        y: Math.floor((h - size) / 2),
+        size,
+      });
+      setReady(true);
+    });
+  }, []);
+
+  useEffect(() => {
+    const onMove = (e) => {
+      const act = interaction.current;
+      if (!act || !imgRef.current) return;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const w = imgRef.current.clientWidth;
+      const h = imgRef.current.clientHeight;
+      const dx = clientX - act.mx;
+      const dy = clientY - act.my;
+
+      if (act.mode === "drag") {
+        setBox((prev) => ({
+          ...prev,
+          x: Math.max(0, Math.min(w - prev.size, act.bx + dx)),
+          y: Math.max(0, Math.min(h - prev.size, act.by + dy)),
+        }));
+        return;
+      }
+
+      const { corner, bx: obx, by: oby, size: osize } = act;
+      let nx = obx, ny = oby, ns;
+
+      if (corner === "br") {
+        ns = osize + dx; nx = obx; ny = oby;
+      } else if (corner === "tr") {
+        ns = osize + dx; nx = obx; ny = oby + osize - ns;
+      } else if (corner === "bl") {
+        ns = osize - dx; nx = obx + osize - ns; ny = oby;
+      } else {
+        ns = osize - dx; nx = obx + osize - ns; ny = oby + osize - ns;
+      }
+
+      ns = Math.max(MIN_CROP_SIZE, ns);
+      nx = Math.max(0, nx);
+      ny = Math.max(0, ny);
+      ns = Math.min(ns, w - nx, h - ny);
+      ns = Math.max(MIN_CROP_SIZE, ns);
+
+      setBox({ x: Math.round(nx), y: Math.round(ny), size: Math.round(ns) });
+    };
+
+    const onEnd = () => { interaction.current = null; };
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onEnd);
+    window.addEventListener("touchmove", onMove, { passive: false });
+    window.addEventListener("touchend", onEnd);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onEnd);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onEnd);
+    };
+  }, []);
+
+  const startDrag = (e) => {
+    e.preventDefault();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    interaction.current = { mode: "drag", mx: clientX, my: clientY, bx: box.x, by: box.y };
+  };
+
+  const startResize = (corner, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    interaction.current = {
+      mode: "resize", corner,
+      mx: clientX, my: clientY,
+      bx: box.x, by: box.y, size: box.size,
+    };
+  };
+
+  const handleCrop = () => {
+    const img = imgRef.current;
+    if (!img || !box.size) return;
+    const scaleX = img.naturalWidth / img.clientWidth;
+    const scaleY = img.naturalHeight / img.clientHeight;
+    const canvas = document.createElement("canvas");
+    canvas.width = CROP_OUTPUT_PX;
+    canvas.height = CROP_OUTPUT_PX;
+    canvas.getContext("2d").drawImage(
+      img,
+      Math.round(box.x * scaleX),
+      Math.round(box.y * scaleY),
+      Math.round(box.size * scaleX),
+      Math.round(box.size * scaleY),
+      0, 0,
+      CROP_OUTPUT_PX,
+      CROP_OUTPUT_PX
+    );
+    canvas.toBlob((blob) => {
+      if (blob) onCrop(blob, URL.createObjectURL(blob));
+    }, "image/jpeg", 0.92);
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle
+        sx={{
+          fontSize: "0.9375rem",
+          fontWeight: 600,
+          py: 1.5,
+          px: 2.5,
+          borderBottom: `1px solid ${C.divider}`,
+        }}
+      >
+        Crop Logo
+        <Typography
+          component="span"
+          sx={{ fontSize: "0.75rem", fontWeight: 400, color: C.hint, ml: 1 }}
+        >
+          — drag to reposition · drag corners to resize
+        </Typography>
+      </DialogTitle>
+
+      <DialogContent sx={{ p: 0, overflow: "hidden", bgcolor: "#111", lineHeight: 0 }}>
+        <Box sx={{ position: "relative", display: "inline-block", width: "100%", lineHeight: 0 }}>
+          <Box
+            component="img"
+            ref={imgRef}
+            src={src || ""}
+            alt=""
+            onLoad={initCrop}
+            draggable={false}
+            sx={{
+              display: "block",
+              width: "100%",
+              height: "auto",
+              userSelect: "none",
+              pointerEvents: "none",
+            }}
+          />
+
+          {ready && (
+            <>
+              <Box sx={{ position: "absolute", top: 0, left: 0, right: 0, height: box.y, bgcolor: SHADE, pointerEvents: "none" }} />
+              <Box sx={{ position: "absolute", top: box.y + box.size, left: 0, right: 0, bottom: 0, bgcolor: SHADE, pointerEvents: "none" }} />
+              <Box sx={{ position: "absolute", top: box.y, left: 0, width: box.x, height: box.size, bgcolor: SHADE, pointerEvents: "none" }} />
+              <Box sx={{ position: "absolute", top: box.y, left: box.x + box.size, right: 0, height: box.size, bgcolor: SHADE, pointerEvents: "none" }} />
+
+              <Box
+                sx={{
+                  position: "absolute",
+                  left: box.x,
+                  top: box.y,
+                  width: box.size,
+                  height: box.size,
+                  border: "2px solid rgba(255,255,255,0.85)",
+                  cursor: "move",
+                  userSelect: "none",
+                  touchAction: "none",
+                  boxSizing: "border-box",
+                }}
+                onMouseDown={startDrag}
+                onTouchStart={startDrag}
+              >
+                {[33.33, 66.66].map((pct) => (
+                  <React.Fragment key={pct}>
+                    <Box sx={{ position: "absolute", left: `${pct}%`, top: 0, bottom: 0, width: "1px", bgcolor: "rgba(255,255,255,0.3)", pointerEvents: "none" }} />
+                    <Box sx={{ position: "absolute", top: `${pct}%`, left: 0, right: 0, height: "1px", bgcolor: "rgba(255,255,255,0.3)", pointerEvents: "none" }} />
+                  </React.Fragment>
+                ))}
+
+                {Object.entries(CORNER_POS).map(([corner, pos]) => (
+                  <Box
+                    key={corner}
+                    sx={{
+                      position: "absolute",
+                      width: 12,
+                      height: 12,
+                      bgcolor: "white",
+                      border: "1.5px solid rgba(0,0,0,0.35)",
+                      borderRadius: "2px",
+                      zIndex: 10,
+                      cursor: pos.cursor,
+                      touchAction: "none",
+                      ...pos,
+                    }}
+                    onMouseDown={(e) => startResize(corner, e)}
+                    onTouchStart={(e) => startResize(corner, e)}
+                  />
+                ))}
+              </Box>
+            </>
+          )}
+        </Box>
+      </DialogContent>
+
+      <DialogActions sx={{ px: 2.5, py: 1.5, borderTop: `1px solid ${C.divider}` }}>
+        <Button
+          onClick={onClose}
+          sx={{ textTransform: "none", fontSize: "0.8125rem", color: C.hint }}
+        >
+          Cancel
+        </Button>
+        <Button
+          variant="contained"
+          onClick={handleCrop}
+          disabled={!ready}
+          sx={saveBtnSx}
+        >
+          Crop &amp; Use
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
 // ── Default form shapes ───────────────────────────────────────────────────────
 const EMPTY_FORM = {
   primary_color:   BRANDING_DEFAULTS.primary_color,
@@ -387,6 +651,10 @@ export default function BrandingSettings() {
 
   const fileInputRef = useRef(null);
   const pendingFile  = useRef(null);
+
+  const [cropOpen, setCropOpen] = useState(false);
+  const [cropSrc, setCropSrc] = useState("");
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   // Admin guard
   useEffect(() => {
@@ -440,16 +708,26 @@ export default function BrandingSettings() {
       setLogoError("Only PNG, JPG, GIF, or WebP images are allowed.");
       return;
     }
-    if (file.size > 1 * 1024 * 1024) {
-      setLogoError("Logo must be smaller than 1 MB.");
+    if (file.size > 10 * 1024 * 1024) {
+      setLogoError("Logo must be smaller than 10 MB.");
       return;
     }
     setLogoError("");
     pendingFile.current = file;
-    setLogoFile(file);
     const reader = new FileReader();
-    reader.onload = (ev) => setLogoPreview(ev.target.result);
+    reader.onload = (ev) => { setCropSrc(ev.target.result); setCropOpen(true); };
     reader.readAsDataURL(file);
+  };
+
+  const handleCropComplete = (blob, previewUrl) => {
+    setLogoFile(blob);
+    setLogoPreview(previewUrl);
+    setCropOpen(false);
+  };
+
+  const handleCropCancel = () => {
+    pendingFile.current = null;
+    setCropOpen(false);
   };
 
   const removeLogo = () => {
@@ -533,7 +811,7 @@ export default function BrandingSettings() {
             <SettingsSubNav />
 
             {/* Main content */}
-            <Box sx={{ flex: 1, display: "flex", gap: 2.5, alignItems: "flex-start", minWidth: 0 }}>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
 
               {/* ── Form card ─────────────────────────────────────────────── */}
               <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -552,7 +830,7 @@ export default function BrandingSettings() {
 
                     <ZohoRow
                       label="Organization Logo"
-                      hint="PNG, JPG, GIF or WebP. Max 1 MB. Used in invoice header and email."
+                      hint="PNG, JPG, GIF or WebP. Max 10 MB. Recommended: square logo. Used in invoice header and email."
                       noDivider
                       alignStart
                     >
@@ -742,6 +1020,24 @@ export default function BrandingSettings() {
                   {/* ══ FOOTER ══════════════════════════════════════════════ */}
                   <Box sx={footerSx}>
                     <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<VisibilityIcon sx={{ fontSize: 16 }} />}
+                      onClick={() => setPreviewOpen(true)}
+                      sx={{
+                        textTransform: "none",
+                        fontSize: "0.8125rem",
+                        borderRadius: "4px",
+                        borderColor: C.border,
+                        color: C.label,
+                        mr: "auto",
+                        "&:hover": { borderColor: C.primary, color: C.primary },
+                      }}
+                    >
+                      Preview Invoice
+                    </Button>
+
+                    <Button
                       variant="text"
                       size="small"
                       startIcon={<RefreshIcon sx={{ fontSize: 16 }} />}
@@ -770,58 +1066,39 @@ export default function BrandingSettings() {
                 </Paper>
               </Box>
 
-              {/* ── Live invoice preview ──────────────────────────────────── */}
-              <Box sx={{ width: 300, flexShrink: 0 }}>
-                <Paper
-                  elevation={0}
-                  sx={{
-                    border: `1px solid ${C.border}`,
-                    borderRadius: "4px",
-                    overflow: "hidden",
-                  }}
-                >
-                  <Box sx={{ px: 2, py: 1.25, borderBottom: `1px solid ${C.divider}`, bgcolor: C.sectionBg }}>
-                    <Typography
-                      sx={{
-                        fontSize: "0.75rem",
-                        fontWeight: 600,
-                        color: C.hint,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.06em",
-                      }}
-                    >
-                      Invoice Preview
-                    </Typography>
-                  </Box>
-                  <Box sx={{ p: 2 }}>
-                    <InvoicePreview
-                      primary={form.primary_color}
-                      secondary={form.secondary_color}
-                      accent={form.accent_color}
-                      orgName={ctxBranding.organization_name}
-                      logoUrl={logoPreview || ctxBranding.logo_url}
-                      showLogo={form.invoice_template_settings.show_logo}
-                    />
-                  </Box>
-                  <Box
-                    sx={{
-                      px: 2,
-                      py: 1,
-                      bgcolor: C.sectionBg,
-                      borderTop: `1px solid ${C.divider}`,
-                    }}
-                  >
-                    <Typography sx={{ fontSize: "0.6875rem", color: C.hint }}>
-                      Preview updates live as you change colours.
-                    </Typography>
-                  </Box>
-                </Paper>
-              </Box>
-
             </Box>
           </Box>
         </Container>
       </Box>
+
+      <CropDialog
+        open={cropOpen}
+        src={cropSrc}
+        onClose={handleCropCancel}
+        onCrop={handleCropComplete}
+      />
+
+      <Drawer
+        anchor="right"
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        PaperProps={{ sx: { width: { xs: "100%", md: "75%" }, p: 3, bgcolor: C.pageBg } }}
+      >
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+          <Typography sx={{ fontWeight: 600, fontSize: "1rem" }}>Invoice Preview</Typography>
+          <IconButton onClick={() => setPreviewOpen(false)} size="small">
+            <CloseIcon />
+          </IconButton>
+        </Box>
+        <InvoicePreview
+          primary={form.primary_color}
+          secondary={form.secondary_color}
+          accent={form.accent_color}
+          orgName={ctxBranding.organization_name}
+          logoUrl={logoPreview || ctxBranding.logo_url}
+          showLogo={form.invoice_template_settings.show_logo}
+        />
+      </Drawer>
 
       <Snackbar
         open={toast.open}

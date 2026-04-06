@@ -6,7 +6,7 @@ import MainLayout from "./Layout/MainLayout";
 import StatusBadge from "./common/StatusBadge";
 import SummaryCard from "./common/SummaryCard";
 import SectionHeader from "./common/SectionHeader";
-import StandardDataTable from "./common/StandardDataTable";
+import StandardDataTable, { CHECKBOX_COLUMN_WIDTH } from "./common/StandardDataTable";
 import axios from "axios";
 import {
   Box,
@@ -428,34 +428,25 @@ const InvoiceList = () => {
     setPage(0);
   };
 
+  const allVisibleSelected =
+    paginatedInvoices.length > 0 &&
+    paginatedInvoices.every((inv) => selectedInvoices.includes(inv.id));
+  const someVisibleSelected = paginatedInvoices.some((inv) =>
+    selectedInvoices.includes(inv.id)
+  );
+
   const invoiceColumns = [
-    {
-      key: "select",
-      label: (
-        <Checkbox
-          indeterminate={
-            selectedInvoices.length > 0 &&
-            selectedInvoices.length < paginatedInvoices.length
-          }
-          checked={
-            paginatedInvoices.length > 0 &&
-            selectedInvoices.length === paginatedInvoices.length
-          }
-          onChange={handleSelectAll}
-        />
-      ),
-      width: 42,
-    },
-    { key: "date", label: "Date" },
-    { key: "invoice", label: "Invoice #" },
-    { key: "order", label: "Order Number" },
-    { key: "customer", label: "Customer Name" },
-    { key: "status", label: "Status" },
-    { key: "email_status", label: "Email", align: "center" },
-    { key: "due", label: "Due Date" },
-    { key: "amount", label: "Amount", align: "right" },
-    { key: "balance", label: "Balance Due", align: "right" },
-    { key: "actions", label: "Actions", align: "center" },
+    { key: "select", label: "", width: CHECKBOX_COLUMN_WIDTH },
+    { key: "date", label: "DATE" },
+    { key: "invoice", label: "INVOICE #" },
+    { key: "order", label: "ORDER NUMBER" },
+    { key: "customer", label: "CUSTOMER NAME" },
+    { key: "status", label: "STATUS" },
+    { key: "email_status", label: "EMAIL", align: "center" },
+    { key: "due", label: "DUE DATE" },
+    { key: "amount", label: "AMOUNT", align: "right" },
+    { key: "balance", label: "BALANCE DUE", align: "right" },
+    { key: "actions", label: "", align: "center" },
   ];
 
   const formatCurrency = (value) => `₹${Number(value || 0).toLocaleString()}`;
@@ -629,6 +620,48 @@ const InvoiceList = () => {
                   onPageChange: handleChangePage,
                   onRowsPerPageChange: handleChangeRowsPerPage,
                 }}
+                renderHeader={() => (
+                  <TableRow sx={{ bgcolor: "#fafbfc" }}>
+                    <TableCell
+                      sx={{ width: CHECKBOX_COLUMN_WIDTH, padding: "0 4px", borderBottomColor: "#edf0f3" }}
+                    >
+                      <Checkbox
+                        indeterminate={someVisibleSelected && !allVisibleSelected}
+                        checked={allVisibleSelected}
+                        onChange={handleSelectAll}
+                        sx={{ color: "#b6bdc7" }}
+                      />
+                    </TableCell>
+                    {[
+                      { label: "DATE" },
+                      { label: "INVOICE #" },
+                      { label: "ORDER NUMBER" },
+                      { label: "CUSTOMER NAME" },
+                      { label: "STATUS" },
+                      { label: "EMAIL", align: "center" },
+                      { label: "DUE DATE" },
+                      { label: "AMOUNT", align: "right" },
+                      { label: "BALANCE DUE", align: "right" },
+                      { label: "", align: "center" },
+                    ].map((col, index) => (
+                      <TableCell
+                        key={`${col.label}-${index}`}
+                        align={col.align || "left"}
+                        sx={{
+                          borderBottomColor: "#edf0f3",
+                          py: 1.2,
+                          color: "#8b95a7",
+                          fontSize: "0.68rem",
+                          letterSpacing: "0.05em",
+                          fontWeight: 700,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {col.label}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                )}
                 renderRow={(invoice) => {
                   const customer = customers.find((c) => c.id === invoice.customer_id);
                   const isActive = invoice.id === activeInvoiceId;
@@ -644,7 +677,7 @@ const InvoiceList = () => {
                         bgcolor: isActive ? "rgba(26, 115, 232, 0.08)" : "transparent",
                       }}
                     >
-                      <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                      <TableCell sx={{ width: CHECKBOX_COLUMN_WIDTH, padding: "0 4px" }} onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={selectedInvoices.includes(invoice.id)}
                           onChange={() => handleSelectOne(invoice.id)}

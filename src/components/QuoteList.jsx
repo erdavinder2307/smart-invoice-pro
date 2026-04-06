@@ -27,7 +27,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import StandardDataTable from "./common/StandardDataTable";
+import StandardDataTable, { CHECKBOX_COLUMN_WIDTH } from "./common/StandardDataTable";
 import { useNavigate } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -300,7 +300,7 @@ const QuoteList = () => {
 
         <StandardDataTable
           columns={[
-            { key: 'checkbox', label: '', width: 40 },
+            { key: 'checkbox', label: '', width: CHECKBOX_COLUMN_WIDTH },
             { key: 'date', label: 'DATE' },
             { key: 'quote_number', label: 'QUOTE NUMBER' },
             { key: 'reference_number', label: 'REFERENCE NUMBER' },
@@ -381,7 +381,7 @@ const QuoteList = () => {
           }
           renderHeader={() => (
             <TableRow>
-              <TableCell sx={{ width: 40, py: 0.6, borderBottom: "1px solid #e6e9ee" }}>
+              <TableCell sx={{ width: CHECKBOX_COLUMN_WIDTH, padding: "0 4px", borderBottom: "1px solid #e6e9ee" }}>
                 <Checkbox
                   size="small"
                   checked={allVisibleSelected}
@@ -429,7 +429,7 @@ const QuoteList = () => {
                   },
                 }}
               >
-                <TableCell onClick={(event) => event.stopPropagation()}>
+                <TableCell sx={{ width: CHECKBOX_COLUMN_WIDTH, padding: "0 4px" }} onClick={(event) => event.stopPropagation()}>
                   <Checkbox
                     size="small"
                     checked={checked}

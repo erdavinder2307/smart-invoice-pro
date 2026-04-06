@@ -38,7 +38,7 @@ export const fieldSx = {
     },
     '& .MuiInputLabel-root': { fontSize: '0.875rem', color: C.hint },
     '& .MuiInputLabel-root.Mui-focused': { color: C.primary },
-    '& .MuiInputBase-input': { fontSize: '0.875rem', py: '7px', px: '10px' },
+    '& .MuiInputBase-input': { fontSize: '0.875rem', py: '7px', px: '10px', textAlign: 'left' },
     '& .MuiFormHelperText-root': { fontSize: '0.75rem', mx: 0 },
 };
 
@@ -65,9 +65,9 @@ export const menuItemSx = { fontSize: '0.875rem' };
  *   "Email Address"    |  [                     ]
  *   "Payment Terms"    |  [                     ]
  */
-const LABEL_WIDTH = 180;
+const DEFAULT_LABEL_WIDTH = 180;
 
-export const ZohoRow = ({ label, required, hint, children, noDivider, alignStart }) => (
+export const ZohoRow = ({ label, required, hint, children, noDivider, alignStart, labelWidth = DEFAULT_LABEL_WIDTH }) => (
     <>
         <Box
             sx={{
@@ -79,8 +79,8 @@ export const ZohoRow = ({ label, required, hint, children, noDivider, alignStart
         >
             <Box
                 sx={{
-                    width: LABEL_WIDTH,
-                    minWidth: LABEL_WIDTH,
+                    width: labelWidth,
+                    minWidth: labelWidth,
                     flexShrink: 0,
                     pr: 2,
                     pt: alignStart ? '8px' : 0,

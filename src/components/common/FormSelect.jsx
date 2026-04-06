@@ -18,6 +18,7 @@ const FormSelect = ({
   label,
   required,
   hint,
+  labelWidth,
   noDivider,
   options = [],
   value,
@@ -47,7 +48,7 @@ const FormSelect = ({
     const selectedOption = options.find((o) => o.value === value) || null;
 
     return (
-      <ZohoRow label={label} required={required} hint={hint} noDivider={noDivider}>
+      <ZohoRow label={label} required={required} hint={hint} labelWidth={labelWidth} noDivider={noDivider}>
         <Autocomplete
           size="small"
           fullWidth={fullWidth}
@@ -79,7 +80,7 @@ const FormSelect = ({
   }
 
   return (
-    <ZohoRow label={label} required={required} hint={hint} noDivider={noDivider}>
+    <ZohoRow label={label} required={required} hint={hint} labelWidth={labelWidth} noDivider={noDivider}>
       <AppSelect
         name={name}
         value={value}

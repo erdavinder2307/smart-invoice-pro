@@ -25,7 +25,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import StandardDataTable from "./common/StandardDataTable";
+import StandardDataTable, { CHECKBOX_COLUMN_WIDTH } from "./common/StandardDataTable";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
@@ -254,7 +254,7 @@ const CustomerList = () => {
 
           <StandardDataTable
             columns={[
-              { key: 'checkbox', label: '', width: 46 },
+              { key: 'checkbox', label: '', width: CHECKBOX_COLUMN_WIDTH },
               { key: 'name', label: 'NAME', width: '18%' },
               { key: 'company_name', label: 'COMPANY NAME', width: '18%' },
               { key: 'email', label: 'EMAIL', width: '19%' },
@@ -326,7 +326,7 @@ const CustomerList = () => {
             }
             renderHeader={() => (
               <TableRow sx={{ bgcolor: "#fafbfc" }}>
-                <TableCell padding="checkbox" sx={{ borderBottomColor: "#edf0f3", width: 46 }}>
+                <TableCell sx={{ width: CHECKBOX_COLUMN_WIDTH, padding: "0 4px", borderBottomColor: "#edf0f3" }}>
                   <Checkbox
                     indeterminate={someVisibleSelected && !allVisibleSelected}
                     checked={allVisibleSelected}
@@ -385,7 +385,7 @@ const CustomerList = () => {
                     "&:hover": { bgcolor: "#fafcff" },
                   }}
                 >
-                  <TableCell padding="checkbox">
+                  <TableCell sx={{ width: CHECKBOX_COLUMN_WIDTH, padding: "0 4px" }}>
                     <Checkbox
                       checked={isSelected}
                       onChange={() => handleSelectOne(customer.id)}

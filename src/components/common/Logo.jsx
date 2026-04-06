@@ -1,5 +1,5 @@
 import React from "react";
-import { BRANDING, getLogoForBackground } from "../../config/branding";
+import { BRANDING } from "../../config/branding";
 
 /**
  * Reusable app logo component with dark/light variants.

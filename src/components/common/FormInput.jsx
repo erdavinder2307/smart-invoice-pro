@@ -14,6 +14,7 @@ const FormInput = ({
   label,
   required,
   hint,
+  labelWidth,
   noDivider,
   alignStart,
   error,
@@ -39,6 +40,7 @@ const FormInput = ({
       label={label}
       required={required}
       hint={hint}
+      labelWidth={labelWidth}
       noDivider={noDivider}
       alignStart={alignStart || !!textFieldProps.multiline}
     >

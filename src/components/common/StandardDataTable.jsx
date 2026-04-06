@@ -15,10 +15,32 @@ import TableSkeleton from "./TableSkeleton";
 import EmptyState from "./EmptyState";
 
 /**
+ * Canonical checkbox column width (48px = compact cell matching MUI checkbox size).
+ * Import this constant instead of hard-coding a value in each list page.
+ *
+ * ── CANONICAL CHECKBOX PATTERN ──────────────────────────────────────────────
+ * DO NOT use padding="checkbox" on TableCell — that MUI prop applies the class
+ * .MuiTableCell-paddingCheckbox which sets width:24px with 2-class specificity
+ * and overrides any sx width you set. Use explicit sx only:
+ *
+ *   // renderHeader
+ *   <TableCell sx={{ width: CHECKBOX_COLUMN_WIDTH, padding: '0 4px' }}>
+ *     <Checkbox indeterminate={...} checked={...} onChange={handleSelectAll} />
+ *   </TableCell>
+ *
+ *   // renderRow
+ *   <TableCell sx={{ width: CHECKBOX_COLUMN_WIDTH, padding: '0 4px' }}>
+ *     <Checkbox checked={...} onChange={...} />
+ *   </TableCell>
+ * ────────────────────────────────────────────────────────────────────────────
+ */
+export const CHECKBOX_COLUMN_WIDTH = 48;
+
+/**
  * StandardDataTable — Unified table component with skeleton loading,
  * rich empty states, optional toolbar, and row click support.
  *
- * New props (backward-compatible — all optional):
+ * Props (all optional except columns/rows):
  *   toolbar        — React node rendered above the table (search/filter bar)
  *   onRowClick     — (row, index) => void, called when a body row is clicked
  *   emptyIcon      — Icon element for empty state
@@ -60,20 +82,24 @@ const StandardDataTable = ({
               renderHeader()
             ) : (
               <TableRow>
-                {columns.map((column) => (
-                  <TableCell
-                    key={column.key}
-                    align={column.align || "left"}
-                    sx={{
-                      width: column.width,
-                      fontWeight: 600,
-                      fontSize: "0.8125rem",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {column.label}
-                  </TableCell>
-                ))}
+                {columns.map((column) => {
+                  const isCheckboxCol = column.key === "checkbox" || column.key === "select";
+                  return (
+                    <TableCell
+                      key={column.key}
+                      align={column.align || "left"}
+                      sx={{
+                        width: column.width,
+                        ...(isCheckboxCol ? { padding: "0 4px" } : {}),
+                        fontWeight: 600,
+                        fontSize: "0.8125rem",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {column.label}
+                    </TableCell>
+                  );
+                })}
               </TableRow>
             )}
           </TableHead>

@@ -23,8 +23,12 @@ import {
   TextField,
   Tooltip,
   Typography,
+  useMediaQuery,
 } from "@mui/material";
-import StandardDataTable from "./common/StandardDataTable";
+import { useTheme } from "@mui/material/styles";
+import ResponsiveDataView from "./common/ResponsiveDataView";
+import { CHECKBOX_COLUMN_WIDTH } from "./common/StandardDataTable";
+import ItemCard from "./common/ItemCard";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
@@ -48,17 +52,20 @@ const formatCurrency = (amount) => new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 2,
 }).format(Number(amount || 0));
 
+const toFiniteNumber = (value, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
 const getAvailableQuantity = (product) => (
-  typeof product.stock === "number"
-    ? product.stock
-    : (typeof product.opening_stock === "number" && typeof product.sold === "number"
-      ? product.opening_stock - product.sold
-      : 0)
+  product.stock !== undefined && product.stock !== null && product.stock !== ""
+    ? toFiniteNumber(product.stock)
+    : toFiniteNumber(product.opening_stock) - toFiniteNumber(product.sold)
 );
 
 const getStockBucket = (product) => {
   const availableQty = getAvailableQuantity(product);
-  const reorderLevel = Number(product.reorder_level || 10);
+  const reorderLevel = toFiniteNumber(product.reorder_level, 10);
 
   if (availableQty <= 0) return "Out of Stock";
   if (availableQty <= reorderLevel) return "Low Stock";
@@ -67,6 +74,8 @@ const getStockBucket = (product) => {
 
 const ProductList = () => {
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -258,20 +267,35 @@ const ProductList = () => {
             </Button>
           </Box>
 
-          <StandardDataTable
+          <ResponsiveDataView
+            isMobile={isMobile}
             columns={[
-              { key: 'checkbox', label: '', width: 44 },
-              { key: 'name', label: 'NAME', width: '17%' },
-              { key: 'purchase_description', label: 'PURCHASE DESCRIPTION', width: '18%' },
-              { key: 'purchase_rate', label: 'PURCHASE RATE', align: 'right', width: '11%' },
-              { key: 'description', label: 'DESCRIPTION', width: '18%' },
-              { key: 'rate', label: 'RATE', align: 'right', width: '10%' },
-              { key: 'hsn_sac', label: 'HSN/SAC', width: '10%' },
-              { key: 'unit', label: 'USAGE UNIT', width: '8%' },
-              { key: 'stock', label: 'STOCK', align: 'right', width: '8%' },
+              { key: 'checkbox', label: '', width: CHECKBOX_COLUMN_WIDTH },
+              { key: 'name', label: 'NAME', width: '22%' },
+              { key: 'purchase_description', label: 'PURCHASE DESCRIPTION', width: '13%' },
+              { key: 'purchase_rate', label: 'PURCHASE RATE', align: 'right', width: '9%' },
+              { key: 'description', label: 'DESCRIPTION', width: '13%' },
+              { key: 'rate', label: 'RATE', align: 'right', width: '8%' },
+              { key: 'hsn_sac', label: 'HSN/SAC', width: '7%' },
+              { key: 'unit', label: 'USAGE UNIT', width: '6%' },
+              { key: 'stock', label: 'STOCK', align: 'right', width: '5%' },
               { key: 'actions', label: '', align: 'center', width: 72 },
             ]}
             rows={paginatedProducts}
+            renderCard={(product) => {
+              const availableQty = getAvailableQuantity(product);
+              const stockBucket = getStockBucket(product);
+              return (
+                <ItemCard
+                  product={product}
+                  availableQty={availableQty}
+                  stockBucket={stockBucket}
+                  onEdit={() => navigate(`/products/edit/${product.id}`)}
+                  onDelete={() => setConfirmDeleteId(product.id)}
+                  onRestock={product.preferred_vendor_id ? () => handleRestock(product) : undefined}
+                />
+              );
+            }}
             loading={loading}
             emptyTitle={searchTerm ? "No items matched your search." : "No items available."}
             toolbar={
@@ -333,7 +357,7 @@ const ProductList = () => {
             }
             renderHeader={() => (
               <TableRow sx={{ bgcolor: "#fafbfc" }}>
-                <TableCell padding="checkbox" sx={{ borderBottomColor: "#edf0f3", width: 44 }}>
+                <TableCell sx={{ width: CHECKBOX_COLUMN_WIDTH, padding: "0 4px", borderBottomColor: "#edf0f3" }}>
                   <Checkbox
                     indeterminate={someVisibleSelected && !allVisibleSelected}
                     checked={allVisibleSelected}
@@ -342,14 +366,14 @@ const ProductList = () => {
                   />
                 </TableCell>
                 {[
-                  { label: "NAME", width: "17%" },
-                  { label: "PURCHASE DESCRIPTION", width: "18%" },
-                  { label: "PURCHASE RATE", width: "11%", align: "right" },
-                  { label: "DESCRIPTION", width: "18%" },
-                  { label: "RATE", width: "10%", align: "right" },
-                  { label: "HSN/SAC", width: "10%" },
-                  { label: "USAGE UNIT", width: "8%" },
-                  { label: "STOCK", width: "8%", align: "right" },
+                  { label: "NAME", width: "22%" },
+                  { label: "PURCHASE DESCRIPTION", width: "13%" },
+                  { label: "PURCHASE RATE", width: "9%", align: "right" },
+                  { label: "DESCRIPTION", width: "13%" },
+                  { label: "RATE", width: "8%", align: "right" },
+                  { label: "HSN/SAC", width: "7%" },
+                  { label: "USAGE UNIT", width: "6%" },
+                  { label: "STOCK", width: "5%", align: "right" },
                   { label: "", width: 72, align: "center" },
                 ].map((column, index) => (
                   <TableCell
@@ -388,7 +412,7 @@ const ProductList = () => {
                     "&:hover": { bgcolor: "#fafcff" },
                   }}
                 >
-                  <TableCell padding="checkbox">
+                  <TableCell sx={{ width: CHECKBOX_COLUMN_WIDTH, padding: "0 4px" }}>
                     <Checkbox
                       checked={isSelected}
                       onChange={() => handleSelectOne(product.id)}

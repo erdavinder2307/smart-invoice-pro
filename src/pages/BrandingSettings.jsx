@@ -14,6 +14,7 @@ import {
   Drawer,
   FormControlLabel,
   IconButton,
+  InputAdornment,
   List,
   ListItemButton,
   ListItemIcon,
@@ -206,40 +207,43 @@ function ColorField({ label, value, onChange }) {
   const isValid = HEX_RE.test(localHex);
 
   return (
-    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-      {/* Native color swatch */}
-      <Tooltip title="Pick a colour">
-        <Box
-          component="input"
-          type="color"
-          value={isValid ? localHex : "#000000"}
-          onChange={handleSwatch}
-          sx={{
-            width: 36,
-            height: 36,
-            border: `1px solid ${C.border}`,
-            borderRadius: "4px",
-            padding: 0,
-            cursor: "pointer",
-            flexShrink: 0,
-            appearance: "none",
-            backgroundColor: "transparent",
-          }}
-        />
-      </Tooltip>
-
-      {/* Hex text input */}
-      <TextField
-        size="small"
-        value={localHex}
-        onChange={handleText}
-        placeholder="#2563EB"
-        inputProps={{ maxLength: 7, style: { fontFamily: "monospace", fontSize: "0.875rem" } }}
-        error={localHex.length > 0 && !isValid}
-        helperText={localHex.length > 0 && !isValid ? "Enter a valid 6-digit hex, e.g. #2563EB" : " "}
-        sx={{ ...fieldSx, width: 160 }}
-      />
-    </Box>
+    <TextField
+      size="small"
+      fullWidth
+      value={localHex}
+      onChange={handleText}
+      placeholder="#2563EB"
+      inputProps={{ maxLength: 7, style: { fontFamily: "monospace", fontSize: "0.875rem" } }}
+      error={localHex.length > 0 && !isValid}
+      helperText={localHex.length > 0 && !isValid ? "Enter a valid 6-digit hex, e.g. #2563EB" : " "}
+      sx={fieldSx}
+      InputProps={{
+        startAdornment: (
+          <InputAdornment position="start" sx={{ mr: 0.5 }}>
+            <Tooltip title="Pick a colour">
+              <Box
+                component="input"
+                type="color"
+                value={isValid ? localHex : "#000000"}
+                onChange={handleSwatch}
+                sx={{
+                  width: 22,
+                  height: 22,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: "3px",
+                  padding: 0,
+                  cursor: "pointer",
+                  flexShrink: 0,
+                  appearance: "none",
+                  backgroundColor: "transparent",
+                  display: "block",
+                }}
+              />
+            </Tooltip>
+          </InputAdornment>
+        ),
+      }}
+    />
   );
 }
 

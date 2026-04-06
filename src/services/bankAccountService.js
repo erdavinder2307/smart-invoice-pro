@@ -22,7 +22,6 @@ export const getBankAccounts = async (userId) => {
         );
         return response.data;
     } catch (error) {
-        console.error('Error fetching bank accounts:', error);
         throw error;
     }
 };
@@ -39,7 +38,6 @@ export const createBankAccount = async (accountData, userId) => {
         );
         return response.data;
     } catch (error) {
-        console.error('Error creating bank account:', error);
         throw error;
     }
 };
@@ -55,7 +53,6 @@ export const getBankAccountById = async (id, userId) => {
         );
         return response.data;
     } catch (error) {
-        console.error('Error fetching bank account details:', error);
         throw error;
     }
 };
@@ -70,7 +67,6 @@ export const updateBankAccount = async (id, accountData, userId) => {
         );
         return response.data;
     } catch (error) {
-        console.error('Error updating bank account:', error);
         throw error;
     }
 };
@@ -84,7 +80,6 @@ export const deleteBankAccount = async (id, userId) => {
         );
         return response.data;
     } catch (error) {
-        console.error('Error deleting bank account:', error);
         throw error;
     }
 };

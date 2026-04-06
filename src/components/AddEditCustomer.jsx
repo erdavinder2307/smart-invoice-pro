@@ -670,19 +670,19 @@ const AddEditCustomer = () => {
               {/* Salutation | First Name | Last Name */}
               <ZohoRow label="Primary Contact" hint="Main contact person for this customer" alignStart>
                 <Grid container spacing={1.5}>
-                  <Grid item xs={12} sm={3}>
+                  <Grid size={{ xs: 12, sm: 3 }}>
                     <AppSelect name="salutation" value={form.salutation} onChange={handleChange} displayEmpty>
                       <MenuItem value="" sx={{ ...menuItemSx, color: C.hint }}>Salutation</MenuItem>
                       {SALUTATIONS.map(s => <MenuItem key={s} value={s} sx={menuItemSx}>{s}</MenuItem>)}
                     </AppSelect>
                   </Grid>
-                  <Grid item xs={12} sm={4.5}>
+                  <Grid size={{ xs: 12, sm: 4.5 }}>
                     <TextField
                       name="first_name" value={form.first_name} onChange={handleChange}
                       size="small" placeholder="First Name" fullWidth sx={fieldSx}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={4.5}>
+                  <Grid size={{ xs: 12, sm: 4.5 }}>
                     <TextField
                       name="last_name" value={form.last_name} onChange={handleChange}
                       size="small" placeholder="Last Name" fullWidth sx={fieldSx}
@@ -728,7 +728,7 @@ const AddEditCustomer = () => {
               {/* Phone | Mobile */}
               <ZohoRow label="Phone" hint="Work phone and mobile" alignStart>
                 <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <PhoneInput
                       codeField="work_phone_code" codeVal={form.work_phone_code}
                       numField="phone" numVal={form.phone}
@@ -736,7 +736,7 @@ const AddEditCustomer = () => {
                       error={errors.phone} helperText={errors.phone}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <PhoneInput
                       codeField="mobile_code" codeVal={form.mobile_code}
                       numField="mobile" numVal={form.mobile}
@@ -1131,7 +1131,7 @@ const AddEditCustomer = () => {
                 <Box sx={{ px: 3, py: 3 }}>
                   <Grid container spacing={4}>
                     {/* Billing */}
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <Typography fontWeight={600} sx={{ mb: 2, fontSize: '0.875rem', color: '#333' }}>
                         Billing Address
                       </Typography>
@@ -1144,7 +1144,7 @@ const AddEditCustomer = () => {
                       />
                     </Grid>
                     {/* Shipping */}
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 2 }}>
                         <Typography fontWeight={600} sx={{ fontSize: '0.875rem', color: '#333' }}>
                           Shipping Address

@@ -206,7 +206,7 @@ const LoginPage = () => {
 
         <Container maxWidth="lg">
           <Grid container spacing={4} alignItems="center">
-            <Grid item xs={12} md={6} lg={5} sx={{ mx: 'auto' }}>
+            <Grid size={{ xs: 12, md: 6, lg: 5 }} sx={{ mx: 'auto' }}>
               <motion.div
                 initial="hidden"
                 animate="visible"

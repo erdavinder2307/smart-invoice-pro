@@ -1,5 +1,9 @@
 import React from 'react';
+import { act } from 'react';
 import { renderWithProviders, screen, fireEvent, waitFor } from '../../test-utils';
+
+// Capture real console.error before any mocks are applied
+const originalConsoleError = console.error;
 import LoginPage from '../../components/Auth/Login';
 import { useAuth } from '../../context/AuthContext';
 
@@ -15,6 +19,21 @@ jest.mock('react-router-dom', () => {
     ...actual,
     useNavigate: () => mockNavigate,
   };
+});
+
+// Suppress the React 18 "not wrapped in act" warning for async event handlers.
+// This is a known limitation when plain async functions call setState after an
+// await — there is no way to keep act active across the microtask boundary
+// without @testing-library/user-event v14.
+beforeAll(() => {
+  jest.spyOn(console, 'error').mockImplementation((...args) => {
+    if (typeof args[0] === 'string' && args[0].includes('not wrapped in act')) return;
+    originalConsoleError(...args);
+  });
+});
+
+afterAll(() => {
+  jest.restoreAllMocks();
 });
 
 beforeEach(() => {
@@ -66,7 +85,7 @@ describe('LoginPage', () => {
 
     // Submit via form
     const form = document.querySelector('form');
-    fireEvent.submit(form);
+    await act(async () => { fireEvent.submit(form); });
 
     await waitFor(() => {
       expect(screen.getByText(/password does not meet/i)).toBeInTheDocument();
@@ -95,7 +114,7 @@ describe('LoginPage', () => {
     fireEvent.change(getPasswordInput(), { target: { value: 'Pass123!' } });
 
     const submitBtn = screen.getByRole('button', { name: /sign in/i });
-    fireEvent.click(submitBtn);
+    await act(async () => { fireEvent.click(submitBtn); });
 
     await waitFor(() => {
       expect(mockLogin).toHaveBeenCalledWith(
@@ -126,7 +145,7 @@ describe('LoginPage', () => {
     fireEvent.change(getPasswordInput(), { target: { value: 'wrong' } });
 
     const submitBtn = screen.getByRole('button', { name: /sign in/i });
-    fireEvent.click(submitBtn);
+    await act(async () => { fireEvent.click(submitBtn); });
 
     await waitFor(() => {
       expect(screen.getByText(/invalid username or password/i)).toBeInTheDocument();

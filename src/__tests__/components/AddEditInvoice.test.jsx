@@ -62,7 +62,10 @@ describe('AddEditInvoice', () => {
       },
     });
 
-    getTaxRates.mockResolvedValue([{ id: '18', name: 'GST 18%', rate: 18 }]);
+    getTaxRates.mockResolvedValue([
+      { id: '0', name: 'Exempt (0%)', rate: 0 },
+      { id: '18', name: 'GST 18%', rate: 18 },
+    ]);
     calculateInvoiceTax.mockResolvedValue({
       cgst_amount: 0,
       sgst_amount: 0,

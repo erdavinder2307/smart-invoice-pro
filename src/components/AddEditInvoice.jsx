@@ -30,7 +30,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import MainLayout from './Layout/MainLayout';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
-import SearchIcon from '@mui/icons-material/Search';
+import CustomerSelect from './common/CustomerSelect';
 import { C, AppSelect, fieldSx, menuItemSx, footerSx, cancelBtnSx, saveBtnSx } from './common/formStyles';
 
 const paymentTermsOptions = ['Due on Receipt', 'Net 15', 'Net 30', 'Net 45'];
@@ -419,32 +419,14 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                 <Box sx={{ px: 0.5 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', py: 2, borderBottom: `1px solid ${C.divider}` }}>
                     <Typography sx={{ ...rowLabelSx, color: '#e53935' }}>Customer Name*</Typography>
-                    <Box sx={{ flex: 1, maxWidth: 600, display: 'flex', gap: 0.8 }}>
-                      <AppSelect
-                        name="customer_id"
+                    <Box sx={{ flex: 1, maxWidth: 520 }}>
+                      <CustomerSelect
+                        customers={customers}
                         value={form.customer_id}
                         onChange={handleChange}
-                        displayEmpty
-                      >
-                        <MenuItem value="" sx={{ ...menuItemSx, color: C.hint }}>Select or add a customer</MenuItem>
-                        {customers.map((customer) => (
-                          <MenuItem key={customer.id} value={customer.id} sx={menuItemSx}>
-                            {customer.name}
-                          </MenuItem>
-                        ))}
-                      </AppSelect>
-                      <IconButton
-                        size="small"
-                        sx={{
-                          alignSelf: 'center',
-                          border: '1px solid #d2d8e3',
-                          borderRadius: '4px',
-                          width: 34,
-                          height: 34,
-                        }}
-                      >
-                        <SearchIcon sx={{ fontSize: 18, color: '#516173' }} />
-                      </IconButton>
+                        name="customer_id"
+                        required
+                      />
                     </Box>
                   </Box>
 

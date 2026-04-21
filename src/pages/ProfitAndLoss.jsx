@@ -62,7 +62,8 @@ const ProfitAndLoss = () => {
     new Date().toISOString().split('T')[0]
   );
 
-  const userId = localStorage.getItem('user_id');
+  const userStr = localStorage.getItem('user');
+  const userId = userStr ? JSON.parse(userStr).id : null;
 
   const fetchReport = async () => {
     if (!userId) {
@@ -74,7 +75,7 @@ const ProfitAndLoss = () => {
     setError('');
 
     try {
-      const response = await axios.get(createApiUrl('/reports/profit-loss'), {
+      const response = await axios.get(createApiUrl('/api/reports/profit-loss'), {
         params: {
           user_id: userId,
           start_date: startDate,
@@ -357,8 +358,8 @@ const ProfitAndLoss = () => {
                 Detailed Statement
               </Typography>
               <Divider sx={{ mb: 2 }} />
-              <TableContainer>
-                <Table>
+              <TableContainer sx={{ overflowX: "hidden" }}>
+                <Table sx={{ tableLayout: "fixed" }}>
                   <TableHead>
                     <TableRow>
                       <TableCell><strong>Account</strong></TableCell>

@@ -8,12 +8,8 @@ import {
   Button,
   Typography,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
   TableRow,
+  TableCell,
   CircularProgress,
   Alert,
   InputAdornment,
@@ -29,11 +25,15 @@ import {
   FormControl,
   Select,
   MenuItem,
-  TablePagination,
   Tooltip,
   Chip,
-  Avatar
+  Avatar,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
+import StandardDataTable from "./common/StandardDataTable";
+import ResponsiveDataView from "./common/ResponsiveDataView";
+import ExpenseCard from "./common/ExpenseCard";
 import { useNavigate } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
@@ -44,6 +44,7 @@ import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import CategoryIcon from "@mui/icons-material/Category";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import ImageIcon from "@mui/icons-material/Image";
+import { useTranslation } from "react-i18next";
 
 const CATEGORIES = [
   "All",
@@ -62,6 +63,7 @@ const CATEGORIES = [
 
 const ExpenseList = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -72,6 +74,8 @@ const ExpenseList = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   const fetchExpenses = useCallback(async () => {
     setLoading(true);
@@ -96,7 +100,7 @@ const ExpenseList = () => {
       const response = await axios.get(url);
       setExpenses(response.data);
     } catch (error) {
-      setError("Failed to fetch expenses");
+      setError(t('expenseList.failedFetch'));
       console.error(error);
     }
     setLoading(false);
@@ -113,7 +117,7 @@ const ExpenseList = () => {
       await fetchExpenses();
       setConfirmDeleteId(null);
     } catch (error) {
-      setError(error.response?.data?.error || "Failed to delete expense");
+      setError(error.response?.data?.error || t('expenseList.failedDelete'));
     }
     setLoading(false);
   };
@@ -172,10 +176,10 @@ const ExpenseList = () => {
           >
             <Box>
               <Typography variant="h4" fontWeight={700} gutterBottom>
-                Expenses
+                {t('expenseList.title')}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Track and manage your business expenses
+                {t('expenseList.subtitle')}
               </Typography>
             </Box>
             <Button
@@ -191,7 +195,7 @@ const ExpenseList = () => {
                 boxShadow: 2
               }}
             >
-              New Expense
+              {t('expenseList.newExpense')}
             </Button>
           </Box>
 
@@ -199,7 +203,7 @@ const ExpenseList = () => {
           <Grid container spacing={2} sx={{ mb: 3 }}>
             <Grid item xs={12} sm={6} md={3}>
               <SummaryCard
-                label="Total Expenses"
+                label={t('expenseList.totalExpenses')}
                 value={`₹${totalExpenses.toLocaleString()}`}
                 icon={<AttachMoneyIcon />}
                 accentColor="error.main"
@@ -207,7 +211,7 @@ const ExpenseList = () => {
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <SummaryCard
-                label="Total Count"
+                label={t('expenseList.totalCount')}
                 value={expenseCount}
                 icon={<ReceiptIcon />}
                 accentColor="primary.main"
@@ -215,7 +219,7 @@ const ExpenseList = () => {
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <SummaryCard
-                label="Average Expense"
+                label={t('expenseList.avgExpense')}
                 value={`₹${avgExpense.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
                 icon={<AccountBalanceWalletIcon />}
                 accentColor="info.main"
@@ -223,7 +227,7 @@ const ExpenseList = () => {
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <SummaryCard
-                label="With Receipts"
+                label={t('expenseList.withReceipts')}
                 value={`${withReceipts} / ${expenseCount}`}
                 icon={<ImageIcon />}
                 accentColor="success.main"
@@ -311,143 +315,88 @@ const ExpenseList = () => {
         )}
 
         {/* Main Table */}
-        <Paper sx={{ borderRadius: 3, border: "1px solid", borderColor: "grey.200", overflow: "hidden" }}>
-          {loading ? (
-            <Box sx={{ display: "flex", justifyContent: "center", p: 6 }}>
-              <CircularProgress />
-            </Box>
-          ) : (
-            <>
-              <TableContainer sx={{ overflowX: "hidden" }}>
-                <Table>
-                  <TableHead sx={{ bgcolor: "grey.50" }}>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Vendor/Payee</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Category</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Amount</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Currency</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Receipt</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Notes</TableCell>
-                      <TableCell align="center" sx={{ fontWeight: 700 }}>Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {paginatedExpenses.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={8} align="center" sx={{ py: 8 }}>
-                          <ReceiptIcon sx={{ fontSize: 48, color: "grey.300", mb: 2 }} />
-                          <Typography variant="h6" color="text.secondary" gutterBottom>
-                            {searchTerm || categoryFilter !== "All" || startDate || endDate
-                              ? "No expenses found"
-                              : "No expenses yet"}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {searchTerm || categoryFilter !== "All" || startDate || endDate
-                              ? "Try adjusting your filters"
-                              : "Click 'New Expense' to record your first expense"}
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      paginatedExpenses.map((expense) => (
-                        <TableRow key={expense.id} hover sx={{ "&:hover": { bgcolor: "grey.50" } }}>
-                          <TableCell>
-                            <Typography variant="body2">
-                              {new Date(expense.date).toLocaleDateString()}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2" fontWeight={600}>
-                              {expense.vendor_name}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={expense.category}
-                              size="small"
-                              icon={<CategoryIcon />}
-                              sx={{ borderRadius: 1.5 }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2" fontWeight={600} color="error.main">
-                              ₹{expense.amount?.toLocaleString()}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2">{expense.currency || "INR"}</Typography>
-                          </TableCell>
-                          <TableCell>
-                            {expense.receipt_url ? (
-                              <Tooltip title="Has receipt">
-                                <Avatar
-                                  src={createApiUrl(expense.receipt_url)}
-                                  variant="rounded"
-                                  sx={{ width: 40, height: 40, cursor: "pointer" }}
-                                  onClick={() => window.open(createApiUrl(expense.receipt_url), '_blank')}
-                                >
-                                  <ImageIcon />
-                                </Avatar>
-                              </Tooltip>
-                            ) : (
-                              <Typography variant="body2" color="text.secondary">-</Typography>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
-                              sx={{
-                                maxWidth: 200,
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap"
-                              }}
-                            >
-                              {expense.notes || "-"}
-                            </Typography>
-                          </TableCell>
-                          <TableCell align="center">
-                            <Box display="flex" gap={0.5} justifyContent="center">
-                              <Tooltip title="Edit">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => navigate(`/expenses/edit/${expense.id}`)}
-                                  sx={{ color: "primary.main" }}
-                                >
-                                  <EditIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Delete">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => setConfirmDeleteId(expense.id)}
-                                  sx={{ color: "error.main" }}
-                                >
-                                  <DeleteIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            </Box>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-              <TablePagination
-                rowsPerPageOptions={[10, 25, 50]}
-                component="div"
-                count={filteredExpenses.length}
-                rowsPerPage={rowsPerPage}
-                page={page}
-                onPageChange={handleChangePage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-              />
-            </>
+        <ResponsiveDataView
+          isMobile={isMobile}
+          renderCard={(expense) => (
+            <ExpenseCard
+              expense={expense}
+              onEdit={() => navigate(`/expenses/edit/${expense.id}`)}
+              onDelete={() => setConfirmDeleteId(expense.id)}
+            />
           )}
-        </Paper>
+          columns={[
+            { key: 'date', label: 'Date' },
+            { key: 'vendor', label: 'Vendor/Payee' },
+            { key: 'category', label: 'Category' },
+            { key: 'amount', label: 'Amount' },
+            { key: 'currency', label: 'Currency' },
+            { key: 'receipt', label: 'Receipt' },
+            { key: 'notes', label: 'Notes' },
+            { key: 'actions', label: 'Actions', align: 'center' },
+          ]}
+          rows={paginatedExpenses}
+          loading={loading}
+          emptyIcon={<ReceiptIcon sx={{ fontSize: 48 }} />}
+          emptyTitle={searchTerm || categoryFilter !== "All" || startDate || endDate ? "No expenses found" : "No expenses yet"}
+          emptySubtitle={searchTerm || categoryFilter !== "All" || startDate || endDate ? "Try adjusting your filters" : "Click 'New Expense' to record your first expense"}
+          renderRow={(expense) => (
+            <TableRow key={expense.id} hover>
+              <TableCell>
+                <Typography variant="body2">{new Date(expense.date).toLocaleDateString()}</Typography>
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2" fontWeight={600}>{expense.vendor_name}</Typography>
+              </TableCell>
+              <TableCell>
+                <Chip label={expense.category} size="small" icon={<CategoryIcon />} sx={{ borderRadius: 1.5 }} />
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2" fontWeight={600} color="error.main">₹{expense.amount?.toLocaleString()}</Typography>
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2">{expense.currency || "INR"}</Typography>
+              </TableCell>
+              <TableCell>
+                {expense.receipt_url ? (
+                  <Tooltip title="Has receipt">
+                    <Avatar src={createApiUrl(expense.receipt_url)} variant="rounded" sx={{ width: 40, height: 40, cursor: "pointer" }} onClick={() => window.open(createApiUrl(expense.receipt_url), '_blank')}>
+                      <ImageIcon />
+                    </Avatar>
+                  </Tooltip>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">-</Typography>
+                )}
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {expense.notes || "-"}
+                </Typography>
+              </TableCell>
+              <TableCell align="center">
+                <Box display="flex" gap={0.5} justifyContent="center">
+                  <Tooltip title="Edit">
+                    <IconButton size="small" onClick={() => navigate(`/expenses/edit/${expense.id}`)} sx={{ color: "primary.main" }}>
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Delete">
+                    <IconButton size="small" onClick={() => setConfirmDeleteId(expense.id)} sx={{ color: "error.main" }}>
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              </TableCell>
+            </TableRow>
+          )}
+          pagination={{
+            rowsPerPageOptions: [10, 25, 50],
+            count: filteredExpenses.length,
+            rowsPerPage,
+            page,
+            onPageChange: handleChangePage,
+            onRowsPerPageChange: handleChangeRowsPerPage,
+          }}
+        />
 
         {/* Category Breakdown (if expenses exist) */}
         {filteredExpenses.length > 0 && (

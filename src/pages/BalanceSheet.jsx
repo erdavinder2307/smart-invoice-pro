@@ -52,7 +52,8 @@ const BalanceSheet = () => {
   const [reportData, setReportData] = useState(null);
   const [asOfDate, setAsOfDate] = useState(new Date().toISOString().split('T')[0]);
 
-  const userId = localStorage.getItem('user_id');
+  const userStr = localStorage.getItem('user');
+  const userId = userStr ? JSON.parse(userStr).id : null;
 
   const fetchReport = async () => {
     if (!userId) {
@@ -64,7 +65,7 @@ const BalanceSheet = () => {
     setError('');
 
     try {
-      const response = await axios.get(createApiUrl('/reports/balance-sheet'), {
+      const response = await axios.get(createApiUrl('/api/reports/balance-sheet'), {
         params: {
           user_id: userId,
           as_of_date: asOfDate
@@ -290,8 +291,8 @@ const BalanceSheet = () => {
                     ASSETS
                   </Typography>
                   <Divider sx={{ mb: 2 }} />
-                  <TableContainer>
-                    <Table>
+                  <TableContainer sx={{ overflowX: "hidden" }}>
+                    <Table sx={{ tableLayout: "fixed" }}>
                       <TableHead>
                         <TableRow>
                           <TableCell><strong>Current Assets</strong></TableCell>
@@ -336,8 +337,8 @@ const BalanceSheet = () => {
                     LIABILITIES
                   </Typography>
                   <Divider sx={{ mb: 2 }} />
-                  <TableContainer>
-                    <Table>
+                  <TableContainer sx={{ overflowX: "hidden" }}>
+                    <Table sx={{ tableLayout: "fixed" }}>
                       <TableHead>
                         <TableRow>
                           <TableCell><strong>Current Liabilities</strong></TableCell>
@@ -370,8 +371,8 @@ const BalanceSheet = () => {
                     EQUITY
                   </Typography>
                   <Divider sx={{ mb: 2 }} />
-                  <TableContainer>
-                    <Table>
+                  <TableContainer sx={{ overflowX: "hidden" }}>
+                    <Table sx={{ tableLayout: "fixed" }}>
                       <TableHead>
                         <TableRow>
                           <TableCell><strong>Owner's Equity</strong></TableCell>

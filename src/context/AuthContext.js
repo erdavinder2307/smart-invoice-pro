@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import authService from '../services/authService';
 
 const AuthContext = createContext(null);
@@ -6,42 +6,67 @@ const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [sessionExpired, setSessionExpired] = useState(false);
 
-    useEffect(() => {
-        // Check for stored user/token on mount
-        const storedUser = localStorage.getItem('user');
-        const token = localStorage.getItem('token');
-
-        if (storedUser && token) {
-            try {
-                setUser(JSON.parse(storedUser));
-            } catch (e) {
-                console.error('Failed to parse user from local storage', e);
-                // If parsing fails, clear storage to prevent inconsistent state
-                authService.logout();
-            }
-        }
-        setLoading(false);
+    const clearSession = useCallback(() => {
+        setUser(null);
     }, []);
 
-    const login = async (credentials) => {
-        try {
-            const token = await authService.login(credentials);
-            // After successful login, authService sets localStorage. 
-            // We explicitly set state here to update UI immediately.
-            const savedUser = localStorage.getItem('user');
-            if (savedUser) {
-                setUser(JSON.parse(savedUser));
+    useEffect(() => {
+        // App-load validation: check stored token; attempt refresh if present
+        const initSession = async () => {
+            const storedUser = localStorage.getItem('user');
+            const token = localStorage.getItem('token');
+            const refreshToken = localStorage.getItem('refresh_token');
+
+            if (storedUser && token) {
+                try {
+                    setUser(JSON.parse(storedUser));
+                } catch (e) {
+                    localStorage.removeItem('user');
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('refresh_token');
+                }
+            } else if (refreshToken) {
+                // No access token but have a refresh token — try to restore session
+                try {
+                    await authService.refreshAccessToken();
+                    const savedUser = localStorage.getItem('user');
+                    if (savedUser) setUser(JSON.parse(savedUser));
+                } catch {
+                    localStorage.removeItem('refresh_token');
+                }
             }
-            return token;
-        } catch (error) {
-            throw error;
+            setLoading(false);
+        };
+
+        initSession();
+    }, []);
+
+    useEffect(() => {
+        // Listen for session-expired events dispatched by the Axios interceptor
+        const handleSessionExpired = () => {
+            clearSession();
+            setSessionExpired(true);
+        };
+        window.addEventListener('auth:session-expired', handleSessionExpired);
+        return () => window.removeEventListener('auth:session-expired', handleSessionExpired);
+    }, [clearSession]);
+
+    const login = async (credentials) => {
+        setSessionExpired(false);
+        const token = await authService.login(credentials);
+        const savedUser = localStorage.getItem('user');
+        if (savedUser) {
+            setUser(JSON.parse(savedUser));
         }
+        return token;
     };
 
     const logout = () => {
         authService.logout();
         setUser(null);
+        setSessionExpired(false);
     };
 
     const register = async (credentials) => {
@@ -64,7 +89,8 @@ export const AuthProvider = ({ children }) => {
         login,
         logout,
         register,
-        loading
+        loading,
+        sessionExpired,
     };
 
     return (

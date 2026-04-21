@@ -1,13 +1,33 @@
-import React from "react";
-import { Box, InputBase, IconButton, Tooltip, Avatar, Typography } from "@mui/material";
-import SearchIcon from "@mui/icons-material/Search";
+import React, { useState } from "react";
+import { Box, IconButton, Tooltip, Avatar, Typography, Badge, FormControl, Select, MenuItem } from "@mui/material";
+import MenuIcon from "@mui/icons-material/Menu";
 import NotificationsOutlinedIcon from "@mui/icons-material/NotificationsOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
+import KeyboardIcon from "@mui/icons-material/Keyboard";
+import NotificationDropdown from "../Notifications/NotificationDropdown";
+import { useNotifications } from "../../context/NotificationContext";
+import GlobalSearchInput from "../search/GlobalSearchInput";
+import { useKeyboardShortcutsContext } from "../../context/KeyboardShortcutsContext";
+import { useTranslation } from "react-i18next";
 
-const TopUtilityBar = ({ searchPlaceholder = "Search invoices, customers, products...", onSearchChange }) => {
+const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+
+const TopUtilityBar = ({ searchPlaceholder = "", onSearchChange, onMenuClick }) => {
+  const { t, i18n } = useTranslation();
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
   const username = storedUser.username || "User";
   const initials = username.charAt(0).toUpperCase();
+  const { unreadCount } = useNotifications();
+  const [notifAnchor, setNotifAnchor] = useState(null);
+  const { openShortcutsModal } = useKeyboardShortcutsContext();
+
+  const activeLanguage = String(i18n.language || 'en').startsWith('hi') ? 'hi' : 'en';
+
+  const handleLanguageChange = async (event) => {
+    const nextLanguage = event.target.value;
+    await i18n.changeLanguage(nextLanguage);
+    localStorage.setItem('app_language', nextLanguage);
+  };
 
   return (
     <Box
@@ -23,36 +43,49 @@ const TopUtilityBar = ({ searchPlaceholder = "Search invoices, customers, produc
         gap: 2,
       }}
     >
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          width: "100%",
-          maxWidth: 560,
-          border: "1px solid",
-          borderColor: "divider",
-          borderRadius: 1,
-          bgcolor: "grey.50",
-          px: 1,
-          height: 36,
-        }}
-      >
-        <SearchIcon sx={{ color: "text.secondary", fontSize: 18, mr: 1 }} />
-        <InputBase
-          placeholder={searchPlaceholder}
-          onChange={(e) => onSearchChange?.(e.target.value)}
-          sx={{ fontSize: "0.8125rem", width: "100%" }}
-          inputProps={{ "aria-label": "global search" }}
-        />
+      <Box sx={{ display: "flex", alignItems: "center", width: "100%", maxWidth: 560, gap: 1 }}>
+        <IconButton
+          color="inherit"
+          onClick={onMenuClick}
+          sx={{ display: { xs: "flex", md: "none" } }}
+          aria-label={t('topBar.openNavigation')}
+        >
+          <MenuIcon fontSize="small" />
+        </IconButton>
+        <GlobalSearchInput placeholder={searchPlaceholder || t('topBar.searchPlaceholder')} onSearchChange={onSearchChange} />
       </Box>
 
       <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-        <Tooltip title="Notifications">
-          <IconButton color="inherit">
-            <NotificationsOutlinedIcon fontSize="small" />
+        <FormControl size="small" sx={{ minWidth: 92 }}>
+          <Select
+            value={activeLanguage}
+            onChange={handleLanguageChange}
+            sx={{
+              fontSize: '0.75rem',
+              height: 30,
+              '& .MuiSelect-select': { py: 0.5, pr: 3 },
+            }}
+            inputProps={{ 'aria-label': t('common.language') }}
+          >
+            <MenuItem value="en">{t('common.english')}</MenuItem>
+            <MenuItem value="hi">{t('common.hindi')}</MenuItem>
+          </Select>
+        </FormControl>
+
+        <Tooltip title={t('common.notifications')}>
+          <IconButton color="inherit" onClick={(e) => setNotifAnchor(e.currentTarget)}>
+            <Badge badgeContent={unreadCount > 0 ? unreadCount : null} color="error" max={99}>
+              <NotificationsOutlinedIcon fontSize="small" />
+            </Badge>
           </IconButton>
         </Tooltip>
-        <Tooltip title="Settings">
+        <NotificationDropdown anchorEl={notifAnchor} onClose={() => setNotifAnchor(null)} />
+        <Tooltip title={t('topBar.keyboardShortcuts', { combo: isMac ? '⌘/' : 'Ctrl+/' })}>
+          <IconButton color="inherit" onClick={openShortcutsModal} aria-label="keyboard shortcuts">
+            <KeyboardIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title={t('common.settings')}>
           <IconButton color="inherit">
             <SettingsOutlinedIcon fontSize="small" />
           </IconButton>

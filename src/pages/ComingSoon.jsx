@@ -165,7 +165,7 @@ const ComingSoon = () => {
                                     fontSize: { xs: '1rem', sm: '1.1rem' }
                                 }}
                             >
-                                We're working hard to bring you this feature. Stay tuned for updates as we continue to enhance Smart Invoice Pro with new capabilities.
+                                We're working hard to bring you this feature. Stay tuned for updates as we continue to enhance Solidev Books with new capabilities.
                             </Typography>
                         </motion.div>
 

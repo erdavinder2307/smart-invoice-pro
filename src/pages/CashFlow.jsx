@@ -58,7 +58,8 @@ const CashFlow = () => {
   const [startDate, setStartDate] = useState(`${currentYear}-01-01`);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
 
-  const userId = localStorage.getItem('user_id');
+  const userStr = localStorage.getItem('user');
+  const userId = userStr ? JSON.parse(userStr).id : null;
 
   const fetchReport = async () => {
     if (!userId) {
@@ -70,7 +71,7 @@ const CashFlow = () => {
     setError('');
 
     try {
-      const response = await axios.get(createApiUrl('/reports/cash-flow'), {
+      const response = await axios.get(createApiUrl('/api/reports/cash-flow'), {
         params: {
           user_id: userId,
           start_date: startDate,
@@ -308,8 +309,8 @@ const CashFlow = () => {
                 Cash Flow from Operating Activities
               </Typography>
               <Divider sx={{ mb: 2 }} />
-              <TableContainer>
-                <Table>
+              <TableContainer sx={{ overflowX: "hidden" }}>
+                <Table sx={{ tableLayout: "fixed" }}>
                   <TableHead>
                     <TableRow>
                       <TableCell><strong>Activity</strong></TableCell>

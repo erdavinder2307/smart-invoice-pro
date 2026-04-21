@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import {
     getBankAccounts,
+    updateBankAccount,
+    deleteBankAccount,
 } from "../services/bankAccountService";
 import MainLayout from "../components/Layout/MainLayout";
 import { useAuth } from "../context/AuthContext";
@@ -8,7 +10,6 @@ import {
     Box,
     Button,
     Typography,
-    Paper,
     Table,
     TableBody,
     TableCell,
@@ -27,23 +28,37 @@ import {
     Grid,
     Tooltip,
     IconButton,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    MenuItem,
+    Select,
+    FormControl,
+    InputLabel,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
 import AddIcon from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
-import VisibilityIcon from '@mui/icons-material/Visibility';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { useTheme } from "@mui/material/styles";
+import EmptyState from '../components/common/EmptyState';
+import { useTranslation } from 'react-i18next';
 
 const BankAccounts = () => {
     const [bankAccounts, setBankAccounts] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
-    const navigate = useNavigate();
+    const [editAccount, setEditAccount] = useState(null);
+    const [editForm, setEditForm] = useState({ bank_name: '', account_name: '', account_type: '' });
+    const [editLoading, setEditLoading] = useState(false);
+    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
     const theme = useTheme();
     const { user } = useAuth();
+    const { t } = useTranslation();
 
     const filteredAccounts = bankAccounts.filter(account =>
         account.bank_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -86,17 +101,48 @@ const BankAccounts = () => {
         fetchBankAccounts();
     }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const handleView = (account) => {
-        navigate(`/bank-accounts/${account.id}`);
-    };
-
     const handleImportStatement = (account) => {
         // Placeholder for future implementation
         alert(`Import statement for ${account.bank_name} - Coming soon!`);
     };
 
+    const handleEditOpen = (account) => {
+        setEditAccount(account);
+        setEditForm({
+            bank_name: account.bank_name || '',
+            account_name: account.account_name || '',
+            account_type: account.account_type || '',
+        });
+    };
+
+    const handleEditSave = async () => {
+        if (!editAccount) return;
+        setEditLoading(true);
+        try {
+            await updateBankAccount(editAccount.id, editForm, user?.id);
+            setEditAccount(null);
+            await fetchBankAccounts();
+        } catch {
+            setError(t('bankAccounts.failedUpdate'));
+        } finally {
+            setEditLoading(false);
+        }
+    };
+
+    const handleDelete = async (id) => {
+        setLoading(true);
+        try {
+            await deleteBankAccount(id, user?.id);
+            setConfirmDeleteId(null);
+            await fetchBankAccounts();
+        } catch {
+            setError(t('bankAccounts.failedDelete'));
+            setLoading(false);
+        }
+    };
+
     return (
-        <MainLayout title="Bank Accounts" subtitle="Manage your bank accounts and import statements">
+        <MainLayout title={t('bankAccounts.title')} subtitle={t('bankAccounts.subtitle')}>
             <Box sx={{ flex: 1, width: '100%' }}>
                 <Grid container spacing={2}>
                     {/* Stats Cards */}
@@ -121,7 +167,7 @@ const BankAccounts = () => {
                                     {bankAccounts.length}
                                 </Typography>
                                 <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                                    Total Accounts
+                                    {t('bankAccounts.totalAccounts')}
                                 </Typography>
                             </CardContent>
                         </Card>
@@ -147,7 +193,7 @@ const BankAccounts = () => {
                                     {bankAccounts.filter(acc => acc.status === 'active').length}
                                 </Typography>
                                 <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                                    Active Accounts
+                                    {t('bankAccounts.activeAccounts')}
                                 </Typography>
                             </CardContent>
                         </Card>
@@ -175,10 +221,10 @@ const BankAccounts = () => {
                                 </Avatar>
                                 <Box>
                                     <Typography variant="h5" fontWeight={700} color="text.primary" gutterBottom>
-                                        Bank Account Management
+                                        {t('bankAccounts.management')}
                                     </Typography>
                                     <Typography variant="body1" color="text.secondary">
-                                        View and manage all your connected bank accounts
+                                        {t('bankAccounts.managementSubtitle')}
                                     </Typography>
                                 </Box>
                             </Box>
@@ -202,7 +248,7 @@ const BankAccounts = () => {
                                     transition: 'all 0.2s ease'
                                 }}
                             >
-                                Add Bank Account
+                                {t('bankAccounts.addButton')}
                             </Button>
                         </Box>
 
@@ -296,40 +342,23 @@ const BankAccounts = () => {
                                         </TableRow>
                                     ) : filteredAccounts.length === 0 && !searchTerm ? (
                                         <TableRow>
-                                            <TableCell colSpan={6} align="center" sx={{ py: 10 }}>
-                                                <AccountBalanceIcon sx={{ fontSize: 64, color: 'grey.300', mb: 2 }} />
-                                                <Typography variant="h5" color="text.secondary" gutterBottom fontWeight={600}>
-                                                    No bank accounts yet
-                                                </Typography>
-                                                <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                                                    Get started by adding your first bank account
-                                                </Typography>
-                                                <Button
-                                                    variant="contained"
-                                                    startIcon={<AddIcon />}
-                                                    onClick={() => alert('Add account functionality - Coming soon!')}
-                                                    sx={{
-                                                        borderRadius: 2,
-                                                        px: 3,
-                                                        py: 1.2,
-                                                        fontWeight: 600,
-                                                        textTransform: 'none',
-                                                    }}
-                                                >
-                                                    Add Your First Account
-                                                </Button>
+                                            <TableCell colSpan={6}>
+                                                <EmptyState
+                                                    icon={<AccountBalanceIcon />}
+                                                    title="No bank accounts yet"
+                                                    subtitle="Get started by adding your first bank account"
+                                                    action={{ label: 'Add Your First Account', onClick: () => alert('Add account functionality - Coming soon!') }}
+                                                />
                                             </TableCell>
                                         </TableRow>
                                     ) : filteredAccounts.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
-                                                <AccountBalanceIcon sx={{ fontSize: 48, color: 'grey.300', mb: 2 }} />
-                                                <Typography variant="h6" color="text.secondary" gutterBottom>
-                                                    No accounts found
-                                                </Typography>
-                                                <Typography variant="body2" color="text.secondary">
-                                                    Try adjusting your search criteria
-                                                </Typography>
+                                            <TableCell colSpan={6}>
+                                                <EmptyState
+                                                    icon={<AccountBalanceIcon />}
+                                                    title="No accounts found"
+                                                    subtitle="Try adjusting your search criteria"
+                                                />
                                             </TableCell>
                                         </TableRow>
                                     ) : (
@@ -391,21 +420,17 @@ const BankAccounts = () => {
                                                     </TableCell>
                                                     <TableCell align="center">
                                                         <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-                                                            <Tooltip title="View Details">
+                                                            <Tooltip title="Edit">
                                                                 <IconButton
                                                                     size="small"
-                                                                    onClick={() => handleView(account)}
+                                                                    onClick={() => handleEditOpen(account)}
                                                                     sx={{
                                                                         color: 'primary.main',
                                                                         bgcolor: 'primary.50',
-                                                                        '&:hover': {
-                                                                            bgcolor: 'primary.100',
-                                                                            transform: 'scale(1.1)'
-                                                                        },
-                                                                        transition: 'all 0.2s ease'
+                                                                        '&:hover': { bgcolor: 'primary.100' },
                                                                     }}
                                                                 >
-                                                                    <VisibilityIcon fontSize="small" />
+                                                                    <EditIcon fontSize="small" />
                                                                 </IconButton>
                                                             </Tooltip>
                                                             <Tooltip title="Import Statement">
@@ -415,14 +440,23 @@ const BankAccounts = () => {
                                                                     sx={{
                                                                         color: 'success.main',
                                                                         bgcolor: 'success.50',
-                                                                        '&:hover': {
-                                                                            bgcolor: 'success.100',
-                                                                            transform: 'scale(1.1)'
-                                                                        },
-                                                                        transition: 'all 0.2s ease'
+                                                                        '&:hover': { bgcolor: 'success.100' },
                                                                     }}
                                                                 >
                                                                     <UploadFileIcon fontSize="small" />
+                                                                </IconButton>
+                                                            </Tooltip>
+                                                            <Tooltip title="Delete">
+                                                                <IconButton
+                                                                    size="small"
+                                                                    onClick={() => setConfirmDeleteId(account.id)}
+                                                                    sx={{
+                                                                        color: 'error.main',
+                                                                        bgcolor: 'error.50',
+                                                                        '&:hover': { bgcolor: 'error.100' },
+                                                                    }}
+                                                                >
+                                                                    <DeleteIcon fontSize="small" />
                                                                 </IconButton>
                                                             </Tooltip>
                                                         </Box>
@@ -437,6 +471,58 @@ const BankAccounts = () => {
                     </CardContent>
                 </Card>
             </Box>
+            {/* Edit Dialog */}
+            <Dialog open={!!editAccount} onClose={() => setEditAccount(null)} maxWidth="xs" fullWidth>
+                <DialogTitle>Edit Bank Account</DialogTitle>
+                <DialogContent sx={{ pt: '12px !important', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <TextField
+                        label="Bank Name"
+                        fullWidth
+                        size="small"
+                        value={editForm.bank_name}
+                        onChange={(e) => setEditForm((f) => ({ ...f, bank_name: e.target.value }))}
+                    />
+                    <TextField
+                        label="Account Name"
+                        fullWidth
+                        size="small"
+                        value={editForm.account_name}
+                        onChange={(e) => setEditForm((f) => ({ ...f, account_name: e.target.value }))}
+                    />
+                    <FormControl fullWidth size="small">
+                        <InputLabel>Account Type</InputLabel>
+                        <Select
+                            label="Account Type"
+                            value={editForm.account_type}
+                            onChange={(e) => setEditForm((f) => ({ ...f, account_type: e.target.value }))}
+                        >
+                            {['savings', 'current', 'credit', 'cash'].map((t) => (
+                                <MenuItem key={t} value={t} sx={{ textTransform: 'capitalize' }}>{t}</MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button onClick={() => setEditAccount(null)} disabled={editLoading}>Cancel</Button>
+                    <Button variant="contained" onClick={handleEditSave} disabled={editLoading}>
+                        {editLoading ? 'Saving…' : 'Save'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={!!confirmDeleteId} onClose={() => setConfirmDeleteId(null)} maxWidth="xs" fullWidth>
+                <DialogTitle>Delete Bank Account</DialogTitle>
+                <DialogContent>
+                    <Typography>Are you sure you want to delete this bank account? This action cannot be undone.</Typography>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button onClick={() => setConfirmDeleteId(null)}>Cancel</Button>
+                    <Button variant="contained" color="error" onClick={() => handleDelete(confirmDeleteId)}>
+                        Delete
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </MainLayout>
     );
 };

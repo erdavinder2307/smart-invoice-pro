@@ -2,35 +2,19 @@ import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { createApiUrl } from "../config/api";
 import {
-  Box,
-  Button,
-  TextField,
-  Select,
-  MenuItem,
-  InputLabel,
-  FormControl,
-  Typography,
-  Grid,
-  CircularProgress,
-  Alert,
-  Container,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton,
-  Paper,
-  Tabs,
-  Tab
+  Box, Button, TextField, Typography, CircularProgress, Alert, Container,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  IconButton, Paper, Tabs, Tab,
 } from "@mui/material";
 import { useParams, useNavigate } from "react-router-dom";
 import MainLayout from "./Layout/MainLayout";
-import SaveIcon from '@mui/icons-material/Save';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
+import { C, fieldSx, footerSx, cancelBtnSx, saveBtnSx } from './common/formStyles';
+import FormInput from './common/FormInput';
+import FormSelect from './common/FormSelect';
+import FormDatePicker from './common/FormDatePicker';
+import { useTranslation } from 'react-i18next';
 
 const TabPanel = ({ children, value, index }) => (
   <Box hidden={value !== index} sx={{ pt: 3 }}>
@@ -61,6 +45,7 @@ const initialForm = {
 const AddEditBill = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [form, setForm] = useState(initialForm);
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -92,7 +77,7 @@ const AddEditBill = () => {
       const response = await axios.get(createApiUrl(`/api/bills/${id}`));
       setForm(response.data);
     } catch (error) {
-      setError("Failed to fetch bill");
+      setError(t('addEditBill.failedFetch'));
       console.error(error);
     }
     setLoading(false);
@@ -217,7 +202,7 @@ const AddEditBill = () => {
       }
       navigate("/bills");
     } catch (error) {
-      setError(error.response?.data?.error || "Failed to save bill");
+      setError(error.response?.data?.error || t('addEditBill.failedSave'));
       console.error(error);
     }
     setSaving(false);
@@ -225,7 +210,7 @@ const AddEditBill = () => {
 
   if (loading) {
     return (
-      <MainLayout>
+      <MainLayout title="Bill">
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
           <CircularProgress />
         </Box>
@@ -234,351 +219,244 @@ const AddEditBill = () => {
   }
 
   return (
-    <MainLayout>
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        {/* Header */}
-        <Box sx={{ mb: 4 }}>
-          <Button
-            startIcon={<ArrowBackIcon />}
-            onClick={() => navigate("/bills")}
-            sx={{ mb: 2, textTransform: "none" }}
+    <MainLayout title={id ? t('addEditBill.editTitle') : t('addEditBill.newTitle')}>
+      <Box sx={{ bgcolor: C.pageBg, minHeight: '100vh', pb: 6 }}>
+        <Container maxWidth="lg" sx={{ pt: 3 }}>
+
+          {error && (
+            <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2, borderRadius: '4px' }}>
+              {error}
+            </Alert>
+          )}
+
+          <Paper
+            component="form" onSubmit={handleSubmit}
+            elevation={0}
+            sx={{ bgcolor: C.white, border: `1px solid ${C.border}`, borderRadius: '4px', overflow: 'hidden' }}
           >
-            Back to Bills
-          </Button>
-          <Typography variant="h4" fontWeight={700} gutterBottom>
-            {id ? "Edit Bill" : "New Bill"}
-          </Typography>
-        </Box>
-
-        {error && (
-          <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }} onClose={() => setError("")}>
-            {error}
-          </Alert>
-        )}
-
-        {/* Form */}
-        <Paper component="form" onSubmit={handleSubmit} elevation={0}
-          sx={{ bgcolor: '#fff', border: '1px solid #e0e0e0', borderRadius: '6px' }}>
-          
-          {/* Basic Info */}
-          <Box sx={{ px: 4, py: 3, borderBottom: '1px solid', borderColor: 'divider' }}>
-            <Typography variant="h6" fontWeight={600} gutterBottom>
-              Basic Information
-            </Typography>
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Bill Number"
-                  name="bill_number"
-                  value={form.bill_number}
-                  onChange={handleChange}
-                  required
-                  fullWidth
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth required>
-                  <InputLabel>Vendor</InputLabel>
-                  <Select
-                    name="vendor_id"
-                    value={form.vendor_id}
-                    onChange={handleChange}
-                    label="Vendor"
-                    sx={{ textAlign: 'left', '& .MuiSelect-select': { textAlign: 'left' } }}
-                  >
-                    {vendors.map(vendor => (
-                      <MenuItem key={vendor.id} value={vendor.id}>
-                        {vendor.vendor_name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Bill Date"
-                  name="bill_date"
-                  type="date"
-                  value={form.bill_date}
-                  onChange={handleChange}
-                  required
-                  fullWidth
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Due Date"
-                  name="due_date"
-                  type="date"
-                  value={form.due_date}
-                  onChange={handleChange}
-                  fullWidth
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  label="Subject"
-                  name="subject"
-                  value={form.subject}
-                  onChange={handleChange}
-                  fullWidth
-                />
-              </Grid>
-            </Grid>
-          </Box>
-
-          {/* Tabs for Items and Expenses */}
-          <Box sx={{ px: 4, py: 3, borderBottom: '1px solid', borderColor: 'divider' }}>
-            <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)}>
-              <Tab label="Items" />
-              <Tab label="Expenses" />
-            </Tabs>
-
-            {/* Items Tab */}
-            <TabPanel value={activeTab} index={0}>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                <Typography variant="h6" fontWeight={600}>
-                  Items
+            {/* ══ BILL INFORMATION ═══════════════════════════════════════ */}
+            <Box sx={{ px: 3 }}>
+              <Box sx={{ py: 1.5, borderBottom: `1px solid ${C.divider}` }}>
+                <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>
+                  {t('addEditBill.billInfo')}
                 </Typography>
-                <Button startIcon={<AddIcon />} onClick={addItem} size="small">
-                  Add Item
-                </Button>
               </Box>
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Item Name</TableCell>
-                      <TableCell>Quantity</TableCell>
-                      <TableCell>Rate</TableCell>
-                      <TableCell>Tax %</TableCell>
-                      <TableCell>Amount</TableCell>
-                      <TableCell></TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {form.items.map((item, index) => (
-                      <TableRow key={index}>
-                        <TableCell>
-                          <TextField
-                            value={item.item_name}
-                            onChange={(e) => handleItemChange(index, 'item_name', e.target.value)}
-                            size="small"
-                            fullWidth
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <TextField
-                            type="number"
-                            value={item.quantity}
-                            onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                            size="small"
-                            sx={{ width: 80 }}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <TextField
-                            type="number"
-                            value={item.rate}
-                            onChange={(e) => handleItemChange(index, 'rate', e.target.value)}
-                            size="small"
-                            sx={{ width: 100 }}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <TextField
-                            type="number"
-                            value={item.tax}
-                            onChange={(e) => handleItemChange(index, 'tax', e.target.value)}
-                            size="small"
-                            sx={{ width: 80 }}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" fontWeight={600}>
-                            ₹{item.amount.toFixed(2)}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          {form.items.length > 1 && (
-                            <IconButton size="small" onClick={() => removeItem(index)} color="error">
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </TabPanel>
 
-            {/* Expenses Tab */}
-            <TabPanel value={activeTab} index={1}>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                <Typography variant="h6" fontWeight={600}>
-                  Expenses
-                </Typography>
-                <Button startIcon={<AddIcon />} onClick={addExpense} size="small">
-                  Add Expense
-                </Button>
-              </Box>
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Expense Name</TableCell>
-                      <TableCell>Amount</TableCell>
-                      <TableCell>Description</TableCell>
-                      <TableCell></TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {form.expenses.length === 0 ? (
+              <FormInput label="Bill Number" required name="bill_number" value={form.bill_number} onChange={handleChange}
+                sx={{ maxWidth: 240 }} />
+
+              <FormSelect label="Vendor" required name="vendor_id" value={form.vendor_id} onChange={handleChange}
+                options={vendors.map(v => ({ value: v.id, label: v.vendor_name }))} width={300} />
+
+              <FormDatePicker label="Bill Date" required name="bill_date" value={form.bill_date} onChange={handleChange} />
+
+              <FormDatePicker label="Due Date" name="due_date" value={form.due_date} onChange={handleChange} />
+
+              <FormInput label="Subject" noDivider name="subject" value={form.subject} onChange={handleChange} />
+            </Box>
+
+            {/* ══ ITEMS & EXPENSES (TABS) ═══════════════════════════════ */}
+            <Box sx={{ px: 3, borderTop: `1px solid ${C.divider}` }}>
+              <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)} sx={{ borderBottom: `1px solid ${C.divider}` }}>
+                <Tab label="Items" />
+                <Tab label="Expenses" />
+              </Tabs>
+
+              {/* Items Tab */}
+              <TabPanel value={activeTab} index={0}>
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                  <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>Items</Typography>
+                  <Button startIcon={<AddIcon />} onClick={addItem} size="small" sx={{ textTransform: 'none' }}>
+                    Add Item
+                  </Button>
+                </Box>
+                <TableContainer>
+                  <Table size="small">
+                    <TableHead>
                       <TableRow>
-                        <TableCell colSpan={4} align="center">
-                          <Typography variant="body2" color="text.secondary">
-                            No expenses added
-                          </Typography>
-                        </TableCell>
+                        <TableCell>Item Name</TableCell>
+                        <TableCell>Quantity</TableCell>
+                        <TableCell>Rate</TableCell>
+                        <TableCell>Tax %</TableCell>
+                        <TableCell>Amount</TableCell>
+                        <TableCell />
                       </TableRow>
-                    ) : (
-                      form.expenses.map((expense, index) => (
+                    </TableHead>
+                    <TableBody>
+                      {form.items.map((item, index) => (
                         <TableRow key={index}>
                           <TableCell>
                             <TextField
-                              value={expense.expense_name}
-                              onChange={(e) => handleExpenseChange(index, 'expense_name', e.target.value)}
-                              size="small"
-                              fullWidth
+                              value={item.item_name}
+                              onChange={(e) => handleItemChange(index, 'item_name', e.target.value)}
+                              size="small" fullWidth sx={fieldSx}
                             />
                           </TableCell>
                           <TableCell>
                             <TextField
-                              type="number"
-                              value={expense.amount}
-                              onChange={(e) => handleExpenseChange(index, 'amount', e.target.value)}
-                              size="small"
-                              sx={{ width: 120 }}
+                              type="number" value={item.quantity}
+                              onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                              size="small" sx={{ ...fieldSx, width: 80 }}
                             />
                           </TableCell>
                           <TableCell>
                             <TextField
-                              value={expense.description}
-                              onChange={(e) => handleExpenseChange(index, 'description', e.target.value)}
-                              size="small"
-                              fullWidth
+                              type="number" value={item.rate}
+                              onChange={(e) => handleItemChange(index, 'rate', e.target.value)}
+                              size="small" sx={{ ...fieldSx, width: 100 }}
                             />
                           </TableCell>
                           <TableCell>
-                            <IconButton size="small" onClick={() => removeExpense(index)} color="error">
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
+                            <TextField
+                              type="number" value={item.tax}
+                              onChange={(e) => handleItemChange(index, 'tax', e.target.value)}
+                              size="small" sx={{ ...fieldSx, width: 80 }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" fontWeight={600}>
+                              ₹{item.amount.toFixed(2)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            {form.items.length > 1 && (
+                              <IconButton size="small" onClick={() => removeItem(index)} color="error">
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            )}
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </TabPanel>
-          </Box>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </TabPanel>
 
-          {/* Summary */}
-          <Box sx={{ px: 4, py: 3, borderBottom: '1px solid', borderColor: 'divider' }}>
-            <Grid container spacing={2} justifyContent="flex-end">
-              <Grid item xs={12} sm={6} md={4}>
-                <Box display="flex" justifyContent="space-between" mb={1}>
-                  <Typography>Subtotal:</Typography>
-                  <Typography fontWeight={600}>₹{form.subtotal.toFixed(2)}</Typography>
+              {/* Expenses Tab */}
+              <TabPanel value={activeTab} index={1}>
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                  <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>Expenses</Typography>
+                  <Button startIcon={<AddIcon />} onClick={addExpense} size="small" sx={{ textTransform: 'none' }}>
+                    Add Expense
+                  </Button>
                 </Box>
-                <Box display="flex" justifyContent="space-between" mb={1}>
-                  <Typography>CGST:</Typography>
-                  <Typography fontWeight={600}>₹{form.cgst_amount.toFixed(2)}</Typography>
-                </Box>
-                <Box display="flex" justifyContent="space-between" mb={1}>
-                  <Typography>SGST:</Typography>
-                  <Typography fontWeight={600}>₹{form.sgst_amount.toFixed(2)}</Typography>
-                </Box>
-                <Box display="flex" justifyContent="space-between" mb={1}>
-                  <Typography>Total Tax:</Typography>
-                  <Typography fontWeight={600}>₹{form.total_tax.toFixed(2)}</Typography>
-                </Box>
-                <Box display="flex" justifyContent="space-between" mt={2} pt={2} borderTop="2px solid" borderColor="divider">
-                  <Typography variant="h6" fontWeight={700}>Total Amount:</Typography>
-                  <Typography variant="h6" fontWeight={700} color="primary">
-                    ₹{form.total_amount.toFixed(2)}
+                <TableContainer>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Expense Name</TableCell>
+                        <TableCell>Amount</TableCell>
+                        <TableCell>Description</TableCell>
+                        <TableCell />
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {form.expenses.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
+                            <Typography variant="body2" color="text.secondary">No expenses added</Typography>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        form.expenses.map((expense, index) => (
+                          <TableRow key={index}>
+                            <TableCell>
+                              <TextField
+                                value={expense.expense_name}
+                                onChange={(e) => handleExpenseChange(index, 'expense_name', e.target.value)}
+                                size="small" fullWidth sx={fieldSx}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                type="number" value={expense.amount}
+                                onChange={(e) => handleExpenseChange(index, 'amount', e.target.value)}
+                                size="small" sx={{ ...fieldSx, width: 120 }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                value={expense.description}
+                                onChange={(e) => handleExpenseChange(index, 'description', e.target.value)}
+                                size="small" fullWidth sx={fieldSx}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <IconButton size="small" onClick={() => removeExpense(index)} color="error">
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </TabPanel>
+            </Box>
+
+            {/* ══ TOTALS SUMMARY ════════════════════════════════════════ */}
+            <Box sx={{ px: 3, borderTop: `1px solid ${C.divider}`, py: 2 }}>
+              <Box sx={{ maxWidth: 320, ml: 'auto' }}>
+                {[
+                  ['Subtotal', form.subtotal],
+                  ['CGST', form.cgst_amount],
+                  ['SGST', form.sgst_amount],
+                  ['Total Tax', form.total_tax],
+                ].map(([label, value]) => (
+                  <Box key={label} display="flex" justifyContent="space-between" mb={0.5}>
+                    <Typography variant="body2" color="text.secondary">{label}:</Typography>
+                    <Typography variant="body2" fontWeight={600}>₹{(value || 0).toFixed(2)}</Typography>
+                  </Box>
+                ))}
+                <Box display="flex" justifyContent="space-between" mt={1.5} pt={1.5} sx={{ borderTop: `2px solid ${C.divider}` }}>
+                  <Typography sx={{ fontWeight: 700, fontSize: '0.9375rem' }}>Total Amount:</Typography>
+                  <Typography sx={{ fontWeight: 700, fontSize: '0.9375rem', color: 'primary.main' }}>
+                    ₹{(form.total_amount || 0).toFixed(2)}
                   </Typography>
                 </Box>
-                <Box display="flex" justifyContent="space-between" mt={1}>
-                  <Typography color="success.main">Amount Paid:</Typography>
-                  <Typography fontWeight={600} color="success.main">₹{form.amount_paid.toFixed(2)}</Typography>
+                <Box display="flex" justifyContent="space-between" mt={0.5}>
+                  <Typography variant="body2" color="success.main">Amount Paid:</Typography>
+                  <Typography variant="body2" fontWeight={600} color="success.main">₹{(form.amount_paid || 0).toFixed(2)}</Typography>
                 </Box>
-                <Box display="flex" justifyContent="space-between" mt={1}>
-                  <Typography color="error.main">Balance Due:</Typography>
-                  <Typography fontWeight={600} color="error.main">₹{form.balance_due.toFixed(2)}</Typography>
+                <Box display="flex" justifyContent="space-between" mt={0.5}>
+                  <Typography variant="body2" color="error.main">Balance Due:</Typography>
+                  <Typography variant="body2" fontWeight={600} color="error.main">₹{(form.balance_due || 0).toFixed(2)}</Typography>
                 </Box>
-              </Grid>
-            </Grid>
-          </Box>
+              </Box>
+            </Box>
 
-          {/* Notes & Status */}
-          <Box sx={{ px: 4, py: 3, borderBottom: '1px solid', borderColor: 'divider' }}>
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Payment Status</InputLabel>
-                  <Select
-                    name="payment_status"
-                    value={form.payment_status}
-                    onChange={handleChange}
-                    label="Payment Status"
-                    sx={{ textAlign: 'left', '& .MuiSelect-select': { textAlign: 'left' } }}
-                  >
-                    <MenuItem value="Unpaid">Unpaid</MenuItem>
-                    <MenuItem value="Partially Paid">Partially Paid</MenuItem>
-                    <MenuItem value="Paid">Paid</MenuItem>
-                    <MenuItem value="Overdue">Overdue</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  label="Notes"
-                  name="notes"
-                  value={form.notes}
-                  onChange={handleChange}
-                  multiline
-                  rows={3}
-                  fullWidth
-                />
-              </Grid>
-            </Grid>
-          </Box>
+            {/* ══ STATUS & NOTES ═══════════════════════════════════════ */}
+            <Box sx={{ px: 3, borderTop: `1px solid ${C.divider}` }}>
+              <Box sx={{ py: 1.5, borderBottom: `1px solid ${C.divider}` }}>
+                <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>
+                  Status & Notes
+                </Typography>
+              </Box>
 
-          {/* Actions */}
-          <Box sx={{ px: 4, py: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-            <Button
-              variant="outlined"
-              onClick={() => navigate("/bills")}
-              sx={{ borderRadius: 2, px: 3, textTransform: "none", fontWeight: 600 }}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="contained"
-              startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
-              disabled={saving}
-              sx={{ borderRadius: 2, px: 3, textTransform: "none", fontWeight: 600 }}
-            >
-              {saving ? "Saving..." : id ? "Update" : "Save"}
-            </Button>
-          </Box>
-        </Paper>
-      </Container>
+              <FormSelect label="Payment Status" name="payment_status" value={form.payment_status} onChange={handleChange}
+                options={['Unpaid', 'Partially Paid', 'Paid', 'Overdue'].map(s => ({ value: s, label: s }))} width={220} />
+
+              <FormInput label="Notes" noDivider name="notes" value={form.notes} onChange={handleChange}
+                multiline rows={3} placeholder="Add any internal notes about this bill…" />
+            </Box>
+
+            {/* ══ FOOTER ════════════════════════════════════════════════ */}
+            <Box sx={footerSx}>
+              <Button variant="outlined" onClick={() => navigate('/bills')} disabled={saving} sx={cancelBtnSx}>
+                Cancel
+              </Button>
+              <Button
+                type="submit" variant="contained" disabled={saving}
+                startIcon={saving ? <CircularProgress size={14} color="inherit" /> : null}
+                sx={saveBtnSx}
+              >
+                {saving ? 'Saving…' : id ? 'Update' : 'Save'}
+              </Button>
+            </Box>
+          </Paper>
+        </Container>
+      </Box>
     </MainLayout>
   );
 };

@@ -8,6 +8,10 @@ const API_CONFIG = {
     INVOICES: '/api/invoices',
     PRODUCTS: '/api/products',
     NEXT_INVOICE_NUMBER: '/api/invoices/next-number',
+    ORGANIZATION_PROFILE: '/api/settings/organization-profile',
+    UPLOAD_ORG_LOGO: '/api/settings/upload-logo',
+    BRANDING: '/api/settings/branding',
+    INVOICE_PREFERENCES: '/api/settings/invoice-preferences',
   }
 };
 

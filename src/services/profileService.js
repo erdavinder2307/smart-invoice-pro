@@ -13,7 +13,6 @@ export const getProfile = async () => {
         });
         return response.data;
     } catch (error) {
-        console.error('Error fetching profile:', error);
         throw error;
     }
 };
@@ -30,7 +29,6 @@ export const updateProfile = async (profileData) => {
         });
         return response.data;
     } catch (error) {
-        console.error('Error updating profile:', error);
         throw error;
     }
 };

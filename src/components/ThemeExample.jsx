@@ -13,7 +13,7 @@ import { Receipt, TrendingUp } from '@mui/icons-material';
 
 // Example component demonstrating theme usage
 const ThemeExampleCard = () => {
-  const theme = useTheme();
+  useTheme();
 
   return (
     <Box sx={{ p: 4, bgcolor: 'background.default' }}>

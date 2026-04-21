@@ -12,6 +12,10 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import { C, ZohoRow, AppSelect, fieldSx, menuItemSx, footerSx, cancelBtnSx, saveBtnSx } from './common/formStyles';
+import FormInput from './common/FormInput';
+import FormSelect from './common/FormSelect';
+import FormDatePicker from './common/FormDatePicker';
+import { useTranslation } from 'react-i18next';
 
 const CATEGORIES = [
   'Office Supplies', 'Travel', 'Utilities', 'Marketing', 'Software',
@@ -28,6 +32,7 @@ const INITIAL_FORM = {
 const AddEditExpense = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [form, setForm] = useState(INITIAL_FORM);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -44,7 +49,7 @@ const AddEditExpense = () => {
       const e = res.data;
       setForm({ vendor_name: e.vendor_name, date: e.date, category: e.category, amount: e.amount, currency: e.currency, notes: e.notes || '' });
       if (e.receipt_url) setExistingReceipt(e.receipt_url);
-    } catch { setError('Failed to fetch expense details'); }
+    } catch { setError(t('addEditExpense.failedFetch')); }
     setLoading(false);
   }, [id]);
 
@@ -97,7 +102,7 @@ const AddEditExpense = () => {
       if (id) await axios.put(createApiUrl(`/api/expenses/${id}`), payload);
       else await axios.post(createApiUrl('/api/expenses'), payload);
       navigate('/expenses');
-    } catch (err) { setError(err.response?.data?.error || 'Failed to save expense'); }
+    } catch (err) { setError(err.response?.data?.error || t('addEditExpense.failedSave')); }
     setSaving(false);
   };
 
@@ -110,7 +115,7 @@ const AddEditExpense = () => {
   );
 
   return (
-    <MainLayout title={id ? 'Edit Expense' : 'New Expense'}>
+    <MainLayout title={id ? t('addEditExpense.editTitle') : t('addEditExpense.newTitle')}>
       <Box sx={{ bgcolor: C.pageBg, minHeight: '100vh', pb: 6 }}>
         <Container maxWidth="lg" sx={{ pt: 3 }}>
 
@@ -129,35 +134,17 @@ const AddEditExpense = () => {
             <Box sx={{ px: 3 }}>
               <Box sx={{ py: 1.5, borderBottom: `1px solid ${C.divider}` }}>
                 <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>
-                  Expense Details
+                  {t('addEditExpense.expenseDetails')}
                 </Typography>
               </Box>
 
-              <ZohoRow label="Vendor / Payee" required>
-                <TextField
-                  name="vendor_name" value={form.vendor_name} onChange={handleChange}
-                  size="small" fullWidth required
-                  placeholder="e.g. Amazon, Uber, Office Depot"
-                  sx={fieldSx}
-                />
-              </ZohoRow>
+              <FormInput label="Vendor / Payee" required name="vendor_name" value={form.vendor_name} onChange={handleChange}
+                placeholder="e.g. Amazon, Uber, Office Depot" />
 
-              <ZohoRow label="Date" required>
-                <TextField
-                  name="date" value={form.date} onChange={handleChange}
-                  type="date" size="small" required
-                  InputLabelProps={{ shrink: true }}
-                  sx={{ ...fieldSx, maxWidth: 220 }}
-                />
-              </ZohoRow>
+              <FormDatePicker label="Date" required name="date" value={form.date} onChange={handleChange} />
 
-              <ZohoRow label="Category" required>
-                <Box sx={{ width: 280 }}>
-                  <AppSelect name="category" value={form.category} onChange={handleChange}>
-                    {CATEGORIES.map(c => <MenuItem key={c} value={c} sx={menuItemSx}>{c}</MenuItem>)}
-                  </AppSelect>
-                </Box>
-              </ZohoRow>
+              <FormSelect label="Category" required name="category" value={form.category} onChange={handleChange}
+                options={CATEGORIES.map(c => ({ value: c, label: c }))} width={280} />
 
               <ZohoRow label="Amount" required>
                 <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
@@ -175,23 +162,17 @@ const AddEditExpense = () => {
                 </Box>
               </ZohoRow>
 
-              <ZohoRow label="Notes" noDivider alignStart>
-                <TextField
-                  name="notes" value={form.notes} onChange={handleChange}
-                  size="small" fullWidth multiline rows={3}
-                  placeholder="Add any additional notes about this expense…"
-                  sx={fieldSx}
-                />
-              </ZohoRow>
+              <FormInput label="Notes" noDivider name="notes" value={form.notes} onChange={handleChange}
+                multiline rows={3} placeholder="Add any additional notes about this expense…" />
             </Box>
 
             {/* ══ RECEIPT UPLOAD ══════════════════════════════════════════ */}
             <Box sx={{ px: 3, py: 2.5, borderTop: `1px solid ${C.divider}` }}>
               <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333', mb: 0.5 }}>
-                Receipt
+                {t('addEditExpense.receipt')}
               </Typography>
               <Typography variant="caption" sx={{ color: C.hint, display: 'block', mb: 2 }}>
-                Upload PNG, JPG, GIF or PDF — max 5 MB
+                {t('addEditExpense.uploadHint')}
               </Typography>
 
               {/* Drop zone */}
@@ -212,7 +193,7 @@ const AddEditExpense = () => {
                 >
                   <CloudUploadIcon sx={{ fontSize: 40, color: C.hint, mb: 1 }} />
                   <Typography sx={{ fontSize: '0.875rem', color: C.label }}>
-                    Drag and drop or click to browse
+                    {t('addEditExpense.dragDrop')}
                   </Typography>
                 </Box>
               )}
@@ -257,7 +238,7 @@ const AddEditExpense = () => {
                   onClick={() => document.getElementById('receipt-upload-field').click()}
                   sx={{ mt: 1.5, textTransform: 'none', fontSize: '0.8125rem', borderRadius: '4px', borderColor: C.border, color: '#555' }}
                 >
-                  Change Receipt
+                  {t('addEditExpense.changeReceipt')}
                 </Button>
               )}
 
@@ -272,14 +253,14 @@ const AddEditExpense = () => {
             {/* ══ FOOTER ═════════════════════════════════════════════════ */}
             <Box sx={footerSx}>
               <Button variant="outlined" onClick={() => navigate('/expenses')} disabled={saving} sx={cancelBtnSx}>
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button
                 type="submit" variant="contained" disabled={saving}
                 startIcon={saving ? <CircularProgress size={14} color="inherit" /> : null}
                 sx={saveBtnSx}
               >
-                {saving ? 'Saving…' : id ? 'Update' : 'Save'}
+                {saving ? t('common.saving') : id ? t('common.update') : t('common.save')}
               </Button>
             </Box>
           </Paper>

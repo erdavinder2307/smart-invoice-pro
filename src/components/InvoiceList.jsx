@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { getInvoices, deleteInvoice } from "../services/invoiceService";
+import { getInvoices, deleteInvoice, sendInvoiceEmail, recordPayment } from "../services/invoiceService";
 import { createApiUrl } from "../config/api";
 import "./InvoiceList.css";
 import MainLayout from "./Layout/MainLayout";
 import StatusBadge from "./common/StatusBadge";
 import SummaryCard from "./common/SummaryCard";
 import SectionHeader from "./common/SectionHeader";
-import StandardDataTable from "./common/StandardDataTable";
+import StandardDataTable, { CHECKBOX_COLUMN_WIDTH } from "./common/StandardDataTable";
+import ResponsiveDataView from "./common/ResponsiveDataView";
+import InvoiceCard from "./common/InvoiceCard";
 import axios from "axios";
 import {
   Box,
@@ -35,8 +37,12 @@ import {
   ListItemText,
   Container,
   FormControl,
+  InputLabel,
   Select,
-  Snackbar
+  Snackbar,
+  FormControlLabel,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
@@ -57,8 +63,11 @@ import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
 import ThumbUpAltIcon from '@mui/icons-material/ThumbUpAlt';
 import ThumbDownAltIcon from '@mui/icons-material/ThumbDownAlt';
 import SendIcon from '@mui/icons-material/Send';
+import EmailIcon from '@mui/icons-material/Email';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import PayNowModal from "./PayNowModal";
 import { useAuth } from "../context/AuthContext";
+import { useTranslation } from "react-i18next";
 
 const initialForm = {
   invoice_number: "",
@@ -94,25 +103,35 @@ const InvoiceList = () => {
   const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [selectedInvoices, setSelectedInvoices] = useState([]);
+  const [activeInvoiceId, setActiveInvoiceId] = useState(null);
   const [payNowOpen, setPayNowOpen] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState('');
   const [linkCopied, setLinkCopied] = useState(false);
+  const [emailDialog, setEmailDialog] = useState({ open: false, invoice: null, recipientEmail: '', subject: '', message: '', attachPdf: false });
+  const [emailSending, setEmailSending] = useState(false);
+  const [paymentDialog, setPaymentDialog] = useState({ open: false, invoice: null, amount: '', paymentDate: new Date().toISOString().split('T')[0], paymentMode: 'Bank Transfer', reference: '' });
+  const [paymentSubmitting, setPaymentSubmitting] = useState(false);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   // Approval-specific state
   const [rejectDialog, setRejectDialog] = useState({ open: false, invoiceId: null, reason: '' });
   const [approvalToast, setApprovalToast] = useState({ open: false, message: '', severity: 'success' });
   const navigate = useNavigate();
   const { user, canApprove } = useAuth();
+  const { t } = useTranslation();
 
   const filteredInvoices = invoices.filter((invoice) => {
     const customer = customers.find((c) => c.id === invoice.customer_id);
     const customerName = customer ? customer.name : "";
 
+    const lowerSearch = searchTerm.toLowerCase();
     const matchesSearch =
-      invoice.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.invoice_type?.toLowerCase().includes(searchTerm.toLowerCase());
+      (invoice.invoice_number || "").toLowerCase().includes(lowerSearch) ||
+      (customerName || "").toLowerCase().includes(lowerSearch) ||
+      (invoice.invoice_type || "").toLowerCase().includes(lowerSearch) ||
+      (invoice.customer_name || "").toLowerCase().includes(lowerSearch);
 
     const matchesStatus = statusFilter === "All" || invoice.status === statusFilter;
 
@@ -124,6 +143,11 @@ const InvoiceList = () => {
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
+
+  const activeInvoice = invoices.find((invoice) => invoice.id === activeInvoiceId) || null;
+  const activeCustomer = activeInvoice
+    ? customers.find((customer) => customer.id === activeInvoice.customer_id)
+    : null;
 
   // Calculate summary metrics
   const totalOutstanding = invoices
@@ -169,6 +193,18 @@ const InvoiceList = () => {
     axios.get(createApiUrl("/api/invoices/next-number")).then(res => setForm(f => ({ ...f, invoice_number: res.data.invoice_number }))).catch(() => { });
   }, []);
 
+  useEffect(() => {
+    if (!filteredInvoices.length) {
+      setActiveInvoiceId(null);
+      return;
+    }
+
+    const activeExists = filteredInvoices.some((invoice) => invoice.id === activeInvoiceId);
+    if (!activeExists) {
+      setActiveInvoiceId(filteredInvoices[0].id);
+    }
+  }, [filteredInvoices, activeInvoiceId]);
+
   // Calculate fields
   useEffect(() => {
     const total_tax = Number(form.cgst_amount || 0) + Number(form.sgst_amount || 0) + Number(form.igst_amount || 0);
@@ -201,6 +237,10 @@ const InvoiceList = () => {
   const handleActionMenuOpen = (event, invoice) => {
     setActionMenuAnchor(event.currentTarget);
     setSelectedInvoice(invoice);
+  };
+
+  const handleSelectInvoice = (invoice) => {
+    setActiveInvoiceId(invoice.id);
   };
 
   const handleActionMenuClose = () => {
@@ -278,6 +318,74 @@ const InvoiceList = () => {
     }
   };
 
+  const handleOpenEmailDialog = (invoice) => {
+    if (!invoice) return;
+    setEmailDialog({
+      open: true,
+      invoice,
+      recipientEmail: invoice.customer_email || '',
+      subject: `Invoice ${invoice.invoice_number || invoice.id} — Due ${invoice.due_date || ''}`,
+      message: '',
+      attachPdf: false,
+    });
+  };
+
+  const handleSendEmailSubmit = async () => {
+    const { invoice, recipientEmail, message, attachPdf } = emailDialog;
+    if (!recipientEmail.trim()) {
+      setApprovalToast({ open: true, message: 'Recipient email is required.', severity: 'error' });
+      return;
+    }
+    setEmailSending(true);
+    try {
+      await sendInvoiceEmail(invoice.id, { recipient_email: recipientEmail.trim(), message, attach_pdf: attachPdf });
+      setEmailDialog({ open: false, invoice: null, recipientEmail: '', subject: '', message: '', attachPdf: false });
+      setApprovalToast({ open: true, message: `Invoice emailed to ${recipientEmail} successfully.`, severity: 'success' });
+      fetchInvoices();
+    } catch (err) {
+      setApprovalToast({ open: true, message: err.response?.data?.error || 'Failed to send email. Please try again.', severity: 'error' });
+    } finally {
+      setEmailSending(false);
+    }
+  };
+
+  const handleOpenPaymentDialog = (invoice) => {
+    if (!invoice) return;
+    setPaymentDialog({
+      open: true,
+      invoice,
+      amount: invoice.balance_due > 0 ? String(invoice.balance_due) : '',
+      paymentDate: new Date().toISOString().split('T')[0],
+      paymentMode: 'Bank Transfer',
+      reference: '',
+    });
+  };
+
+  const handleRecordPaymentSubmit = async () => {
+    const { invoice, amount, paymentDate, paymentMode, reference } = paymentDialog;
+    const parsedAmount = parseFloat(amount);
+    if (!parsedAmount || parsedAmount <= 0) {
+      setApprovalToast({ open: true, message: 'Please enter a valid amount.', severity: 'error' });
+      return;
+    }
+    setPaymentSubmitting(true);
+    try {
+      const result = await recordPayment(invoice.id, {
+        amount: parsedAmount,
+        payment_date: paymentDate,
+        payment_mode: paymentMode,
+        reference,
+      });
+      setInvoices(prev => prev.map(inv => inv.id === invoice.id ? result.invoice : inv));
+      setPaymentDialog({ open: false, invoice: null, amount: '', paymentDate: new Date().toISOString().split('T')[0], paymentMode: 'Bank Transfer', reference: '' });
+      setApprovalToast({ open: true, message: `Payment of ₹${parsedAmount.toLocaleString()} recorded successfully.`, severity: 'success' });
+    } catch (err) {
+      setApprovalToast({ open: true, message: err.response?.data?.error || 'Failed to record payment. Please try again.', severity: 'error' });
+    } finally {
+      setPaymentSubmitting(false);
+    }
+  };
+
   const handleDownloadPDF = async (invoice) => {
     try {
       const response = await axios.post(
@@ -328,34 +436,28 @@ const InvoiceList = () => {
     setPage(0);
   };
 
+  const allVisibleSelected =
+    paginatedInvoices.length > 0 &&
+    paginatedInvoices.every((inv) => selectedInvoices.includes(inv.id));
+  const someVisibleSelected = paginatedInvoices.some((inv) =>
+    selectedInvoices.includes(inv.id)
+  );
+
   const invoiceColumns = [
-    {
-      key: "select",
-      label: (
-        <Checkbox
-          indeterminate={
-            selectedInvoices.length > 0 &&
-            selectedInvoices.length < paginatedInvoices.length
-          }
-          checked={
-            paginatedInvoices.length > 0 &&
-            selectedInvoices.length === paginatedInvoices.length
-          }
-          onChange={handleSelectAll}
-        />
-      ),
-      width: 42,
-    },
-    { key: "date", label: "Date" },
-    { key: "invoice", label: "Invoice #" },
-    { key: "order", label: "Order Number" },
-    { key: "customer", label: "Customer Name" },
-    { key: "status", label: "Status" },
-    { key: "due", label: "Due Date" },
-    { key: "amount", label: "Amount", align: "right" },
-    { key: "balance", label: "Balance Due", align: "right" },
-    { key: "actions", label: "Actions", align: "center" },
+    { key: "select", label: "", width: CHECKBOX_COLUMN_WIDTH },
+    { key: "date", label: "DATE" },
+    { key: "invoice", label: "INVOICE #" },
+    { key: "order", label: "ORDER NUMBER" },
+    { key: "customer", label: "CUSTOMER NAME" },
+    { key: "status", label: "STATUS" },
+    { key: "email_status", label: "EMAIL", align: "center" },
+    { key: "due", label: "DUE DATE" },
+    { key: "amount", label: "AMOUNT", align: "right" },
+    { key: "balance", label: "BALANCE DUE", align: "right" },
+    { key: "actions", label: "", align: "center" },
   ];
+
+  const formatCurrency = (value) => `₹${Number(value || 0).toLocaleString()}`;
 
 
   return (
@@ -364,10 +466,10 @@ const InvoiceList = () => {
         {/* Page Header */}
         <Box sx={{ mb: 4 }}>
           <SectionHeader
-            title="All Invoices"
-            subtitle="Track and manage all customer invoices and payments"
+            title={t('invoiceList.title')}
+            subtitle={t('invoiceList.subtitle')}
             primaryAction={{
-              label: "New Invoice",
+              label: t('invoiceList.newInvoice'),
               icon: <AddIcon />,
               onClick: handleAdd,
             }}
@@ -387,12 +489,12 @@ const InvoiceList = () => {
             }}
           >
             <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600}>
-              Payment Summary
+              {t('invoiceList.paymentSummary')}
             </Typography>
             <Grid container spacing={2} sx={{ mt: 0.5 }}>
               <Grid item xs={12} sm={6} md={3}>
                 <SummaryCard
-                  label="Outstanding Receivables"
+                  label={t('invoiceList.outstandingReceivables')}
                   value={`₹${totalOutstanding.toLocaleString()}`}
                   icon={<AttachMoneyIcon />}
                   accentColor="error.main"
@@ -400,7 +502,7 @@ const InvoiceList = () => {
               </Grid>
               <Grid item xs={12} sm={6} md={2}>
                 <SummaryCard
-                  label="Due Today"
+                  label={t('invoiceList.dueToday')}
                   value={dueToday}
                   icon={<TodayIcon />}
                   accentColor="warning.main"
@@ -408,7 +510,7 @@ const InvoiceList = () => {
               </Grid>
               <Grid item xs={12} sm={6} md={2}>
                 <SummaryCard
-                  label="Due Within 30 Days"
+                  label={t('invoiceList.dueWithin30Days')}
                   value={dueWithin30Days}
                   icon={<DateRangeIcon />}
                   accentColor="info.main"
@@ -416,7 +518,7 @@ const InvoiceList = () => {
               </Grid>
               <Grid item xs={12} sm={6} md={2}>
                 <SummaryCard
-                  label="Overdue"
+                  label={t('invoiceList.overdue')}
                   value={overdueCount}
                   icon={<ErrorIcon />}
                   accentColor="error.main"
@@ -496,98 +598,341 @@ const InvoiceList = () => {
           </Fade>
         )}
 
-        {/* Main Invoice Table */}
-        <StandardDataTable
-          columns={invoiceColumns}
-          rows={paginatedInvoices}
-          loading={loading}
-          emptyMessage={searchTerm || statusFilter !== "All" ? "No invoices found" : "No invoices yet"}
-          pagination={{
-            rowsPerPageOptions: [10, 25, 50],
-            count: filteredInvoices.length,
-            rowsPerPage,
-            page,
-            onPageChange: handleChangePage,
-            onRowsPerPageChange: handleChangeRowsPerPage,
-          }}
-          renderRow={(invoice) => {
-            const customer = customers.find((c) => c.id === invoice.customer_id);
-            return (
-              <TableRow
-                key={invoice.id}
-                hover
-                sx={{
-                  "&:hover": { bgcolor: "grey.50" },
-                  cursor: "pointer"
-                }}
-              >
-                <TableCell padding="checkbox">
-                  <Checkbox
-                    checked={selectedInvoices.includes(invoice.id)}
-                    onChange={() => handleSelectOne(invoice.id)}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Typography variant="body2">{invoice.issue_date || "—"}</Typography>
-                </TableCell>
-                <TableCell>
-                  <Typography variant="body2" fontWeight={600}>
-                    {invoice.invoice_number}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <Typography variant="body2" color="text.secondary">
-                    {invoice.order_number || "—"}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <Typography variant="body2">
-                    {customer ? customer.name : `Customer #${invoice.customer_id}`}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <StatusBadge status={invoice.status || "Draft"} />
-                  {invoice.status === 'Pending Approval' && (
-                    <Chip
-                      label="Pending"
-                      size="small"
-                      color="warning"
-                      icon={<HourglassEmptyIcon />}
-                      sx={{ ml: 0.5, fontSize: '0.7rem' }}
+        <Grid container spacing={2.2}>
+          <Grid item xs={12} lg={5}>
+            <Paper
+              elevation={0}
+              sx={{
+                borderRadius: 3,
+                border: "1px solid",
+                borderColor: "grey.200",
+                overflow: "hidden",
+                height: "100%",
+              }}
+            >
+              <Box sx={{ px: 2, py: 1.5, borderBottom: "1px solid", borderColor: "grey.200", bgcolor: "grey.50" }}>
+                <Typography variant="subtitle1" fontWeight={700}>Invoices</Typography>
+                <Typography variant="caption" color="text.secondary">Click any invoice to preview details</Typography>
+              </Box>
+
+              <ResponsiveDataView
+                isMobile={isMobile}
+                renderCard={(invoice) => {
+                  const cardCustomer = customers.find((c) => c.id === invoice.customer_id);
+                  return (
+                    <InvoiceCard
+                      invoice={invoice}
+                      customerName={cardCustomer ? cardCustomer.name : `Customer #${invoice.customer_id}`}
+                      onEdit={() => handleEdit(invoice)}
+                      onActionMenu={(e) => handleActionMenuOpen(e, invoice)}
                     />
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Typography variant="body2">{invoice.due_date || "—"}</Typography>
-                </TableCell>
-                <TableCell align="right">
-                  <Typography variant="body2" fontWeight={600}>
-                    ₹{invoice.total_amount?.toLocaleString() || "0"}
-                  </Typography>
-                </TableCell>
-                <TableCell align="right">
-                  <Typography
-                    variant="body2"
-                    fontWeight={600}
-                    color={invoice.balance_due > 0 ? "error.main" : "success.main"}
-                  >
-                    ₹{invoice.balance_due?.toLocaleString() || "0"}
-                  </Typography>
-                </TableCell>
-                <TableCell align="center">
-                  <Tooltip title="Actions">
-                    <IconButton
-                      size="small"
-                      onClick={(e) => handleActionMenuOpen(e, invoice)}
+                  );
+                }}
+                columns={invoiceColumns}
+                rows={paginatedInvoices}
+                loading={loading}
+                emptyMessage={searchTerm || statusFilter !== "All" ? t('invoiceList.noInvoices') : t('invoiceList.noInvoices')}
+                pagination={{
+                  rowsPerPageOptions: [10, 25, 50],
+                  count: filteredInvoices.length,
+                  rowsPerPage,
+                  page,
+                  onPageChange: handleChangePage,
+                  onRowsPerPageChange: handleChangeRowsPerPage,
+                }}
+                renderHeader={() => (
+                  <TableRow sx={{ bgcolor: "#fafbfc" }}>
+                    <TableCell
+                      sx={{ width: CHECKBOX_COLUMN_WIDTH, padding: "0 4px", borderBottomColor: "#edf0f3" }}
                     >
-                      <MoreVertIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                </TableCell>
-              </TableRow>
-            );
-          }}
-        />
+                      <Checkbox
+                        indeterminate={someVisibleSelected && !allVisibleSelected}
+                        checked={allVisibleSelected}
+                        onChange={handleSelectAll}
+                        sx={{ color: "#b6bdc7" }}
+                      />
+                    </TableCell>
+                    {[
+                      { label: t('invoiceList.columns.date') },
+                      { label: t('invoiceList.columns.invoiceNumber') },
+                      { label: t('invoiceList.columns.orderNumber') },
+                      { label: t('invoiceList.columns.customerName') },
+                      { label: t('invoiceList.columns.status') },
+                      { label: "EMAIL", align: "center" },
+                      { label: t('invoiceList.columns.dueDate') },
+                      { label: t('invoiceList.columns.amount'), align: "right" },
+                      { label: t('invoiceList.columns.balanceDue'), align: "right" },
+                      { label: "", align: "center" },
+                    ].map((col, index) => (
+                      <TableCell
+                        key={`${col.label}-${index}`}
+                        align={col.align || "left"}
+                        sx={{
+                          borderBottomColor: "#edf0f3",
+                          py: 1.2,
+                          color: "#8b95a7",
+                          fontSize: "0.68rem",
+                          letterSpacing: "0.05em",
+                          fontWeight: 700,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {col.label}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                )}
+                renderRow={(invoice) => {
+                  const customer = customers.find((c) => c.id === invoice.customer_id);
+                  const isActive = invoice.id === activeInvoiceId;
+
+                  return (
+                    <TableRow
+                      key={invoice.id}
+                      hover
+                      onClick={() => handleSelectInvoice(invoice)}
+                      sx={{
+                        "&:hover": { bgcolor: "grey.50" },
+                        cursor: "pointer",
+                        bgcolor: isActive ? "rgba(26, 115, 232, 0.08)" : "transparent",
+                      }}
+                    >
+                      <TableCell sx={{ width: CHECKBOX_COLUMN_WIDTH, padding: "0 4px" }} onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedInvoices.includes(invoice.id)}
+                          onChange={() => handleSelectOne(invoice.id)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">{invoice.issue_date || "—"}</Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight={600}>
+                          {invoice.invoice_number}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" color="text.secondary">
+                          {invoice.order_number || "—"}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {customer ? customer.name : `Customer #${invoice.customer_id}`}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={invoice.status || "Draft"} />
+                        {invoice.status === 'Pending Approval' && (
+                          <Chip
+                            label="Pending"
+                            size="small"
+                            color="warning"
+                            icon={<HourglassEmptyIcon />}
+                            sx={{ ml: 0.5, fontSize: '0.7rem' }}
+                          />
+                        )}
+                      </TableCell>
+                      <TableCell align="center">
+                        {invoice.email_status === 'sent' ? (
+                          <Tooltip title={`Sent to ${invoice.last_sent_to || ''} on ${(invoice.email_sent_at || '').slice(0, 10)}`}>
+                            <Chip label="Sent" size="small" color="success" sx={{ fontSize: '0.65rem', height: 20 }} />
+                          </Tooltip>
+                        ) : invoice.email_status === 'failed' ? (
+                          <Chip label="Failed" size="small" color="error" sx={{ fontSize: '0.65rem', height: 20 }} />
+                        ) : (
+                          <Chip label="Not Sent" size="small" sx={{ fontSize: '0.65rem', height: 20, bgcolor: 'grey.200', color: 'text.secondary' }} />
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">{invoice.due_date || "—"}</Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="body2" fontWeight={600}>
+                          ₹{invoice.total_amount?.toLocaleString() || "0"}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography
+                          variant="body2"
+                          fontWeight={600}
+                          color={invoice.balance_due > 0 ? "error.main" : "success.main"}
+                        >
+                          ₹{invoice.balance_due?.toLocaleString() || "0"}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="center" onClick={(e) => e.stopPropagation()}>
+                        <Tooltip title="Actions">
+                          <IconButton
+                            size="small"
+                            onClick={(e) => handleActionMenuOpen(e, invoice)}
+                          >
+                            <MoreVertIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  );
+                }}
+              />
+            </Paper>
+          </Grid>
+
+          <Grid item xs={12} lg={7}>
+            <Paper
+              elevation={0}
+              sx={{
+                borderRadius: 3,
+                border: "1px solid",
+                borderColor: "grey.200",
+                minHeight: 620,
+                overflow: "hidden",
+              }}
+            >
+              {!activeInvoice ? (
+                <Box sx={{ p: 5, textAlign: "center" }}>
+                  <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>No Invoice Selected</Typography>
+                  <Typography variant="body2" color="text.secondary">Choose an invoice from the left list to see details here.</Typography>
+                </Box>
+              ) : (
+                <>
+                  <Box sx={{ px: 3, py: 2, borderBottom: "1px solid", borderColor: "grey.200", bgcolor: "grey.50" }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
+                      <Box>
+                        <Typography variant="h6" sx={{ fontWeight: 700 }}>{activeInvoice.invoice_number || `INV-${activeInvoice.id}`}</Typography>
+                        <Typography variant="body2" color="text.secondary">{activeCustomer?.name || `Customer #${activeInvoice.customer_id}`}</Typography>
+                      </Box>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <StatusBadge status={activeInvoice.status || "Draft"} />
+                        <Button size="small" variant="outlined" onClick={() => handleEdit(activeInvoice)} sx={{ textTransform: "none" }}>
+                          Edit
+                        </Button>
+                        <Button size="small" variant="outlined" onClick={() => handleDownloadPDF(activeInvoice)} sx={{ textTransform: "none" }}>
+                          PDF
+                        </Button>
+                        <Button size="small" variant="outlined" startIcon={<EmailIcon />} onClick={() => handleOpenEmailDialog(activeInvoice)} sx={{ textTransform: "none" }}>
+                          Email
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="contained"
+                          color="success"
+                          onClick={() => handleOpenPaymentDialog(activeInvoice)}
+                          disabled={activeInvoice.status === 'Paid' || activeInvoice.status === 'Cancelled'}
+                          sx={{ textTransform: "none", boxShadow: "none" }}
+                        >
+                          Record Payment
+                        </Button>
+                      </Box>
+                    </Box>
+                  </Box>
+
+                  <Box sx={{ p: 3 }}>
+                    <Grid container spacing={2} sx={{ mb: 2.5 }}>
+                      <Grid item xs={12} sm={4}>
+                        <Typography variant="caption" color="text.secondary">Invoice Date</Typography>
+                        <Typography variant="body2" fontWeight={600}>{activeInvoice.issue_date || "—"}</Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={4}>
+                        <Typography variant="caption" color="text.secondary">Due Date</Typography>
+                        <Typography variant="body2" fontWeight={600}>{activeInvoice.due_date || "—"}</Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={4}>
+                        <Typography variant="caption" color="text.secondary">Payment Terms</Typography>
+                        <Typography variant="body2" fontWeight={600}>{activeInvoice.payment_terms || "—"}</Typography>
+                      </Grid>
+                    </Grid>
+
+                    <Paper variant="outlined" sx={{ borderRadius: 2, mb: 2.5 }}>
+                      <Box sx={{ display: "grid", gridTemplateColumns: "1.8fr 1fr 1fr", px: 2, py: 1, bgcolor: "grey.50", borderBottom: "1px solid", borderColor: "grey.200" }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>Item</Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textAlign: "right" }}>Qty</Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textAlign: "right" }}>Amount</Typography>
+                      </Box>
+
+                      {(activeInvoice.items || []).length ? (
+                        activeInvoice.items.map((item, index) => (
+                          <Box
+                            key={`${activeInvoice.id}-${index}`}
+                            sx={{
+                              display: "grid",
+                              gridTemplateColumns: "1.8fr 1fr 1fr",
+                              px: 2,
+                              py: 1.1,
+                              borderBottom: index === activeInvoice.items.length - 1 ? "none" : "1px solid",
+                              borderColor: "grey.100",
+                            }}
+                          >
+                            <Typography variant="body2">{item.name || "Untitled Item"}</Typography>
+                            <Typography variant="body2" sx={{ textAlign: "right" }}>{item.quantity || 0}</Typography>
+                            <Typography variant="body2" sx={{ textAlign: "right", fontWeight: 600 }}>{formatCurrency(item.amount || (item.quantity || 0) * (item.rate || 0))}</Typography>
+                          </Box>
+                        ))
+                      ) : (
+                        <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 2 }}>
+                          No line items available for preview.
+                        </Typography>
+                      )}
+                    </Paper>
+
+                    <Grid container spacing={2.5}>
+                      <Grid item xs={12} md={7}>
+                        <Typography variant="caption" color="text.secondary">Notes</Typography>
+                        <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", mt: 0.5 }}>
+                          {activeInvoice.notes || "No customer notes"}
+                        </Typography>
+                      </Grid>
+
+                      <Grid item xs={12} md={5}>
+                        <Paper variant="outlined" sx={{ borderRadius: 2, p: 1.8 }}>
+                          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                            <Typography variant="body2" color="text.secondary">Subtotal</Typography>
+                            <Typography variant="body2" fontWeight={600}>{formatCurrency(activeInvoice.subtotal)}</Typography>
+                          </Box>
+                          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                            <Typography variant="body2" color="text.secondary">Tax</Typography>
+                            <Typography variant="body2" fontWeight={600}>{formatCurrency(activeInvoice.total_tax)}</Typography>
+                          </Box>
+                          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                            <Typography variant="body2" color="text.secondary">Paid</Typography>
+                            <Typography variant="body2" fontWeight={600}>{formatCurrency(activeInvoice.amount_paid)}</Typography>
+                          </Box>
+                          <Box sx={{ display: "flex", justifyContent: "space-between", pt: 1, borderTop: "1px solid", borderColor: "grey.200" }}>
+                            <Typography variant="subtitle2" fontWeight={700}>Balance Due</Typography>
+                            <Typography variant="subtitle2" fontWeight={700} color={Number(activeInvoice.balance_due || 0) > 0 ? "error.main" : "success.main"}>
+                              {formatCurrency(activeInvoice.balance_due || activeInvoice.total_amount)}
+                            </Typography>
+                          </Box>
+                        </Paper>
+                      </Grid>
+                    </Grid>
+
+                    {(activeInvoice.payment_history || []).length > 0 && (
+                      <Box sx={{ mt: 3 }}>
+                        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>Payment History</Typography>
+                        <Paper variant="outlined" sx={{ borderRadius: 2 }}>
+                          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', px: 2, py: 1, bgcolor: 'grey.50', borderBottom: '1px solid', borderColor: 'grey.200' }}>
+                            {['Amount', 'Date', 'Mode', 'Reference'].map(h => (
+                              <Typography key={h} variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.65rem', letterSpacing: 0.3 }}>{h}</Typography>
+                            ))}
+                          </Box>
+                          {activeInvoice.payment_history.map((p, i) => (
+                            <Box key={p.id || i} sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', px: 2, py: 1.25, borderBottom: i < activeInvoice.payment_history.length - 1 ? '1px solid' : 'none', borderColor: 'grey.100', alignItems: 'center' }}>
+                              <Typography variant="body2" fontWeight={600} color="success.main">{formatCurrency(p.amount)}</Typography>
+                              <Typography variant="body2" color="text.secondary">{p.payment_date || '—'}</Typography>
+                              <Typography variant="body2" color="text.secondary">{p.payment_mode || '—'}</Typography>
+                              <Typography variant="body2" color="text.secondary">{p.reference || '—'}</Typography>
+                            </Box>
+                          ))}
+                        </Paper>
+                      </Box>
+                    )}
+                  </Box>
+                </>
+              )}
+            </Paper>
+          </Grid>
+        </Grid>
       </Container>
 
       {/* Action Menu */}
@@ -603,6 +948,18 @@ const InvoiceList = () => {
           }
         }}
       >
+        <MenuItem
+          onClick={() => {
+            navigate('/invoices/add', { state: { cloneFrom: selectedInvoice } });
+            handleActionMenuClose();
+          }}
+          sx={{ py: 1.25 }}
+        >
+          <ListItemIcon>
+            <ContentCopyIcon fontSize="small" color="action" />
+          </ListItemIcon>
+          <ListItemText primary="Duplicate" secondary="Copy as new draft" />
+        </MenuItem>
         <MenuItem
           onClick={() => {
             handleEdit(selectedInvoice);
@@ -629,6 +986,20 @@ const InvoiceList = () => {
             <ListItemText primary="Pay Now" secondary="Online via Zoho Payments" />
           </MenuItem>
         )}
+        {selectedInvoice && selectedInvoice.status !== 'Paid' && selectedInvoice.status !== 'Cancelled' && (
+          <MenuItem
+            onClick={() => {
+              handleOpenPaymentDialog(selectedInvoice);
+              handleActionMenuClose();
+            }}
+            sx={{ py: 1.25 }}
+          >
+            <ListItemIcon>
+              <AttachMoneyIcon fontSize="small" color="success" />
+            </ListItemIcon>
+            <ListItemText primary="Record Payment" secondary="Log an offline payment" />
+          </MenuItem>
+        )}
         <MenuItem
           onClick={() => {
             handleDownloadPDF(selectedInvoice);
@@ -640,6 +1011,18 @@ const InvoiceList = () => {
             <PictureAsPdfIcon fontSize="small" color="success" />
           </ListItemIcon>
           <ListItemText primary="Download PDF" />
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            handleOpenEmailDialog(selectedInvoice);
+            handleActionMenuClose();
+          }}
+          sx={{ py: 1.25 }}
+        >
+          <ListItemIcon>
+            <EmailIcon fontSize="small" color="primary" />
+          </ListItemIcon>
+          <ListItemText primary="Send Email" secondary="Email invoice to customer" />
         </MenuItem>
         <MenuItem
           onClick={() => {
@@ -845,6 +1228,157 @@ const InvoiceList = () => {
           {approvalToast.message}
         </Alert>
       </Snackbar>
+
+      {/* Send Email Dialog */}
+      <Dialog
+        open={emailDialog.open}
+        onClose={() => !emailSending && setEmailDialog({ open: false, invoice: null, recipientEmail: '', subject: '', message: '', attachPdf: false })}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Typography variant="h6" fontWeight={700}>Send Invoice by Email</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {emailDialog.invoice?.invoice_number}
+          </Typography>
+        </DialogTitle>
+        <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 2.5 }}>
+          <TextField
+            label="To"
+            value={emailDialog.recipientEmail}
+            onChange={(e) => setEmailDialog((d) => ({ ...d, recipientEmail: e.target.value }))}
+            fullWidth
+            size="small"
+            required
+            type="email"
+            autoFocus
+          />
+          <TextField
+            label="Subject"
+            value={emailDialog.subject}
+            onChange={(e) => setEmailDialog((d) => ({ ...d, subject: e.target.value }))}
+            fullWidth
+            size="small"
+          />
+          <TextField
+            label="Message (optional)"
+            value={emailDialog.message}
+            onChange={(e) => setEmailDialog((d) => ({ ...d, message: e.target.value }))}
+            fullWidth
+            multiline
+            rows={3}
+            size="small"
+            placeholder="Add a personal note to the customer..."
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={emailDialog.attachPdf}
+                onChange={(e) => setEmailDialog((d) => ({ ...d, attachPdf: e.target.checked }))}
+                size="small"
+              />
+            }
+            label={<Typography variant="body2">Attach PDF invoice</Typography>}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+          <Button
+            onClick={() => setEmailDialog({ open: false, invoice: null, recipientEmail: '', subject: '', message: '', attachPdf: false })}
+            disabled={emailSending}
+            sx={{ textTransform: 'none' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={emailSending ? <CircularProgress size={16} color="inherit" /> : <EmailIcon />}
+            onClick={handleSendEmailSubmit}
+            disabled={emailSending || !emailDialog.recipientEmail.trim()}
+            sx={{ textTransform: 'none' }}
+          >
+            {emailSending ? 'Sending…' : 'Send Email'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Record Payment Dialog */}
+      <Dialog
+        open={paymentDialog.open}
+        onClose={() => !paymentSubmitting && setPaymentDialog({ open: false, invoice: null, amount: '', paymentDate: new Date().toISOString().split('T')[0], paymentMode: 'Bank Transfer', reference: '' })}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Typography variant="h6" fontWeight={700}>Record Payment</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {paymentDialog.invoice?.invoice_number} · Balance: {formatCurrency(paymentDialog.invoice?.balance_due || 0)}
+          </Typography>
+        </DialogTitle>
+        <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 2.5 }}>
+          <TextField
+            label="Amount"
+            type="number"
+            value={paymentDialog.amount}
+            onChange={(e) => setPaymentDialog((d) => ({ ...d, amount: e.target.value }))}
+            fullWidth
+            size="small"
+            required
+            autoFocus
+            inputProps={{ min: 0.01, step: '0.01' }}
+            InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }}
+          />
+          <TextField
+            label="Payment Date"
+            type="date"
+            value={paymentDialog.paymentDate}
+            onChange={(e) => setPaymentDialog((d) => ({ ...d, paymentDate: e.target.value }))}
+            fullWidth
+            size="small"
+            required
+            InputLabelProps={{ shrink: true }}
+          />
+          <FormControl size="small" fullWidth>
+            <InputLabel>Payment Mode</InputLabel>
+            <Select
+              value={paymentDialog.paymentMode}
+              onChange={(e) => setPaymentDialog((d) => ({ ...d, paymentMode: e.target.value }))}
+              label="Payment Mode"
+            >
+              {['Bank Transfer', 'Cash', 'UPI', 'Cheque', 'Credit Card', 'Debit Card', 'Other'].map((m) => (
+                <MenuItem key={m} value={m}>{m}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <TextField
+            label="Reference / Transaction ID (optional)"
+            value={paymentDialog.reference}
+            onChange={(e) => setPaymentDialog((d) => ({ ...d, reference: e.target.value }))}
+            fullWidth
+            size="small"
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+          <Button
+            onClick={() => setPaymentDialog({ open: false, invoice: null, amount: '', paymentDate: new Date().toISOString().split('T')[0], paymentMode: 'Bank Transfer', reference: '' })}
+            disabled={paymentSubmitting}
+            sx={{ textTransform: 'none' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="success"
+            startIcon={paymentSubmitting ? <CircularProgress size={16} color="inherit" /> : <AttachMoneyIcon />}
+            onClick={handleRecordPaymentSubmit}
+            disabled={paymentSubmitting || !paymentDialog.amount}
+            sx={{ textTransform: 'none', boxShadow: 'none' }}
+          >
+            {paymentSubmitting ? 'Saving…' : 'Record Payment'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </MainLayout>
   );
 };

@@ -143,7 +143,7 @@ const Features = () => {
     },
     {
       question: 'Can I customize invoice templates?',
-      answer: 'Yes! Smart Invoice Pro offers fully customizable invoice templates. You can add your company logo, adjust colors, modify layouts, and create templates that match your brand identity. We also provide several professional pre-made templates to get you started quickly.'
+      answer: 'Yes! Solidev Books offers fully customizable invoice templates. You can add your company logo, adjust colors, modify layouts, and create templates that match your brand identity. We also provide several professional pre-made templates to get you started quickly.'
     },
     {
       question: 'Does it integrate with accounting software?',
@@ -151,11 +151,11 @@ const Features = () => {
     },
     {
       question: 'What payment methods do you support?',
-      answer: 'Smart Invoice Pro supports multiple payment gateways including Stripe, PayPal, and bank transfers. Your customers can pay via credit cards, debit cards, digital wallets, and ACH transfers directly through the customer portal.'
+      answer: 'Solidev Books supports multiple payment gateways including Stripe, PayPal, and bank transfers. Your customers can pay via credit cards, debit cards, digital wallets, and ACH transfers directly through the customer portal.'
     },
     {
       question: 'Is there a mobile app available?',
-      answer: 'Currently, Smart Invoice Pro is a responsive web application that works perfectly on all mobile devices. We are developing native iOS and Android apps that will be available in 2025 with additional mobile-specific features.'
+      answer: 'Currently, Solidev Books is a responsive web application that works perfectly on all mobile devices. We are developing native iOS and Android apps that will be available in 2025 with additional mobile-specific features.'
     }
   ];
 
@@ -204,7 +204,7 @@ const Features = () => {
                     opacity: 0.95
                   }}
                 >
-                  Discover how Smart Invoice Pro can transform your business operations
+                  Discover how Solidev Books can transform your business operations
                   with cutting-edge features designed for modern entrepreneurs
                 </Typography>
               </motion.div>
@@ -380,7 +380,7 @@ const Features = () => {
             <Box sx={{ position: 'absolute', bottom: -50, right: -50, width: 250, height: 250, borderRadius: '50%', background: 'rgba(255,255,255,0.03)' }} />
 
             <Typography variant="h4" sx={{ fontWeight: 700, mb: 6, color: 'white', position: 'relative', zIndex: 1 }}>
-              Why Businesses Choose Smart Invoice Pro
+              Why Businesses Choose Solidev Books
             </Typography>
             <Grid container spacing={6} sx={{ position: 'relative', zIndex: 1 }}>
               <Grid item xs={12} md={4}>
@@ -512,7 +512,7 @@ const Features = () => {
               Ready to Experience These Features?
             </Typography>
             <Typography variant="h6" sx={{ mb: 6, color: 'text.secondary', maxWidth: 600, mx: 'auto' }}>
-              Join thousands of businesses already using Smart Invoice Pro to streamline their financial operations.
+              Join thousands of businesses already using Solidev Books to streamline their financial operations.
             </Typography>
             <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
               <Button

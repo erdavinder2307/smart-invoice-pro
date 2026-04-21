@@ -8,7 +8,6 @@ import {
   CircularProgress,
   Container,
   IconButton,
-  InputAdornment,
   MenuItem,
   Paper,
   Radio,
@@ -23,11 +22,13 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import MainLayout from './Layout/MainLayout';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
-import SearchIcon from '@mui/icons-material/Search';
+import CustomerSelect from './common/CustomerSelect';
+import AppFormField from './common/Form/AppFormField';
+import FormLayout from './common/Form/FormLayout';
 import {
   C,
   AppSelect,
@@ -37,6 +38,7 @@ import {
   menuItemSx,
   saveBtnSx,
 } from './common/formStyles';
+import { useTranslation } from 'react-i18next';
 
 const TAX_OPTIONS = [0, 5, 12, 18, 28];
 const EMPTY_ITEM = { name: '', quantity: 1, rate: 0, discount: 0, tax: 0, amount: 0 };
@@ -68,13 +70,9 @@ const initialForm = {
   items: [EMPTY_ITEM],
 };
 
-const rowLabelSx = {
-  width: 122,
-  minWidth: 122,
-  pr: 2,
-  fontSize: '0.8125rem',
-  color: '#333',
-  lineHeight: 1.35,
+const formFieldSx = {
+  ...fieldSx,
+  width: '100%',
 };
 
 const tableInputSx = {
@@ -118,6 +116,8 @@ const ActionTextButton = ({ children, ...props }) => (
 const AddEditQuote = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const location = useLocation();
   const quoteId = id;
   const [form, setForm] = useState(initialForm);
   const [customers, setCustomers] = useState([]);
@@ -161,15 +161,36 @@ const AddEditQuote = () => {
         } else {
           const today = new Date().toISOString().slice(0, 10);
           const expiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+          const cloneSourceId = location.state?.cloneFrom?.id;
           try {
             const nextNumberResponse = await axios.get(createApiUrl('/api/quotes/next-number'));
             if (!active) return;
-            setForm((prev) => ({
-              ...prev,
-              quote_number: nextNumberResponse.data?.next_number || 'QT-000001',
-              issue_date: today,
-              expiry_date: expiry,
-            }));
+            const nextNumber = nextNumberResponse.data?.next_number || 'QT-000001';
+
+            if (cloneSourceId) {
+              const cloneResponse = await axios.get(createApiUrl(`/api/quotes/${cloneSourceId}`));
+              if (!active) return;
+              const src = cloneResponse.data;
+              setForm((prev) => ({
+                ...prev,
+                ...src,
+                id: undefined,
+                quote_number: nextNumber,
+                issue_date: today,
+                expiry_date: expiry,
+                status: 'Draft',
+                items: Array.isArray(src.items) && src.items.length
+                  ? src.items.map((item) => ({ ...EMPTY_ITEM, ...item }))
+                  : [EMPTY_ITEM],
+              }));
+            } else {
+              setForm((prev) => ({
+                ...prev,
+                quote_number: nextNumber,
+                issue_date: today,
+                expiry_date: expiry,
+              }));
+            }
           } catch {
             if (!active) return;
             setForm((prev) => ({ ...prev, quote_number: 'QT-000001', issue_date: today, expiry_date: expiry }));
@@ -184,6 +205,7 @@ const AddEditQuote = () => {
 
     load();
     return () => { active = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quoteId]);
 
   useEffect(() => {
@@ -320,7 +342,7 @@ const AddEditQuote = () => {
     <MainLayout showBreadcrumbs={false}>
       <Box sx={{ bgcolor: '#f7f8fb', minHeight: '100vh', pb: 9 }}>
         <Container maxWidth={false} sx={{ pt: 2, px: { xs: 2, md: 3 } }}>
-          <Box sx={{ maxWidth: 1040 }}>
+          <Box sx={{ width: '100%' }}>
             {error && (
               <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2, borderRadius: '4px' }}>
                 {error}
@@ -328,7 +350,7 @@ const AddEditQuote = () => {
             )}
 
             <Typography sx={{ fontSize: '1.1rem', fontWeight: 500, color: '#212121', mb: 1.2, textAlign: 'left' }}>
-              {quoteId ? 'Edit Quote' : 'New Quote'}
+              {quoteId ? t('addEditQuote.editTitle') : t('addEditQuote.newTitle')}
             </Typography>
 
             <Paper
@@ -338,110 +360,89 @@ const AddEditQuote = () => {
               elevation={0}
               sx={{ bgcolor: C.white, border: `1px solid ${C.border}`, borderRadius: '4px', overflow: 'hidden' }}
             >
-              <Box sx={{ px: 3, py: 1.85, bgcolor: '#f3f5f9', borderBottom: `1px solid ${C.divider}` }}>
-                <Box sx={{ display: 'flex', alignItems: { xs: 'flex-start', md: 'center' }, flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
-                  <Typography sx={{ ...rowLabelSx, color: C.red }}>
-                    Customer Name*
-                  </Typography>
-                  <Box sx={{ display: 'flex', width: '100%', maxWidth: 490, gap: 0.75 }}>
-                    <Box sx={{ flex: 1 }}>
-                      <AppSelect name="customer_id" value={form.customer_id} onChange={handleChange} displayEmpty>
-                        <MenuItem value="" sx={{ ...menuItemSx, color: C.hint }}>Select or add a customer</MenuItem>
-                        {customers.map((customer) => (
-                          <MenuItem key={customer.id} value={customer.id} sx={menuItemSx}>
-                            {customer.display_name || customer.name}
-                          </MenuItem>
-                        ))}
-                      </AppSelect>
-                    </Box>
-                    <Button
-                      type="button"
-                      variant="contained"
-                      sx={{ minWidth: 32, width: 32, height: 32, px: 0, boxShadow: 'none', bgcolor: '#5b96f7', '&:hover': { boxShadow: 'none', bgcolor: '#4b86e6' } }}
-                    >
-                      <SearchIcon sx={{ fontSize: 16 }} />
-                    </Button>
-                  </Box>
-                </Box>
-              </Box>
+              <Box sx={{ px: 3, py: 3 }}>
+                <FormLayout>
+                  <AppFormField label="Customer Name" required testId="quote-field-customer">
+                    <CustomerSelect
+                      customers={customers}
+                      value={form.customer_id}
+                      onChange={handleChange}
+                      name="customer_id"
+                      required
+                    />
+                  </AppFormField>
 
-              <Box sx={{ px: 3, py: 1.9 }}>
-                <Box sx={{ display: 'grid', gap: 2.1 }}>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2.5, alignItems: 'center' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', flex: '1 1 330px', minWidth: 280 }}>
-                      <Typography sx={{ ...rowLabelSx, color: C.red }}>Quote#*</Typography>
-                      <TextField
-                        value={form.quote_number}
-                        size="small"
-                        InputProps={{ readOnly: true }}
-                        sx={{ ...fieldSx, width: 220, '& .MuiOutlinedInput-root': { bgcolor: '#fbfcff' } }}
-                      />
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', flex: '1 1 330px', minWidth: 280 }}>
-                      <Typography sx={rowLabelSx}>Reference#</Typography>
-                      <TextField
-                        name="reference_number"
-                        value={form.reference_number}
-                        onChange={handleChange}
-                        size="small"
-                        sx={{ ...fieldSx, width: 220 }}
-                      />
-                    </Box>
-                  </Box>
+                  <AppFormField label="Quote #" required layout="half" testId="quote-field-number">
+                    <TextField
+                      value={form.quote_number}
+                      size="small"
+                      fullWidth
+                      InputProps={{ readOnly: true }}
+                      sx={{ ...formFieldSx, '& .MuiOutlinedInput-root': { ...fieldSx['& .MuiOutlinedInput-root'], bgcolor: '#fbfcff' } }}
+                    />
+                  </AppFormField>
 
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2.5, alignItems: 'center' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', flex: '1 1 330px', minWidth: 280 }}>
-                      <Typography sx={{ ...rowLabelSx, color: C.red }}>Quote Date*</Typography>
-                      <TextField
-                        name="issue_date"
-                        value={form.issue_date}
-                        onChange={handleChange}
-                        type="date"
-                        size="small"
-                        required
-                        sx={{ ...fieldSx, width: 220 }}
-                      />
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', flex: '1 1 330px', minWidth: 280 }}>
-                      <Typography sx={rowLabelSx}>Expiry Date</Typography>
-                      <TextField
-                        name="expiry_date"
-                        value={form.expiry_date}
-                        onChange={handleChange}
-                        type="date"
-                        size="small"
-                        sx={{ ...fieldSx, width: 220 }}
-                      />
-                    </Box>
-                  </Box>
+                  <AppFormField label="Reference #" layout="half" testId="quote-field-reference">
+                    <TextField
+                      name="reference_number"
+                      value={form.reference_number}
+                      onChange={handleChange}
+                      size="small"
+                      fullWidth
+                      sx={formFieldSx}
+                    />
+                  </AppFormField>
 
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2.5, alignItems: 'center', pt: 1.5, borderTop: `1px solid ${C.divider}` }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', flex: '1 1 330px', minWidth: 280 }}>
-                      <Typography sx={rowLabelSx}>Salesperson</Typography>
-                      <TextField
-                        name="salesperson"
-                        value={form.salesperson}
-                        onChange={handleChange}
-                        size="small"
-                        placeholder="Select or Add Salesperson"
-                        sx={{ ...fieldSx, width: 220 }}
-                      />
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', flex: '1 1 330px', minWidth: 280 }}>
-                      <Typography sx={rowLabelSx}>Project Name</Typography>
-                      <TextField
-                        name="project_name"
-                        value={form.project_name}
-                        onChange={handleChange}
-                        size="small"
-                        placeholder="Select a project"
-                        sx={{ ...fieldSx, width: 220 }}
-                      />
-                    </Box>
-                  </Box>
+                  <AppFormField label="Quote Date" required layout="half" testId="quote-field-issue-date">
+                    <TextField
+                      name="issue_date"
+                      value={form.issue_date}
+                      onChange={handleChange}
+                      type="date"
+                      size="small"
+                      required
+                      fullWidth
+                      sx={formFieldSx}
+                    />
+                  </AppFormField>
 
-                  <Box sx={{ display: 'flex', alignItems: 'flex-start', pt: 1.5, borderTop: `1px solid ${C.divider}` }}>
-                    <Typography sx={{ ...rowLabelSx, pt: '8px' }}>Subject</Typography>
+                  <AppFormField label="Expiry Date" layout="half" testId="quote-field-expiry-date">
+                    <TextField
+                      name="expiry_date"
+                      value={form.expiry_date}
+                      onChange={handleChange}
+                      type="date"
+                      size="small"
+                      fullWidth
+                      sx={formFieldSx}
+                    />
+                  </AppFormField>
+
+                  <AppFormField label="Salesperson" layout="half" testId="quote-field-salesperson">
+                    <TextField
+                      name="salesperson"
+                      value={form.salesperson}
+                      onChange={handleChange}
+                      size="small"
+                      placeholder="Select or Add Salesperson"
+                      fullWidth
+                      sx={formFieldSx}
+                    />
+                  </AppFormField>
+
+                  <AppFormField label="Project Name" layout="half" testId="quote-field-project-name">
+                    <TextField
+                      name="project_name"
+                      value={form.project_name}
+                      onChange={handleChange}
+                      size="small"
+                      placeholder="Select a project"
+                      fullWidth
+                      sx={formFieldSx}
+                    />
+                  </AppFormField>
+
+                  <AppFormField label="Subject" testId="quote-field-subject">
                     <TextField
                       name="subject"
                       value={form.subject}
@@ -449,10 +450,10 @@ const AddEditQuote = () => {
                       size="small"
                       fullWidth
                       placeholder="Let your customer know what this Quote is for"
-                      sx={{ ...fieldSx, maxWidth: 380 }}
+                      sx={formFieldSx}
                     />
-                  </Box>
-                </Box>
+                  </AppFormField>
+                </FormLayout>
               </Box>
 
               <Box sx={{ px: 3, py: 1.7, borderTop: `1px solid ${C.divider}` }}>
@@ -463,7 +464,7 @@ const AddEditQuote = () => {
                   </Button>
                 </Box>
 
-                <TableContainer sx={{ border: `1px solid ${C.border}`, borderRadius: '4px', overflowX: 'hidden' }}>
+                <TableContainer sx={{ border: `1px solid ${C.border}`, borderRadius: '4px', overflowX: 'auto' }}>
                   <Table size="small" sx={{ width: '100%', tableLayout: 'fixed' }}>
                     <TableHead>
                       <TableRow sx={{ bgcolor: '#f8f9fb' }}>

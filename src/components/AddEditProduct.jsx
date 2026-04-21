@@ -8,7 +8,6 @@ import {
   Button,
   Checkbox,
   CircularProgress,
-  Container,
   FormControlLabel,
   Grid,
   InputAdornment,
@@ -34,8 +33,10 @@ import {
   menuItemSx,
   saveBtnSx,
 } from './common/formStyles';
+import FormInput from './common/FormInput';
+import FormSelect from './common/FormSelect';
+import { useTranslation } from 'react-i18next';
 
-const categoryOptions = ['Electronics', 'Grocery', 'Clothing', 'Stationery', 'Other'];
 const unitOptions = ['pcs', 'kg', 'litre', 'box', 'pack', 'hrs', 'set'];
 const taxPreferenceOptions = [
   { value: 'taxable', label: 'Taxable' },
@@ -85,26 +86,23 @@ const helperLineSx = {
   lineHeight: 1.6,
 };
 
+const TOP_FIELD_WIDTH = 360;
+const ITEM_FORM_LABEL_WIDTH = 120;
+
 const taxLabelSx = {
   fontSize: '0.8125rem',
   color: '#333',
   minWidth: 120,
 };
 
-const infoLabelSx = {
-  width: 104,
-  minWidth: 104,
-  fontSize: '0.8125rem',
-  color: '#333',
-  lineHeight: 1.3,
-};
-
 const AddEditProduct = ({ onSuccess, onCancel }) => {
   const { id: productId } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [form, setForm] = useState(initialForm);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [serverError, setServerError] = useState('');
+  const [errors, setErrors] = useState({});
   const [vendors, setVendors] = useState([]);
   const [showInventoryFields, setShowInventoryFields] = useState(false);
   const [showTaxRateEditor, setShowTaxRateEditor] = useState(false);
@@ -134,13 +132,15 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
             purchase_account: res.data?.purchase_account || 'Cost of Goods Sold',
           }));
         })
-        .catch(() => setError('Failed to fetch product details'))
+        .catch(() => setServerError(t('addEditProduct.failedFetch')))
         .finally(() => setLoading(false));
     }
   }, [productId]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    // Clear field error when user starts typing
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
     setForm((prev) => {
       const nextValue = type === 'checkbox' ? checked : value;
       const updates = { [name]: nextValue };
@@ -161,20 +161,51 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
     });
   };
 
+  const MAX_PRICE = 99999999;
+
   const validateForm = () => {
-    if (!form.name.trim()) return 'Item name is required';
-    if (!form.unit.trim()) return 'Unit is required';
-    if (form.sales_enabled && (form.price === '' || Number(form.price) < 0)) return 'Valid selling price is required';
-    if (form.purchase_enabled && (form.purchase_rate === '' || Number(form.purchase_rate) < 0)) return 'Valid cost price is required';
-    if (form.tax_preference === 'taxable' && (form.tax_rate === '' || Number(form.tax_rate) < 0)) return 'Valid tax rate is required';
-    return null;
+    const newErrors = {};
+    if (!form.name.trim()) {
+      newErrors.name = 'Item name is required';
+    } else if (form.name.trim().length > 255) {
+      newErrors.name = 'Item name must be 255 characters or fewer';
+    }
+    if (!form.unit.trim()) {
+      newErrors.unit = 'Unit is required';
+    }
+    if (form.sales_enabled) {
+      if (form.price === '' || form.price === null) {
+        newErrors.price = 'Selling price is required';
+      } else if (Number(form.price) < 0) {
+        newErrors.price = 'Selling price cannot be negative';
+      } else if (Number(form.price) > MAX_PRICE) {
+        newErrors.price = `Selling price cannot exceed ₹${MAX_PRICE.toLocaleString('en-IN')}`;
+      }
+    }
+    if (form.purchase_enabled) {
+      if (form.purchase_rate === '' || form.purchase_rate === null) {
+        newErrors.purchase_rate = 'Cost price is required';
+      } else if (Number(form.purchase_rate) < 0) {
+        newErrors.purchase_rate = 'Cost price cannot be negative';
+      } else if (Number(form.purchase_rate) > MAX_PRICE) {
+        newErrors.purchase_rate = `Cost price cannot exceed ₹${MAX_PRICE.toLocaleString('en-IN')}`;
+      }
+    }
+    if (form.tax_preference === 'taxable' && (form.tax_rate === '' || Number(form.tax_rate) < 0)) {
+      newErrors.tax_rate = 'Valid tax rate is required';
+    }
+    return newErrors;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    const validationError = validateForm();
-    if (validationError) return setError(validationError);
+    setServerError('');
+    const newErrors = validateForm();
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    setErrors({});
 
     const payload = {
       ...form,
@@ -191,8 +222,15 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
       else await createProduct(payload);
       if (onSuccess) onSuccess();
       navigate('/products');
-    } catch {
-      setError('Failed to save product');
+    } catch (err) {
+      const apiError = err.response?.data?.error || 'Failed to save product';
+      const apiField = err.response?.data?.field;
+      // Map server-side field errors to inline field errors
+      if (apiField === 'name') {
+        setErrors((prev) => ({ ...prev, name: apiError }));
+      } else {
+        setServerError(apiError);
+      }
     } finally {
       setLoading(false);
     }
@@ -210,16 +248,16 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
 
   return (
     <MainLayout showBreadcrumbs={false}>
-      <Box sx={{ bgcolor: '#f7f8fb', minHeight: '100vh', pb: 6 }}>
-        <Container maxWidth="xl" sx={{ pt: 2 }}>
-          {error && (
-            <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2, borderRadius: '4px' }}>
-              {error}
+      <Box sx={{ pb: 6 }}>
+        <Box sx={{ pt: 2 }}>
+          {serverError && (
+            <Alert severity="error" onClose={() => setServerError('')} sx={{ mb: 2, borderRadius: '4px' }}>
+              {serverError}
             </Alert>
           )}
 
           <Typography sx={{ fontSize: '1.85rem', fontWeight: 500, color: '#212121', mb: 1.5, textAlign: 'left' }}>
-            {productId ? 'Edit Item' : 'New Item'}
+            {productId ? t('addEditProduct.editTitle') : t('addEditProduct.newTitle')}
           </Typography>
 
           <Paper
@@ -230,7 +268,7 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
             sx={{ bgcolor: C.white, border: `1px solid ${C.border}`, borderRadius: '4px', overflow: 'hidden' }}
           >
             <Box sx={{ px: 3 }}>
-              <ZohoRow label="Type" hint="Choose whether this item is a good or a service">
+              <ZohoRow label="Type" hint="Choose whether this item is a good or a service" labelWidth={ITEM_FORM_LABEL_WIDTH}>
                 <RadioGroup row name="item_type" value={form.item_type} onChange={handleChange} sx={{ gap: 1.5 }}>
                   <FormControlLabel
                     value="goods"
@@ -247,63 +285,64 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
                 </RadioGroup>
               </ZohoRow>
 
-              <ZohoRow label="Name" required>
-                <Box sx={{ width: 360, maxWidth: '100%' }}>
-                  <TextField
-                    name="name"
-                    value={form.name}
-                    onChange={handleChange}
-                    size="small"
-                    fullWidth
-                    required
-                    sx={fieldSx}
-                  />
-                </Box>
-              </ZohoRow>
+              <FormInput
+                label="Name"
+                labelWidth={ITEM_FORM_LABEL_WIDTH}
+                required
+                name="name"
+                value={form.name}
+                onChange={handleChange}
+                error={!!errors.name}
+                helperText={errors.name || ''}
+                inputProps={{ maxLength: 255 }}
+                sx={{ width: TOP_FIELD_WIDTH, maxWidth: '100%' }}
+              />
 
-              <ZohoRow label="Unit" hint="Unit used while selling or purchasing this item">
-                <Box sx={{ width: 260, maxWidth: '100%' }}>
-                  <AppSelect name="unit" value={form.unit} onChange={handleChange} displayEmpty>
-                    <MenuItem value="" sx={{ ...menuItemSx, color: C.hint }}>Select unit</MenuItem>
-                    {unitOptions.map((unit) => <MenuItem key={unit} value={unit} sx={menuItemSx}>{unit}</MenuItem>)}
-                  </AppSelect>
-                </Box>
-              </ZohoRow>
+              <FormSelect
+                label="Unit"
+                labelWidth={ITEM_FORM_LABEL_WIDTH}
+                hint="Unit used while selling or purchasing this item"
+                name="unit"
+                value={form.unit}
+                onChange={handleChange}
+                displayEmpty
+                placeholder="Select unit"
+                width={TOP_FIELD_WIDTH}
+                options={unitOptions.map((unit) => ({ value: unit, label: unit }))}
+              />
 
-              <ZohoRow label="HSN Code">
-                <Box sx={{ width: 260, maxWidth: '100%' }}>
-                  <TextField
-                    name="hsn_sac"
-                    value={form.hsn_sac}
-                    onChange={handleChange}
-                    size="small"
-                    fullWidth
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <SearchIcon sx={{ fontSize: 15, color: C.primary }} />
-                        </InputAdornment>
-                      ),
-                    }}
-                    sx={fieldSx}
-                  />
-                </Box>
-              </ZohoRow>
+              <FormInput
+                label="HSN Code"
+                labelWidth={ITEM_FORM_LABEL_WIDTH}
+                name="hsn_sac"
+                value={form.hsn_sac}
+                onChange={handleChange}
+                sx={{ width: TOP_FIELD_WIDTH, maxWidth: '100%' }}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <SearchIcon sx={{ fontSize: 15, color: C.primary }} />
+                    </InputAdornment>
+                  ),
+                }}
+              />
 
-              <ZohoRow label="Tax Preference" required noDivider>
-                <Box sx={{ width: 260, maxWidth: '100%' }}>
-                  <AppSelect name="tax_preference" value={form.tax_preference} onChange={handleChange}>
-                    {taxPreferenceOptions.map((option) => (
-                      <MenuItem key={option.value} value={option.value} sx={menuItemSx}>{option.label}</MenuItem>
-                    ))}
-                  </AppSelect>
-                </Box>
-              </ZohoRow>
+              <FormSelect
+                label="Tax Preference"
+                labelWidth={ITEM_FORM_LABEL_WIDTH}
+                required
+                noDivider
+                name="tax_preference"
+                value={form.tax_preference}
+                onChange={handleChange}
+                width={TOP_FIELD_WIDTH}
+                options={taxPreferenceOptions}
+              />
             </Box>
 
             <Box sx={{ px: 3, py: 2, borderTop: `1px solid ${C.divider}` }}>
               <Grid container spacing={4}>
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                     <Typography sx={sectionTitleSx}>Sales Information</Typography>
                     <FormControlLabel
@@ -321,54 +360,52 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
                     />
                   </Box>
 
-                  <Box sx={{ display: 'grid', gap: 1.25 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                      <Typography sx={infoLabelSx}>Selling Price <Box component="span" sx={{ color: C.red }}>*</Box></Typography>
-                      <TextField
-                        name="price"
-                        value={form.price}
-                        onChange={handleChange}
-                        type="number"
-                        size="small"
-                        fullWidth
-                        disabled={!form.sales_enabled}
-                        inputProps={{ min: 0, step: 0.01 }}
-                        InputProps={{
-                          startAdornment: (
-                            <InputAdornment position="start">
-                              <Typography sx={{ fontSize: '0.8125rem', color: C.hint }}>INR</Typography>
-                            </InputAdornment>
-                          ),
-                        }}
-                        sx={fieldSx}
-                      />
-                    </Box>
+                  <ZohoRow label="Selling Price" labelWidth={ITEM_FORM_LABEL_WIDTH} required noDivider={false}>
+                    <TextField
+                      name="price"
+                      value={form.price}
+                      onChange={handleChange}
+                      type="number"
+                      size="small"
+                      fullWidth
+                      disabled={!form.sales_enabled}
+                      error={!!errors.price}
+                      helperText={errors.price || ''}
+                      inputProps={{ min: 0, max: 99999999, step: 0.01 }}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <Typography sx={{ fontSize: '0.8125rem', color: C.hint }}>INR</Typography>
+                          </InputAdornment>
+                        ),
+                      }}
+                      sx={fieldSx}
+                    />
+                  </ZohoRow>
 
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                      <Typography sx={infoLabelSx}>Account <Box component="span" sx={{ color: C.red }}>*</Box></Typography>
-                      <AppSelect name="sales_account" value={form.sales_account} onChange={handleChange} disabled={!form.sales_enabled}>
-                        {salesAccountOptions.map((account) => <MenuItem key={account} value={account} sx={menuItemSx}>{account}</MenuItem>)}
-                      </AppSelect>
-                    </Box>
+                  <ZohoRow label="Account" labelWidth={ITEM_FORM_LABEL_WIDTH} required noDivider={false}>
+                    <AppSelect name="sales_account" value={form.sales_account} onChange={handleChange} disabled={!form.sales_enabled}>
+                      {salesAccountOptions.map((account) => <MenuItem key={account} value={account} sx={menuItemSx}>{account}</MenuItem>)}
+                    </AppSelect>
+                  </ZohoRow>
 
-                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-                      <Typography sx={{ ...infoLabelSx, pt: '8px' }}>Description</Typography>
-                      <TextField
-                        name="description"
-                        value={form.description}
-                        onChange={handleChange}
-                        size="small"
-                        fullWidth
-                        multiline
-                        rows={3}
-                        disabled={!form.sales_enabled}
-                        sx={fieldSx}
-                      />
-                    </Box>
-                  </Box>
+                  <ZohoRow label="Description" labelWidth={ITEM_FORM_LABEL_WIDTH} alignStart noDivider>
+                    <TextField
+                      name="description"
+                      value={form.description}
+                      onChange={handleChange}
+                      size="small"
+                      fullWidth
+                      multiline
+                      rows={3}
+                      disabled={!form.sales_enabled}
+                      inputProps={{ maxLength: 1000 }}
+                      sx={fieldSx}
+                    />
+                  </ZohoRow>
                 </Grid>
 
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                     <Typography sx={sectionTitleSx}>Purchase Information</Typography>
                     <FormControlLabel
@@ -386,67 +423,64 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
                     />
                   </Box>
 
-                  <Box sx={{ display: 'grid', gap: 1.25 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                      <Typography sx={infoLabelSx}>Cost Price <Box component="span" sx={{ color: C.red }}>*</Box></Typography>
-                      <TextField
-                        name="purchase_rate"
-                        value={form.purchase_rate}
-                        onChange={handleChange}
-                        type="number"
-                        size="small"
-                        fullWidth
-                        disabled={!form.purchase_enabled}
-                        inputProps={{ min: 0, step: 0.01 }}
-                        InputProps={{
-                          startAdornment: (
-                            <InputAdornment position="start">
-                              <Typography sx={{ fontSize: '0.8125rem', color: C.hint }}>INR</Typography>
-                            </InputAdornment>
-                          ),
-                        }}
-                        sx={fieldSx}
-                      />
-                    </Box>
+                  <ZohoRow label="Cost Price" labelWidth={ITEM_FORM_LABEL_WIDTH} required noDivider={false}>
+                    <TextField
+                      name="purchase_rate"
+                      value={form.purchase_rate}
+                      onChange={handleChange}
+                      type="number"
+                      size="small"
+                      fullWidth
+                      disabled={!form.purchase_enabled}
+                      error={!!errors.purchase_rate}
+                      helperText={errors.purchase_rate || ''}
+                      inputProps={{ min: 0, max: 99999999, step: 0.01 }}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <Typography sx={{ fontSize: '0.8125rem', color: C.hint }}>INR</Typography>
+                          </InputAdornment>
+                        ),
+                      }}
+                      sx={fieldSx}
+                    />
+                  </ZohoRow>
 
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                      <Typography sx={infoLabelSx}>Account <Box component="span" sx={{ color: C.red }}>*</Box></Typography>
-                      <AppSelect name="purchase_account" value={form.purchase_account} onChange={handleChange} disabled={!form.purchase_enabled}>
-                        {purchaseAccountOptions.map((account) => <MenuItem key={account} value={account} sx={menuItemSx}>{account}</MenuItem>)}
-                      </AppSelect>
-                    </Box>
+                  <ZohoRow label="Account" labelWidth={ITEM_FORM_LABEL_WIDTH} required noDivider={false}>
+                    <AppSelect name="purchase_account" value={form.purchase_account} onChange={handleChange} disabled={!form.purchase_enabled}>
+                      {purchaseAccountOptions.map((account) => <MenuItem key={account} value={account} sx={menuItemSx}>{account}</MenuItem>)}
+                    </AppSelect>
+                  </ZohoRow>
 
-                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-                      <Typography sx={{ ...infoLabelSx, pt: '8px' }}>Description</Typography>
-                      <TextField
-                        name="purchase_description"
-                        value={form.purchase_description}
-                        onChange={handleChange}
-                        size="small"
-                        fullWidth
-                        multiline
-                        rows={3}
-                        disabled={!form.purchase_enabled}
-                        sx={fieldSx}
-                      />
-                    </Box>
+                  <ZohoRow label="Description" labelWidth={ITEM_FORM_LABEL_WIDTH} alignStart noDivider={false}>
+                    <TextField
+                      name="purchase_description"
+                      value={form.purchase_description}
+                      onChange={handleChange}
+                      size="small"
+                      fullWidth
+                      multiline
+                      rows={3}
+                      disabled={!form.purchase_enabled}
+                      inputProps={{ maxLength: 1000 }}
+                      sx={fieldSx}
+                    />
+                  </ZohoRow>
 
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                      <Typography sx={infoLabelSx}>Preferred Vendor</Typography>
-                      <AppSelect
-                        name="preferred_vendor_id"
-                        value={form.preferred_vendor_id}
-                        onChange={handleChange}
-                        displayEmpty
-                        disabled={!form.purchase_enabled}
-                      >
-                        <MenuItem value="" sx={{ ...menuItemSx, color: C.hint }}>None</MenuItem>
-                        {vendors.map((vendor) => (
-                          <MenuItem key={vendor.id} value={vendor.id} sx={menuItemSx}>{vendor.vendor_name}</MenuItem>
-                        ))}
-                      </AppSelect>
-                    </Box>
-                  </Box>
+                  <ZohoRow label="Preferred Vendor" labelWidth={ITEM_FORM_LABEL_WIDTH} noDivider>
+                    <AppSelect
+                      name="preferred_vendor_id"
+                      value={form.preferred_vendor_id}
+                      onChange={handleChange}
+                      displayEmpty
+                      disabled={!form.purchase_enabled}
+                    >
+                      <MenuItem value="" sx={{ ...menuItemSx, color: C.hint }}>None</MenuItem>
+                      {vendors.map((vendor) => (
+                        <MenuItem key={vendor.id} value={vendor.id} sx={menuItemSx}>{vendor.name || vendor.vendor_name}</MenuItem>
+                      ))}
+                    </AppSelect>
+                  </ZohoRow>
                 </Grid>
               </Grid>
             </Box>
@@ -605,7 +639,7 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
               </Button>
             </Box>
           </Paper>
-        </Container>
+        </Box>
       </Box>
     </MainLayout>
   );

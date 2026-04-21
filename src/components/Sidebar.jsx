@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Drawer from "@mui/material/Drawer";
 import List from "@mui/material/List";
@@ -7,6 +8,7 @@ import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import Collapse from "@mui/material/Collapse";
+import Popover from "@mui/material/Popover";
 import Divider from "@mui/material/Divider";
 import Box from "@mui/material/Box";
 import Avatar from "@mui/material/Avatar";
@@ -21,105 +23,42 @@ import DialogContentText from "@mui/material/DialogContentText";
 import IconButton from "@mui/material/IconButton";
 import { useTheme } from "@mui/material/styles";
 
-// ── Icons ────────────────────────────────────────────────────────────────────
-import DashboardIcon from "@mui/icons-material/Dashboard";
-import Inventory2Icon from "@mui/icons-material/Inventory2";
-import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
-import PeopleIcon from "@mui/icons-material/People";
-import RequestQuoteIcon from "@mui/icons-material/RequestQuote";
-import ReceiptIcon from "@mui/icons-material/Receipt";
-import EventRepeatIcon from "@mui/icons-material/EventRepeat";
-import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
-import LocalShippingIcon from "@mui/icons-material/LocalShipping";
-import AssignmentIcon from "@mui/icons-material/Assignment";
-import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
-import AssessmentIcon from "@mui/icons-material/Assessment";
-import SettingsIcon from "@mui/icons-material/Settings";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import LogoutIcon from "@mui/icons-material/Logout";
-import BusinessIcon from "@mui/icons-material/Business";
 
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
+import { useSidebar } from "../context/SidebarContext";
+import { NAV_CONFIG } from "../config/navConfig";
+import Logo from "./common/Logo";
+import { BRANDING } from "../config/branding";
 
-// ── Constants ────────────────────────────────────────────────────────────────
 // ── Constants ────────────────────────────────────────────────────────────────
 const DRAWER_EXPANDED = 256;
 const DRAWER_COLLAPSED = 72;
-
-// ── Navigation Configuration ─────────────────────────────────────────────────
-const NAV_CONFIG = {
-  dashboard: {
-    id: 'dashboard',
-    label: 'Dashboard',
-    icon: <DashboardIcon />,
-    path: '/dashboard',
-  },
-  items: {
-    id: 'items',
-    label: 'Items',
-    icon: <Inventory2Icon />,
-    path: '/products',
-  },
-  sales: {
-    id: 'sales',
-    label: 'Sales',
-    icon: <PointOfSaleIcon />,
-    expandable: true,
-    children: [
-      { id: 'customers', label: 'Customers', icon: <PeopleIcon />, path: '/customers' },
-      { id: 'quotes', label: 'Quotes', icon: <RequestQuoteIcon />, path: '/quotes' },
-      { id: 'invoices', label: 'Invoices', icon: <ReceiptIcon />, path: '/invoices' },
-      { id: 'recurring', label: 'Recurring Invoices', icon: <EventRepeatIcon />, path: '/recurring-profiles' },
-    ],
-  },
-  purchases: {
-    id: 'purchases',
-    label: 'Purchases',
-    icon: <ShoppingCartIcon />,
-    expandable: true,
-    children: [
-      { id: 'vendors', label: 'Vendors', icon: <LocalShippingIcon />, path: '/vendors' },
-      { id: 'purchase-orders', label: 'Purchase Orders', icon: <ShoppingCartIcon />, path: '/purchase-orders' },
-      { id: 'bills', label: 'Bills', icon: <AssignmentIcon />, path: '/bills' },
-    ],
-  },
-  banking: {
-    id: 'banking',
-    label: 'Banking',
-    icon: <AccountBalanceIcon />,
-    expandable: true,
-    children: [
-      { id: 'bank-accounts', label: 'Bank Accounts', icon: <AccountBalanceIcon />, path: '/bank-accounts' },
-    ],
-  },
-  reports: {
-    id: 'reports',
-    label: 'Reports',
-    icon: <AssessmentIcon />,
-    path: '/reports',
-  },
-  settings: {
-    id: 'settings',
-    label: 'Settings',
-    icon: <SettingsIcon />,
-    path: '/settings/users',
-    adminOnly: true,
-  },
-};
+const SIDEBAR_SCROLL_KEY = "sidebarScrollTop";
 
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
+  const { t } = useTranslation();
   const { logout, isAdmin } = useAuth();
+  const {
+    isCollapsed,
+    toggleSidebar,
+    mobileOpen,
+    setMobileOpen,
+    isMobile,
+  } = useSidebar();
+  const isDesktopCollapsed = !isMobile && isCollapsed;
+  const navScrollRef = useRef(null);
 
-  // ── Sidebar collapse state (persisted) ───────────────────────────────────
-  const [isCollapsed, setIsCollapsed] = useState(
-    () => localStorage.getItem("sidebarCollapsed") === "true"
-  );
+  const getNavLabel = (config) =>
+    config?.labelKey ? t(config.labelKey, config.label) : config?.label;
 
   // ── Expanded sections state (persisted per section) ──────────────────────
   const [expandedSections, setExpandedSections] = useState(() => {
@@ -146,15 +85,10 @@ const Sidebar = () => {
 
   // ── Logout dialog ────────────────────────────────────────────────────────
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [popoverAnchor, setPopoverAnchor] = useState(null);
+  const [popoverKey, setPopoverKey] = useState(null);
 
-  const drawerWidth = isCollapsed ? DRAWER_COLLAPSED : DRAWER_EXPANDED;
-
-  // ── Toggle sidebar collapse ──────────────────────────────────────────────
-  const toggleSidebar = () => {
-    const next = !isCollapsed;
-    setIsCollapsed(next);
-    localStorage.setItem("sidebarCollapsed", String(next));
-  };
+  const drawerWidth = isDesktopCollapsed ? DRAWER_COLLAPSED : DRAWER_EXPANDED;
 
   // ── Toggle section expansion ─────────────────────────────────────────────
   const toggleSection = (sectionId) => {
@@ -182,38 +116,65 @@ const Sidebar = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
-  // ── Auto-collapse on small screens ───────────────────────────────────────
+  // ── Close transient navigation surfaces on route change ─────────────────
   useEffect(() => {
-    const onResize = () => {
-      if (window.innerWidth < 768 && !isCollapsed) {
-        setIsCollapsed(true);
-        localStorage.setItem("sidebarCollapsed", "true");
-      }
+    setMobileOpen(false);
+    setPopoverAnchor(null);
+    setPopoverKey(null);
+  }, [location.pathname, setMobileOpen]);
+
+  // ── Restore sidebar scroll on mount (fallback for reload/remount) ───────
+  useEffect(() => {
+    const node = navScrollRef.current;
+    if (!node) return;
+    const raw = sessionStorage.getItem(SIDEBAR_SCROLL_KEY);
+    const saved = raw ? Number(raw) : 0;
+    if (!Number.isNaN(saved)) {
+      node.scrollTop = saved;
+    }
+  }, []);
+
+  // ── Persist sidebar scroll while user scrolls ───────────────────────────
+  useEffect(() => {
+    const node = navScrollRef.current;
+    if (!node) return;
+    const onScroll = () => {
+      sessionStorage.setItem(SIDEBAR_SCROLL_KEY, String(node.scrollTop));
     };
-    onResize();
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, [isCollapsed]);
+    node.addEventListener("scroll", onScroll, { passive: true });
+    return () => node.removeEventListener("scroll", onScroll);
+  }, []);
 
   // ── User info ─────────────────────────────────────────────────────────────
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-  const username = storedUser.username || "Admin User";
-  const email = storedUser.email || "admin@smartinvoice.com";
+  const username = storedUser.username || t('sidebar.adminUser');
+  const email = storedUser.email || "admin@solidevbooks.com";
   const initials = username.charAt(0).toUpperCase();
 
   // ── Logout handlers ───────────────────────────────────────────────────────
   const handleLogoutClick = () => setShowLogoutDialog(true);
   const handleLogoutCancel = () => setShowLogoutDialog(false);
-  const handleLogoutConfirm = () => { 
-    setShowLogoutDialog(false); 
-    logout(); 
-    navigate("/"); 
+  const handleLogoutConfirm = () => {
+    setShowLogoutDialog(false);
+    logout();
+    navigate("/");
+  };
+
+  const handlePopoverClose = () => {
+    setPopoverAnchor(null);
+    setPopoverKey(null);
+  };
+
+  const handleNavigate = (path) => {
+    handlePopoverClose();
+    setMobileOpen(false);
+    navigate(path);
   };
 
   // ── Check if path is active ───────────────────────────────────────────────
   const isPathActive = (path) => {
-    if (path === '/dashboard') {
-      return location.pathname === '/dashboard';
+    if (path === "/dashboard") {
+      return location.pathname === "/dashboard";
     }
     return location.pathname.startsWith(path);
   };
@@ -221,7 +182,7 @@ const Sidebar = () => {
   // ── Check if section has active child ─────────────────────────────────────
   const isSectionActive = (section) => {
     if (!section.expandable || !section.children) return false;
-    return section.children.some(child => isPathActive(child.path));
+    return section.children.some((child) => isPathActive(child.path));
   };
 
   // ── Drawer styles ─────────────────────────────────────────────────────────
@@ -240,19 +201,19 @@ const Sidebar = () => {
   };
 
   // ── Nav button styles ─────────────────────────────────────────────────────
-  const navButtonSx = (isActive, isChild = false) => ({
+  const navButtonSx = (isActive, isChild = false, forceExpanded = false) => ({
     borderRadius: 1.5,
-    py: 1.25,
-    px: isCollapsed ? 0 : (isChild ? 1.5 : 2),
-    pl: isCollapsed ? 0 : (isChild ? 3.5 : 2),
-    justifyContent: isCollapsed ? "center" : "flex-start",
+    py: isChild ? 1 : 1.25,
+    px: isDesktopCollapsed && !forceExpanded ? 0 : isChild ? 1.5 : 2,
+    pl: isDesktopCollapsed && !forceExpanded ? 0 : isChild ? 3.5 : 2,
+    justifyContent: isDesktopCollapsed && !forceExpanded ? "center" : "flex-start",
     minHeight: isChild ? 40 : 44,
     mb: 0.5,
     bgcolor: isActive ? "primary.main" : "transparent",
     color: isActive ? "common.white" : "rgba(255,255,255,0.7)",
     transition: "all 0.2s ease",
     "& .MuiListItemIcon-root": {
-      minWidth: isCollapsed ? 0 : (isChild ? 32 : 40),
+      minWidth: isDesktopCollapsed && !forceExpanded ? 0 : isChild ? 32 : 40,
       justifyContent: "center",
       color: isActive ? "common.white" : "rgba(255,255,255,0.65)",
     },
@@ -269,25 +230,28 @@ const Sidebar = () => {
   });
 
   // ── Render simple nav item ────────────────────────────────────────────────
-  const renderNavItem = (config, isChild = false) => {
+  const renderNavItem = (config, isChild = false, forceExpanded = false) => {
     if (config.adminOnly && !isAdmin) return null;
-    
+
+    const showLabels = forceExpanded || !isDesktopCollapsed;
+    const showTooltip = isDesktopCollapsed && !forceExpanded;
     const isActive = isPathActive(config.path);
-    
+    const label = getNavLabel(config);
+
     const button = (
       <ListItemButton
-        onClick={() => navigate(config.path)}
-        sx={navButtonSx(isActive, isChild)}
+        onClick={() => handleNavigate(config.path)}
+        sx={navButtonSx(isActive, isChild, forceExpanded)}
       >
         <ListItemIcon>{config.icon}</ListItemIcon>
-        {!isCollapsed && <ListItemText primary={config.label} />}
+        {showLabels && <ListItemText primary={label} />}
       </ListItemButton>
     );
 
     return (
       <ListItem key={config.id} disablePadding>
-        {isCollapsed ? (
-          <Tooltip title={config.label} placement="right" arrow>
+        {showTooltip ? (
+          <Tooltip title={label} placement="right" arrow>
             {button}
           </Tooltip>
         ) : button}
@@ -296,36 +260,41 @@ const Sidebar = () => {
   };
 
   // ── Render expandable section ─────────────────────────────────────────────
-  const renderExpandableSection = (sectionKey, config) => {
+  const renderExpandableSection = (sectionKey, config, forceExpanded = false) => {
+    if (config.adminOnly && !isAdmin) return null;
+
+    const showLabels = forceExpanded || !isDesktopCollapsed;
+    const showTooltip = isDesktopCollapsed && !forceExpanded;
+    const usePopover = isDesktopCollapsed && !forceExpanded;
     const isExpanded = expandedSections[sectionKey] || false;
     const hasActiveChild = isSectionActive(config);
+    const label = getNavLabel(config);
 
     const parentButton = (
       <ListItemButton
-        onClick={() => {
-          if (isCollapsed) {
-            // In collapsed mode, navigate to first child
-            if (config.children && config.children.length > 0) {
-              navigate(config.children[0].path);
-            }
+        onClick={(event) => {
+          if (usePopover) {
+            setPopoverAnchor(event.currentTarget);
+            setPopoverKey(sectionKey);
           } else {
             toggleSection(sectionKey);
           }
         }}
         sx={{
-          ...navButtonSx(hasActiveChild && isCollapsed, false),
-          mb: isCollapsed ? 0.5 : 0,
+          ...navButtonSx(hasActiveChild && usePopover, false, forceExpanded),
+          mb: usePopover ? 0.5 : 0,
         }}
       >
         <ListItemIcon>{config.icon}</ListItemIcon>
-        {!isCollapsed && (
+        {showLabels && (
           <>
-            <ListItemText primary={config.label} />
-            {isExpanded ? (
-              <ExpandLessIcon sx={{ fontSize: 18, color: "rgba(255,255,255,0.65)" }} />
-            ) : (
-              <ExpandMoreIcon sx={{ fontSize: 18, color: "rgba(255,255,255,0.65)" }} />
-            )}
+            <ListItemText primary={label} />
+            {!usePopover &&
+              (isExpanded ? (
+                <ExpandLessIcon sx={{ fontSize: 18, color: "rgba(255,255,255,0.65)" }} />
+              ) : (
+                <ExpandMoreIcon sx={{ fontSize: 18, color: "rgba(255,255,255,0.65)" }} />
+              ))}
           </>
         )}
       </ListItemButton>
@@ -333,17 +302,17 @@ const Sidebar = () => {
 
     return (
       <ListItem key={sectionKey} disablePadding sx={{ flexDirection: "column", alignItems: "stretch" }}>
-        {isCollapsed ? (
-          <Tooltip title={config.label} placement="right" arrow>
+        {showTooltip ? (
+          <Tooltip title={label} placement="right" arrow>
             {parentButton}
           </Tooltip>
         ) : parentButton}
 
         {/* Children - only shown in expanded mode */}
-        {!isCollapsed && config.children && (
+        {!usePopover && showLabels && config.children && (
           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
             <List disablePadding>
-              {config.children.map(child => renderNavItem(child, true))}
+              {config.children.map((child) => renderNavItem(child, true, forceExpanded))}
             </List>
           </Collapse>
         )}
@@ -351,58 +320,47 @@ const Sidebar = () => {
     );
   };
 
-  return (
+  const renderNavContent = (forceExpanded = false) => (
     <>
-      <Drawer
-        variant="permanent"
-        sx={{
-          flexShrink: 0,
-          width: drawerWidth,
-          transition: theme.transitions.create("width", {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.standard,
-          }),
-          "& .MuiDrawer-paper": drawerPaperSx,
-        }}
-      >
-        {/* ── Brand / Logo ─────────────────────────────────────────────── */}
+      {!isMobile && (
         <Box
           sx={{
             display: "flex",
             alignItems: "center",
-            justifyContent: isCollapsed ? "center" : "flex-start",
+            justifyContent: isDesktopCollapsed ? "center" : "flex-start",
             gap: 1.5,
-            px: isCollapsed ? 1.5 : 2.5,
+            px: isDesktopCollapsed ? 1.5 : 2.5,
             py: 2.5,
             borderBottom: "1px solid",
             borderColor: "grey.800",
           }}
         >
-          <BusinessIcon sx={{ fontSize: 28, color: "primary.main", flexShrink: 0 }} />
-          {!isCollapsed && (
+          <Logo size={28} showText={false} variant="light" />
+          {!isDesktopCollapsed && (
             <Box>
               <Typography variant="subtitle1" fontWeight={700} color="common.white" lineHeight={1.2}>
-                Smart Invoice
+                {BRANDING.appName}
               </Typography>
               <Typography variant="caption" sx={{ color: "grey.500" }}>
-                Pro Edition
+                {BRANDING.tagline}
               </Typography>
             </Box>
           )}
         </Box>
+      )}
 
-        {/* ── Collapse Toggle ───────────────────────────────────────────── */}
+      {!isMobile && (
         <Box
           sx={{
             display: "flex",
-            justifyContent: isCollapsed ? "center" : "flex-end",
+            justifyContent: isDesktopCollapsed ? "center" : "flex-end",
             px: 1,
             py: 0.75,
             borderBottom: "1px solid",
             borderColor: "grey.800",
           }}
         >
-          <Tooltip title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"} placement="right" arrow>
+          <Tooltip title={isDesktopCollapsed ? t('sidebar.expand') : t('sidebar.collapse')} placement="right" arrow>
             <IconButton
               onClick={toggleSidebar}
               size="small"
@@ -412,117 +370,183 @@ const Sidebar = () => {
                 borderRadius: 1.5,
               }}
             >
-              {isCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+              {isDesktopCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
             </IconButton>
           </Tooltip>
         </Box>
+      )}
 
-        {/* ── Navigation List ───────────────────────────────────────────── */}
-        <Box sx={{ flex: 1, py: 2, overflowY: "auto", overflowX: "hidden" }}>
-          <List sx={{ px: isCollapsed ? 1 : 1.5 }} disablePadding>
-            {/* Dashboard */}
-            {renderNavItem(NAV_CONFIG.dashboard)}
+      <Box ref={navScrollRef} sx={{ flex: 1, py: 2, overflowY: "auto", overflowX: "hidden" }}>
+        <List sx={{ px: isDesktopCollapsed && !forceExpanded ? 1 : 1.5 }} disablePadding>
+          {renderNavItem(NAV_CONFIG.dashboard, false, forceExpanded)}
+          {renderNavItem(NAV_CONFIG.items, false, forceExpanded)}
+          {renderExpandableSection("sales", NAV_CONFIG.sales, forceExpanded)}
+          {renderExpandableSection("purchases", NAV_CONFIG.purchases, forceExpanded)}
+          {renderExpandableSection("banking", NAV_CONFIG.banking, forceExpanded)}
+          {renderNavItem(NAV_CONFIG.reports, false, forceExpanded)}
+          {renderExpandableSection("settings", NAV_CONFIG.settings, forceExpanded)}
+        </List>
+      </Box>
 
-            {/* Items */}
-            {renderNavItem(NAV_CONFIG.items)}
-
-            {/* Sales - expandable */}
-            {renderExpandableSection('sales', NAV_CONFIG.sales)}
-
-            {/* Purchases - expandable */}
-            {renderExpandableSection('purchases', NAV_CONFIG.purchases)}
-
-            {/* Banking - expandable */}
-            {renderExpandableSection('banking', NAV_CONFIG.banking)}
-
-            {/* Reports */}
-            {renderNavItem(NAV_CONFIG.reports)}
-
-            {/* Settings (admin only) */}
-            {renderNavItem(NAV_CONFIG.settings)}
-          </List>
-        </Box>
-
-        {/* ── User Profile + Logout ──────────────────────────────────────── */}
-        <Divider sx={{ borderColor: "grey.800" }} />
-        <Box sx={{ p: isCollapsed ? 1 : 2 }}>
-          {/* Profile row (expanded only) */}
-          {!isCollapsed && (
-            <Box
+      <Divider sx={{ borderColor: "grey.800" }} />
+      <Box sx={{ p: isDesktopCollapsed && !forceExpanded ? 1 : 2 }}>
+        {(!isDesktopCollapsed || forceExpanded) && (
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1.5,
+              mb: 1.5,
+              p: 1.5,
+              borderRadius: 2,
+              bgcolor: "grey.800",
+            }}
+          >
+            <Avatar
               sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 1.5,
-                mb: 1.5,
-                p: 1.5,
-                borderRadius: 2,
-                bgcolor: "grey.800",
+                width: 36,
+                height: 36,
+                bgcolor: "primary.main",
+                fontSize: "0.9rem",
+                fontWeight: 700,
+                flexShrink: 0,
               }}
             >
-              <Avatar
-                sx={{
-                  width: 36,
-                  height: 36,
-                  bgcolor: "primary.main",
-                  fontSize: "0.9rem",
-                  fontWeight: 700,
-                  flexShrink: 0,
-                }}
-              >
-                {initials}
-              </Avatar>
-              <Box sx={{ minWidth: 0 }}>
-                <Typography variant="body2" fontWeight={600} color="common.white" noWrap>
-                  {username}
-                </Typography>
-                <Typography variant="caption" sx={{ color: "grey.500" }} noWrap>
-                  {email}
-                </Typography>
-              </Box>
+              {initials}
+            </Avatar>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="body2" fontWeight={600} color="common.white" noWrap>
+                {username}
+              </Typography>
+              <Typography variant="caption" sx={{ color: "grey.500" }} noWrap>
+                {email}
+              </Typography>
             </Box>
-          )}
+          </Box>
+        )}
 
-          {/* Logout */}
-          {isCollapsed ? (
-            <Tooltip title="Sign out" placement="right" arrow>
-              <IconButton
-                onClick={handleLogoutClick}
-                sx={{
-                  width: "100%",
-                  borderRadius: 2,
-                  py: 1.25,
-                  color: "grey.500",
-                  "&:hover": { bgcolor: "error.900", color: "error.light" },
-                }}
-              >
-                <LogoutIcon />
-              </IconButton>
-            </Tooltip>
-          ) : (
-            <Button
-              variant="outlined"
-              fullWidth
-              startIcon={<LogoutIcon />}
+        {isDesktopCollapsed && !forceExpanded ? (
+          <Tooltip title={t('sidebar.signOut')} placement="right" arrow>
+            <IconButton
               onClick={handleLogoutClick}
               sx={{
+                width: "100%",
                 borderRadius: 2,
-                py: 1,
-                fontWeight: 600,
-                textTransform: "none",
-                borderColor: "grey.700",
-                color: "grey.400",
-                "&:hover": {
-                  borderColor: "error.main",
-                  bgcolor: "error.900",
-                  color: "error.light",
-                },
+                py: 1.25,
+                color: "grey.500",
+                "&:hover": { bgcolor: "error.900", color: "error.light" },
               }}
             >
-              Sign out
-            </Button>
-          )}
-        </Box>
-      </Drawer>
+              <LogoutIcon />
+            </IconButton>
+          </Tooltip>
+        ) : (
+          <Button
+            variant="outlined"
+            fullWidth
+            startIcon={<LogoutIcon />}
+            onClick={handleLogoutClick}
+            sx={{
+              borderRadius: 2,
+              py: 1,
+              fontWeight: 600,
+              textTransform: "none",
+              borderColor: "grey.700",
+              color: "grey.400",
+              "&:hover": {
+                borderColor: "error.main",
+                bgcolor: "error.900",
+                color: "error.light",
+              },
+            }}
+          >
+            {t('sidebar.signOut')}
+          </Button>
+        )}
+      </Box>
+    </>
+  );
+
+  return (
+    <>
+      {isMobile ? (
+        <Drawer
+          variant="temporary"
+          open={mobileOpen}
+          onClose={() => setMobileOpen(false)}
+          ModalProps={{ keepMounted: true }}
+          sx={{
+            display: { xs: "block", md: "none" },
+            "& .MuiDrawer-paper": {
+              ...drawerPaperSx,
+              width: DRAWER_EXPANDED,
+            },
+          }}
+        >
+          {renderNavContent(true)}
+        </Drawer>
+      ) : (
+        <Drawer
+          variant="permanent"
+          sx={{
+            flexShrink: 0,
+            width: drawerWidth,
+            transition: theme.transitions.create("width", {
+              easing: theme.transitions.easing.sharp,
+              duration: theme.transitions.duration.standard,
+            }),
+            "& .MuiDrawer-paper": drawerPaperSx,
+          }}
+        >
+          {renderNavContent(false)}
+        </Drawer>
+      )}
+
+      <Popover
+        open={Boolean(popoverAnchor) && Boolean(popoverKey)}
+        anchorEl={popoverAnchor}
+        onClose={handlePopoverClose}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "left" }}
+        PaperProps={{
+          sx: {
+            width: 260,
+            bgcolor: "grey.900",
+            color: "common.white",
+            border: "1px solid",
+            borderColor: "grey.700",
+            boxShadow: 8,
+            borderRadius: 2,
+            overflow: "hidden",
+          },
+        }}
+      >
+        {popoverKey && NAV_CONFIG[popoverKey]?.children && (
+          <>
+            <Box sx={{ px: 2, py: 1.5, borderBottom: "1px solid", borderColor: "grey.800" }}>
+              <Typography variant="subtitle2" fontWeight={700} color="common.white">
+                {getNavLabel(NAV_CONFIG[popoverKey])}
+              </Typography>
+            </Box>
+            <List sx={{ px: 1.5, py: 1 }} disablePadding>
+              {NAV_CONFIG[popoverKey].children.map((child) => {
+                const isActive = isPathActive(child.path);
+                return (
+                  <ListItem key={child.id} disablePadding>
+                    <ListItemButton
+                      onClick={() => handleNavigate(child.path)}
+                      sx={navButtonSx(isActive, true, true)}
+                    >
+                      <ListItemIcon>{child.icon}</ListItemIcon>
+                      <ListItemText primary={getNavLabel(child)} />
+                    </ListItemButton>
+                  </ListItem>
+                );
+              })}
+            </List>
+          </>
+        )}
+      </Popover>
 
       {/* ── Logout Confirmation Dialog ──────────────────────────────────────── */}
       <Dialog
@@ -532,11 +556,11 @@ const Sidebar = () => {
         PaperProps={{ sx: { borderRadius: 3, minWidth: 380 } }}
       >
         <DialogTitle id="logout-dialog-title" sx={{ fontWeight: 600 }}>
-          Confirm Sign Out
+          {t('sidebar.confirmSignOut', 'Confirm Sign Out')}
         </DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to sign out? You will need to log in again to access your dashboard.
+            {t('sidebar.signOutConfirmMsg', 'Are you sure you want to sign out? You will need to log in again to access your dashboard.')}
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ p: 2, pt: 0 }}>
@@ -545,7 +569,7 @@ const Sidebar = () => {
             variant="outlined"
             sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
           >
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button
             onClick={handleLogoutConfirm}
@@ -554,7 +578,7 @@ const Sidebar = () => {
             autoFocus
             sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
           >
-            Sign Out
+            {t('sidebar.signOut')}
           </Button>
         </DialogActions>
       </Dialog>

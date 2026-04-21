@@ -16,7 +16,6 @@ import {
   Chip,
   Button,
   IconButton,
-  LinearProgress
 } from "@mui/material";
 import {
   Inventory,
@@ -25,6 +24,7 @@ import {
   MoreVert,
   Refresh
 } from "@mui/icons-material";
+import EmptyState from "./common/EmptyState";
 
 const ProductStockSummary = () => {
   const [products, setProducts] = useState([]);
@@ -203,16 +203,12 @@ const ProductStockSummary = () => {
               </TableRow>
             ) : products.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={3} sx={{ textAlign: 'center', py: 6 }}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                    <Inventory sx={{ fontSize: 48, color: '#9ca3af' }} />
-                    <Typography color="text.secondary" variant="h6">
-                      No products found
-                    </Typography>
-                    <Typography color="text.secondary" variant="body2">
-                      Add some products to see inventory data
-                    </Typography>
-                  </Box>
+                <TableCell colSpan={3}>
+                  <EmptyState
+                    icon={<Inventory />}
+                    title="No products found"
+                    subtitle="Add some products to see inventory data"
+                  />
                 </TableCell>
               </TableRow>
             ) : (

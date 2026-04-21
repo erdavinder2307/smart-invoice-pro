@@ -11,7 +11,6 @@ import {
   useMediaQuery
 } from '@mui/material';
 import {
-  Business,
   Email,
   Phone,
   LocationOn,
@@ -20,6 +19,7 @@ import {
   LinkedIn,
   GitHub
 } from '@mui/icons-material';
+import Logo from '../common/Logo';
 
 
 const Footer = () => {
@@ -53,10 +53,7 @@ const Footer = () => {
           {/* Company Info — full width on mobile */}
           <Grid item xs={12} md={4}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, justifyContent: { xs: 'center', md: 'flex-start' } }}>
-              <Business sx={{ color: 'primary.main', mr: 1, fontSize: 30 }} />
-              <Typography variant="h6" sx={{ fontWeight: 700, color: 'white', fontSize: '1.1rem' }}>
-                Smart Invoice Pro
-              </Typography>
+              <Logo size={30} showText={true} textColor="#ffffff" variant="light" />
             </Box>
             <Typography variant="body2" sx={{ color: 'grey.400', mb: 3, lineHeight: 1.7, maxWidth: 320, textAlign: { xs: 'center', md: 'left' } }}>
               Simplifying invoicing and bookkeeping for modern businesses with
@@ -171,7 +168,7 @@ const Footer = () => {
           }}
         >
           <Typography variant="body2" sx={{ color: 'grey.500' }}>
-            © {new Date().getFullYear()} Smart Invoice Pro. All rights reserved.
+            © {new Date().getFullYear()} Solidev Books. All rights reserved.
           </Typography>
           <Box sx={{ display: 'flex', gap: { xs: 2, sm: 3 }, flexWrap: 'wrap', justifyContent: 'center' }}>
             {[

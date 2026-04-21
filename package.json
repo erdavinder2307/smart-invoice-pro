@@ -13,13 +13,17 @@
     "@testing-library/react": "^16.2.0",
     "@testing-library/user-event": "^13.5.0",
     "axios": "^1.8.4",
+    "chart.js": "^4.5.1",
     "framer-motion": "^12.33.0",
     "history": "^5.3.0",
+    "i18next": "^26.0.6",
+    "i18next-browser-languagedetector": "^8.2.1",
     "jspdf": "^4.2.0",
     "jspdf-autotable": "^5.0.7",
     "react": "^19.0.0",
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.0.0",
+    "react-i18next": "^17.0.4",
     "react-router-dom": "^7.5.1",
     "react-scripts": "5.0.1",
     "recharts": "^3.1.2",
@@ -54,5 +58,67 @@
   "overrides": {
     "nth-check": "^2.0.1",
     "svgo": "^3.0.0"
+  },
+  "jest": {
+    "transformIgnorePatterns": [
+      "node_modules/(?!(axios|react-router|react-router-dom)/)"
+    ],
+    "moduleNameMapper": {
+      "\\.(css|less|scss)$": "<rootDir>/src/__mocks__/styleMock.js",
+      "^react-router-dom$": "<rootDir>/node_modules/react-router-dom/dist/index.js",
+      "^react-router$": "<rootDir>/node_modules/react-router/dist/development/index.js",
+      "^react-router/dom$": "<rootDir>/node_modules/react-router/dist/development/dom-export.js"
+    },
+    "coverageThreshold": {
+      "./src/services/": {
+        "statements": 80,
+        "functions": 80,
+        "lines": 80
+      },
+      "./src/components/common/": {
+        "statements": 70,
+        "functions": 70,
+        "lines": 70
+      },
+      "./src/components/Auth/": {
+        "statements": 70,
+        "functions": 60,
+        "lines": 70
+      },
+      "./src/pages/Dashboard.jsx": {
+        "statements": 70,
+        "functions": 70,
+        "lines": 70
+      },
+      "./src/admin/services/": {
+        "statements": 80,
+        "functions": 80,
+        "lines": 80
+      },
+      "./src/admin/routes/": {
+        "statements": 60,
+        "functions": 50,
+        "lines": 60
+      },
+      "./src/admin/pages/": {
+        "statements": 20,
+        "functions": 15,
+        "lines": 20
+      },
+      "./src/admin/components/": {
+        "statements": 70,
+        "functions": 60,
+        "lines": 70
+      },
+      "./src/context/": {
+        "statements": 50,
+        "functions": 40,
+        "lines": 50
+      },
+      "./src/config/": {
+        "statements": 50,
+        "lines": 50
+      }
+    }
   }
 }

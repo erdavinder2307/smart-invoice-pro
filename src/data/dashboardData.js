@@ -4,7 +4,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import React from "react";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
-import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import PaymentsIcon from "@mui/icons-material/Payments";

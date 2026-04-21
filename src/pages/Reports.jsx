@@ -18,6 +18,7 @@ import TimelineIcon from '@mui/icons-material/Timeline';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import MoneyOffIcon from '@mui/icons-material/MoneyOff';
+import PaymentsIcon from '@mui/icons-material/Payments';
 
 const Reports = () => {
   const navigate = useNavigate();
@@ -45,6 +46,13 @@ const Reports = () => {
       color: '#FF9800'
     },
     {
+      title: 'A/P Aging',
+      description: 'Track overdue bills by age brackets',
+      icon: <MoneyOffIcon sx={{ fontSize: 48, color: 'error.main' }} />,
+      path: '/reports/ap-aging',
+      color: '#F44336'
+    },
+    {
       title: 'Cash Flow',
       description: 'Monitor cash inflows and outflows',
       icon: <TimelineIcon sx={{ fontSize: 48, color: 'success.main' }} />,
@@ -57,6 +65,27 @@ const Reports = () => {
       icon: <ReceiptLongIcon sx={{ fontSize: 48, color: 'secondary.main' }} />,
       path: '/reports/sales-summary',
       color: '#9C27B0'
+    },
+    {
+      title: 'GST Tax Summary',
+      description: 'CGST, SGST and IGST breakdown by GST rate',
+      icon: <ReceiptLongIcon sx={{ fontSize: 48, color: 'warning.main' }} />,
+      path: '/reports/gst-tax-summary',
+      color: '#FF9800'
+    },
+    {
+      title: 'Payments Received',
+      description: 'Customer payments received in a period',
+      icon: <PaymentsIcon sx={{ fontSize: 48, color: 'success.main' }} />,
+      path: '/reports/payments-received',
+      color: '#4CAF50'
+    },
+    {
+      title: 'Payments Made',
+      description: 'Vendor payments made in a period',
+      icon: <PaymentsIcon sx={{ fontSize: 48, color: 'error.main' }} />,
+      path: '/reports/payments-made',
+      color: '#F44336'
     },
     {
       title: 'Expense Report',

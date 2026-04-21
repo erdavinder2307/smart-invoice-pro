@@ -9,14 +9,8 @@ import {
   Box,
   Button,
   Typography,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
   TableRow,
-  CircularProgress,
+  TableCell,
   Alert,
   TextField,
   Dialog,
@@ -31,18 +25,25 @@ import {
   MenuItem,
   Select,
   FormControl,
-  TablePagination,
-  Container
+  Container,
+  CircularProgress,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
+import StandardDataTable from "./common/StandardDataTable";
+import ResponsiveDataView from "./common/ResponsiveDataView";
+import VendorCard from "./common/VendorCard";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import SearchIcon from "@mui/icons-material/Search";
 import BusinessIcon from "@mui/icons-material/Business";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import { useTranslation } from "react-i18next";
 
 const VendorList = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -51,6 +52,8 @@ const VendorList = () => {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   useEffect(() => {
     fetchVendors();
@@ -62,7 +65,7 @@ const VendorList = () => {
       const response = await axios.get(createApiUrl("/api/vendors"));
       setVendors(response.data);
     } catch (error) {
-      setError("Failed to fetch vendors");
+      setError(t('vendorList.failedFetch'));
       console.error(error);
     }
     setLoading(false);
@@ -75,7 +78,7 @@ const VendorList = () => {
       await fetchVendors();
       setConfirmDeleteId(null);
     } catch (error) {
-      setError("Failed to delete vendor");
+      setError(t('vendorList.failedDelete'));
     }
     setLoading(false);
   };
@@ -127,10 +130,10 @@ const VendorList = () => {
           >
             <Box>
               <Typography variant="h4" fontWeight={700} gutterBottom>
-                Vendors
+                {t('vendorList.title')}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Manage your suppliers and track payables
+                {t('vendorList.subtitle')}
               </Typography>
             </Box>
             <Button
@@ -146,7 +149,7 @@ const VendorList = () => {
                 boxShadow: 2
               }}
             >
-              New Vendor
+              {t('vendorList.newVendor')}
             </Button>
           </Box>
 
@@ -154,7 +157,7 @@ const VendorList = () => {
           <Grid container spacing={2} sx={{ mb: 3 }}>
             <Grid item xs={12} sm={6} md={4}>
               <SummaryCard
-                label="Total Vendors"
+                label={t('vendorList.totalVendors')}
                 value={totalVendors}
                 icon={<LocalShippingIcon />}
                 accentColor="primary.main"
@@ -162,7 +165,7 @@ const VendorList = () => {
             </Grid>
             <Grid item xs={12} sm={6} md={4}>
               <SummaryCard
-                label="Active Vendors"
+                label={t('vendorList.activeVendors')}
                 value={activeVendors}
                 icon={<BusinessIcon />}
                 accentColor="success.main"
@@ -170,7 +173,7 @@ const VendorList = () => {
             </Grid>
             <Grid item xs={12} sm={6} md={4}>
               <SummaryCard
-                label="Inactive Vendors"
+                label={t('vendorList.inactiveVendors')}
                 value={totalVendors - activeVendors}
                 icon={<BusinessIcon />}
                 accentColor="warning.main"
@@ -199,7 +202,7 @@ const VendorList = () => {
                 displayEmpty
                 sx={{ borderRadius: 2 }}
               >
-                <MenuItem value="All">All Status</MenuItem>
+                <MenuItem value="All">{t('common.allStatus')}</MenuItem>
                 <MenuItem value="Active">Active</MenuItem>
                 <MenuItem value="Inactive">Inactive</MenuItem>
               </Select>
@@ -240,122 +243,74 @@ const VendorList = () => {
         )}
 
         {/* Main Table */}
-        <Paper
-          elevation={0}
-          sx={{
-            borderRadius: 3,
-            border: "1px solid",
-            borderColor: "grey.200",
-            overflow: "hidden"
+        <ResponsiveDataView
+          isMobile={isMobile}
+          renderCard={(vendor) => (
+            <VendorCard
+              vendor={vendor}
+              onEdit={() => navigate(`/vendors/edit/${vendor.id}`)}
+              onDelete={() => setConfirmDeleteId(vendor.id)}
+            />
+          )}
+          columns={[
+            { key: 'vendor_name', label: t('vendorList.columns.vendorName') },
+            { key: 'contact_person', label: t('vendorList.columns.contactPerson') },
+            { key: 'email', label: t('vendorList.columns.email') },
+            { key: 'phone', label: t('vendorList.columns.phone') },
+            { key: 'payment_terms', label: t('vendorList.columns.paymentTerms') },
+            { key: 'status', label: t('common.status'), align: 'center' },
+            { key: 'actions', label: t('common.actions'), align: 'center' },
+          ]}
+          rows={paginatedVendors}
+          loading={loading}
+          emptyIcon={<LocalShippingIcon sx={{ fontSize: 48 }} />}
+          emptyTitle={searchTerm ? t('vendorList.noVendors') : t('vendorList.noVendorsYet')}
+          emptySubtitle={searchTerm ? "Try adjusting your search terms" : "Click 'New Vendor' to add your first vendor"}
+          renderRow={(vendor) => (
+            <TableRow key={vendor.id} hover sx={{ cursor: 'pointer' }}>
+              <TableCell>
+                <Typography variant="body2" fontWeight={600}>{vendor.vendor_name}</Typography>
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2">{vendor.contact_person || "-"}</Typography>
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2">{vendor.email}</Typography>
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2">{vendor.phone || "-"}</Typography>
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2">{vendor.payment_terms || "Net 30"}</Typography>
+              </TableCell>
+              <TableCell align="center">
+                <StatusBadge status={vendor.status || "Active"} />
+              </TableCell>
+              <TableCell align="center">
+                <Box display="flex" gap={0.5} justifyContent="center">
+                  <Tooltip title="Edit">
+                    <IconButton size="small" onClick={() => navigate(`/vendors/edit/${vendor.id}`)} sx={{ color: 'primary.main' }}>
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Delete">
+                    <IconButton size="small" onClick={() => setConfirmDeleteId(vendor.id)} sx={{ color: 'error.main' }}>
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              </TableCell>
+            </TableRow>
+          )}
+          pagination={{
+            rowsPerPageOptions: [10, 25, 50],
+            count: filteredVendors.length,
+            rowsPerPage,
+            page,
+            onPageChange: handleChangePage,
+            onRowsPerPageChange: handleChangeRowsPerPage,
           }}
-        >
-          <TableContainer sx={{ overflowX: "hidden" }}>
-            <Table stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 600 }}>Vendor Name</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Contact Person</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Email</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Phone</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Payment Terms</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }} align="center">
-                    Actions
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
-                      <CircularProgress size={40} />
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                        Loading vendors...
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                ) : paginatedVendors.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
-                      <LocalShippingIcon sx={{ fontSize: 48, color: "grey.300", mb: 2 }} />
-                      <Typography variant="h6" color="text.secondary" gutterBottom>
-                        {searchTerm ? "No vendors found" : "No vendors yet"}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {searchTerm
-                          ? "Try adjusting your search terms"
-                          : "Click 'New Vendor' to add your first vendor"}
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  paginatedVendors.map((vendor) => (
-                    <TableRow
-                      key={vendor.id}
-                      hover
-                      sx={{
-                        "&:hover": { bgcolor: "grey.50" },
-                        cursor: "pointer"
-                      }}
-                    >
-                      <TableCell>
-                        <Typography variant="body2" fontWeight={600}>
-                          {vendor.vendor_name}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">{vendor.contact_person || "-"}</Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">{vendor.email}</Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">{vendor.phone || "-"}</Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">{vendor.payment_terms || "Net 30"}</Typography>
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={vendor.status || "Active"} />
-                      </TableCell>
-                      <TableCell align="center">
-                        <Box display="flex" gap={0.5} justifyContent="center">
-                          <Tooltip title="Edit">
-                            <IconButton
-                              size="small"
-                              onClick={() => navigate(`/vendors/edit/${vendor.id}`)}
-                              sx={{ color: "primary.main" }}
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Delete">
-                            <IconButton
-                              size="small"
-                              onClick={() => setConfirmDeleteId(vendor.id)}
-                              sx={{ color: "error.main" }}
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-          <TablePagination
-            rowsPerPageOptions={[10, 25, 50]}
-            component="div"
-            count={filteredVendors.length}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={handleChangePage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-          />
-        </Paper>
+        />
       </Container>
 
       {/* Delete Confirmation Dialog */}

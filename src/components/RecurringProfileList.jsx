@@ -9,13 +9,8 @@ import {
   Button,
   Typography,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
   TableRow,
-  CircularProgress,
+  TableCell,
   Alert,
   InputAdornment,
   TextField,
@@ -33,9 +28,13 @@ import {
   Container,
   FormControl,
   Select,
-  TablePagination,
   Chip,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
+import StandardDataTable from "./common/StandardDataTable";
+import ResponsiveDataView from "./common/ResponsiveDataView";
+import RecurringProfileCard from "./common/RecurringProfileCard";
 import { useNavigate } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
@@ -48,10 +47,12 @@ import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import EventRepeatIcon from "@mui/icons-material/EventRepeat";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import { useTranslation } from "react-i18next";
 
 const RecurringProfileList = () => {
   const [profiles, setProfiles] = useState([]);
   const [customers, setCustomers] = useState([]);
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -61,6 +62,8 @@ const RecurringProfileList = () => {
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const navigate = useNavigate();
 
   const fetchProfiles = async () => {
@@ -70,7 +73,7 @@ const RecurringProfileList = () => {
       setProfiles(response.data);
       setError("");
     } catch (err) {
-      setError("Failed to fetch recurring profiles");
+      setError(t('recurringProfileList.failedFetch'));
       console.error(err);
     }
     setLoading(false);
@@ -143,7 +146,7 @@ const RecurringProfileList = () => {
       setConfirmDeleteId(null);
       setError("");
     } catch (err) {
-      setError("Failed to delete recurring profile");
+      setError(t('recurringProfileList.failedDelete'));
       console.error(err);
     }
     setLoading(false);
@@ -224,7 +227,7 @@ const RecurringProfileList = () => {
                   Recurring Invoices
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
-                  Automate invoice generation with recurring profiles
+                  {t('recurringProfileList.subtitle')}
                 </Typography>
               </Box>
               <Button
@@ -241,7 +244,7 @@ const RecurringProfileList = () => {
                   "&:hover": { boxShadow: 4 }
                 }}
               >
-                New Recurring Profile
+                {t('recurringProfileList.newProfile')}
               </Button>
             </Box>
 
@@ -320,7 +323,7 @@ const RecurringProfileList = () => {
                       onChange={(e) => setStatusFilter(e.target.value)}
                       sx={{ borderRadius: 2, bgcolor: "grey.50" }}
                     >
-                      <MenuItem value="All">All Status</MenuItem>
+                <MenuItem value="All">{t('common.allStatus')}</MenuItem>
                       <MenuItem value="Active">Active</MenuItem>
                       <MenuItem value="Paused">Paused</MenuItem>
                       <MenuItem value="Expired">Expired</MenuItem>
@@ -337,111 +340,78 @@ const RecurringProfileList = () => {
             </Paper>
 
             {/* Table */}
-            <Paper sx={{ borderRadius: 3, border: "1px solid", borderColor: "grey.200", overflow: "hidden" }}>
-              {loading ? (
-                <Box sx={{ display: "flex", justifyContent: "center", p: 6 }}>
-                  <CircularProgress />
-                </Box>
-              ) : (
-                <>
-                  <TableContainer sx={{ overflowX: "hidden" }}>
-                    <Table>
-                      <TableHead sx={{ bgcolor: "grey.50" }}>
-                        <TableRow>
-                          <TableCell sx={{ fontWeight: 700 }}>Profile Name</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Customer</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Frequency</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Next Run</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Last Run</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Generated</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 700 }}>Actions</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {paginatedProfiles.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
-                              <Typography color="text.secondary">No recurring profiles found</Typography>
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          paginatedProfiles.map((profile) => (
-                            <TableRow
-                              key={profile.id}
-                              sx={{
-                                "&:hover": { bgcolor: "grey.50" },
-                                cursor: "pointer"
-                              }}
-                              onClick={() => handleEdit(profile)}
-                            >
-                              <TableCell>
-                                <Typography variant="body2" fontWeight={600}>
-                                  {profile.profile_name}
-                                </Typography>
-                              </TableCell>
-                              <TableCell>
-                                <Typography variant="body2">
-                                  {getCustomerName(profile.customer_id)}
-                                </Typography>
-                              </TableCell>
-                              <TableCell>
-                                <Chip
-                                  icon={getFrequencyIcon(profile.frequency)}
-                                  label={profile.frequency}
-                                  size="small"
-                                  color="primary"
-                                  variant="outlined"
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Typography variant="body2">
-                                  {profile.next_run_date ? new Date(profile.next_run_date).toLocaleDateString() : "-"}
-                                </Typography>
-                              </TableCell>
-                              <TableCell>
-                                <Typography variant="body2" color="text.secondary">
-                                  {profile.last_run_date ? new Date(profile.last_run_date).toLocaleDateString() : "Never"}
-                                </Typography>
-                              </TableCell>
-                              <TableCell>
-                                <Typography variant="body2" fontWeight={600}>
-                                  {profile.occurrences_created || 0}
-                                  {profile.occurrence_limit ? ` / ${profile.occurrence_limit}` : ''}
-                                </Typography>
-                              </TableCell>
-                              <TableCell>
-                                <StatusBadge status={profile.status} color={getStatusColor(profile.status)} />
-                              </TableCell>
-                              <TableCell align="center">
-                                <IconButton
-                                  size="small"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleActionMenuOpen(e, profile);
-                                  }}
-                                >
-                                  <MoreVertIcon />
-                                </IconButton>
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                  <TablePagination
-                    component="div"
-                    count={filteredProfiles.length}
-                    page={page}
-                    onPageChange={handleChangePage}
-                    rowsPerPage={rowsPerPage}
-                    onRowsPerPageChange={handleChangeRowsPerPage}
-                    rowsPerPageOptions={[5, 10, 25, 50]}
-                  />
-                </>
+            <ResponsiveDataView
+              isMobile={isMobile}
+              renderCard={(profile) => (
+                <RecurringProfileCard
+                  profile={profile}
+                  customerName={getCustomerName(profile.customer_id)}
+                  onEdit={() => handleEdit(profile)}
+                  onActionMenu={(e) => { e.stopPropagation(); handleActionMenuOpen(e, profile); }}
+                  getStatusColor={getStatusColor}
+                  getFrequencyIcon={getFrequencyIcon}
+                />
               )}
-            </Paper>
+              columns={[
+                { key: 'profile_name', label: 'Profile Name' },
+                { key: 'customer', label: 'Customer' },
+                { key: 'frequency', label: 'Frequency' },
+                { key: 'next_run', label: 'Next Run' },
+                { key: 'last_run', label: 'Last Run' },
+                { key: 'generated', label: 'Generated' },
+                { key: 'status', label: 'Status' },
+                { key: 'actions', label: 'Actions', align: 'center' },
+              ]}
+              rows={paginatedProfiles}
+              loading={loading}
+              emptyIcon={<EventRepeatIcon sx={{ fontSize: 48 }} />}
+              emptyTitle={t('recurringProfileList.noProfiles')}
+              emptySubtitle="Create a recurring profile to automate invoice generation"
+              onRowClick={(profile) => handleEdit(profile)}
+              renderRow={(profile) => (
+                <TableRow
+                  key={profile.id}
+                  hover
+                  sx={{ cursor: 'pointer' }}
+                  onClick={() => handleEdit(profile)}
+                >
+                  <TableCell>
+                    <Typography variant="body2" fontWeight={600}>{profile.profile_name}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">{getCustomerName(profile.customer_id)}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Chip icon={getFrequencyIcon(profile.frequency)} label={profile.frequency} size="small" color="primary" variant="outlined" />
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">{profile.next_run_date ? new Date(profile.next_run_date).toLocaleDateString() : "-"}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color="text.secondary">{profile.last_run_date ? new Date(profile.last_run_date).toLocaleDateString() : "Never"}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" fontWeight={600}>{profile.occurrences_created || 0}{profile.occurrence_limit ? ` / ${profile.occurrence_limit}` : ''}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge status={profile.status} color={getStatusColor(profile.status)} />
+                  </TableCell>
+                  <TableCell align="center">
+                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleActionMenuOpen(e, profile); }}>
+                      <MoreVertIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              )}
+              pagination={{
+                rowsPerPageOptions: [5, 10, 25, 50],
+                count: filteredProfiles.length,
+                rowsPerPage,
+                page,
+                onPageChange: handleChangePage,
+                onRowsPerPageChange: handleChangeRowsPerPage,
+              }}
+            />
           </Box>
         </Fade>
       </Container>

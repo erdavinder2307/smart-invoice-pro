@@ -2,11 +2,15 @@
 import React from "react";
 import Box from "@mui/material/Box";
 import Container from "@mui/material/Container";
-import Sidebar from "../Sidebar";
 import Typography from "@mui/material/Typography";
 import DashboardHeader from "../DashboardHeader";
 import TopUtilityBar from "./TopUtilityBar";
 import AppBreadcrumbs from "./AppBreadcrumbs";
+import { useSidebar } from "../../context/SidebarContext";
+import CommandPalette from "../keyboard/CommandPalette";
+import KeyboardShortcutsModal from "../keyboard/KeyboardShortcutsModal";
+import QuickCreateCustomerModal from "../keyboard/QuickCreateCustomerModal";
+import QuickCreateInvoiceStarter from "../keyboard/QuickCreateInvoiceStarter";
 
 const MainLayout = ({
     children,
@@ -16,15 +20,21 @@ const MainLayout = ({
     showUtilityBar = true,
     showBreadcrumbs = true,
 }) => {
+    const { toggleMobileDrawer } = useSidebar();
 
     return (
-        <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "grey.50" }}>
-            <Sidebar />
-            <Box component="main" sx={{ flex: 1, width: 0, display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ minHeight: "100vh", bgcolor: "grey.50" }}>
+            {/* Global keyboard overlays — always mounted while app is open */}
+            <CommandPalette />
+            <KeyboardShortcutsModal />
+            <QuickCreateCustomerModal />
+            <QuickCreateInvoiceStarter />
+
+            <Box component="main" sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
                 {/* Top Utility Bar */}
                 {showUtilityBar && (
                     <Box sx={{ position: 'sticky', top: 0, zIndex: 1200 }}>
-                        <TopUtilityBar />
+                        <TopUtilityBar onMenuClick={toggleMobileDrawer} />
                     </Box>
                 )}
 
@@ -59,7 +69,7 @@ const MainLayout = ({
                 </Box>
 
                 {/* Main Content Area */}
-                <Box sx={{ flex: 1, bgcolor: "grey.50", overflowY: "auto" }}>
+                <Box sx={{ flex: 1, minWidth: 0, bgcolor: "grey.50", overflowY: "auto" }}>
                     <Container maxWidth={false} sx={{ px: { xs: 1.5, md: 2.5 }, py: 2 }}>
                         {children}
                     </Container>

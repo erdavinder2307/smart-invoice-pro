@@ -22,7 +22,6 @@ export const getBankAccounts = async (userId) => {
         );
         return response.data;
     } catch (error) {
-        console.error('Error fetching bank accounts:', error);
         throw error;
     }
 };
@@ -39,7 +38,6 @@ export const createBankAccount = async (accountData, userId) => {
         );
         return response.data;
     } catch (error) {
-        console.error('Error creating bank account:', error);
         throw error;
     }
 };
@@ -55,7 +53,33 @@ export const getBankAccountById = async (id, userId) => {
         );
         return response.data;
     } catch (error) {
-        console.error('Error fetching bank account details:', error);
+        throw error;
+    }
+};
+
+export const updateBankAccount = async (id, accountData, userId) => {
+    try {
+        const headers = userId ? { 'X-User-Id': userId } : getUserHeaders();
+        const response = await axios.put(
+            createApiUrl(`/api/bank-accounts/${id}`),
+            accountData,
+            { headers }
+        );
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+};
+
+export const deleteBankAccount = async (id, userId) => {
+    try {
+        const headers = userId ? { 'X-User-Id': userId } : getUserHeaders();
+        const response = await axios.delete(
+            createApiUrl(`/api/bank-accounts/${id}`),
+            { headers }
+        );
+        return response.data;
+    } catch (error) {
         throw error;
     }
 };

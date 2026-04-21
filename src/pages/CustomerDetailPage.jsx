@@ -109,7 +109,7 @@ const CustomerDetailPage = () => {
       }
     };
     fetchOverview();
-  }, [id]);
+  }, [id, t]);
 
   if (loading) {
     return (

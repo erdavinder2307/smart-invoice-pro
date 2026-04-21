@@ -135,7 +135,7 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
         .catch(() => setServerError(t('addEditProduct.failedFetch')))
         .finally(() => setLoading(false));
     }
-  }, [productId]);
+  }, [productId, t]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;

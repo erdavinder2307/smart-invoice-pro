@@ -34,7 +34,7 @@ const AddEditVendor = () => {
       setForm(res.data);
     } catch { setError(t('addEditVendor.failedFetch')); }
     setLoading(false);
-  }, [id]);
+  }, [id, t]);
 
   useEffect(() => { if (id) fetchVendor(); }, [id, fetchVendor]);
 

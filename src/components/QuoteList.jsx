@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { createApiUrl } from "../config/api";
 import MainLayout from "./Layout/MainLayout";
@@ -29,7 +29,7 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import StandardDataTable, { CHECKBOX_COLUMN_WIDTH } from "./common/StandardDataTable";
+import { CHECKBOX_COLUMN_WIDTH } from "./common/StandardDataTable";
 import ResponsiveDataView from "./common/ResponsiveDataView";
 import QuoteCard from "./common/QuoteCard";
 import { useNavigate } from "react-router-dom";
@@ -74,7 +74,7 @@ const QuoteList = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
-  const fetchQuotes = async () => {
+  const fetchQuotes = useCallback(async () => {
     setLoading(true);
     try {
       const response = await axios.get(createApiUrl("/api/quotes"));
@@ -85,21 +85,21 @@ const QuoteList = () => {
       console.error(err);
     }
     setLoading(false);
-  };
+  }, [t]);
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = useCallback(async () => {
     try {
       const response = await axios.get(createApiUrl("/api/customers"));
       setCustomers(response.data);
     } catch (err) {
       console.error("Failed to fetch customers:", err);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchQuotes();
     fetchCustomers();
-  }, []);
+  }, [fetchQuotes, fetchCustomers]);
 
   const customerMap = useMemo(() => {
     const map = new Map();

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import MainLayout from "../components/Layout/MainLayout";
 import {
   Alert,
@@ -15,10 +15,6 @@ import {
   FormControlLabel,
   IconButton,
   InputAdornment,
-  List,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
   Paper,
   Snackbar,
   Switch,
@@ -27,15 +23,7 @@ import {
   Typography,
 } from "@mui/material";
 import BusinessIcon from "@mui/icons-material/Business";
-import BrushIcon from "@mui/icons-material/Brush";
 import CloseIcon from "@mui/icons-material/Close";
-import DescriptionIcon from "@mui/icons-material/Description";
-import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
-import PeopleIcon from "@mui/icons-material/People";
-import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
-import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
-import ExtensionIcon from "@mui/icons-material/Extension";
-import HistoryIcon from "@mui/icons-material/History";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import DeleteIcon from "@mui/icons-material/Delete";
 import RefreshIcon from "@mui/icons-material/Refresh";
@@ -53,122 +41,6 @@ import {
 import FormInput from "../components/common/FormInput";
 import { getBranding, updateBranding } from "../services/brandingService";
 import { uploadOrgLogo } from "../services/organizationProfileService";
-
-// ── Settings sub-nav (shared with OrganizationProfile) ───────────────────────
-const SETTINGS_NAV = [
-  {
-    label: "Organization Profile",
-    path: "/settings/organization-profile",
-    icon: <BusinessIcon sx={{ fontSize: 18 }} />,
-  },
-  {
-    label: "Branding",
-    path: "/settings/branding",
-    icon: <BrushIcon sx={{ fontSize: 18 }} />,
-  },
-  {
-    label: "Invoice Preferences",
-    path: "/settings/invoice-preferences",
-    icon: <DescriptionIcon sx={{ fontSize: 18 }} />,
-  },
-  {
-    label: "Taxes",
-    path: "/settings/taxes",
-    icon: <ReceiptLongIcon sx={{ fontSize: 18 }} />,
-  },
-  {
-    label: "User Management",
-    path: "/settings/users",
-    icon: <PeopleIcon sx={{ fontSize: 18 }} />,
-  },
-  {
-    label: "Roles",
-    path: "/settings/roles",
-    icon: <AdminPanelSettingsIcon sx={{ fontSize: 18 }} />,
-  },
-  {
-    label: "Automation",
-    path: "/settings/automation",
-    icon: <NotificationsActiveIcon sx={{ fontSize: 18 }} />,
-  },
-  {
-    label: "Integrations",
-    path: "/settings/integrations",
-    icon: <ExtensionIcon sx={{ fontSize: 18 }} />,
-  },
-  {
-    label: "Audit Log",
-    path: "/settings/audit-log",
-    icon: <HistoryIcon sx={{ fontSize: 18 }} />,
-  },
-];
-
-function SettingsSubNav() {
-  const navigate = useNavigate();
-  const { pathname } = useLocation();
-
-  return (
-    <Paper
-      elevation={0}
-      sx={{
-        width: 210,
-        flexShrink: 0,
-        bgcolor: C.white,
-        border: `1px solid ${C.border}`,
-        borderRadius: "4px",
-        alignSelf: "flex-start",
-      }}
-    >
-      <Box sx={{ px: 2, py: 1.25, borderBottom: `1px solid ${C.divider}` }}>
-        <Typography
-          sx={{
-            fontSize: "0.6875rem",
-            fontWeight: 600,
-            color: C.hint,
-            textTransform: "uppercase",
-            letterSpacing: "0.06em",
-          }}
-        >
-          Settings
-        </Typography>
-      </Box>
-      <List disablePadding>
-        {SETTINGS_NAV.map(({ label, path, icon }) => {
-          const isActive = pathname === path || pathname.startsWith(path);
-          return (
-            <ListItemButton
-              key={path}
-              onClick={() => navigate(path)}
-              sx={{
-                py: 0.875,
-                px: 2,
-                borderLeft: isActive
-                  ? `3px solid ${C.primary}`
-                  : "3px solid transparent",
-                bgcolor: isActive ? "#e8f0fe" : "transparent",
-                "&:hover": { bgcolor: isActive ? "#e8f0fe" : C.sectionBg },
-              }}
-            >
-              <ListItemIcon
-                sx={{ minWidth: 28, color: isActive ? C.primary : C.hint }}
-              >
-                {icon}
-              </ListItemIcon>
-              <ListItemText
-                primary={label}
-                primaryTypographyProps={{
-                  fontSize: "0.8125rem",
-                  fontWeight: isActive ? 600 : 400,
-                  color: isActive ? C.primary : C.label,
-                }}
-              />
-            </ListItemButton>
-          );
-        })}
-      </List>
-    </Paper>
-  );
-}
 
 // ── Section header ────────────────────────────────────────────────────────────
 function SectionHeader({ children }) {

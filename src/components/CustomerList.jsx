@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import {
@@ -27,7 +27,7 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import StandardDataTable, { CHECKBOX_COLUMN_WIDTH } from "./common/StandardDataTable";
+import { CHECKBOX_COLUMN_WIDTH } from "./common/StandardDataTable";
 import ResponsiveDataView from "./common/ResponsiveDataView";
 import CustomerCard from "./common/CustomerCard";
 import AddIcon from "@mui/icons-material/Add";
@@ -81,7 +81,7 @@ const CustomerList = () => {
     { value: "Inactive", label: t('customerList.inactiveCustomers') },
   ];
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -93,11 +93,11 @@ const CustomerList = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
 
   useEffect(() => {
     fetchCustomers();
-  }, []);
+  }, [fetchCustomers]);
 
   useEffect(() => {
     const handleCustomerCreated = () => {
@@ -106,7 +106,7 @@ const CustomerList = () => {
 
     window.addEventListener('customer:created', handleCustomerCreated);
     return () => window.removeEventListener('customer:created', handleCustomerCreated);
-  }, []);
+  }, [fetchCustomers]);
 
   useEffect(() => {
     if (location.state?.successMessage) {

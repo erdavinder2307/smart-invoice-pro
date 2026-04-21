@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { createApiUrl } from "../config/api";
 import MainLayout from "./Layout/MainLayout";
@@ -34,7 +34,6 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import StandardDataTable from "./common/StandardDataTable";
 import ResponsiveDataView from "./common/ResponsiveDataView";
 import SalesOrderCard from "./common/SalesOrderCard";
 import { useNavigate } from "react-router-dom";
@@ -73,7 +72,7 @@ const SalesOrderList = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const navigate = useNavigate();
 
-  const fetchSalesOrders = async () => {
+  const fetchSalesOrders = useCallback(async () => {
     setLoading(true);
     try {
       const response = await axios.get(createApiUrl("/api/sales-orders"));
@@ -84,7 +83,7 @@ const SalesOrderList = () => {
       console.error(err);
     }
     setLoading(false);
-  };
+  }, [t]);
 
   const fetchCustomers = async () => {
     try {
@@ -98,7 +97,7 @@ const SalesOrderList = () => {
   useEffect(() => {
     fetchSalesOrders();
     fetchCustomers();
-  }, []);
+  }, [fetchSalesOrders]);
 
   const filteredSalesOrders = salesOrders.filter((so) => {
     const customer = customers.find((c) => c.id === so.customer_id);

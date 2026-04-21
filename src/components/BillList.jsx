@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { createApiUrl } from "../config/api";
 import MainLayout from "./Layout/MainLayout";
@@ -29,7 +29,6 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import StandardDataTable from "./common/StandardDataTable";
 import ResponsiveDataView from "./common/ResponsiveDataView";
 import BillCard from "./common/BillCard";
 import { useNavigate } from "react-router-dom";
@@ -57,11 +56,7 @@ const BillList = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [billsResponse, vendorsResponse] = await Promise.all([
@@ -75,7 +70,11 @@ const BillList = () => {
       console.error(error);
     }
     setLoading(false);
-  };
+  }, [t]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleDelete = async (id) => {
     setLoading(true);

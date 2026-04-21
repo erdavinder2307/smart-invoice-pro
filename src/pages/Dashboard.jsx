@@ -126,7 +126,7 @@ const DashboardPage = () => {
       .then((res) => setRecentInvoices(res.data))
       .catch(() => setRecentInvoices([]))
       .finally(() => setRecentLoading(false));
-  }, []);
+  }, [t]);
 
   // ── Chart data ────────────────────────────────────────────────────────────
   const revenueChartData = revenue && Array.isArray(revenue) && revenue.length > 0

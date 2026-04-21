@@ -51,7 +51,7 @@ const AddEditExpense = () => {
       if (e.receipt_url) setExistingReceipt(e.receipt_url);
     } catch { setError(t('addEditExpense.failedFetch')); }
     setLoading(false);
-  }, [id]);
+  }, [id, t]);
 
   useEffect(() => {
     if (id) fetchExpense();

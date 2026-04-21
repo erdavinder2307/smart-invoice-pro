@@ -6,7 +6,7 @@ import MainLayout from "./Layout/MainLayout";
 import StatusBadge from "./common/StatusBadge";
 import SummaryCard from "./common/SummaryCard";
 import SectionHeader from "./common/SectionHeader";
-import StandardDataTable, { CHECKBOX_COLUMN_WIDTH } from "./common/StandardDataTable";
+import { CHECKBOX_COLUMN_WIDTH } from "./common/StandardDataTable";
 import ResponsiveDataView from "./common/ResponsiveDataView";
 import InvoiceCard from "./common/InvoiceCard";
 import axios from "axios";

@@ -31,7 +31,6 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import StandardDataTable from "./common/StandardDataTable";
 import ResponsiveDataView from "./common/ResponsiveDataView";
 import ExpenseCard from "./common/ExpenseCard";
 import { useNavigate } from "react-router-dom";
@@ -104,7 +103,7 @@ const ExpenseList = () => {
       console.error(error);
     }
     setLoading(false);
-  }, [categoryFilter, startDate, endDate]);
+  }, [categoryFilter, startDate, endDate, t]);
 
   useEffect(() => {
     fetchExpenses();

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createApiUrl } from "../config/api";
 import MainLayout from "./Layout/MainLayout";
@@ -30,7 +30,6 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import StandardDataTable from "./common/StandardDataTable";
 import ResponsiveDataView from "./common/ResponsiveDataView";
 import VendorCard from "./common/VendorCard";
 import AddIcon from "@mui/icons-material/Add";
@@ -55,11 +54,7 @@ const VendorList = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
-  useEffect(() => {
-    fetchVendors();
-  }, []);
-
-  const fetchVendors = async () => {
+  const fetchVendors = useCallback(async () => {
     setLoading(true);
     try {
       const response = await axios.get(createApiUrl("/api/vendors"));
@@ -69,7 +64,11 @@ const VendorList = () => {
       console.error(error);
     }
     setLoading(false);
-  };
+  }, [t]);
+
+  useEffect(() => {
+    fetchVendors();
+  }, [fetchVendors]);
 
   const handleDelete = async (id) => {
     setLoading(true);

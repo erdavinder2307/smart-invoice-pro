@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { createApiUrl } from "../config/api";
 import MainLayout from "./Layout/MainLayout";
@@ -32,7 +32,6 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import StandardDataTable from "./common/StandardDataTable";
 import ResponsiveDataView from "./common/ResponsiveDataView";
 import RecurringProfileCard from "./common/RecurringProfileCard";
 import { useNavigate } from "react-router-dom";
@@ -66,7 +65,7 @@ const RecurringProfileList = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const navigate = useNavigate();
 
-  const fetchProfiles = async () => {
+  const fetchProfiles = useCallback(async () => {
     setLoading(true);
     try {
       const response = await axios.get(createApiUrl("/api/recurring-profiles"));
@@ -77,7 +76,7 @@ const RecurringProfileList = () => {
       console.error(err);
     }
     setLoading(false);
-  };
+  }, [t]);
 
   const fetchCustomers = async () => {
     try {
@@ -91,7 +90,7 @@ const RecurringProfileList = () => {
   useEffect(() => {
     fetchProfiles();
     fetchCustomers();
-  }, []);
+  }, [fetchProfiles]);
 
   const filteredProfiles = profiles.filter((profile) => {
     const customer = customers.find((c) => c.id === profile.customer_id);

@@ -81,7 +81,7 @@ const AddEditBill = () => {
       console.error(error);
     }
     setLoading(false);
-  }, [id]);
+  }, [id, t]);
 
   useEffect(() => {
     fetchVendors();

@@ -26,6 +26,7 @@ import {
   Typography,
   Alert,
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import {
   InfoOutlined as InfoIcon,
   Edit as EditIcon,
@@ -33,9 +34,9 @@ import {
   Add as AddIcon,
 } from '@mui/icons-material';
 import MainLayout from './Layout/MainLayout';
+import AppFormField from './common/Form/AppFormField';
+import FormLayout from './common/Form/FormLayout';
 import { C, fieldSx, selectSx, menuItemSx, ZohoRow, FieldLabel, AppSelect } from './common/formStyles';
-import FormInput from './common/FormInput';
-import FormSelect from './common/FormSelect';
 import { createApiUrl } from '../config/api';
 import axios from 'axios';
 
@@ -320,6 +321,7 @@ const OtherDetailsRow = ({ label, required, hint, children, alignStart = false }
 
 // ─── MAIN COMPONENT ────────────────────────────────────────────────────────
 const AddEditCustomer = () => {
+  const { t } = useTranslation();
   const { id: customerId } = useParams();
   const navigate = useNavigate();
 
@@ -548,9 +550,9 @@ const AddEditCustomer = () => {
       delete payload.shipping_street2;
       if (customerId) await axios.put(createApiUrl(`/api/customers/${customerId}`), payload);
       else await axios.post(createApiUrl('/api/customers'), payload);
-      navigate('/customers', { state: { successMessage: customerId ? 'Customer updated successfully.' : 'Customer created successfully.' } });
+      navigate('/customers', { state: { successMessage: customerId ? t('customerForm.updateSuccess') : t('customerForm.createSuccess') } });
     } catch (err) {
-      setApiError(err.response?.data?.error || 'Failed to save customer. Please try again.');
+      setApiError(err.response?.data?.error || t('customerForm.saveFailed'));
     } finally { setSaving(false); }
   };
 
@@ -602,7 +604,7 @@ const AddEditCustomer = () => {
   };
 
   if (loading) return (
-    <MainLayout title="Customer">
+    <MainLayout title={t('customerForm.title')}>
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
         <CircularProgress />
       </Box>
@@ -611,7 +613,7 @@ const AddEditCustomer = () => {
 
   // ─── render ─────────────────────────────────────────────────────────────
   return (
-    <MainLayout title={customerId ? 'Edit Customer' : 'New Customer'}>
+    <MainLayout title={customerId ? t('customerForm.editTitle') : t('customerForm.newTitle')}>
       <Box sx={{ bgcolor: '#fff', minHeight: '100vh', pb: 6 }}>
         <Container maxWidth={false} sx={{ pt: 2, px: 2.5 }}>
           <Box sx={{ maxWidth: 1020 }}>
@@ -625,9 +627,9 @@ const AddEditCustomer = () => {
             }}>
               <InfoIcon sx={{ fontSize: 15, color: C.primary, flexShrink: 0 }} />
               <Typography variant="body2" sx={{ fontSize: '0.8125rem', color: '#1558b0' }}>
-                Prefill Customer details from the GST portal using the Customer's GSTIN.{' '}
+                {t('customerForm.gstPrefillNotice')}{' '}
                 <Box component="span" sx={{ fontWeight: 600, textDecoration: 'underline', cursor: 'pointer' }}>
-                  Prefill ›
+                  {t('customerForm.prefill')} ›
                 </Box>
               </Typography>
             </Box>
@@ -648,7 +650,7 @@ const AddEditCustomer = () => {
 
             {/* ══ SECTION 1 — CUSTOMER TYPE ══════════════════════════════════ */}
             <Box sx={{ px: 3, borderBottom: `1px solid ${C.divider}` }}>
-              <ZohoRow label="Customer Type" noDivider>
+              <ZohoRow label={t('customerForm.customerType')} noDivider>
                 <RadioGroup
                   row name="customer_type" value={form.customer_type}
                   onChange={handleChange} sx={{ gap: 3 }}
@@ -657,7 +659,7 @@ const AddEditCustomer = () => {
                     <FormControlLabel
                       key={v} value={v} sx={{ m: 0 }}
                       control={<Radio size="small" sx={{ p: '3px', mr: '4px', color: '#bbb', '&.Mui-checked': { color: C.primary } }} />}
-                      label={<Typography sx={{ fontSize: '0.875rem', color: C.label, textTransform: 'capitalize' }}>{v}</Typography>}
+                      label={<Typography sx={{ fontSize: '0.875rem', color: C.label, textTransform: 'capitalize' }}>{t(`customerForm.customerTypeOptions.${v}`)}</Typography>}
                     />
                   ))}
                 </RadioGroup>
@@ -666,120 +668,118 @@ const AddEditCustomer = () => {
 
             {/* ══ SECTION 2 — PRIMARY CONTACT ════════════════════════════════ */}
             <Box sx={{ px: 3 }}>
-
-              {/* Salutation | First Name | Last Name */}
-              <ZohoRow label="Primary Contact" hint="Main contact person for this customer" alignStart>
-                <Grid container spacing={1.5}>
-                  <Grid size={{ xs: 12, sm: 3 }}>
-                    <AppSelect name="salutation" value={form.salutation} onChange={handleChange} displayEmpty>
-                      <MenuItem value="" sx={{ ...menuItemSx, color: C.hint }}>Salutation</MenuItem>
-                      {SALUTATIONS.map(s => <MenuItem key={s} value={s} sx={menuItemSx}>{s}</MenuItem>)}
-                    </AppSelect>
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 4.5 }}>
-                    <TextField
-                      name="first_name" value={form.first_name} onChange={handleChange}
-                      size="small" placeholder="First Name" fullWidth sx={fieldSx}
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 4.5 }}>
-                    <TextField
-                      name="last_name" value={form.last_name} onChange={handleChange}
-                      size="small" placeholder="Last Name" fullWidth sx={fieldSx}
-                    />
-                  </Grid>
-                </Grid>
-              </ZohoRow>
-
-              {/* Company Name */}
-              <FormInput
-                label="Company Name"
-                required={form.customer_type === 'business'}
-                name="company_name"
-                value={form.company_name}
-                onChange={handleChange}
-                error={!!errors.company_name}
-                helperText={errors.company_name}
-              />
-
-              {/* Display Name */}
-              <FormInput
-                label="Display Name"
-                required
-                name="display_name"
-                value={form.display_name}
-                onChange={handleChange}
-                placeholder="Select or type to add"
-                error={!!errors.display_name}
-                helperText={errors.display_name}
-              />
-
-              {/* Email Address */}
-              <FormInput
-                label="Email Address"
-                name="email"
-                value={form.email}
-                onChange={handleChange}
-                type="email"
-                error={!!errors.email}
-                helperText={errors.email}
-              />
-
-              {/* Phone | Mobile */}
-              <ZohoRow label="Phone" hint="Work phone and mobile" alignStart>
-                <Grid container spacing={2}>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <PhoneInput
-                      codeField="work_phone_code" codeVal={form.work_phone_code}
-                      numField="phone" numVal={form.phone}
-                      onChange={handleChange} placeholder="Work Phone"
-                      error={errors.phone} helperText={errors.phone}
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <PhoneInput
-                      codeField="mobile_code" codeVal={form.mobile_code}
-                      numField="mobile" numVal={form.mobile}
-                      onChange={handleChange} placeholder="Mobile"
-                    />
-                  </Grid>
-                </Grid>
-              </ZohoRow>
-
-              {/* Customer Language */}
-              <FormSelect
-                label="Customer Language"
-                hint="Language used for customer communications"
-                name="language"
-                value={form.language}
-                onChange={handleChange}
-                width={220}
-                options={[
-                  { value: 'en', label: 'English' },
-                  { value: 'hi', label: 'Hindi' },
-                  { value: 'ta', label: 'Tamil' },
-                  { value: 'te', label: 'Telugu' },
-                  { value: 'mr', label: 'Marathi' },
-                ]}
-              />
-
-              {/* Communication Channels */}
-              <ZohoRow label="Communication Channels" noDivider>
-                <Box sx={{ display: 'flex', gap: 3, alignItems: 'center' }}>
-                  {[{ name: 'comm_email', label: 'Email' }, { name: 'comm_sms', label: 'SMS' }].map(opt => (
-                    <FormControlLabel
-                      key={opt.name} sx={{ m: 0 }}
-                      control={
-                        <Checkbox
-                          size="small" name={opt.name} checked={form[opt.name]} onChange={handleChange}
-                          sx={{ p: '3px', mr: '4px', color: '#bbb', '&.Mui-checked': { color: C.primary } }}
+              <Box sx={{ py: 3 }}>
+                <FormLayout>
+                  <AppFormField label={t('customerForm.primaryContact')} hint={t('customerForm.primaryContactHint')} testId="customer-field-primary-contact">
+                    <Grid container spacing={1.5}>
+                      <Grid size={{ xs: 12, sm: 3 }}>
+                        <AppSelect name="salutation" value={form.salutation} onChange={handleChange} displayEmpty>
+                          <MenuItem value="" sx={{ ...menuItemSx, color: C.hint }}>{t('customerForm.salutation')}</MenuItem>
+                          {SALUTATIONS.map(s => <MenuItem key={s} value={s} sx={menuItemSx}>{s}</MenuItem>)}
+                        </AppSelect>
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 4.5 }}>
+                        <TextField
+                          name="first_name" value={form.first_name} onChange={handleChange}
+                          size="small" placeholder={t('customerForm.firstName')} fullWidth sx={fieldSx}
                         />
-                      }
-                      label={<Typography sx={{ fontSize: '0.875rem', color: C.label }}>{opt.label}</Typography>}
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 4.5 }}>
+                        <TextField
+                          name="last_name" value={form.last_name} onChange={handleChange}
+                          size="small" placeholder={t('customerForm.lastName')} fullWidth sx={fieldSx}
+                        />
+                      </Grid>
+                    </Grid>
+                  </AppFormField>
+
+                  <AppFormField label={t('customerForm.companyName')} required={form.customer_type === 'business'} testId="customer-field-company-name">
+                    <TextField
+                      name="company_name"
+                      value={form.company_name}
+                      onChange={handleChange}
+                      size="small"
+                      fullWidth
+                      error={!!errors.company_name}
+                      helperText={errors.company_name}
+                      sx={fieldSx}
                     />
-                  ))}
-                </Box>
-              </ZohoRow>
+                  </AppFormField>
+
+                  <AppFormField label={t('customerForm.displayName')} required testId="customer-field-display-name">
+                    <TextField
+                      name="display_name"
+                      value={form.display_name}
+                      onChange={handleChange}
+                      size="small"
+                      fullWidth
+                      placeholder={t('customerForm.displayNamePlaceholder')}
+                      error={!!errors.display_name}
+                      helperText={errors.display_name}
+                      sx={fieldSx}
+                    />
+                  </AppFormField>
+
+                  <AppFormField label={t('customerForm.emailAddress')} layout="half" testId="customer-field-email">
+                    <TextField
+                      name="email"
+                      value={form.email}
+                      onChange={handleChange}
+                      type="email"
+                      size="small"
+                      fullWidth
+                      error={!!errors.email}
+                      helperText={errors.email}
+                      sx={fieldSx}
+                    />
+                  </AppFormField>
+
+                  <AppFormField label={t('customerForm.customerLanguage')} hint={t('customerForm.customerLanguageHint')} layout="half" testId="customer-field-language">
+                    <AppSelect name="language" value={form.language} onChange={handleChange}>
+                      {[['en', 'English'], ['hi', 'Hindi'], ['ta', 'Tamil'], ['te', 'Telugu'], ['mr', 'Marathi']].map(([value, label]) => (
+                        <MenuItem key={value} value={value} sx={menuItemSx}>{label}</MenuItem>
+                      ))}
+                    </AppSelect>
+                  </AppFormField>
+
+                  <AppFormField label={t('customerForm.phone')} hint={t('customerForm.phoneHint')} testId="customer-field-phone">
+                    <Grid container spacing={2}>
+                      <Grid size={{ xs: 12, sm: 6 }}>
+                        <PhoneInput
+                          codeField="work_phone_code" codeVal={form.work_phone_code}
+                          numField="phone" numVal={form.phone}
+                          onChange={handleChange} placeholder={t('customerForm.workPhone')}
+                          error={errors.phone} helperText={errors.phone}
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6 }}>
+                        <PhoneInput
+                          codeField="mobile_code" codeVal={form.mobile_code}
+                          numField="mobile" numVal={form.mobile}
+                          onChange={handleChange} placeholder={t('customerForm.mobile')}
+                        />
+                      </Grid>
+                    </Grid>
+                  </AppFormField>
+
+                  <AppFormField label={t('customerForm.communicationChannels')} testId="customer-field-communication">
+                    <Box sx={{ display: 'flex', gap: 3, alignItems: 'center', flexWrap: 'wrap', minHeight: 40 }}>
+                      {[{ name: 'comm_email', label: 'Email' }, { name: 'comm_sms', label: 'SMS' }].map(opt => (
+                        <FormControlLabel
+                          key={opt.name} sx={{ m: 0 }}
+                          control={
+                            <Checkbox
+                              size="small" name={opt.name} checked={form[opt.name]} onChange={handleChange}
+                              sx={{ p: '3px', mr: '4px', color: '#bbb', '&.Mui-checked': { color: C.primary } }}
+                            />
+                          }
+                          label={<Typography sx={{ fontSize: '0.875rem', color: C.label }}>{opt.label}</Typography>}
+                        />
+                      ))}
+                    </Box>
+                  </AppFormField>
+                </FormLayout>
+              </Box>
             </Box>
 
             {/* ══ SECTION 3 — TABS ═══════════════════════════════════════════ */}
@@ -799,15 +799,23 @@ const AddEditCustomer = () => {
                   '& .MuiTabs-indicator': { height: 2, backgroundColor: C.primary },
                 }}
               >
-                {['Other Details', 'Address', 'Contact Persons', 'Custom Fields', 'Reporting Tags', 'Remarks'].map(t => (
-                  <Tab key={t} label={t} disableRipple={false} />
+                {[
+                  t('customerForm.tabs.otherDetails'),
+                  t('customerForm.tabs.address'),
+                  t('customerForm.tabs.contactPersons'),
+                  t('customerForm.tabs.customFields'),
+                  t('customerForm.tabs.reportingTags'),
+                  t('customerForm.tabs.remarks'),
+                ].map((tabLabel) => (
+                  <Tab key={tabLabel} label={tabLabel} disableRipple={false} />
                 ))}
               </Tabs>
 
               {/* ── TAB 0: OTHER DETAILS ─────────────────────────────────── */}
               <TabPanel value={tab} index={0}>
                 <Box sx={{ px: 3, py: 2.25 }}>
-                  <OtherDetailsRow label="GST Treatment" required>
+                  <FormLayout>
+                    <AppFormField label={t('customerForm.gstTreatment')} required layout="half" testId="customer-detail-field-gst-treatment">
                     <AppSelect name="gst_treatment" value={form.gst_treatment} onChange={handleChange} displayEmpty>
                       <MenuItem value="" sx={{ ...menuItemSx, color: C.hint }}>Select a GST treatment</MenuItem>
                       <MenuItem value="regular" sx={menuItemSx}>Registered Business - Regular</MenuItem>
@@ -818,35 +826,35 @@ const AddEditCustomer = () => {
                       <MenuItem value="special_economic_zone" sx={menuItemSx}>Special Economic Zone</MenuItem>
                       <MenuItem value="deemed_export" sx={menuItemSx}>Deemed Export</MenuItem>
                     </AppSelect>
-                  </OtherDetailsRow>
+                    </AppFormField>
 
-                  <OtherDetailsRow label="Place of Supply" required>
+                    <AppFormField label={t('customerForm.placeOfSupply')} required layout="half" testId="customer-detail-field-place-of-supply">
                     <SearchableTextSelect
                       name="place_of_supply"
                       value={form.place_of_supply}
                       onValueChange={handleFieldValueChange}
                       options={INDIAN_STATES}
-                      placeholder="Search place of supply"
+                      placeholder={t('customerForm.placeOfSupplyPlaceholder')}
                     />
-                  </OtherDetailsRow>
+                    </AppFormField>
 
-                  <OtherDetailsRow label="PAN" hint="10-character Permanent Account Number">
+                    <AppFormField label={t('customerForm.pan')} hint={t('customerForm.panHint')} layout="half" testId="customer-detail-field-pan">
                     <TextField
                       name="pan" value={form.pan} onChange={handleChange}
                       size="small" fullWidth placeholder=""
                       inputProps={{ style: { textTransform: 'uppercase' } }}
                       error={!!errors.pan || (form.pan && !isValidPAN(form.pan))}
-                      helperText={errors.pan || (form.pan && !isValidPAN(form.pan) ? 'Invalid PAN format' : '')}
+                      helperText={errors.pan || (form.pan && !isValidPAN(form.pan) ? t('customerForm.invalidPan') : '')}
                       sx={fieldSx}
                     />
-                  </OtherDetailsRow>
+                    </AppFormField>
 
-                  <OtherDetailsRow label="Tax Preference" required>
+                    <AppFormField label={t('customerForm.taxPreference')} required layout="half" testId="customer-detail-field-tax-preference">
                     <RadioGroup
                       row name="tax_preference" value={form.tax_preference}
                       onChange={handleChange} sx={{ gap: 1.25, mt: '2px' }}
                     >
-                      {[{ v: 'taxable', l: 'Taxable' }, { v: 'tax_exempt', l: 'Tax Exempt' }].map(opt => (
+                      {[{ v: 'taxable', l: t('customerForm.taxable') }, { v: 'tax_exempt', l: t('customerForm.taxExempt') }].map(opt => (
                         <FormControlLabel
                           key={opt.v} value={opt.v} sx={{ m: 0 }}
                           control={<Radio size="small" sx={{ p: '3px', mr: '4px', color: '#bbb', '&.Mui-checked': { color: C.primary } }} />}
@@ -854,17 +862,17 @@ const AddEditCustomer = () => {
                         />
                       ))}
                     </RadioGroup>
-                  </OtherDetailsRow>
+                    </AppFormField>
 
-                  <OtherDetailsRow label="Currency">
+                    <AppFormField label={t('customerForm.currency')} layout="half" testId="customer-detail-field-currency">
                     <AppSelect name="currency" value={form.currency} onChange={handleChange}>
                       {[['INR', 'INR - Indian Rupee'], ['USD', 'USD - US Dollar'], ['EUR', 'EUR - Euro'], ['GBP', 'GBP - British Pound'], ['AED', 'AED - UAE Dirham']].map(([v, l]) => (
                         <MenuItem key={v} value={v} sx={menuItemSx}>{l}</MenuItem>
                       ))}
                     </AppSelect>
-                  </OtherDetailsRow>
+                    </AppFormField>
 
-                  <OtherDetailsRow label="Opening Balance">
+                    <AppFormField label={t('customerForm.openingBalance')} layout="half" testId="customer-detail-field-opening-balance">
                     <TextField
                       name="opening_balance" value={form.opening_balance} onChange={handleChange}
                       size="small" fullWidth type="number"
@@ -878,10 +886,10 @@ const AddEditCustomer = () => {
                       }}
                       sx={fieldSx}
                     />
-                  </OtherDetailsRow>
+                    </AppFormField>
 
-                  <OtherDetailsRow label="Payment Terms">
-                    <>
+                    <AppFormField label={t('customerForm.paymentTerms')} testId="customer-detail-field-payment-terms">
+                      <Box>
                       <AppSelect name="payment_terms" value={form.payment_terms} onChange={handleChange}>
                         {PAYMENT_TERMS_OPTIONS.map(t => <MenuItem key={t.value} value={t.value} sx={menuItemSx}>{t.label}</MenuItem>)}
                       </AppSelect>
@@ -892,16 +900,16 @@ const AddEditCustomer = () => {
                           onChange={handleChange}
                           size="small"
                           fullWidth
-                          placeholder="e.g. 50% advance, balance in 15 days"
+                          placeholder={t('customerForm.customPaymentTermsPlaceholder')}
                           error={!!errors.custom_payment_terms}
                           helperText={errors.custom_payment_terms}
                           sx={{ ...fieldSx, mt: 1 }}
                         />
                       )}
-                    </>
-                  </OtherDetailsRow>
+                      </Box>
+                    </AppFormField>
 
-                  <OtherDetailsRow label="Enable Portal?" hint="Allow customer portal access" alignStart>
+                    <AppFormField label={t('customerForm.enablePortal')} hint={t('customerForm.enablePortalHint')} testId="customer-detail-field-portal">
                     <Box sx={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'flex-start', width: '100%' }}>
                       <FormControlLabel
                         sx={{ m: 0, ml: 0, alignItems: 'flex-start' }}
@@ -914,12 +922,12 @@ const AddEditCustomer = () => {
                             sx={{ p: 0, mr: '6px', color: '#bbb', '&.Mui-checked': { color: C.primary } }}
                           />
                         }
-                        label={<Typography sx={{ fontSize: '0.8125rem', color: C.label }}>Allow portal access for this customer</Typography>}
+                        label={<Typography sx={{ fontSize: '0.8125rem', color: C.label }}>{t('customerForm.allowPortalAccess')}</Typography>}
                       />
                     </Box>
-                  </OtherDetailsRow>
+                    </AppFormField>
 
-                  <OtherDetailsRow label="Documents" alignStart>
+                    <AppFormField label={t('customerForm.documents')} testId="customer-detail-field-documents">
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                       <Button
                         variant="outlined"
@@ -934,7 +942,7 @@ const AddEditCustomer = () => {
                           '&:hover': { bgcolor: '#fafbff', borderColor: '#b7bec8' },
                         }}
                       >
-                        Upload File
+                        {t('customerForm.uploadFile')}
                       </Button>
                       <input
                         ref={documentInputRef}
@@ -944,7 +952,7 @@ const AddEditCustomer = () => {
                         onChange={handleDocumentSelect}
                       />
                       <Typography sx={{ fontSize: '0.72rem', color: C.hint, mt: 0.6 }}>
-                        You can upload a maximum of 10 files, 10MB each
+                        {t('customerForm.uploadHint')}
                       </Typography>
 
                       {!!(form.documents || []).length && (
@@ -973,9 +981,10 @@ const AddEditCustomer = () => {
                         </Box>
                       )}
                     </Box>
-                  </OtherDetailsRow>
+                    </AppFormField>
+                  </FormLayout>
 
-                  <OtherDetailsRow label="GST Number" hint="15-character GSTIN" alignStart>
+                  <OtherDetailsRow label={t('customerForm.gstNumber')} hint={t('customerForm.gstNumberHint')} alignStart>
                     <Box>
                       <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
                         <TextField
@@ -983,7 +992,7 @@ const AddEditCustomer = () => {
                           size="small" fullWidth placeholder=""
                           inputProps={{ style: { textTransform: 'uppercase' } }}
                           error={!!errors.gst_number || (form.gst_number && !isValidGST(form.gst_number))}
-                          helperText={errors.gst_number || (form.gst_number && !isValidGST(form.gst_number) ? 'Invalid GST format' : '')}
+                          helperText={errors.gst_number || (form.gst_number && !isValidGST(form.gst_number) ? t('customerForm.invalidGst') : '')}
                           sx={fieldSx}
                         />
                         <Button
@@ -1004,7 +1013,7 @@ const AddEditCustomer = () => {
                             '&.Mui-disabled': { borderColor: '#ddd', color: '#999' },
                           }}
                         >
-                          {gstPrefilling ? <CircularProgress size={14} sx={{ color: C.primary }} /> : 'Prefill'}
+                          {gstPrefilling ? <CircularProgress size={14} sx={{ color: C.primary }} /> : t('customerForm.prefill')}
                         </Button>
                       </Box>
                       {gstPrefillError && (
@@ -1029,7 +1038,7 @@ const AddEditCustomer = () => {
                           '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' },
                         }}
                       >
-                        Add more details
+                        {t('customerForm.addMoreDetails')}
                       </Button>
                     </Box>
                   )}
@@ -1465,7 +1474,7 @@ const AddEditCustomer = () => {
                   '&:hover': { borderColor: '#a0a8b4', bgcolor: 'transparent' },
                 }}
               >
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button
                 type="submit" variant="contained" size="medium" disabled={saving}
@@ -1478,7 +1487,7 @@ const AddEditCustomer = () => {
                   '&:disabled': { bgcolor: '#a8c7f5', color: '#fff' },
                 }}
               >
-                {saving ? 'Saving…' : customerId ? 'Update' : 'Save'}
+                {saving ? t('common.saving') : customerId ? t('common.update') : t('common.save')}
               </Button>
             </Box>
           </Box>
@@ -1492,17 +1501,17 @@ const AddEditCustomer = () => {
       <Dialog open={cfOpen} onClose={() => setCfOpen(false)} maxWidth="xs" fullWidth
         PaperProps={{ elevation: 2, sx: { borderRadius: '6px' } }}>
         <DialogTitle sx={{ fontSize: '1rem', fontWeight: 600, borderBottom: `1px solid ${C.divider}`, pb: 1.5 }}>
-          Add Custom Field
+          {t('customerForm.addCustomField')}
         </DialogTitle>
         <DialogContent sx={{ pt: '20px !important' }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <Box>
-              <FieldLabel required>Field Name</FieldLabel>
+              <FieldLabel required>{t('customerForm.fieldName')}</FieldLabel>
               <TextField size="small" fullWidth value={cfKey}
                 onChange={e => setCfKey(e.target.value)} sx={fieldSx} />
             </Box>
             <Box>
-              <FieldLabel>Field Value</FieldLabel>
+              <FieldLabel>{t('customerForm.fieldValue')}</FieldLabel>
               <TextField size="small" fullWidth value={cfValue}
                 onChange={e => setCfValue(e.target.value)} sx={fieldSx} />
             </Box>
@@ -1511,11 +1520,11 @@ const AddEditCustomer = () => {
         <DialogActions sx={{ px: 3, py: 2, borderTop: `1px solid ${C.divider}`, gap: 1 }}>
           <Button onClick={() => setCfOpen(false)}
             sx={{ textTransform: 'none', fontSize: '0.875rem', color: '#555', borderRadius: '4px' }}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button onClick={saveCf} variant="contained"
             sx={{ textTransform: 'none', fontSize: '0.875rem', borderRadius: '4px', bgcolor: C.primary, boxShadow: 'none', '&:hover': { bgcolor: '#1558b0', boxShadow: 'none' } }}>
-            Add
+            {t('common.add')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1527,6 +1536,7 @@ const AddEditCustomer = () => {
 // Extracted so Billing and Shipping share identical field structure.
 // Uses FieldLabel above each field — same pattern as Other Details tab.
 const AddressFields = ({ prefix, form, onChange, onValueChange, disabled }) => {
+  const { t } = useTranslation();
   const val = name => form[`${prefix}${name}`] || '';
   const LABEL_WIDTH = 120;
 
@@ -1571,50 +1581,50 @@ const AddressFields = ({ prefix, form, onChange, onValueChange, disabled }) => {
 
   return (
     <Box>
-      <AddressRow label="Attention">
+      <AddressRow label={t('customerForm.address.attention')}>
         <TextField {...wrap('attention')} placeholder="" />
       </AddressRow>
 
-      <AddressRow label="Country/Region">
+      <AddressRow label={t('customerForm.address.countryRegion')}>
         <SearchableTextSelect
           name={`${prefix}country`}
           value={val('country')}
           onValueChange={onValueChange}
           options={COUNTRIES}
-          placeholder="Search country"
+          placeholder={t('customerForm.address.searchCountry')}
           disabled={disabled}
           freeSolo
         />
       </AddressRow>
 
-      <AddressRow label="Address" alignStart>
+      <AddressRow label={t('customerForm.address.address')} alignStart>
         <Box sx={{ display: 'grid', gap: 1 }}>
-          <TextField {...wrap('street')} placeholder="Street 1" />
-          <TextField {...wrap('street2')} placeholder="Street 2" />
+          <TextField {...wrap('street')} placeholder={t('customerForm.address.street1')} />
+          <TextField {...wrap('street2')} placeholder={t('customerForm.address.street2')} />
         </Box>
       </AddressRow>
 
-      <AddressRow label="City">
+      <AddressRow label={t('customerForm.address.city')}>
         <TextField {...wrap('city')} placeholder="" />
       </AddressRow>
 
-      <AddressRow label="State">
+      <AddressRow label={t('customerForm.address.state')}>
         <SearchableTextSelect
           name={`${prefix}state`}
           value={val('state')}
           onValueChange={onValueChange}
           options={INDIAN_STATES}
-          placeholder="Search or type a state"
+          placeholder={t('customerForm.address.searchState')}
           disabled={disabled}
           freeSolo
         />
       </AddressRow>
 
-      <AddressRow label="Pin Code">
+      <AddressRow label={t('customerForm.address.pinCode')}>
         <TextField {...wrap('zip')} placeholder="" />
       </AddressRow>
 
-      <AddressRow label="Phone">
+      <AddressRow label={t('customerForm.address.phone')}>
         <AddressPhoneInput
           codeField={`${prefix}phone_code`}
           codeVal={val('phone_code') || '+91'}
@@ -1625,7 +1635,7 @@ const AddressFields = ({ prefix, form, onChange, onValueChange, disabled }) => {
         />
       </AddressRow>
 
-      <AddressRow label="Fax Number">
+      <AddressRow label={t('customerForm.address.faxNumber')}>
         <TextField {...wrap('fax')} placeholder="" />
       </AddressRow>
     </Box>

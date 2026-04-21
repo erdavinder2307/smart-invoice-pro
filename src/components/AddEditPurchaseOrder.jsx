@@ -11,6 +11,7 @@ import MainLayout from "./Layout/MainLayout";
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { C, fieldSx, footerSx, cancelBtnSx, saveBtnSx } from './common/formStyles';
+import { useTranslation } from 'react-i18next';
 import FormInput from './common/FormInput';
 import FormSelect from './common/FormSelect';
 import FormDatePicker from './common/FormDatePicker';
@@ -34,8 +35,7 @@ const initialForm = {
 
 const AddEditPurchaseOrder = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
-  const location = useLocation();
+  const navigate = useNavigate();  const { t } = useTranslation();  const location = useLocation();
   const [form, setForm] = useState(initialForm);
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -190,7 +190,7 @@ const AddEditPurchaseOrder = () => {
   }
 
   return (
-    <MainLayout title={id ? 'Edit Purchase Order' : 'New Purchase Order'}>
+    <MainLayout title={id ? t('addEditPurchaseOrder.editTitle') : t('addEditPurchaseOrder.newTitle')}>
       <Box sx={{ bgcolor: C.pageBg, minHeight: '100vh', pb: 6 }}>
         <Container maxWidth="lg" sx={{ pt: 3 }}>
 

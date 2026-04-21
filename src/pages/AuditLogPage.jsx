@@ -41,19 +41,7 @@ import CloseIcon from "@mui/icons-material/Close";
 
 import { useAuth } from "../context/AuthContext";
 import { getAuditLogs, getAuditLogDetailData } from "../services/auditLogService";
-
-// ── Settings sub-nav ──────────────────────────────────────────────────────────
-const SETTINGS_NAV = [
-  { label: "Organization Profile", path: "/settings/organization-profile", icon: <BusinessIcon sx={{ fontSize: 18 }} /> },
-  { label: "Branding",             path: "/settings/branding",             icon: <BrushIcon sx={{ fontSize: 18 }} /> },
-  { label: "Invoice Preferences",  path: "/settings/invoice-preferences",  icon: <DescriptionIcon sx={{ fontSize: 18 }} /> },
-  { label: "Taxes",                path: "/settings/taxes",                icon: <ReceiptLongIcon sx={{ fontSize: 18 }} /> },
-  { label: "User Management",      path: "/settings/users",                icon: <PeopleIcon sx={{ fontSize: 18 }} /> },
-  { label: "Roles",                path: "/settings/roles",                icon: <AdminPanelSettingsIcon sx={{ fontSize: 18 }} /> },
-  { label: "Automation",           path: "/settings/automation",           icon: <NotificationsActiveIcon sx={{ fontSize: 18 }} /> },
-  { label: "Integrations",         path: "/settings/integrations",         icon: <ExtensionIcon sx={{ fontSize: 18 }} /> },
-  { label: "Audit Log",            path: "/settings/audit-log",            icon: <HistoryIcon sx={{ fontSize: 18 }} /> },
-];
+import { useTranslation } from "react-i18next";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const ACTION_COLORS = {
@@ -122,13 +110,25 @@ function formatValue(v) {
 function SettingsSubNav() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { t } = useTranslation();
+  const SETTINGS_NAV = [
+    { labelKey: "settingsNav.organization", path: "/settings/organization-profile", icon: <BusinessIcon sx={{ fontSize: 18 }} /> },
+    { labelKey: "settingsNav.branding",     path: "/settings/branding",             icon: <BrushIcon sx={{ fontSize: 18 }} /> },
+    { labelKey: "settingsNav.invoicePreferences", path: "/settings/invoice-preferences", icon: <DescriptionIcon sx={{ fontSize: 18 }} /> },
+    { labelKey: "settingsNav.taxes",         path: "/settings/taxes",                icon: <ReceiptLongIcon sx={{ fontSize: 18 }} /> },
+    { labelKey: "settingsNav.userManagement", path: "/settings/users",              icon: <PeopleIcon sx={{ fontSize: 18 }} /> },
+    { labelKey: "settingsNav.roles",         path: "/settings/roles",               icon: <AdminPanelSettingsIcon sx={{ fontSize: 18 }} /> },
+    { labelKey: "settingsNav.automation",    path: "/settings/automation",          icon: <NotificationsActiveIcon sx={{ fontSize: 18 }} /> },
+    { labelKey: "settingsNav.integrations",  path: "/settings/integrations",        icon: <ExtensionIcon sx={{ fontSize: 18 }} /> },
+    { labelKey: "settingsNav.auditLog",      path: "/settings/audit-log",           icon: <HistoryIcon sx={{ fontSize: 18 }} /> },
+  ];
   return (
     <Paper
       elevation={0}
       sx={{ width: 220, flexShrink: 0, border: "1px solid #e0e0e0", borderRadius: 2, p: 1, height: "fit-content" }}
     >
       <List dense disablePadding>
-        {SETTINGS_NAV.map(({ label, path, icon }) => {
+        {SETTINGS_NAV.map(({ labelKey, path, icon }) => {
           const active = pathname === path || pathname.startsWith(path + "/");
           return (
             <ListItemButton
@@ -138,7 +138,7 @@ function SettingsSubNav() {
               sx={{ borderRadius: 1, mb: 0.25, "&.Mui-selected": { bgcolor: "#e8f5e9" } }}
             >
               <ListItemIcon sx={{ minWidth: 32 }}>{icon}</ListItemIcon>
-              <ListItemText primary={<Typography variant="body2" fontWeight={active ? 600 : 400}>{label}</Typography>} />
+              <ListItemText primary={<Typography variant="body2" fontWeight={active ? 600 : 400}>{t(labelKey)}</Typography>} />
             </ListItemButton>
           );
         })}
@@ -263,6 +263,7 @@ function AuditDetailDialog({ log, onClose }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function AuditLogPage() {
   const { userRole } = useAuth();
+  const { t } = useTranslation();
   const [logs, setLogs]       = useState([]);
   const [total, setTotal]     = useState(0);
   const [page, setPage]       = useState(0);
@@ -291,7 +292,7 @@ export default function AuditLogPage() {
       setLogs(result.logs ?? []);
       setTotal(result.total ?? 0);
     } catch (err) {
-      setError("Failed to load audit logs.");
+      setError(t('auditLog.failedFetch'));
     } finally {
       setLoading(false);
     }
@@ -302,10 +303,9 @@ export default function AuditLogPage() {
   if (userRole && userRole !== "Admin") {
     return (
       <MainLayout>
-        <Box sx={{ display: "flex", gap: 3, p: 3 }}>
-          <SettingsSubNav />
-          <Box flex={1}>
-            <Alert severity="error">Access denied. Audit Log is restricted to Admin users.</Alert>
+        <Box sx={{ p: 3 }}>
+          <Box>
+            <Alert severity="error">{t('auditLog.accessDenied')}</Alert>
           </Box>
         </Box>
       </MainLayout>
@@ -314,14 +314,12 @@ export default function AuditLogPage() {
 
   return (
     <MainLayout>
-      <Box sx={{ display: "flex", gap: 3, p: 3 }}>
-        <SettingsSubNav />
-
+      <Box sx={{ p: 3 }}>
         <Box flex={1} minWidth={0}>
           {/* Header */}
           <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
             <HistoryIcon sx={{ mr: 1, color: "text.secondary" }} />
-            <Typography variant="h6" fontWeight={700}>Audit Log</Typography>
+            <Typography variant="h6" fontWeight={700}>{t('auditLog.title')}</Typography>
           </Box>
 
           {/* Filters */}

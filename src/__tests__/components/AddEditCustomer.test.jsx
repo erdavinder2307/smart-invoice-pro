@@ -40,6 +40,37 @@ describe('AddEditCustomer', () => {
     expect(container.querySelector('input[name="phone"]')).toBeInTheDocument();
   });
 
+  it('renders the customer form with the expected shared layout hooks', async () => {
+    const { container } = renderWithProviders(<AddEditCustomer />);
+
+    await waitFor(() => expect(container.querySelector('input[name="display_name"]')).toBeInTheDocument());
+
+    expect(screen.getByTestId('customer-field-primary-contact')).toHaveAttribute('data-layout', 'full');
+    expect(screen.getByTestId('customer-field-company-name')).toHaveAttribute('data-layout', 'full');
+    expect(screen.getByTestId('customer-field-display-name')).toHaveAttribute('data-layout', 'full');
+    expect(screen.getByTestId('customer-field-phone')).toHaveAttribute('data-layout', 'full');
+    expect(screen.getByTestId('customer-field-communication')).toHaveAttribute('data-layout', 'full');
+
+    ['customer-field-email', 'customer-field-language'].forEach((testId) => {
+      expect(screen.getByTestId(testId)).toHaveAttribute('data-layout', 'half');
+    });
+
+    [
+      'customer-detail-field-gst-treatment',
+      'customer-detail-field-place-of-supply',
+      'customer-detail-field-pan',
+      'customer-detail-field-tax-preference',
+      'customer-detail-field-currency',
+      'customer-detail-field-opening-balance',
+    ].forEach((testId) => {
+      expect(screen.getByTestId(testId)).toHaveAttribute('data-layout', 'half');
+    });
+
+    ['customer-detail-field-payment-terms', 'customer-detail-field-portal', 'customer-detail-field-documents'].forEach((testId) => {
+      expect(screen.getByTestId(testId)).toHaveAttribute('data-layout', 'full');
+    });
+  });
+
   it('shows required-field validation errors', async () => {
     renderWithProviders(<AddEditCustomer />);
 

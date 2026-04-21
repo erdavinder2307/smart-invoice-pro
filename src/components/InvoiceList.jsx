@@ -67,6 +67,7 @@ import EmailIcon from '@mui/icons-material/Email';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import PayNowModal from "./PayNowModal";
 import { useAuth } from "../context/AuthContext";
+import { useTranslation } from "react-i18next";
 
 const initialForm = {
   invoice_number: "",
@@ -119,6 +120,7 @@ const InvoiceList = () => {
   const [approvalToast, setApprovalToast] = useState({ open: false, message: '', severity: 'success' });
   const navigate = useNavigate();
   const { user, canApprove } = useAuth();
+  const { t } = useTranslation();
 
   const filteredInvoices = invoices.filter((invoice) => {
     const customer = customers.find((c) => c.id === invoice.customer_id);
@@ -464,10 +466,10 @@ const InvoiceList = () => {
         {/* Page Header */}
         <Box sx={{ mb: 4 }}>
           <SectionHeader
-            title="All Invoices"
-            subtitle="Track and manage all customer invoices and payments"
+            title={t('invoiceList.title')}
+            subtitle={t('invoiceList.subtitle')}
             primaryAction={{
-              label: "New Invoice",
+              label: t('invoiceList.newInvoice'),
               icon: <AddIcon />,
               onClick: handleAdd,
             }}
@@ -487,12 +489,12 @@ const InvoiceList = () => {
             }}
           >
             <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600}>
-              Payment Summary
+              {t('invoiceList.paymentSummary')}
             </Typography>
             <Grid container spacing={2} sx={{ mt: 0.5 }}>
               <Grid item xs={12} sm={6} md={3}>
                 <SummaryCard
-                  label="Outstanding Receivables"
+                  label={t('invoiceList.outstandingReceivables')}
                   value={`₹${totalOutstanding.toLocaleString()}`}
                   icon={<AttachMoneyIcon />}
                   accentColor="error.main"
@@ -500,7 +502,7 @@ const InvoiceList = () => {
               </Grid>
               <Grid item xs={12} sm={6} md={2}>
                 <SummaryCard
-                  label="Due Today"
+                  label={t('invoiceList.dueToday')}
                   value={dueToday}
                   icon={<TodayIcon />}
                   accentColor="warning.main"
@@ -508,7 +510,7 @@ const InvoiceList = () => {
               </Grid>
               <Grid item xs={12} sm={6} md={2}>
                 <SummaryCard
-                  label="Due Within 30 Days"
+                  label={t('invoiceList.dueWithin30Days')}
                   value={dueWithin30Days}
                   icon={<DateRangeIcon />}
                   accentColor="info.main"
@@ -516,7 +518,7 @@ const InvoiceList = () => {
               </Grid>
               <Grid item xs={12} sm={6} md={2}>
                 <SummaryCard
-                  label="Overdue"
+                  label={t('invoiceList.overdue')}
                   value={overdueCount}
                   icon={<ErrorIcon />}
                   accentColor="error.main"
@@ -629,7 +631,7 @@ const InvoiceList = () => {
                 columns={invoiceColumns}
                 rows={paginatedInvoices}
                 loading={loading}
-                emptyMessage={searchTerm || statusFilter !== "All" ? "No invoices found" : "No invoices yet"}
+                emptyMessage={searchTerm || statusFilter !== "All" ? t('invoiceList.noInvoices') : t('invoiceList.noInvoices')}
                 pagination={{
                   rowsPerPageOptions: [10, 25, 50],
                   count: filteredInvoices.length,
@@ -651,15 +653,15 @@ const InvoiceList = () => {
                       />
                     </TableCell>
                     {[
-                      { label: "DATE" },
-                      { label: "INVOICE #" },
-                      { label: "ORDER NUMBER" },
-                      { label: "CUSTOMER NAME" },
-                      { label: "STATUS" },
+                      { label: t('invoiceList.columns.date') },
+                      { label: t('invoiceList.columns.invoiceNumber') },
+                      { label: t('invoiceList.columns.orderNumber') },
+                      { label: t('invoiceList.columns.customerName') },
+                      { label: t('invoiceList.columns.status') },
                       { label: "EMAIL", align: "center" },
-                      { label: "DUE DATE" },
-                      { label: "AMOUNT", align: "right" },
-                      { label: "BALANCE DUE", align: "right" },
+                      { label: t('invoiceList.columns.dueDate') },
+                      { label: t('invoiceList.columns.amount'), align: "right" },
+                      { label: t('invoiceList.columns.balanceDue'), align: "right" },
                       { label: "", align: "center" },
                     ].map((col, index) => (
                       <TableCell

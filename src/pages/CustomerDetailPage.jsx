@@ -30,6 +30,7 @@ import PaymentsIcon from "@mui/icons-material/Payments";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import FormatListNumberedIcon from "@mui/icons-material/FormatListNumbered";
 import EmptyState from "../components/common/EmptyState";
+import { useTranslation } from "react-i18next";
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat("en-IN", {
@@ -89,6 +90,7 @@ const InfoRow = ({ label, value }) =>
 const CustomerDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -101,7 +103,7 @@ const CustomerDetailPage = () => {
         const res = await axios.get(createApiUrl(`/api/customers/${id}/overview`));
         setData(res.data);
       } catch {
-        setError("Failed to load customer details.");
+        setError(t('customerDetail.failedFetch'));
       } finally {
         setLoading(false);
       }
@@ -122,7 +124,7 @@ const CustomerDetailPage = () => {
   if (error || !data) {
     return (
       <MainLayout>
-        <Alert severity="error" sx={{ m: 2 }}>{error || "Customer not found."}</Alert>
+        <Alert severity="error" sx={{ m: 2 }}>{error || t('customerDetail.notFound')}</Alert>
       </MainLayout>
     );
   }

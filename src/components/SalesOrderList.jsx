@@ -52,10 +52,12 @@ import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import PendingIcon from "@mui/icons-material/Pending";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import { useTranslation } from "react-i18next";
 
 const SalesOrderList = () => {
   const [salesOrders, setSalesOrders] = useState([]);
   const [customers, setCustomers] = useState([]);
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -78,7 +80,7 @@ const SalesOrderList = () => {
       setSalesOrders(response.data);
       setError("");
     } catch (err) {
-      setError("Failed to fetch sales orders");
+      setError(t('salesOrderList.failedFetch'));
       console.error(err);
     }
     setLoading(false);
@@ -142,7 +144,7 @@ const SalesOrderList = () => {
       setConfirmDeleteId(null);
       setError("");
     } catch (err) {
-      setError("Failed to delete sales order");
+      setError(t('salesOrderList.failedDelete'));
       console.error(err);
     }
     setLoading(false);
@@ -293,7 +295,7 @@ const SalesOrderList = () => {
                   Sales Orders
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
-                  Manage customer sales orders and conversions
+                  {t('salesOrderList.subtitle')}
                 </Typography>
               </Box>
               <Button
@@ -310,7 +312,7 @@ const SalesOrderList = () => {
                   "&:hover": { boxShadow: 4 }
                 }}
               >
-                New Sales Order
+                {t('salesOrderList.newSalesOrder')}
               </Button>
             </Box>
 

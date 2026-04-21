@@ -92,6 +92,35 @@ describe('AddEditInvoice', () => {
     expect(screen.getByText('Item Table')).toBeInTheDocument();
   });
 
+  it('renders the invoice metadata fields with the expected grid sizing hooks', async () => {
+    renderWithProviders(<AddEditInvoice />);
+
+    await screen.findByDisplayValue('INV-00999');
+
+    expect(screen.getByText('Customer Name')).toBeInTheDocument();
+    expect(screen.getByText('Invoice #')).toBeInTheDocument();
+    expect(screen.getByText('Order Number')).toBeInTheDocument();
+    expect(screen.getByText('Invoice Date')).toBeInTheDocument();
+    expect(screen.getByText('Due Date')).toBeInTheDocument();
+    expect(screen.getByText('Terms')).toBeInTheDocument();
+    expect(screen.getByText('Salesperson')).toBeInTheDocument();
+    expect(screen.getByText('Subject')).toBeInTheDocument();
+
+    expect(screen.getByTestId('invoice-field-customer')).toHaveAttribute('data-layout', 'full');
+    expect(screen.getByTestId('invoice-field-subject')).toHaveAttribute('data-layout', 'full');
+
+    [
+      'invoice-field-number',
+      'invoice-field-order-number',
+      'invoice-field-issue-date',
+      'invoice-field-due-date',
+      'invoice-field-payment-terms',
+      'invoice-field-salesperson',
+    ].forEach((testId) => {
+      expect(screen.getByTestId(testId)).toHaveAttribute('data-layout', 'half');
+    });
+  });
+
   it('adds new item row when Add New Row is clicked', async () => {
     renderWithProviders(<AddEditInvoice />);
 

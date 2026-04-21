@@ -14,6 +14,7 @@ import { C, fieldSx, footerSx, cancelBtnSx, saveBtnSx } from './common/formStyle
 import FormInput from './common/FormInput';
 import FormSelect from './common/FormSelect';
 import FormDatePicker from './common/FormDatePicker';
+import { useTranslation } from 'react-i18next';
 
 const TabPanel = ({ children, value, index }) => (
   <Box hidden={value !== index} sx={{ pt: 3 }}>
@@ -44,6 +45,7 @@ const initialForm = {
 const AddEditBill = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [form, setForm] = useState(initialForm);
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -75,7 +77,7 @@ const AddEditBill = () => {
       const response = await axios.get(createApiUrl(`/api/bills/${id}`));
       setForm(response.data);
     } catch (error) {
-      setError("Failed to fetch bill");
+      setError(t('addEditBill.failedFetch'));
       console.error(error);
     }
     setLoading(false);
@@ -200,7 +202,7 @@ const AddEditBill = () => {
       }
       navigate("/bills");
     } catch (error) {
-      setError(error.response?.data?.error || "Failed to save bill");
+      setError(error.response?.data?.error || t('addEditBill.failedSave'));
       console.error(error);
     }
     setSaving(false);
@@ -217,7 +219,7 @@ const AddEditBill = () => {
   }
 
   return (
-    <MainLayout title={id ? 'Edit Bill' : 'New Bill'}>
+    <MainLayout title={id ? t('addEditBill.editTitle') : t('addEditBill.newTitle')}>
       <Box sx={{ bgcolor: C.pageBg, minHeight: '100vh', pb: 6 }}>
         <Container maxWidth="lg" sx={{ pt: 3 }}>
 
@@ -236,7 +238,7 @@ const AddEditBill = () => {
             <Box sx={{ px: 3 }}>
               <Box sx={{ py: 1.5, borderBottom: `1px solid ${C.divider}` }}>
                 <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>
-                  Bill Information
+                  {t('addEditBill.billInfo')}
                 </Typography>
               </Box>
 

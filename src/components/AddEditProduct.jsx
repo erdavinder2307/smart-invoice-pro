@@ -35,6 +35,7 @@ import {
 } from './common/formStyles';
 import FormInput from './common/FormInput';
 import FormSelect from './common/FormSelect';
+import { useTranslation } from 'react-i18next';
 
 const unitOptions = ['pcs', 'kg', 'litre', 'box', 'pack', 'hrs', 'set'];
 const taxPreferenceOptions = [
@@ -97,6 +98,7 @@ const taxLabelSx = {
 const AddEditProduct = ({ onSuccess, onCancel }) => {
   const { id: productId } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [form, setForm] = useState(initialForm);
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState('');
@@ -130,7 +132,7 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
             purchase_account: res.data?.purchase_account || 'Cost of Goods Sold',
           }));
         })
-        .catch(() => setServerError('Failed to fetch product details'))
+        .catch(() => setServerError(t('addEditProduct.failedFetch')))
         .finally(() => setLoading(false));
     }
   }, [productId]);
@@ -255,7 +257,7 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
           )}
 
           <Typography sx={{ fontSize: '1.85rem', fontWeight: 500, color: '#212121', mb: 1.5, textAlign: 'left' }}>
-            {productId ? 'Edit Item' : 'New Item'}
+            {productId ? t('addEditProduct.editTitle') : t('addEditProduct.newTitle')}
           </Typography>
 
           <Paper

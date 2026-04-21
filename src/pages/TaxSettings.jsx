@@ -52,54 +52,19 @@ import {
   deleteTaxRate,
 } from "../services/taxService";
 import { getOrgProfile, updateOrgProfile } from "../services/organizationProfileService";
+import { useTranslation } from "react-i18next";
 
 // ── Settings sub-nav ──────────────────────────────────────────────────────────
 const SETTINGS_NAV = [
-  {
-    label: "Organization Profile",
-    path: "/settings/organization-profile",
-    icon: <BusinessIcon sx={{ fontSize: 18 }} />,
-  },
-  {
-    label: "Branding",
-    path: "/settings/branding",
-    icon: <BrushIcon sx={{ fontSize: 18 }} />,
-  },
-  {
-    label: "Invoice Preferences",
-    path: "/settings/invoice-preferences",
-    icon: <DescriptionIcon sx={{ fontSize: 18 }} />,
-  },
-  {
-    label: "Taxes",
-    path: "/settings/taxes",
-    icon: <ReceiptLongIcon sx={{ fontSize: 18 }} />,
-  },
-  {
-    label: "User Management",
-    path: "/settings/users",
-    icon: <PeopleIcon sx={{ fontSize: 18 }} />,
-  },
-  {
-    label: "Roles",
-    path: "/settings/roles",
-    icon: <AdminPanelSettingsIcon sx={{ fontSize: 18 }} />,
-  },
-  {
-    label: "Automation",
-    path: "/settings/automation",
-    icon: <NotificationsActiveIcon sx={{ fontSize: 18 }} />,
-  },
-  {
-    label: "Integrations",
-    path: "/settings/integrations",
-    icon: <ExtensionIcon sx={{ fontSize: 18 }} />,
-  },
-  {
-    label: "Audit Log",
-    path: "/settings/audit-log",
-    icon: <HistoryIcon sx={{ fontSize: 18 }} />,
-  },
+  { labelKey: "settingsNav.organization", path: "/settings/organization-profile", icon: <BusinessIcon sx={{ fontSize: 18 }} /> },
+  { labelKey: "settingsNav.branding",     path: "/settings/branding",             icon: <BrushIcon sx={{ fontSize: 18 }} /> },
+  { labelKey: "settingsNav.invoicePreferences", path: "/settings/invoice-preferences", icon: <DescriptionIcon sx={{ fontSize: 18 }} /> },
+  { labelKey: "settingsNav.taxes",         path: "/settings/taxes",                icon: <ReceiptLongIcon sx={{ fontSize: 18 }} /> },
+  { labelKey: "settingsNav.userManagement", path: "/settings/users",              icon: <PeopleIcon sx={{ fontSize: 18 }} /> },
+  { labelKey: "settingsNav.roles",         path: "/settings/roles",               icon: <AdminPanelSettingsIcon sx={{ fontSize: 18 }} /> },
+  { labelKey: "settingsNav.automation",    path: "/settings/automation",          icon: <NotificationsActiveIcon sx={{ fontSize: 18 }} /> },
+  { labelKey: "settingsNav.integrations",  path: "/settings/integrations",        icon: <ExtensionIcon sx={{ fontSize: 18 }} /> },
+  { labelKey: "settingsNav.auditLog",      path: "/settings/audit-log",           icon: <HistoryIcon sx={{ fontSize: 18 }} /> },
 ];
 
 const EMPTY_RATE = { name: "", rate: "", type: "GST", is_default: false };
@@ -107,6 +72,7 @@ const EMPTY_RATE = { name: "", rate: "", type: "GST", is_default: false };
 function SettingsSubNav() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { t } = useTranslation();
 
   return (
     <Paper
@@ -134,7 +100,7 @@ function SettingsSubNav() {
         </Typography>
       </Box>
       <List disablePadding>
-        {SETTINGS_NAV.map(({ label, path, icon }) => {
+        {SETTINGS_NAV.map(({ labelKey, path, icon }) => {
           const active = pathname === path;
           return (
             <ListItemButton
@@ -154,7 +120,7 @@ function SettingsSubNav() {
             >
               <ListItemIcon sx={{ minWidth: 30, color: C.hint }}>{icon}</ListItemIcon>
               <ListItemText
-                primary={label}
+                primary={t(labelKey)}
                 primaryTypographyProps={{ fontSize: "0.8125rem", fontWeight: active ? 600 : 400 }}
               />
             </ListItemButton>
@@ -364,11 +330,7 @@ const TaxSettings = () => {
   return (
     <MainLayout>
       <Box sx={{ bgcolor: "#f8fafc", minHeight: "100vh", py: 2.5, px: { xs: 1, md: 3 } }}>
-        <Box sx={{ maxWidth: 1020, mx: "auto", display: "flex", gap: 2.5, alignItems: "flex-start" }}>
-
-          <SettingsSubNav />
-
-          <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+        <Box sx={{ maxWidth: 1020, mx: "auto", minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
             {/* ── Page header ── */}
             <Box>
               <Typography sx={{ fontSize: "1.5rem", fontWeight: 600, color: "#151a25" }}>
@@ -599,7 +561,6 @@ const TaxSettings = () => {
                 </Paper>
               </>
             )}
-          </Box>
         </Box>
       </Box>
 

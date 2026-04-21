@@ -39,9 +39,11 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import SearchIcon from "@mui/icons-material/Search";
 import BusinessIcon from "@mui/icons-material/Business";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import { useTranslation } from "react-i18next";
 
 const VendorList = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -63,7 +65,7 @@ const VendorList = () => {
       const response = await axios.get(createApiUrl("/api/vendors"));
       setVendors(response.data);
     } catch (error) {
-      setError("Failed to fetch vendors");
+      setError(t('vendorList.failedFetch'));
       console.error(error);
     }
     setLoading(false);
@@ -76,7 +78,7 @@ const VendorList = () => {
       await fetchVendors();
       setConfirmDeleteId(null);
     } catch (error) {
-      setError("Failed to delete vendor");
+      setError(t('vendorList.failedDelete'));
     }
     setLoading(false);
   };
@@ -128,10 +130,10 @@ const VendorList = () => {
           >
             <Box>
               <Typography variant="h4" fontWeight={700} gutterBottom>
-                Vendors
+                {t('vendorList.title')}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Manage your suppliers and track payables
+                {t('vendorList.subtitle')}
               </Typography>
             </Box>
             <Button
@@ -147,7 +149,7 @@ const VendorList = () => {
                 boxShadow: 2
               }}
             >
-              New Vendor
+              {t('vendorList.newVendor')}
             </Button>
           </Box>
 
@@ -155,7 +157,7 @@ const VendorList = () => {
           <Grid container spacing={2} sx={{ mb: 3 }}>
             <Grid item xs={12} sm={6} md={4}>
               <SummaryCard
-                label="Total Vendors"
+                label={t('vendorList.totalVendors')}
                 value={totalVendors}
                 icon={<LocalShippingIcon />}
                 accentColor="primary.main"
@@ -163,7 +165,7 @@ const VendorList = () => {
             </Grid>
             <Grid item xs={12} sm={6} md={4}>
               <SummaryCard
-                label="Active Vendors"
+                label={t('vendorList.activeVendors')}
                 value={activeVendors}
                 icon={<BusinessIcon />}
                 accentColor="success.main"
@@ -171,7 +173,7 @@ const VendorList = () => {
             </Grid>
             <Grid item xs={12} sm={6} md={4}>
               <SummaryCard
-                label="Inactive Vendors"
+                label={t('vendorList.inactiveVendors')}
                 value={totalVendors - activeVendors}
                 icon={<BusinessIcon />}
                 accentColor="warning.main"
@@ -200,7 +202,7 @@ const VendorList = () => {
                 displayEmpty
                 sx={{ borderRadius: 2 }}
               >
-                <MenuItem value="All">All Status</MenuItem>
+                <MenuItem value="All">{t('common.allStatus')}</MenuItem>
                 <MenuItem value="Active">Active</MenuItem>
                 <MenuItem value="Inactive">Inactive</MenuItem>
               </Select>
@@ -251,18 +253,18 @@ const VendorList = () => {
             />
           )}
           columns={[
-            { key: 'vendor_name', label: 'Vendor Name' },
-            { key: 'contact_person', label: 'Contact Person' },
-            { key: 'email', label: 'Email' },
-            { key: 'phone', label: 'Phone' },
-            { key: 'payment_terms', label: 'Payment Terms' },
-            { key: 'status', label: 'Status', align: 'center' },
-            { key: 'actions', label: 'Actions', align: 'center' },
+            { key: 'vendor_name', label: t('vendorList.columns.vendorName') },
+            { key: 'contact_person', label: t('vendorList.columns.contactPerson') },
+            { key: 'email', label: t('vendorList.columns.email') },
+            { key: 'phone', label: t('vendorList.columns.phone') },
+            { key: 'payment_terms', label: t('vendorList.columns.paymentTerms') },
+            { key: 'status', label: t('common.status'), align: 'center' },
+            { key: 'actions', label: t('common.actions'), align: 'center' },
           ]}
           rows={paginatedVendors}
           loading={loading}
           emptyIcon={<LocalShippingIcon sx={{ fontSize: 48 }} />}
-          emptyTitle={searchTerm ? "No vendors found" : "No vendors yet"}
+          emptyTitle={searchTerm ? t('vendorList.noVendors') : t('vendorList.noVendorsYet')}
           emptySubtitle={searchTerm ? "Try adjusting your search terms" : "Click 'New Vendor' to add your first vendor"}
           renderRow={(vendor) => (
             <TableRow key={vendor.id} hover sx={{ cursor: 'pointer' }}>

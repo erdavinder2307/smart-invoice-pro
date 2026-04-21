@@ -2,12 +2,15 @@
 import React from "react";
 import Box from "@mui/material/Box";
 import Container from "@mui/material/Container";
-import Sidebar from "../Sidebar";
 import Typography from "@mui/material/Typography";
 import DashboardHeader from "../DashboardHeader";
 import TopUtilityBar from "./TopUtilityBar";
 import AppBreadcrumbs from "./AppBreadcrumbs";
 import { useSidebar } from "../../context/SidebarContext";
+import CommandPalette from "../keyboard/CommandPalette";
+import KeyboardShortcutsModal from "../keyboard/KeyboardShortcutsModal";
+import QuickCreateCustomerModal from "../keyboard/QuickCreateCustomerModal";
+import QuickCreateInvoiceStarter from "../keyboard/QuickCreateInvoiceStarter";
 
 const MainLayout = ({
     children,
@@ -20,9 +23,14 @@ const MainLayout = ({
     const { toggleMobileDrawer } = useSidebar();
 
     return (
-        <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "grey.50" }}>
-            <Sidebar />
-            <Box component="main" sx={{ flex: 1, width: 0, display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ minHeight: "100vh", bgcolor: "grey.50" }}>
+            {/* Global keyboard overlays — always mounted while app is open */}
+            <CommandPalette />
+            <KeyboardShortcutsModal />
+            <QuickCreateCustomerModal />
+            <QuickCreateInvoiceStarter />
+
+            <Box component="main" sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
                 {/* Top Utility Bar */}
                 {showUtilityBar && (
                     <Box sx={{ position: 'sticky', top: 0, zIndex: 1200 }}>

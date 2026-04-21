@@ -8,6 +8,7 @@ import {
   CircularProgress,
   Container,
   FormControlLabel,
+  InputAdornment,
   List,
   ListItemButton,
   ListItemIcon,
@@ -17,6 +18,7 @@ import {
   Switch,
   TextField,
   Typography,
+  MenuItem,
 } from '@mui/material';
 import BusinessIcon from '@mui/icons-material/Business';
 import BrushIcon from '@mui/icons-material/Brush';
@@ -32,14 +34,14 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import { useAuth } from '../context/AuthContext';
 import { useInvoicePreferences, PREFS_DEFAULTS } from '../context/InvoicePreferencesContext';
 import {
+  AppSelect,
   C,
-  ZohoRow,
   fieldSx,
   footerSx,
   saveBtnSx,
 } from '../components/common/formStyles';
-import FormInput from '../components/common/FormInput';
-import FormSelect from '../components/common/FormSelect';
+import AppFormField from '../components/common/Form/AppFormField';
+import FormLayout from '../components/common/Form/FormLayout';
 import { updateInvoicePreferences } from '../services/invoicePreferencesService';
 
 // ── Settings sub-nav ──────────────────────────────────────────────────────────
@@ -130,7 +132,7 @@ function SectionHeader({ children }) {
   );
 }
 
-// ── Live preview chip ─────────────────────────────────────────────────────────
+// ── Live preview ──────────────────────────────────────────────────────────────
 function NumberPreview({ prefix, suffix, padding, next }) {
   const padded = Math.max(1, Math.min(10, Number(padding) || 5));
   const n      = Number(next) || 1;
@@ -138,21 +140,22 @@ function NumberPreview({ prefix, suffix, padding, next }) {
   return (
     <Box
       sx={{
-        display: 'inline-flex',
+        display: 'flex',
         alignItems: 'center',
-        gap: 1,
-        mt: 1,
-        px: 2,
-        py: 0.75,
-        bgcolor: '#f0f4ff',
-        border: `1px solid #c7d7f9`,
+        height: 34,
+        px: 1.25,
+        bgcolor: 'action.hover',
+        border: `1px solid ${C.border}`,
         borderRadius: '4px',
+        fontSize: '0.875rem',
+        fontWeight: 700,
+        fontFamily: 'monospace',
+        color: C.primary,
+        width: '100%',
+        boxSizing: 'border-box',
       }}
     >
-      <Typography sx={{ fontSize: '0.75rem', color: C.hint }}>Preview:</Typography>
-      <Typography sx={{ fontSize: '0.875rem', fontWeight: 700, color: C.primary, fontFamily: 'monospace' }}>
-        {sample}
-      </Typography>
+      {sample}
     </Box>
   );
 }
@@ -276,13 +279,10 @@ export default function InvoicePreferences() {
     <MainLayout title="Invoice Preferences">
       <Box sx={{ bgcolor: C.pageBg, minHeight: '100vh', pb: 6 }}>
         <Container maxWidth={false} sx={{ pt: 3, px: 2.5 }}>
-          <Box sx={{ display: 'flex', gap: 2.5, alignItems: 'flex-start' }}>
-
-            {/* Left settings sub-nav */}
-            <SettingsSubNav />
+          <Box sx={{ minWidth: 0 }}>
 
             {/* Main form card */}
-            <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Box sx={{ minWidth: 0 }}>
               <Paper
                 elevation={0}
                 sx={{
@@ -297,147 +297,160 @@ export default function InvoicePreferences() {
                 <Box sx={{ px: 3 }}>
                   <SectionHeader>Invoice Numbering</SectionHeader>
 
-                  <ZohoRow label="Auto-generate Number">
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={form.auto_generate_invoice_number}
-                          onChange={(e) => set('auto_generate_invoice_number', e.target.checked)}
-                          size="small"
-                        />
-                      }
-                      label={
-                        <Typography sx={{ fontSize: '0.8125rem', color: C.label }}>
-                          {form.auto_generate_invoice_number
-                            ? 'Backend generates & increments the number automatically'
-                            : 'Manually enter invoice number'}
-                        </Typography>
-                      }
-                      sx={{ m: 0 }}
-                    />
-                  </ZohoRow>
+                  <FormLayout>
+                    <AppFormField label="Auto-generate Number" testId="invoice-pref-field-auto-generate">
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={form.auto_generate_invoice_number}
+                            onChange={(e) => set('auto_generate_invoice_number', e.target.checked)}
+                            size="small"
+                          />
+                        }
+                        label={
+                          <Typography sx={{ fontSize: '0.8125rem', color: C.label }}>
+                            {form.auto_generate_invoice_number
+                              ? 'Backend generates & increments the number automatically'
+                              : 'Manually enter invoice number'}
+                          </Typography>
+                        }
+                        sx={{ m: 0 }}
+                      />
+                    </AppFormField>
 
-                  <FormInput
-                    label="Prefix"
-                    hint='Text before the number, e.g. "INV-"'
-                    value={form.invoice_prefix}
-                    onChange={(e) => set('invoice_prefix', e.target.value)}
-                    inputProps={{ maxLength: 20 }}
-                    error={!!fieldErrors.invoice_prefix}
-                    helperText={fieldErrors.invoice_prefix || ' '}
-                    sx={{ width: 200 }}
-                  />
-
-                  <FormInput
-                    label="Suffix"
-                    hint='Optional text after the number, e.g. "-2026"'
-                    value={form.invoice_suffix}
-                    onChange={(e) => set('invoice_suffix', e.target.value)}
-                    inputProps={{ maxLength: 20 }}
-                    placeholder="(none)"
-                    error={!!fieldErrors.invoice_suffix}
-                    helperText={fieldErrors.invoice_suffix || ' '}
-                    sx={{ width: 200 }}
-                  />
-
-                  <FormInput
-                    label="Next Number"
-                    hint="The counter that will be assigned to the next new invoice."
-                    type="number"
-                    value={form.next_invoice_number}
-                    onChange={(e) => set('next_invoice_number', e.target.value === '' ? '' : Number(e.target.value))}
-                    inputProps={{ min: 1, step: 1, style: { fontFamily: 'monospace' } }}
-                    error={!!fieldErrors.next_invoice_number}
-                    helperText={fieldErrors.next_invoice_number || ' '}
-                    sx={{ width: 140 }}
-                  />
-
-                  <ZohoRow
-                    label="Zero-padding Width"
-                    hint="Length to pad the number to with leading zeros (1–10)."
-                    noDivider
-                  >
-                    <Box>
+                    <AppFormField label="Prefix" hint='Text before the number, e.g. "INV-"' layout="half" testId="invoice-pref-field-prefix">
                       <TextField
+                        value={form.invoice_prefix}
+                        onChange={(e) => set('invoice_prefix', e.target.value)}
                         size="small"
+                        fullWidth
+                        inputProps={{ maxLength: 20 }}
+                        error={!!fieldErrors.invoice_prefix}
+                        helperText={fieldErrors.invoice_prefix || ' '}
+                        sx={fieldSx}
+                      />
+                    </AppFormField>
+
+                    <AppFormField label="Suffix" hint='Optional text after the number, e.g. "-2026"' layout="half" testId="invoice-pref-field-suffix">
+                      <TextField
+                        value={form.invoice_suffix}
+                        onChange={(e) => set('invoice_suffix', e.target.value)}
+                        size="small"
+                        fullWidth
+                        inputProps={{ maxLength: 20 }}
+                        placeholder="(none)"
+                        error={!!fieldErrors.invoice_suffix}
+                        helperText={fieldErrors.invoice_suffix || ' '}
+                        sx={fieldSx}
+                      />
+                    </AppFormField>
+
+                    <AppFormField label="Next Number" hint="The counter that will be assigned to the next new invoice." layout="half" testId="invoice-pref-field-next-number">
+                      <TextField
+                        type="number"
+                        value={form.next_invoice_number}
+                        onChange={(e) => set('next_invoice_number', e.target.value === '' ? '' : Number(e.target.value))}
+                        size="small"
+                        fullWidth
+                        inputProps={{ min: 1, step: 1, style: { fontFamily: 'monospace' } }}
+                        error={!!fieldErrors.next_invoice_number}
+                        helperText={fieldErrors.next_invoice_number || ' '}
+                        sx={fieldSx}
+                      />
+                    </AppFormField>
+
+                    <AppFormField label="Zero-padding Width" hint="Length to pad the number to with leading zeros (1–10)." layout="half" testId="invoice-pref-field-padding">
+                      <TextField
                         type="number"
                         value={form.number_padding}
                         onChange={(e) => set('number_padding', e.target.value === '' ? '' : Number(e.target.value))}
+                        size="small"
+                        fullWidth
                         inputProps={{ min: 1, max: 10, step: 1 }}
                         error={!!fieldErrors.number_padding}
                         helperText={fieldErrors.number_padding || ' '}
-                        sx={{ ...fieldSx, width: 100 }}
+                        sx={fieldSx}
                       />
+                    </AppFormField>
+
+                    <AppFormField label="Preview" testId="invoice-pref-field-preview">
                       <NumberPreview
                         prefix={form.invoice_prefix}
                         suffix={form.invoice_suffix}
                         padding={form.number_padding}
                         next={form.next_invoice_number}
                       />
-                    </Box>
-                  </ZohoRow>
+                    </AppFormField>
+                  </FormLayout>
                 </Box>
 
                 {/* ══ PAYMENT TERMS ══════════════════════════════════════════ */}
                 <Box sx={{ px: 3, borderTop: `1px solid ${C.divider}` }}>
                   <SectionHeader>Payment Terms</SectionHeader>
 
-                  <FormSelect
-                    label="Default Payment Terms"
-                    hint="Applied to new invoices when no term is specified."
-                    value={form.default_payment_terms}
-                    onChange={(e) => set('default_payment_terms', e.target.value)}
-                    width={200}
-                    options={PAYMENT_TERMS_OPTIONS.map((t) => ({ value: t, label: t }))}
-                  />
+                  <FormLayout>
+                    <AppFormField label="Default Payment Terms" hint="Applied to new invoices when no term is specified." layout="half" testId="invoice-pref-field-payment-terms">
+                      <AppSelect value={form.default_payment_terms} onChange={(e) => set('default_payment_terms', e.target.value)}>
+                        {PAYMENT_TERMS_OPTIONS.map((term) => (
+                          <MenuItem key={term} value={term}>{term}</MenuItem>
+                        ))}
+                      </AppSelect>
+                    </AppFormField>
 
-                  <ZohoRow
-                    label="Default Due Days"
-                    hint="Days after issue date to set due date automatically (e.g. 30 for Net 30)."
-                    noDivider
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <AppFormField label="Default Due Days" hint="Days after issue date to set due date automatically (e.g. 30 for Net 30)." layout="half" testId="invoice-pref-field-due-days">
                       <TextField
-                        size="small"
                         type="number"
                         value={form.default_due_days}
                         onChange={(e) => set('default_due_days', e.target.value === '' ? '' : Number(e.target.value))}
+                        size="small"
+                        fullWidth
                         inputProps={{ min: 0, step: 1 }}
+                        InputProps={{
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <Typography sx={{ fontSize: '0.8125rem', color: C.hint }}>days</Typography>
+                            </InputAdornment>
+                          ),
+                        }}
                         error={!!fieldErrors.default_due_days}
                         helperText={fieldErrors.default_due_days || ' '}
-                        sx={{ ...fieldSx, width: 120 }}
+                        sx={fieldSx}
                       />
-                      <Typography sx={{ fontSize: '0.8125rem', color: C.hint, mb: 2.5 }}>days</Typography>
-                    </Box>
-                  </ZohoRow>
+                    </AppFormField>
+                  </FormLayout>
                 </Box>
 
                 {/* ══ DEFAULT CONTENT ════════════════════════════════════════ */}
                 <Box sx={{ px: 3, borderTop: `1px solid ${C.divider}` }}>
                   <SectionHeader>Default Content</SectionHeader>
 
-                  <FormInput
-                    label="Customer Notes"
-                    hint="Pre-filled in the Notes field of every new invoice."
-                    multiline
-                    rows={3}
-                    value={form.default_notes}
-                    onChange={(e) => set('default_notes', e.target.value)}
-                    inputProps={{ maxLength: 2000 }}
-                    placeholder="e.g. Thank you for your business."
-                  />
+                  <FormLayout>
+                    <AppFormField label="Customer Notes" hint="Pre-filled in the Notes field of every new invoice." testId="invoice-pref-field-notes">
+                      <TextField
+                        multiline
+                        rows={3}
+                        value={form.default_notes}
+                        onChange={(e) => set('default_notes', e.target.value)}
+                        fullWidth
+                        inputProps={{ maxLength: 2000 }}
+                        placeholder="e.g. Thank you for your business."
+                        sx={fieldSx}
+                      />
+                    </AppFormField>
 
-                  <FormInput
-                    label="Terms & Conditions"
-                    hint="Pre-filled in the Terms & Conditions field of every new invoice."
-                    noDivider
-                    multiline
-                    rows={3}
-                    value={form.default_terms}
-                    onChange={(e) => set('default_terms', e.target.value)}
-                    inputProps={{ maxLength: 2000 }}
-                    placeholder="e.g. Payment due within 30 days."
-                  />
+                    <AppFormField label="Terms & Conditions" hint="Pre-filled in the Terms & Conditions field of every new invoice." testId="invoice-pref-field-terms">
+                      <TextField
+                        multiline
+                        rows={3}
+                        value={form.default_terms}
+                        onChange={(e) => set('default_terms', e.target.value)}
+                        fullWidth
+                        inputProps={{ maxLength: 2000 }}
+                        placeholder="e.g. Payment due within 30 days."
+                        sx={fieldSx}
+                      />
+                    </AppFormField>
+                  </FormLayout>
                 </Box>
 
                 {/* ══ FOOTER ═════════════════════════════════════════════════ */}
@@ -470,7 +483,6 @@ export default function InvoicePreferences() {
                 </Box>
               </Paper>
             </Box>
-
           </Box>
         </Container>
       </Box>

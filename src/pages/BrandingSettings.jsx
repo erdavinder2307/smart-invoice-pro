@@ -809,13 +809,7 @@ export default function BrandingSettings() {
     <MainLayout title="Branding Settings">
       <Box sx={{ bgcolor: C.pageBg, minHeight: "100vh", pb: 6 }}>
         <Container maxWidth={false} sx={{ pt: 3, px: 2.5 }}>
-          <Box sx={{ display: "flex", gap: 2.5, alignItems: "flex-start" }}>
-
-            {/* Left settings sub-nav */}
-            <SettingsSubNav />
-
-            {/* Main content */}
-            <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Box sx={{ minWidth: 0 }}>
 
               {/* ── Form card ─────────────────────────────────────────────── */}
               <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -1070,7 +1064,6 @@ export default function BrandingSettings() {
                 </Paper>
               </Box>
 
-            </Box>
           </Box>
         </Container>
       </Box>

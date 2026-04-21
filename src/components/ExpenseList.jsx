@@ -44,6 +44,7 @@ import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import CategoryIcon from "@mui/icons-material/Category";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import ImageIcon from "@mui/icons-material/Image";
+import { useTranslation } from "react-i18next";
 
 const CATEGORIES = [
   "All",
@@ -62,6 +63,7 @@ const CATEGORIES = [
 
 const ExpenseList = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -98,7 +100,7 @@ const ExpenseList = () => {
       const response = await axios.get(url);
       setExpenses(response.data);
     } catch (error) {
-      setError("Failed to fetch expenses");
+      setError(t('expenseList.failedFetch'));
       console.error(error);
     }
     setLoading(false);
@@ -115,7 +117,7 @@ const ExpenseList = () => {
       await fetchExpenses();
       setConfirmDeleteId(null);
     } catch (error) {
-      setError(error.response?.data?.error || "Failed to delete expense");
+      setError(error.response?.data?.error || t('expenseList.failedDelete'));
     }
     setLoading(false);
   };
@@ -174,10 +176,10 @@ const ExpenseList = () => {
           >
             <Box>
               <Typography variant="h4" fontWeight={700} gutterBottom>
-                Expenses
+                {t('expenseList.title')}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Track and manage your business expenses
+                {t('expenseList.subtitle')}
               </Typography>
             </Box>
             <Button
@@ -193,7 +195,7 @@ const ExpenseList = () => {
                 boxShadow: 2
               }}
             >
-              New Expense
+              {t('expenseList.newExpense')}
             </Button>
           </Box>
 
@@ -201,7 +203,7 @@ const ExpenseList = () => {
           <Grid container spacing={2} sx={{ mb: 3 }}>
             <Grid item xs={12} sm={6} md={3}>
               <SummaryCard
-                label="Total Expenses"
+                label={t('expenseList.totalExpenses')}
                 value={`₹${totalExpenses.toLocaleString()}`}
                 icon={<AttachMoneyIcon />}
                 accentColor="error.main"
@@ -209,7 +211,7 @@ const ExpenseList = () => {
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <SummaryCard
-                label="Total Count"
+                label={t('expenseList.totalCount')}
                 value={expenseCount}
                 icon={<ReceiptIcon />}
                 accentColor="primary.main"
@@ -217,7 +219,7 @@ const ExpenseList = () => {
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <SummaryCard
-                label="Average Expense"
+                label={t('expenseList.avgExpense')}
                 value={`₹${avgExpense.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
                 icon={<AccountBalanceWalletIcon />}
                 accentColor="info.main"
@@ -225,7 +227,7 @@ const ExpenseList = () => {
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <SummaryCard
-                label="With Receipts"
+                label={t('expenseList.withReceipts')}
                 value={`${withReceipts} / ${expenseCount}`}
                 icon={<ImageIcon />}
                 accentColor="success.main"

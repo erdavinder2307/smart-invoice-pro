@@ -59,7 +59,9 @@ import IntegrationSettings from './pages/IntegrationSettings';
 import NotificationsPage from './pages/NotificationsPage';
 import AuditLogPage from './pages/AuditLogPage';
 import CustomerDetailPage from './pages/CustomerDetailPage';
+import SearchResultsPage from './pages/SearchResultsPage';
 import AdminRoutes from './admin/routes/AdminRoutes';
+import AppLayout from './components/Layout/AppLayout';
 
 const AppRoutes = () => {
   return (
@@ -71,69 +73,72 @@ const AppRoutes = () => {
         <Route path="/contact" element={<Contact />} />
         <Route path="/theme-example" element={<ThemeExample />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/invoices" element={<InvoiceList />} />
-        <Route path="/invoices/add" element={<AddEditInvoice />} />
-        <Route path="/invoices/edit/:id" element={<AddEditInvoice />} />
-        <Route path="/quotes" element={<QuoteList />} />
-        <Route path="/quotes/add" element={<AddEditQuote />} />
-        <Route path="/quotes/edit/:id" element={<AddEditQuote />} />
-        <Route path="/quotes/convert/:id/:type" element={<ConvertQuote />} />
-        <Route path="/recurring-profiles" element={<RecurringProfileList />} />
-        <Route path="/recurring-profiles/add" element={<AddEditRecurringProfile />} />
-        <Route path="/recurring-profiles/edit/:id" element={<AddEditRecurringProfile />} />
-        <Route path="/sales-orders" element={<SalesOrderList />} />
-        <Route path="/sales-orders/add" element={<AddEditSalesOrder />} />
-        <Route path="/sales-orders/edit/:id" element={<AddEditSalesOrder />} />
-        <Route path="/vendors" element={<VendorList />} />
-        <Route path="/vendors/add" element={<AddEditVendor />} />
-        <Route path="/vendors/edit/:id" element={<AddEditVendor />} />
-        <Route path="/purchase-orders" element={<PurchaseOrderList />} />
-        <Route path="/purchase-orders/add" element={<AddEditPurchaseOrder />} />
-        <Route path="/purchase-orders/edit/:id" element={<AddEditPurchaseOrder />} />
-        <Route path="/bills" element={<BillList />} />
-        <Route path="/bills/add" element={<AddEditBill />} />
-        <Route path="/bills/edit/:id" element={<AddEditBill />} />
-        <Route path="/expenses" element={<ExpenseList />} />
-        <Route path="/expenses/add" element={<AddEditExpense />} />
-        <Route path="/expenses/edit/:id" element={<AddEditExpense />} />
-        <Route path="/reports" element={<Reports />} />
-        <Route path="/reports/profit-loss" element={<ProfitAndLoss />} />
-        <Route path="/reports/ar-aging" element={<ARAgingReport />} />
-        <Route path="/reports/ap-aging" element={<APAgingReport />} />
-        <Route path="/reports/balance-sheet" element={<BalanceSheet />} />
-        <Route path="/reports/cash-flow" element={<CashFlow />} />
-        <Route path="/reports/sales-summary" element={<SalesSummary />} />
-        <Route path="/reports/gst-tax-summary" element={<GSTTaxSummary />} />
-        <Route path="/reports/payments-received" element={<PaymentsReceived />} />
-        <Route path="/reports/payments-made" element={<PaymentsMade />} />
-        <Route path="/customers" element={<CustomerList />} />
-        <Route path="/customers/add" element={<AddEditCustomer />} />
-        <Route path="/customers/edit/:id" element={<AddEditCustomer />} />
-        <Route path="/customers/:id" element={<CustomerDetailPage />} />
+        <Route element={<AppLayout />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/invoices" element={<InvoiceList />} />
+          <Route path="/invoices/add" element={<AddEditInvoice />} />
+          <Route path="/invoices/edit/:id" element={<AddEditInvoice />} />
+          <Route path="/quotes" element={<QuoteList />} />
+          <Route path="/quotes/add" element={<AddEditQuote />} />
+          <Route path="/quotes/edit/:id" element={<AddEditQuote />} />
+          <Route path="/quotes/convert/:id/:type" element={<ConvertQuote />} />
+          <Route path="/recurring-profiles" element={<RecurringProfileList />} />
+          <Route path="/recurring-profiles/add" element={<AddEditRecurringProfile />} />
+          <Route path="/recurring-profiles/edit/:id" element={<AddEditRecurringProfile />} />
+          <Route path="/sales-orders" element={<SalesOrderList />} />
+          <Route path="/sales-orders/add" element={<AddEditSalesOrder />} />
+          <Route path="/sales-orders/edit/:id" element={<AddEditSalesOrder />} />
+          <Route path="/vendors" element={<VendorList />} />
+          <Route path="/vendors/add" element={<AddEditVendor />} />
+          <Route path="/vendors/edit/:id" element={<AddEditVendor />} />
+          <Route path="/purchase-orders" element={<PurchaseOrderList />} />
+          <Route path="/purchase-orders/add" element={<AddEditPurchaseOrder />} />
+          <Route path="/purchase-orders/edit/:id" element={<AddEditPurchaseOrder />} />
+          <Route path="/bills" element={<BillList />} />
+          <Route path="/bills/add" element={<AddEditBill />} />
+          <Route path="/bills/edit/:id" element={<AddEditBill />} />
+          <Route path="/expenses" element={<ExpenseList />} />
+          <Route path="/expenses/add" element={<AddEditExpense />} />
+          <Route path="/expenses/edit/:id" element={<AddEditExpense />} />
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/reports/profit-loss" element={<ProfitAndLoss />} />
+          <Route path="/reports/ar-aging" element={<ARAgingReport />} />
+          <Route path="/reports/ap-aging" element={<APAgingReport />} />
+          <Route path="/reports/balance-sheet" element={<BalanceSheet />} />
+          <Route path="/reports/cash-flow" element={<CashFlow />} />
+          <Route path="/reports/sales-summary" element={<SalesSummary />} />
+          <Route path="/reports/gst-tax-summary" element={<GSTTaxSummary />} />
+          <Route path="/reports/payments-received" element={<PaymentsReceived />} />
+          <Route path="/reports/payments-made" element={<PaymentsMade />} />
+          <Route path="/customers" element={<CustomerList />} />
+          <Route path="/customers/add" element={<AddEditCustomer />} />
+          <Route path="/customers/edit/:id" element={<AddEditCustomer />} />
+          <Route path="/customers/:id" element={<CustomerDetailPage />} />
+          <Route path="/products" element={<ProductList />} />
+          <Route path="/products/add" element={<AddEditProduct />} />
+          <Route path="/products/edit/:id" element={<AddEditProduct />} />
+          <Route path="/stock-adjustment" element={<StockAdjustment />} />
+          <Route path="/bank-accounts" element={<BankAccounts />} />
+          <Route path="/bank-reconciliation" element={<BankReconciliation />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/settings" element={<UserManagement />} />
+          <Route path="/settings/users" element={<UserManagement />} />
+          <Route path="/settings/organization-profile" element={<OrganizationProfile />} />
+          <Route path="/settings/branding" element={<BrandingSettings />} />
+          <Route path="/settings/invoice-preferences" element={<InvoicePreferences />} />
+          <Route path="/settings/taxes" element={<TaxSettings />} />
+          <Route path="/settings/roles" element={<RoleManagement />} />
+          <Route path="/settings/automation" element={<AutomationSettings />} />
+          <Route path="/settings/integrations" element={<IntegrationSettings />} />
+          <Route path="/settings/audit-log" element={<AuditLogPage />} />
+          <Route path="/settings/audit-logs" element={<AuditLogPage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/search" element={<SearchResultsPage />} />
+          <Route path="/approvals" element={<PendingApprovals />} />
+        </Route>
         <Route path="/customer/login" element={<CustomerLogin />} />
         <Route path="/customer/dashboard" element={<CustomerDashboard />} />
         <Route path="/customer/invoices/:id" element={<CustomerInvoiceDetail />} />
-        <Route path="/products" element={<ProductList />} />
-        <Route path="/products/add" element={<AddEditProduct />} />
-        <Route path="/products/edit/:id" element={<AddEditProduct />} />
-        <Route path="/stock-adjustment" element={<StockAdjustment />} />
-        <Route path="/bank-accounts" element={<BankAccounts />} />
-        <Route path="/bank-reconciliation" element={<BankReconciliation />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/settings" element={<UserManagement />} />
-        <Route path="/settings/users" element={<UserManagement />} />
-        <Route path="/settings/organization-profile" element={<OrganizationProfile />} />
-        <Route path="/settings/branding" element={<BrandingSettings />} />
-        <Route path="/settings/invoice-preferences" element={<InvoicePreferences />} />
-        <Route path="/settings/taxes" element={<TaxSettings />} />
-        <Route path="/settings/roles" element={<RoleManagement />} />
-        <Route path="/settings/automation" element={<AutomationSettings />} />
-        <Route path="/settings/integrations" element={<IntegrationSettings />} />
-        <Route path="/settings/audit-log" element={<AuditLogPage />} />
-        <Route path="/settings/audit-logs" element={<AuditLogPage />} />
-        <Route path="/notifications" element={<NotificationsPage />} />
-        <Route path="/approvals" element={<PendingApprovals />} />
 
         {/* Public Invoice Portal — no auth required */}
         <Route path="/portal/invoice/:token" element={<PortalInvoiceView />} />

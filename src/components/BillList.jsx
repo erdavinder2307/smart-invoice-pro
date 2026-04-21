@@ -40,9 +40,11 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import ReceiptIcon from "@mui/icons-material/Receipt";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import PaymentIcon from "@mui/icons-material/Payment";
+import { useTranslation } from "react-i18next";
 
 const BillList = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [bills, setBills] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -69,7 +71,7 @@ const BillList = () => {
       setBills(billsResponse.data);
       setVendors(vendorsResponse.data);
     } catch (error) {
-      setError("Failed to fetch bills");
+      setError(t('billList.failedFetch'));
       console.error(error);
     }
     setLoading(false);
@@ -82,7 +84,7 @@ const BillList = () => {
       await fetchData();
       setConfirmDeleteId(null);
     } catch (error) {
-      setError(error.response?.data?.error || "Failed to delete bill");
+      setError(error.response?.data?.error || t('billList.failedDelete'));
     }
     setLoading(false);
   };
@@ -139,10 +141,10 @@ const BillList = () => {
           >
             <Box>
               <Typography variant="h4" fontWeight={700} gutterBottom>
-                Bills
+                {t('billList.title')}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Track and manage vendor bills and payments
+                {t('billList.subtitle')}
               </Typography>
             </Box>
             <Button
@@ -158,7 +160,7 @@ const BillList = () => {
                 boxShadow: 2
               }}
             >
-              New Bill
+              {t('billList.newBill')}
             </Button>
           </Box>
 
@@ -166,7 +168,7 @@ const BillList = () => {
           <Grid container spacing={2} sx={{ mb: 3 }}>
             <Grid item xs={12} sm={6} md={3}>
               <SummaryCard
-                label="Total Bills"
+                label={t('billList.totalBills')}
                 value={`₹${totalBillAmount.toLocaleString()}`}
                 icon={<ReceiptIcon />}
                 accentColor="primary.main"
@@ -174,7 +176,7 @@ const BillList = () => {
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <SummaryCard
-                label="Total Paid"
+                label={t('billList.totalPaid')}
                 value={`₹${totalPaid.toLocaleString()}`}
                 icon={<PaymentIcon />}
                 accentColor="success.main"
@@ -182,7 +184,7 @@ const BillList = () => {
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <SummaryCard
-                label="Total Due"
+                label={t('billList.totalDue')}
                 value={`₹${totalDue.toLocaleString()}`}
                 icon={<AttachMoneyIcon />}
                 accentColor="error.main"
@@ -190,7 +192,7 @@ const BillList = () => {
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <SummaryCard
-                label="Unpaid / Paid"
+                label={t('billList.unpaidPaid')}
                 value={`${unpaidCount} / ${paidCount}`}
                 icon={<ReceiptIcon />}
                 accentColor="warning.main"
@@ -219,7 +221,7 @@ const BillList = () => {
                 displayEmpty
                 sx={{ borderRadius: 2 }}
               >
-                <MenuItem value="All">All Status</MenuItem>
+                <MenuItem value="All">{t('common.allStatus')}</MenuItem>
                 <MenuItem value="Unpaid">Unpaid</MenuItem>
                 <MenuItem value="Partially Paid">Partially Paid</MenuItem>
                 <MenuItem value="Paid">Paid</MenuItem>
@@ -290,7 +292,7 @@ const BillList = () => {
           rows={paginatedBills}
           loading={loading}
           emptyIcon={<ReceiptIcon sx={{ fontSize: 48 }} />}
-          emptyTitle={searchTerm || statusFilter !== "All" ? "No bills found" : "No bills yet"}
+          emptyTitle={searchTerm || statusFilter !== "All" ? t('billList.noBills') : t('billList.noBillsYet')}
           emptySubtitle={searchTerm || statusFilter !== "All" ? "Try adjusting your search or filters" : "Click 'New Bill' to create your first bill"}
           renderRow={(bill) => {
             const vendor = vendors.find(v => v.id === bill.vendor_id);

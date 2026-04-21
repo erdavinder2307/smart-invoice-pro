@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import MainLayout from "../components/Layout/MainLayout";
 import Box from "@mui/material/Box";
 import Container from "@mui/material/Container";
@@ -74,6 +75,7 @@ ChartJS.register(
 const DashboardPage = () => {
   const theme = useTheme();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   // ── API state ─────────────────────────────────────────────────────────────
   const [summary, setSummary] = useState(null);
@@ -101,21 +103,21 @@ const DashboardPage = () => {
     axios
       .get(createApiUrl("/api/dashboard/summary"))
       .then((res) => setSummary(res.data))
-      .catch(() => setSummaryError("Failed to load summary"))
+      .catch(() => setSummaryError(t('dashboard.failedSummary')))
       .finally(() => setSummaryLoading(false));
 
     setLowStockLoading(true);
     axios
       .get(createApiUrl("/api/dashboard/low-stock"))
       .then((res) => setLowStock(res.data))
-      .catch(() => setLowStockError("Failed to load low stock items"))
+      .catch(() => setLowStockError(t('dashboard.failedLowStock')))
       .finally(() => setLowStockLoading(false));
 
     setRevenueLoading(true);
     axios
       .get(createApiUrl("/api/dashboard/monthly-revenue"))
       .then((res) => setRevenue(res.data))
-      .catch(() => setRevenueError("Failed to load revenue chart"))
+      .catch(() => setRevenueError(t('dashboard.failedRevenue')))
       .finally(() => setRevenueLoading(false));
 
     setRecentLoading(true);
@@ -132,7 +134,7 @@ const DashboardPage = () => {
       labels: revenue.map((r) => r.month),
       datasets: [
         {
-          label: "Monthly Revenue (₹)",
+          label: t('dashboard.chart.monthlyRevenueDataset'),
           data: revenue.map((r) => r.revenue),
           backgroundColor: theme.palette.primary.main,
           borderRadius: 6,
@@ -168,8 +170,8 @@ const DashboardPage = () => {
 
   return (
     <MainLayout
-      title="Dashboard Overview"
-      subtitle="Welcome back! Here's what's happening with your business today."
+      title={t('dashboard.title')}
+      subtitle={t('dashboard.subtitle')}
       showDashboardHeader={false}
     >
       <Box
@@ -197,8 +199,8 @@ const DashboardPage = () => {
         >
           {/* Greeting */}
           <SectionHeader
-            title={`Hello, ${greetName} 👋`}
-            subtitle="Here's an overview of your business today"
+            title={t('dashboard.greeting', { name: greetName })}
+            subtitle={t('dashboard.greetingSubtitle')}
             sx={{ mb: 0, minWidth: 280, flex: 1 }}
           />
 
@@ -220,11 +222,11 @@ const DashboardPage = () => {
             >
               <Search sx={{ color: "text.secondary", fontSize: 20, mr: 1 }} />
               <InputBase
-                placeholder="Search invoices, customers…"
+                placeholder={t('dashboard.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 sx={{ fontSize: "0.875rem", flex: 1 }}
-                inputProps={{ "aria-label": "search dashboard" }}
+                inputProps={{ "aria-label": t('dashboard.searchAriaLabel') }}
               />
             </Paper>
 
@@ -239,10 +241,10 @@ const DashboardPage = () => {
                 "& .MuiOutlinedInput-notchedOutline": { borderColor: "divider" },
               }}
             >
-              <MenuItem value="this_week">This Week</MenuItem>
-              <MenuItem value="this_month">This Month</MenuItem>
-              <MenuItem value="this_quarter">This Quarter</MenuItem>
-              <MenuItem value="this_year">This Year</MenuItem>
+              <MenuItem value="this_week">{t('dashboard.filters.thisWeek')}</MenuItem>
+              <MenuItem value="this_month">{t('dashboard.filters.thisMonth')}</MenuItem>
+              <MenuItem value="this_quarter">{t('dashboard.filters.thisQuarter')}</MenuItem>
+              <MenuItem value="this_year">{t('dashboard.filters.thisYear')}</MenuItem>
             </Select>
           </Box>
         </Box>
@@ -258,12 +260,12 @@ const DashboardPage = () => {
             sx={{ mb: 3, borderRadius: 2 }}
             action={
               <Button color="inherit" size="small" onClick={() => navigate("/invoices")}>
-                View Invoices
+                {t('dashboard.viewInvoices')}
               </Button>
             }
           >
-            <strong>{summary.overdue_count} invoice{summary.overdue_count > 1 ? "s are" : " is"} overdue.</strong>{" "}
-            Follow up with customers to collect outstanding payments.
+            <strong>{t('dashboard.overdueMessage', { count: summary.overdue_count })}</strong>{" "}
+            {t('dashboard.overdueFollowUp')}
           </Alert>
         )}
         <Container maxWidth="xl" disableGutters>
@@ -273,7 +275,7 @@ const DashboardPage = () => {
             fontWeight={600}
             sx={{ mb: 1.5, display: "block" }}
           >
-            Business Overview
+            {t('dashboard.sections.businessOverview')}
           </Typography>
 
           {/* Row A — Real data */}
@@ -281,7 +283,7 @@ const DashboardPage = () => {
             <Grid size={{ xs: 12, sm: 6, md: 3 }} sx={{ display: "flex" }}>
               <StatCard
                 icon={<People sx={{ fontSize: 22, color: "primary.main" }} />}
-                label="Total Customers"
+                label={t('dashboard.kpi.totalCustomers')}
                 value={summaryLoading ? undefined : summaryError ? "—" : fmt(summary?.total_customers)}
                 loading={summaryLoading}
                 trend={12}
@@ -293,7 +295,7 @@ const DashboardPage = () => {
             <Grid size={{ xs: 12, sm: 6, md: 3 }} sx={{ display: "flex" }}>
               <StatCard
                 icon={<Inventory sx={{ fontSize: 22, color: "secondary.main" }} />}
-                label="Total Products"
+                label={t('dashboard.kpi.totalProducts')}
                 value={summaryLoading ? undefined : summaryError ? "—" : fmt(summary?.total_products)}
                 loading={summaryLoading}
                 trend={8}
@@ -305,7 +307,7 @@ const DashboardPage = () => {
             <Grid size={{ xs: 12, sm: 6, md: 3 }} sx={{ display: "flex" }}>
               <StatCard
                 icon={<Receipt sx={{ fontSize: 22, color: "info.main" }} />}
-                label="Total Invoices"
+                label={t('dashboard.kpi.totalInvoices')}
                 value={summaryLoading ? undefined : summaryError ? "—" : fmt(summary?.total_invoices)}
                 loading={summaryLoading}
                 trend={15}
@@ -317,7 +319,7 @@ const DashboardPage = () => {
             <Grid size={{ xs: 12, sm: 6, md: 3 }} sx={{ display: "flex" }}>
               <StatCard
                 icon={<AttachMoney sx={{ fontSize: 22, color: "success.main" }} />}
-                label="Total Revenue"
+                label={t('dashboard.kpi.totalRevenue')}
                 value={summaryLoading ? undefined : summaryError ? "—" : `₹${fmt(summary?.total_revenue)}`}
                 loading={summaryLoading}
                 trend={18}
@@ -333,7 +335,7 @@ const DashboardPage = () => {
             <Grid size={{ xs: 12, sm: 6, md: 3 }} sx={{ display: "flex" }}>
               <StatCard
                 icon={<ReceiptLong sx={{ fontSize: 22, color: "warning.main" }} />}
-                label="Total Receivables"
+                label={t('dashboard.kpi.totalReceivables')}
                 value={summaryLoading ? undefined : `₹${fmt(summary?.total_receivables ?? 0)}`}
                 loading={summaryLoading}
                 accentColor="warning.main"
@@ -344,7 +346,7 @@ const DashboardPage = () => {
             <Grid size={{ xs: 12, sm: 6, md: 3 }} sx={{ display: "flex" }}>
               <StatCard
                 icon={<Payments sx={{ fontSize: 22, color: "error.main" }} />}
-                label="Total Payables"
+                label={t('dashboard.kpi.totalPayables')}
                 value={summaryLoading ? undefined : `₹${fmt(summary?.total_payables ?? 0)}`}
                 loading={summaryLoading}
                 accentColor="error.main"
@@ -355,7 +357,7 @@ const DashboardPage = () => {
             <Grid size={{ xs: 12, sm: 6, md: 3 }} sx={{ display: "flex" }}>
               <StatCard
                 icon={<Warning sx={{ fontSize: 22, color: "error.main" }} />}
-                label="Overdue Invoices"
+                label={t('dashboard.kpi.overdueInvoices')}
                 value={summaryLoading ? undefined : fmt(summary?.overdue_count ?? 0)}
                 loading={summaryLoading}
                 accentColor="error.main"
@@ -366,8 +368,8 @@ const DashboardPage = () => {
             <Grid size={{ xs: 12, sm: 6, md: 3 }} sx={{ display: "flex" }}>
               <StatCard
                 icon={<TrendingUp sx={{ fontSize: 22, color: "secondary.main" }} />}
-                label="Monthly Recurring Revenue"
-                value="Coming Soon"
+                label={t('dashboard.kpi.monthlyRecurringRevenue')}
+                value={t('dashboard.kpi.comingSoon')}
                 accentColor="secondary.main"
                 iconBg="secondary.50"
                 sx={{ height: "100%" }}
@@ -380,18 +382,18 @@ const DashboardPage = () => {
             SECTION 3 — Revenue Analytics
         ══════════════════════════════════════════════════════════════════ */}
         <Typography variant="overline" color="text.secondary" fontWeight={600} sx={{ mb: 1.5, display: "block" }}>
-          Revenue Analytics
+          {t('dashboard.sections.revenueAnalytics')}
         </Typography>
 
         <Grid container spacing={3} sx={{ mb: 4 }}>
           {/* Bar Chart */}
           <Grid size={{ xs: 12, md: 8 }}>
             <SectionPaper
-              title="Monthly Revenue"
-              subtitle="Revenue trend across the fiscal year"
+              title={t('dashboard.chart.monthlyRevenue')}
+              subtitle={t('dashboard.chart.monthlyRevenueSubtitle')}
               action={
                 <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-                  <Chip label="This Year" size="small" variant="outlined" sx={{ borderColor: "divider" }} />
+                  <Chip label={t('dashboard.chart.thisYearChip')} size="small" variant="outlined" sx={{ borderColor: "divider" }} />
                   <IconButton size="small">
                     <MoreVert fontSize="small" />
                   </IconButton>
@@ -411,7 +413,7 @@ const DashboardPage = () => {
                 </Box>
               ) : (
                 <Typography color="text.secondary" align="center" sx={{ py: 8 }}>
-                  No revenue data available
+                  {t('dashboard.chart.noData')}
                 </Typography>
               )}
             </SectionPaper>
@@ -419,7 +421,7 @@ const DashboardPage = () => {
 
           {/* Inventory Overview (right column) */}
           <Grid size={{ xs: 12, md: 4 }}>
-            <SectionPaper title="Inventory Overview" sx={{ height: "100%" }}>
+            <SectionPaper title={t('dashboard.inventory.title')} sx={{ height: "100%" }}>
               {lowStockLoading ? (
                 <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
                   <CircularProgress size={28} />
@@ -432,20 +434,20 @@ const DashboardPage = () => {
                   <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 2 }}>
                     <Chip
                       icon={<Inventory sx={{ fontSize: "1rem !important" }} />}
-                      label={`${summary?.total_products ?? "—"} Total`}
+                      label={t('dashboard.inventory.totalChip', { count: summary?.total_products ?? 0 })}
                       size="small"
                       variant="outlined"
                     />
                     {lowStock.filter((i) => i.stock < 5).length > 0 && (
                       <Chip
-                        label={`${lowStock.filter((i) => i.stock < 5).length} Critical`}
+                        label={t('dashboard.inventory.criticalChip', { count: lowStock.filter((i) => i.stock < 5).length })}
                         size="small"
                         color="error"
                       />
                     )}
                     {lowStock.filter((i) => i.stock >= 5).length > 0 && (
                       <Chip
-                        label={`${lowStock.filter((i) => i.stock >= 5).length} Low`}
+                        label={t('dashboard.inventory.lowChip', { count: lowStock.filter((i) => i.stock >= 5).length })}
                         size="small"
                         color="warning"
                       />
@@ -453,11 +455,11 @@ const DashboardPage = () => {
                   </Box>
 
                   {lowStock.length === 0 ? (
-                    <Alert severity="success">All products are well stocked ✅</Alert>
+                    <Alert severity="success">{t('dashboard.inventory.wellStocked')}</Alert>
                   ) : (
                     <>
                       <Alert severity="warning" sx={{ mb: 1.5 }}>
-                        {lowStock.length} product{lowStock.length > 1 ? "s" : ""} need attention
+                        {t('dashboard.inventory.needsAttention', { count: lowStock.length })}
                       </Alert>
                       <List disablePadding>
                         {lowStock.slice(0, 5).map((item, idx) => (
@@ -468,11 +470,11 @@ const DashboardPage = () => {
                             >
                               <ListItemText
                                 primary={<Typography variant="body2" fontWeight={500}>{item.name}</Typography>}
-                                secondary={<Typography variant="caption" color="text.secondary">Stock: {item.stock}</Typography>}
+                                secondary={<Typography variant="caption" color="text.secondary">{ t('dashboard.inventory.stockLabel', { count: item.stock }) }</Typography>}
                                 sx={{ m: 0 }}
                               />
                               <Chip
-                                label={item.stock < 5 ? "Critical" : "Low"}
+                                label={item.stock < 5 ? t('dashboard.inventory.criticalBadge') : t('dashboard.inventory.lowBadge')}
                                 size="small"
                                 color={item.stock < 5 ? "error" : "warning"}
                                 variant="outlined"
@@ -495,7 +497,7 @@ const DashboardPage = () => {
             SECTION 4 — Full Inventory Table
         ══════════════════════════════════════════════════════════════════ */}
         <Typography variant="overline" color="text.secondary" fontWeight={600} sx={{ mb: 1.5, display: "block" }}>
-          Stock Detail
+          {t('dashboard.sections.stockDetail')}
         </Typography>
         <Box sx={{ mb: 4 }}>
           <ProductStockSummary />
@@ -505,14 +507,14 @@ const DashboardPage = () => {
             SECTION 5 — Recent Invoices Activity Feed
         ══════════════════════════════════════════════════════════════════ */}
         <Typography variant="overline" color="text.secondary" fontWeight={600} sx={{ mb: 1.5, display: "block" }}>
-          Recent Activity
+          {t('dashboard.sections.recentActivity')}
         </Typography>
 
         <Grid container spacing={3} sx={{ mb: 4 }}>
           <Grid size={{ xs: 12 }}>
             <SectionPaper
-              title="Recent Invoices"
-              subtitle="Latest 10 invoices across all customers"
+              title={t('dashboard.recentInvoices.title')}
+              subtitle={t('dashboard.recentInvoices.subtitle')}
               action={
                 <Button
                   size="small"
@@ -520,7 +522,7 @@ const DashboardPage = () => {
                   sx={{ textTransform: "none", fontWeight: 600 }}
                   onClick={() => navigate("/invoices")}
                 >
-                  View All
+                  {t('dashboard.recentInvoices.viewAll')}
                 </Button>
               }
             >
@@ -530,7 +532,7 @@ const DashboardPage = () => {
                 </Box>
               ) : recentInvoices.length === 0 ? (
                 <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
-                  No invoices found. Create your first invoice to get started.
+                  {t('dashboard.recentInvoices.empty')}
                 </Typography>
               ) : (
                 <List disablePadding sx={{ mt: 0.5 }}>
@@ -556,7 +558,7 @@ const DashboardPage = () => {
                               {inv.invoice_number || "—"}
                             </Typography>
                             <Typography variant="caption" color="text.secondary" noWrap>
-                              {inv.customer_name || "Unknown Customer"} · {inv.issue_date || ""}
+                              {inv.customer_name || t('dashboard.recentInvoices.unknownCustomer')} · {inv.issue_date || ""}
                             </Typography>
                           </Box>
                         </Box>
@@ -580,7 +582,7 @@ const DashboardPage = () => {
             SECTION 6 — Quick Actions
         ══════════════════════════════════════════════════════════════════ */}
         <Typography variant="overline" color="text.secondary" fontWeight={600} sx={{ mb: 1.5, display: "block" }}>
-          Quick Actions
+          {t('dashboard.sections.quickActions')}
         </Typography>
 
         <SectionPaper sx={{ mb: 4 }}>
@@ -591,7 +593,7 @@ const DashboardPage = () => {
               sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2, minWidth: 150 }}
               onClick={() => navigate("/invoices/add")}
             >
-              New Invoice
+              {t('dashboard.quickActions.newInvoice')}
             </Button>
             <Button
               variant="outlined"
@@ -599,7 +601,7 @@ const DashboardPage = () => {
               sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2, minWidth: 150 }}
               onClick={() => navigate("/customers/add")}
             >
-              Add Customer
+              {t('dashboard.quickActions.addCustomer')}
             </Button>
             <Button
               variant="outlined"
@@ -607,7 +609,7 @@ const DashboardPage = () => {
               sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2, minWidth: 150 }}
               onClick={() => navigate("/products/add")}
             >
-              Add Product
+              {t('dashboard.quickActions.addProduct')}
             </Button>
             <Button
               variant="outlined"
@@ -615,7 +617,7 @@ const DashboardPage = () => {
               sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2, minWidth: 180 }}
               disabled
             >
-              Import Bank Statement
+              {t('dashboard.quickActions.importBank')}
             </Button>
           </Stack>
         </SectionPaper>
@@ -624,10 +626,10 @@ const DashboardPage = () => {
             SECTION 7 — Product Capabilities Overview
         ══════════════════════════════════════════════════════════════════ */}
         <Typography variant="overline" color="text.secondary" fontWeight={600} sx={{ mb: 0.5, display: "block" }}>
-          Product Capabilities
+          {t('dashboard.sections.productCapabilities')}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Platform features — live, in development, and on the roadmap.
+          {t('dashboard.sections.capabilitiesSubtitle')}
         </Typography>
 
         <Grid container spacing={2.5}>

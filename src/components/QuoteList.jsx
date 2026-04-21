@@ -33,6 +33,7 @@ import StandardDataTable, { CHECKBOX_COLUMN_WIDTH } from "./common/StandardDataT
 import ResponsiveDataView from "./common/ResponsiveDataView";
 import QuoteCard from "./common/QuoteCard";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
@@ -71,6 +72,7 @@ const QuoteList = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const fetchQuotes = async () => {
     setLoading(true);
@@ -79,7 +81,7 @@ const QuoteList = () => {
       setQuotes(response.data);
       setError("");
     } catch (err) {
-      setError("Failed to fetch quotes");
+      setError(t('quoteList.failedFetch'));
       console.error(err);
     }
     setLoading(false);
@@ -145,7 +147,7 @@ const QuoteList = () => {
       setConfirmDeleteId(null);
       setError("");
     } catch (err) {
-      setError("Failed to delete quote");
+      setError(t('quoteList.failedDelete'));
       console.error(err);
     }
     setLoading(false);
@@ -294,7 +296,7 @@ const QuoteList = () => {
               "&:hover": { bgcolor: "#2563eb", boxShadow: "none" },
             }}
           >
-            New
+            {t('quoteList.new')}
           </Button>
         </Box>
 
@@ -326,8 +328,8 @@ const QuoteList = () => {
           ]}
           rows={paginatedQuotes}
           loading={loading}
-          emptyTitle="No quotes found"
-          emptySubtitle="Create a quote to get started"
+          emptyTitle={t('quoteList.noQuotes')}
+          emptySubtitle={t('quoteList.createFirst')}
           toolbar={
             <Box
               sx={{
@@ -343,7 +345,7 @@ const QuoteList = () => {
             >
               <TextField
                 size="small"
-                placeholder="Search in Quotes"
+              placeholder={t('quoteList.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);

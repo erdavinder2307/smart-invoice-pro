@@ -37,12 +37,13 @@ import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import MainLayout from "./Layout/MainLayout";
 import { createApiUrl } from "../config/api";
 import { deleteProduct, getProducts } from "../services/productService";
+import { useTranslation } from "react-i18next";
 
 const VIEW_OPTIONS = [
-  { value: "All", label: "All Items" },
-  { value: "In Stock", label: "In Stock Items" },
-  { value: "Low Stock", label: "Low Stock Items" },
-  { value: "Out of Stock", label: "Out of Stock Items" },
+  { value: "All", labelKey: "productList.allItems" },
+  { value: "In Stock", labelKey: "productList.inStock" },
+  { value: "Low Stock", labelKey: "productList.lowStock" },
+  { value: "Out of Stock", labelKey: "productList.outOfStock" },
 ];
 
 const formatCurrency = (amount) => new Intl.NumberFormat("en-IN", {
@@ -76,6 +77,7 @@ const ProductList = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { t } = useTranslation();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -94,7 +96,7 @@ const ProductList = () => {
       setProducts(Array.isArray(data) ? data : []);
     } catch {
       setProducts([]);
-      setError("Failed to fetch items.");
+      setError(t('productList.failedFetch'));
     } finally {
       setLoading(false);
     }
@@ -137,7 +139,7 @@ const ProductList = () => {
       setSelectedProducts((prev) => prev.filter((productId) => productId !== id));
       await fetchProducts();
     } catch {
-      setError("Failed to delete item.");
+      setError(t('productList.failedDelete'));
       setLoading(false);
     }
   };
@@ -239,7 +241,7 @@ const ProductList = () => {
               <Select value={viewFilter} onChange={(event) => setViewFilter(event.target.value)}>
                 {VIEW_OPTIONS.map((option) => (
                   <MenuItem key={option.value} value={option.value}>
-                    {option.label}
+                    {t(option.labelKey)}
                   </MenuItem>
                 ))}
               </Select>
@@ -263,7 +265,7 @@ const ProductList = () => {
                 "&:hover": { bgcolor: "#2563eb", boxShadow: "none" },
               }}
             >
-              New
+              {t('productList.new')}
             </Button>
           </Box>
 
@@ -271,13 +273,13 @@ const ProductList = () => {
             isMobile={isMobile}
             columns={[
               { key: 'checkbox', label: '', width: CHECKBOX_COLUMN_WIDTH },
-              { key: 'name', label: 'NAME', width: '22%' },
-              { key: 'purchase_description', label: 'PURCHASE DESCRIPTION', width: '13%' },
-              { key: 'purchase_rate', label: 'PURCHASE RATE', align: 'right', width: '9%' },
-              { key: 'description', label: 'DESCRIPTION', width: '13%' },
-              { key: 'rate', label: 'RATE', align: 'right', width: '8%' },
-              { key: 'hsn_sac', label: 'HSN/SAC', width: '7%' },
-              { key: 'unit', label: 'USAGE UNIT', width: '6%' },
+              { key: 'name', label: t('productList.columns.name'), width: '22%' },
+              { key: 'purchase_description', label: t('productList.columns.purchaseDescription'), width: '13%' },
+              { key: 'purchase_rate', label: t('productList.columns.purchaseRate'), align: 'right', width: '9%' },
+              { key: 'description', label: t('productList.columns.description'), width: '13%' },
+              { key: 'rate', label: t('productList.columns.rate'), align: 'right', width: '8%' },
+              { key: 'hsn_sac', label: t('productList.columns.hsnSac'), width: '7%' },
+              { key: 'unit', label: t('productList.columns.usageUnit'), width: '6%' },
               { key: 'stock', label: 'STOCK', align: 'right', width: '5%' },
               { key: 'actions', label: '', align: 'center', width: 72 },
             ]}
@@ -297,7 +299,7 @@ const ProductList = () => {
               );
             }}
             loading={loading}
-            emptyTitle={searchTerm ? "No items matched your search." : "No items available."}
+            emptyTitle={searchTerm ? t('productList.noItemsSearch') : t('productList.noItems')}
             toolbar={
               <>
                 <Box
@@ -322,7 +324,7 @@ const ProductList = () => {
 
                   <TextField
                     size="small"
-                    placeholder="Search in Items"
+                    placeholder={t('productList.searchPlaceholder')}
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}
                     InputProps={{
@@ -366,14 +368,14 @@ const ProductList = () => {
                   />
                 </TableCell>
                 {[
-                  { label: "NAME", width: "22%" },
-                  { label: "PURCHASE DESCRIPTION", width: "13%" },
-                  { label: "PURCHASE RATE", width: "9%", align: "right" },
-                  { label: "DESCRIPTION", width: "13%" },
-                  { label: "RATE", width: "8%", align: "right" },
-                  { label: "HSN/SAC", width: "7%" },
-                  { label: "USAGE UNIT", width: "6%" },
-                  { label: "STOCK", width: "5%", align: "right" },
+                  { label: t('productList.columns.name'), width: "22%" },
+                  { label: t('productList.columns.purchaseDescription'), width: "13%" },
+                  { label: t('productList.columns.purchaseRate'), width: "9%", align: "right" },
+                  { label: t('productList.columns.description'), width: "13%" },
+                  { label: t('productList.columns.rate'), width: "8%", align: "right" },
+                  { label: t('productList.columns.hsnSac'), width: "7%" },
+                  { label: t('productList.columns.usageUnit'), width: "6%" },
+                  { label: t('productList.columns.stock'), width: "5%", align: "right" },
                   { label: "", width: 72, align: "center" },
                 ].map((column, index) => (
                   <TableCell

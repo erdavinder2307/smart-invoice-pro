@@ -36,19 +36,8 @@ import EditIcon from "@mui/icons-material/Edit";
 import SearchIcon from "@mui/icons-material/Search";
 import MainLayout from "./Layout/MainLayout";
 import { createApiUrl } from "../config/api";
-
-const VIEW_OPTIONS = [
-  { value: "All", label: "All Customers" },
-  { value: "Active", label: "Active Customers" },
-  { value: "Inactive", label: "Inactive Customers" },
-];
-
-const formatCurrency = (amount) => new Intl.NumberFormat("en-IN", {
-  style: "currency",
-  currency: "INR",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-}).format(Number(amount || 0));
+import { useTranslation } from "react-i18next";
+import { formatCurrency as formatCurrencyByLocale } from "../utils/intlFormatters";
 
 const normalizeCustomer = (customer) => {
   const displayName = customer.display_name
@@ -70,6 +59,7 @@ const normalizeCustomer = (customer) => {
 };
 
 const CustomerList = () => {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [customers, setCustomers] = useState([]);
@@ -85,6 +75,12 @@ const CustomerList = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
+  const viewOptions = [
+    { value: "All", label: t('customerList.allCustomers') },
+    { value: "Active", label: t('customerList.activeCustomers') },
+    { value: "Inactive", label: t('customerList.inactiveCustomers') },
+  ];
+
   const fetchCustomers = async () => {
     setLoading(true);
     setError("");
@@ -93,7 +89,7 @@ const CustomerList = () => {
       setCustomers(Array.isArray(res.data) ? res.data.map(normalizeCustomer) : []);
     } catch {
       setCustomers([]);
-      setError("Failed to load customers.");
+      setError(t('customerList.failedToLoad'));
     } finally {
       setLoading(false);
     }
@@ -101,6 +97,15 @@ const CustomerList = () => {
 
   useEffect(() => {
     fetchCustomers();
+  }, []);
+
+  useEffect(() => {
+    const handleCustomerCreated = () => {
+      fetchCustomers();
+    };
+
+    window.addEventListener('customer:created', handleCustomerCreated);
+    return () => window.removeEventListener('customer:created', handleCustomerCreated);
   }, []);
 
   useEffect(() => {
@@ -228,7 +233,7 @@ const CustomerList = () => {
                 value={statusFilter}
                 onChange={(event) => setStatusFilter(event.target.value)}
               >
-                {VIEW_OPTIONS.map((option) => (
+                {viewOptions.map((option) => (
                   <MenuItem key={option.value} value={option.value}>
                     {option.label}
                   </MenuItem>
@@ -254,7 +259,7 @@ const CustomerList = () => {
                 "&:hover": { bgcolor: "#2563eb", boxShadow: "none" },
               }}
             >
-              New
+              {t('customerList.new')}
             </Button>
           </Box>
 
@@ -449,12 +454,12 @@ const CustomerList = () => {
                   </TableCell>
                   <TableCell align="right">
                     <Typography sx={{ fontSize: "0.8125rem", fontWeight: 500, color: receivablesColor }}>
-                      {formatCurrency(customer.receivables)}
+                      {formatCurrencyByLocale(customer.receivables, i18n.language)}
                     </Typography>
                   </TableCell>
                   <TableCell align="right">
                     <Typography sx={{ fontSize: "0.8125rem", fontWeight: 500, color: unusedCreditsColor }}>
-                      {formatCurrency(customer.unused_credits)}
+                      {formatCurrencyByLocale(customer.unused_credits, i18n.language)}
                     </Typography>
                   </TableCell>
                   <TableCell align="center">

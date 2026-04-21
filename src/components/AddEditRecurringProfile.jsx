@@ -25,6 +25,7 @@ import {
 import { useParams, useNavigate } from "react-router-dom";
 import MainLayout from "./Layout/MainLayout";
 import { C, ZohoRow, AppSelect, fieldSx, menuItemSx, footerSx, cancelBtnSx, saveBtnSx } from './common/formStyles';
+import { useTranslation } from 'react-i18next';
 import FormInput from './common/FormInput';
 import FormSelect from './common/FormSelect';
 import FormDatePicker from './common/FormDatePicker';
@@ -66,6 +67,7 @@ const itemAmount = (item) => ((item.quantity * item.rate - item.discount) * (1 +
 const AddEditRecurringProfile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const profileId = id;
   const [form, setForm] = useState(initialForm);
   const [customers, setCustomers] = useState([]);
@@ -204,7 +206,7 @@ const AddEditRecurringProfile = () => {
           <Box component="form" onSubmit={handleSubmit} autoComplete="off" sx={{ bgcolor: '#fff' }}>
             <Box sx={{ px: 0.5, pt: 0.25, pb: 1.5, borderBottom: `1px solid ${C.divider}` }}>
               <Typography sx={{ fontSize: '2rem', fontWeight: 500, color: '#151a25', textAlign: 'left' }}>
-                {profileId ? 'Edit Recurring Invoice' : 'New Recurring Invoice'}
+                {profileId ? t('addEditRecurringProfile.editTitle') : t('addEditRecurringProfile.newTitle')}
               </Typography>
             </Box>
 

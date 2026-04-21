@@ -22,6 +22,7 @@ import MainLayout from '../components/Layout/MainLayout';
 import SectionHeader from '../components/common/SectionHeader';
 import EmptyState from '../components/common/EmptyState';
 import { useNotifications } from '../context/NotificationContext';
+import { useTranslation } from 'react-i18next';
 
 const FILTERS = [
   { label: 'All', value: 'all' },
@@ -56,6 +57,7 @@ function relativeTime(iso) {
 const NotificationsPage = () => {
   const { notifications, loading, unreadCount, markRead, markAllAsRead } = useNotifications();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [activeFilter, setActiveFilter] = useState('all');
 
   const filtered =
@@ -74,12 +76,12 @@ const NotificationsPage = () => {
     <MainLayout>
       <Container maxWidth="md" sx={{ py: 4 }}>
         <SectionHeader
-          title="Notifications"
-          subtitle="Activity feed and system alerts"
+          title={t('notifications.title')}
+          subtitle={t('notifications.subtitle')}
           primaryAction={
             unreadCount > 0
               ? {
-                  label: 'Mark all as read',
+                  label: t('notifications.markAllRead'),
                   icon: <DoneAllIcon />,
                   onClick: markAllAsRead,
                 }

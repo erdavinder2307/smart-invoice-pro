@@ -1,6 +1,13 @@
 import React from 'react';
-import { Box } from '@mui/material';
+import { Box, Grid } from '@mui/material';
 import { FieldLabel } from '../formStyles';
+
+export const FORM_FIELD_LAYOUTS = {
+  full: 12,
+  half: { xs: 12, md: 6 },
+};
+
+export const resolveFormFieldSize = (layout = 'full') => FORM_FIELD_LAYOUTS[layout] || layout;
 
 /**
  * FormField — Composable label-above-input building block.
@@ -23,15 +30,29 @@ import { FieldLabel } from '../formStyles';
  *     </Grid>
  *   </Grid>
  */
-const FormField = ({ label, required, hint, children, sx }) => (
-  <Box sx={sx}>
-    {label && (
-      <FieldLabel required={required} hint={hint}>
-        {label}
-      </FieldLabel>
-    )}
-    {children}
-  </Box>
-);
+const FormField = ({
+  label,
+  required,
+  hint,
+  children,
+  sx,
+  fieldSx,
+  layout = 'full',
+  size,
+  testId,
+}) => {
+  const resolvedSize = size || resolveFormFieldSize(layout);
+
+  return (
+    <Grid size={resolvedSize} sx={sx} data-testid={testId} data-layout={layout}>
+      {label && (
+        <FieldLabel required={required} hint={hint}>
+          {label}
+        </FieldLabel>
+      )}
+      <Box sx={fieldSx}>{children}</Box>
+    </Grid>
+  );
+};
 
 export default FormField;

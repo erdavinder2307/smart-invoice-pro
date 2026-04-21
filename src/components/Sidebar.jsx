@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Drawer from "@mui/material/Drawer";
 import List from "@mui/material/List";
@@ -28,6 +29,7 @@ import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import LogoutIcon from "@mui/icons-material/Logout";
 
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import { useSidebar } from "../context/SidebarContext";
 import { NAV_CONFIG } from "../config/navConfig";
@@ -37,11 +39,13 @@ import { BRANDING } from "../config/branding";
 // ── Constants ────────────────────────────────────────────────────────────────
 const DRAWER_EXPANDED = 256;
 const DRAWER_COLLAPSED = 72;
+const SIDEBAR_SCROLL_KEY = "sidebarScrollTop";
 
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
+  const { t } = useTranslation();
   const { logout, isAdmin } = useAuth();
   const {
     isCollapsed,
@@ -51,6 +55,10 @@ const Sidebar = () => {
     isMobile,
   } = useSidebar();
   const isDesktopCollapsed = !isMobile && isCollapsed;
+  const navScrollRef = useRef(null);
+
+  const getNavLabel = (config) =>
+    config?.labelKey ? t(config.labelKey, config.label) : config?.label;
 
   // ── Expanded sections state (persisted per section) ──────────────────────
   const [expandedSections, setExpandedSections] = useState(() => {
@@ -115,9 +123,31 @@ const Sidebar = () => {
     setPopoverKey(null);
   }, [location.pathname, setMobileOpen]);
 
+  // ── Restore sidebar scroll on mount (fallback for reload/remount) ───────
+  useEffect(() => {
+    const node = navScrollRef.current;
+    if (!node) return;
+    const raw = sessionStorage.getItem(SIDEBAR_SCROLL_KEY);
+    const saved = raw ? Number(raw) : 0;
+    if (!Number.isNaN(saved)) {
+      node.scrollTop = saved;
+    }
+  }, []);
+
+  // ── Persist sidebar scroll while user scrolls ───────────────────────────
+  useEffect(() => {
+    const node = navScrollRef.current;
+    if (!node) return;
+    const onScroll = () => {
+      sessionStorage.setItem(SIDEBAR_SCROLL_KEY, String(node.scrollTop));
+    };
+    node.addEventListener("scroll", onScroll, { passive: true });
+    return () => node.removeEventListener("scroll", onScroll);
+  }, []);
+
   // ── User info ─────────────────────────────────────────────────────────────
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-  const username = storedUser.username || "Admin User";
+  const username = storedUser.username || t('sidebar.adminUser');
   const email = storedUser.email || "admin@solidevbooks.com";
   const initials = username.charAt(0).toUpperCase();
 
@@ -206,6 +236,7 @@ const Sidebar = () => {
     const showLabels = forceExpanded || !isDesktopCollapsed;
     const showTooltip = isDesktopCollapsed && !forceExpanded;
     const isActive = isPathActive(config.path);
+    const label = getNavLabel(config);
 
     const button = (
       <ListItemButton
@@ -213,14 +244,14 @@ const Sidebar = () => {
         sx={navButtonSx(isActive, isChild, forceExpanded)}
       >
         <ListItemIcon>{config.icon}</ListItemIcon>
-        {showLabels && <ListItemText primary={config.label} />}
+        {showLabels && <ListItemText primary={label} />}
       </ListItemButton>
     );
 
     return (
       <ListItem key={config.id} disablePadding>
         {showTooltip ? (
-          <Tooltip title={config.label} placement="right" arrow>
+          <Tooltip title={label} placement="right" arrow>
             {button}
           </Tooltip>
         ) : button}
@@ -237,6 +268,7 @@ const Sidebar = () => {
     const usePopover = isDesktopCollapsed && !forceExpanded;
     const isExpanded = expandedSections[sectionKey] || false;
     const hasActiveChild = isSectionActive(config);
+    const label = getNavLabel(config);
 
     const parentButton = (
       <ListItemButton
@@ -256,7 +288,7 @@ const Sidebar = () => {
         <ListItemIcon>{config.icon}</ListItemIcon>
         {showLabels && (
           <>
-            <ListItemText primary={config.label} />
+            <ListItemText primary={label} />
             {!usePopover &&
               (isExpanded ? (
                 <ExpandLessIcon sx={{ fontSize: 18, color: "rgba(255,255,255,0.65)" }} />
@@ -271,7 +303,7 @@ const Sidebar = () => {
     return (
       <ListItem key={sectionKey} disablePadding sx={{ flexDirection: "column", alignItems: "stretch" }}>
         {showTooltip ? (
-          <Tooltip title={config.label} placement="right" arrow>
+          <Tooltip title={label} placement="right" arrow>
             {parentButton}
           </Tooltip>
         ) : parentButton}
@@ -328,7 +360,7 @@ const Sidebar = () => {
             borderColor: "grey.800",
           }}
         >
-          <Tooltip title={isDesktopCollapsed ? "Expand sidebar" : "Collapse sidebar"} placement="right" arrow>
+          <Tooltip title={isDesktopCollapsed ? t('sidebar.expand') : t('sidebar.collapse')} placement="right" arrow>
             <IconButton
               onClick={toggleSidebar}
               size="small"
@@ -344,7 +376,7 @@ const Sidebar = () => {
         </Box>
       )}
 
-      <Box sx={{ flex: 1, py: 2, overflowY: "auto", overflowX: "hidden" }}>
+      <Box ref={navScrollRef} sx={{ flex: 1, py: 2, overflowY: "auto", overflowX: "hidden" }}>
         <List sx={{ px: isDesktopCollapsed && !forceExpanded ? 1 : 1.5 }} disablePadding>
           {renderNavItem(NAV_CONFIG.dashboard, false, forceExpanded)}
           {renderNavItem(NAV_CONFIG.items, false, forceExpanded)}
@@ -394,7 +426,7 @@ const Sidebar = () => {
         )}
 
         {isDesktopCollapsed && !forceExpanded ? (
-          <Tooltip title="Sign out" placement="right" arrow>
+          <Tooltip title={t('sidebar.signOut')} placement="right" arrow>
             <IconButton
               onClick={handleLogoutClick}
               sx={{
@@ -428,7 +460,7 @@ const Sidebar = () => {
               },
             }}
           >
-            Sign out
+            {t('sidebar.signOut')}
           </Button>
         )}
       </Box>
@@ -493,7 +525,7 @@ const Sidebar = () => {
           <>
             <Box sx={{ px: 2, py: 1.5, borderBottom: "1px solid", borderColor: "grey.800" }}>
               <Typography variant="subtitle2" fontWeight={700} color="common.white">
-                {NAV_CONFIG[popoverKey].label}
+                {getNavLabel(NAV_CONFIG[popoverKey])}
               </Typography>
             </Box>
             <List sx={{ px: 1.5, py: 1 }} disablePadding>
@@ -506,7 +538,7 @@ const Sidebar = () => {
                       sx={navButtonSx(isActive, true, true)}
                     >
                       <ListItemIcon>{child.icon}</ListItemIcon>
-                      <ListItemText primary={child.label} />
+                      <ListItemText primary={getNavLabel(child)} />
                     </ListItemButton>
                   </ListItem>
                 );
@@ -524,11 +556,11 @@ const Sidebar = () => {
         PaperProps={{ sx: { borderRadius: 3, minWidth: 380 } }}
       >
         <DialogTitle id="logout-dialog-title" sx={{ fontWeight: 600 }}>
-          Confirm Sign Out
+          {t('sidebar.confirmSignOut', 'Confirm Sign Out')}
         </DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to sign out? You will need to log in again to access your dashboard.
+            {t('sidebar.signOutConfirmMsg', 'Are you sure you want to sign out? You will need to log in again to access your dashboard.')}
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ p: 2, pt: 0 }}>
@@ -537,7 +569,7 @@ const Sidebar = () => {
             variant="outlined"
             sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
           >
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button
             onClick={handleLogoutConfirm}
@@ -546,7 +578,7 @@ const Sidebar = () => {
             autoFocus
             sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
           >
-            Sign Out
+            {t('sidebar.signOut')}
           </Button>
         </DialogActions>
       </Dialog>

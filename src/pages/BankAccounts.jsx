@@ -45,6 +45,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useTheme } from "@mui/material/styles";
 import EmptyState from '../components/common/EmptyState';
+import { useTranslation } from 'react-i18next';
 
 const BankAccounts = () => {
     const [bankAccounts, setBankAccounts] = useState([]);
@@ -57,6 +58,7 @@ const BankAccounts = () => {
     const [confirmDeleteId, setConfirmDeleteId] = useState(null);
     const theme = useTheme();
     const { user } = useAuth();
+    const { t } = useTranslation();
 
     const filteredAccounts = bankAccounts.filter(account =>
         account.bank_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -121,7 +123,7 @@ const BankAccounts = () => {
             setEditAccount(null);
             await fetchBankAccounts();
         } catch {
-            setError('Failed to update bank account.');
+            setError(t('bankAccounts.failedUpdate'));
         } finally {
             setEditLoading(false);
         }
@@ -134,13 +136,13 @@ const BankAccounts = () => {
             setConfirmDeleteId(null);
             await fetchBankAccounts();
         } catch {
-            setError('Failed to delete bank account.');
+            setError(t('bankAccounts.failedDelete'));
             setLoading(false);
         }
     };
 
     return (
-        <MainLayout title="Bank Accounts" subtitle="Manage your bank accounts and import statements">
+        <MainLayout title={t('bankAccounts.title')} subtitle={t('bankAccounts.subtitle')}>
             <Box sx={{ flex: 1, width: '100%' }}>
                 <Grid container spacing={2}>
                     {/* Stats Cards */}
@@ -165,7 +167,7 @@ const BankAccounts = () => {
                                     {bankAccounts.length}
                                 </Typography>
                                 <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                                    Total Accounts
+                                    {t('bankAccounts.totalAccounts')}
                                 </Typography>
                             </CardContent>
                         </Card>
@@ -191,7 +193,7 @@ const BankAccounts = () => {
                                     {bankAccounts.filter(acc => acc.status === 'active').length}
                                 </Typography>
                                 <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                                    Active Accounts
+                                    {t('bankAccounts.activeAccounts')}
                                 </Typography>
                             </CardContent>
                         </Card>
@@ -219,10 +221,10 @@ const BankAccounts = () => {
                                 </Avatar>
                                 <Box>
                                     <Typography variant="h5" fontWeight={700} color="text.primary" gutterBottom>
-                                        Bank Account Management
+                                        {t('bankAccounts.management')}
                                     </Typography>
                                     <Typography variant="body1" color="text.secondary">
-                                        View and manage all your connected bank accounts
+                                        {t('bankAccounts.managementSubtitle')}
                                     </Typography>
                                 </Box>
                             </Box>
@@ -246,7 +248,7 @@ const BankAccounts = () => {
                                     transition: 'all 0.2s ease'
                                 }}
                             >
-                                Add Bank Account
+                                {t('bankAccounts.addButton')}
                             </Button>
                         </Box>
 

@@ -17,6 +17,7 @@ import {
   TableHead,
   TableRow,
   IconButton,
+  MenuItem,
   Paper,
 } from "@mui/material";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
@@ -24,10 +25,11 @@ import MainLayout from "./Layout/MainLayout";
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CustomerSelect from './common/CustomerSelect';
-import { C, ZohoRow, fieldSx, footerSx, cancelBtnSx, saveBtnSx } from './common/formStyles';
+import AppFormField from './common/Form/AppFormField';
+import FormLayout from './common/Form/FormLayout';
+import { AppSelect, C, ZohoRow, fieldSx, footerSx, cancelBtnSx, saveBtnSx } from './common/formStyles';
+import { useTranslation } from 'react-i18next';
 import FormInput from './common/FormInput';
-import FormSelect from './common/FormSelect';
-import FormDatePicker from './common/FormDatePicker';
 
 const statusOptions = ["Draft", "Confirmed", "Closed", "Invoiced", "Cancelled"];
 
@@ -48,13 +50,18 @@ const initialForm = {
   terms_conditions: "",
   is_gst_applicable: false,
   subject: "",
+  salesperson: "",
   items: [{ item_name: "", description: "", quantity: 1, rate: 0, discount: 0, tax: 0, amount: 0 }],
+};
+
+const formFieldSx = {
+  ...fieldSx,
+  width: '100%',
 };
 
 const AddEditSalesOrder = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
-  const location = useLocation();
+  const navigate = useNavigate();  const { t } = useTranslation();  const location = useLocation();
   const soId = id;
   const [form, setForm] = useState(initialForm);
   const [customers, setCustomers] = useState([]);
@@ -173,7 +180,7 @@ const AddEditSalesOrder = () => {
   };
 
   return (
-    <MainLayout title={id ? 'Edit Sales Order' : 'New Sales Order'}>
+    <MainLayout title={id ? t('addEditSalesOrder.editTitle') : t('addEditSalesOrder.newTitle')}>
       <Box sx={{ bgcolor: C.pageBg, minHeight: '100vh', pb: 6 }}>
         <Box sx={{ width: '100%', pt: 3 }}>
 
@@ -188,51 +195,98 @@ const AddEditSalesOrder = () => {
             elevation={0}
             sx={{ bgcolor: C.white, border: `1px solid ${C.border}`, borderRadius: '4px', overflow: 'hidden' }}
           >
-            {/* ══ BASIC INFORMATION ══════════════════════════════════ */}
-            <Box sx={{ px: 3 }}>
-              <Box sx={{ py: 1.5, borderBottom: `1px solid ${C.divider}` }}>
-                <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>
-                  Basic Information
-                </Typography>
-              </Box>
+            <Box sx={{ px: 3, py: 3, borderBottom: `1px solid ${C.divider}` }}>
+              <FormLayout>
+                <AppFormField label="Customer" required testId="sales-order-field-customer">
+                  <CustomerSelect
+                    customers={customers}
+                    value={form.customer_id}
+                    onChange={handleChange}
+                    name="customer_id"
+                    required
+                  />
+                </AppFormField>
 
-              <FormInput label="SO Number" required name="so_number" value={form.so_number} onChange={handleChange}
-                disabled={!!id} sx={{ maxWidth: 240 }} />
+                <AppFormField label="SO Number" required layout="half" testId="sales-order-field-number">
+                  <TextField
+                    name="so_number"
+                    value={form.so_number}
+                    onChange={handleChange}
+                    size="small"
+                    fullWidth
+                    disabled={!!id}
+                    sx={formFieldSx}
+                  />
+                </AppFormField>
 
-              <ZohoRow label="Customer" required>
-                <CustomerSelect
-                  customers={customers}
-                  value={form.customer_id}
-                  onChange={handleChange}
-                  name="customer_id"
-                  required
-                />
-              </ZohoRow>
+                <AppFormField label="Status" required layout="half" testId="sales-order-field-status">
+                  <AppSelect name="status" value={form.status} onChange={handleChange}>
+                    {statusOptions.map((status) => (
+                      <MenuItem key={status} value={status}>{status}</MenuItem>
+                    ))}
+                  </AppSelect>
+                </AppFormField>
 
-              <FormSelect label="Status" required name="status" value={form.status} onChange={handleChange}
-                options={statusOptions.map(s => ({ value: s, label: s }))} width={220} />
+                <AppFormField label="Order Date" required layout="half" testId="sales-order-field-order-date">
+                  <TextField
+                    name="order_date"
+                    value={form.order_date}
+                    onChange={handleChange}
+                    type="date"
+                    size="small"
+                    fullWidth
+                    sx={formFieldSx}
+                  />
+                </AppFormField>
 
-              <FormInput label="Subject" noDivider name="subject" value={form.subject} onChange={handleChange}
-                placeholder="e.g., Office equipment order" />
-            </Box>
+                <AppFormField label="Delivery Date" layout="half" testId="sales-order-field-delivery-date">
+                  <TextField
+                    name="delivery_date"
+                    value={form.delivery_date || ''}
+                    onChange={handleChange}
+                    type="date"
+                    size="small"
+                    fullWidth
+                    sx={formFieldSx}
+                  />
+                </AppFormField>
 
-            {/* ══ DATES & TERMS ═════════════════════════════════════ */}
-            <Box sx={{ px: 3, borderTop: `1px solid ${C.divider}` }}>
-              <Box sx={{ py: 1.5, borderBottom: `1px solid ${C.divider}` }}>
-                <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>
-                  Dates & Terms
-                </Typography>
-              </Box>
+                <AppFormField label="Payment Terms" layout="half" testId="sales-order-field-payment-terms">
+                  <TextField
+                    name="payment_terms"
+                    value={form.payment_terms}
+                    onChange={handleChange}
+                    size="small"
+                    fullWidth
+                    placeholder="e.g., Net 30"
+                    sx={formFieldSx}
+                  />
+                </AppFormField>
 
-              <FormDatePicker label="Order Date" required name="order_date" value={form.order_date} onChange={handleChange} />
+                <AppFormField label="Salesperson" layout="half" testId="sales-order-field-salesperson">
+                  <TextField
+                    name="salesperson"
+                    value={form.salesperson || ''}
+                    onChange={handleChange}
+                    size="small"
+                    fullWidth
+                    placeholder="Enter salesperson name"
+                    sx={formFieldSx}
+                  />
+                </AppFormField>
 
-              <FormDatePicker label="Delivery Date" name="delivery_date" value={form.delivery_date || ''} onChange={handleChange} />
-
-              <FormInput label="Payment Terms" name="payment_terms" value={form.payment_terms} onChange={handleChange}
-                placeholder="e.g., Net 30" />
-
-              <FormInput label="Salesperson" noDivider name="salesperson" value={form.salesperson || ''} onChange={handleChange}
-                placeholder="Enter salesperson name" />
+                <AppFormField label="Subject" testId="sales-order-field-subject">
+                  <TextField
+                    name="subject"
+                    value={form.subject}
+                    onChange={handleChange}
+                    size="small"
+                    fullWidth
+                    placeholder="e.g., Office equipment order"
+                    sx={formFieldSx}
+                  />
+                </AppFormField>
+              </FormLayout>
             </Box>
 
             {/* ══ TAX INFORMATION ════════════════════════════════════ */}

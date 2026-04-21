@@ -205,18 +205,13 @@ export default function AutomationSettings() {
     <MainLayout>
       <Box
         sx={{
-          display: "flex",
-          gap: 2.5,
           p: 3,
           bgcolor: C.pageBg,
           minHeight: "calc(100vh - 64px)",
-          alignItems: "flex-start",
         }}
       >
-        <SettingsSubNav />
-
         {/* Content panel */}
-        <Box sx={{ flex: 1, minWidth: 0, maxWidth: 640 }}>
+        <Box sx={{ minWidth: 0, maxWidth: 640 }}>
           {/* Header */}
           <Box sx={{ mb: 2 }}>
             <Typography variant="h6" fontWeight={700} sx={{ fontSize: "1rem", color: C.label }}>

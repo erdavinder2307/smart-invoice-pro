@@ -3,12 +3,14 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import './i18n';
 import { AuthProvider } from './context/AuthContext';
 import { BrandingProvider } from './context/BrandingContext';
 import { InvoicePreferencesProvider } from './context/InvoicePreferencesContext';
 import { PermissionProvider } from './context/PermissionContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { SidebarProvider } from './context/SidebarContext';
+import { KeyboardShortcutsProvider } from './context/KeyboardShortcutsContext';
 import axios from 'axios';
 import authService from './services/authService';
 
@@ -94,7 +96,9 @@ root.render(
           <InvoicePreferencesProvider>
             <PermissionProvider>
               <NotificationProvider>
-                <App />
+                <KeyboardShortcutsProvider>
+                  <App />
+                </KeyboardShortcutsProvider>
               </NotificationProvider>
             </PermissionProvider>
           </InvoicePreferencesProvider>

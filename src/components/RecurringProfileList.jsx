@@ -47,10 +47,12 @@ import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import EventRepeatIcon from "@mui/icons-material/EventRepeat";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import { useTranslation } from "react-i18next";
 
 const RecurringProfileList = () => {
   const [profiles, setProfiles] = useState([]);
   const [customers, setCustomers] = useState([]);
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -71,7 +73,7 @@ const RecurringProfileList = () => {
       setProfiles(response.data);
       setError("");
     } catch (err) {
-      setError("Failed to fetch recurring profiles");
+      setError(t('recurringProfileList.failedFetch'));
       console.error(err);
     }
     setLoading(false);
@@ -144,7 +146,7 @@ const RecurringProfileList = () => {
       setConfirmDeleteId(null);
       setError("");
     } catch (err) {
-      setError("Failed to delete recurring profile");
+      setError(t('recurringProfileList.failedDelete'));
       console.error(err);
     }
     setLoading(false);
@@ -225,7 +227,7 @@ const RecurringProfileList = () => {
                   Recurring Invoices
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
-                  Automate invoice generation with recurring profiles
+                  {t('recurringProfileList.subtitle')}
                 </Typography>
               </Box>
               <Button
@@ -242,7 +244,7 @@ const RecurringProfileList = () => {
                   "&:hover": { boxShadow: 4 }
                 }}
               >
-                New Recurring Profile
+                {t('recurringProfileList.newProfile')}
               </Button>
             </Box>
 
@@ -321,7 +323,7 @@ const RecurringProfileList = () => {
                       onChange={(e) => setStatusFilter(e.target.value)}
                       sx={{ borderRadius: 2, bgcolor: "grey.50" }}
                     >
-                      <MenuItem value="All">All Status</MenuItem>
+                <MenuItem value="All">{t('common.allStatus')}</MenuItem>
                       <MenuItem value="Active">Active</MenuItem>
                       <MenuItem value="Paused">Paused</MenuItem>
                       <MenuItem value="Expired">Expired</MenuItem>
@@ -363,7 +365,7 @@ const RecurringProfileList = () => {
               rows={paginatedProfiles}
               loading={loading}
               emptyIcon={<EventRepeatIcon sx={{ fontSize: 48 }} />}
-              emptyTitle="No recurring profiles found"
+              emptyTitle={t('recurringProfileList.noProfiles')}
               emptySubtitle="Create a recurring profile to automate invoice generation"
               onRowClick={(profile) => handleEdit(profile)}
               renderRow={(profile) => (

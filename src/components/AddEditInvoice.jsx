@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { createInvoice, updateInvoice } from '../services/invoiceService';
 import { createApiUrl } from '../config/api';
@@ -27,11 +27,16 @@ import {
   Typography,
 } from '@mui/material';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import MainLayout from './Layout/MainLayout';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CustomerSelect from './common/CustomerSelect';
+import AppFormField from './common/Form/AppFormField';
+import FormLayout from './common/Form/FormLayout';
 import { C, AppSelect, fieldSx, menuItemSx, footerSx, cancelBtnSx, saveBtnSx } from './common/formStyles';
+import { useFormSubmitShortcut } from '../hooks/useFormSubmitShortcut';
+import { formatCurrency as formatCurrencyByLocale, formatNumber } from '../utils/intlFormatters';
 
 const paymentTermsOptions = ['Due on Receipt', 'Net 15', 'Net 30', 'Net 45'];
 // taxOptions now loaded from API; these are fallback values used until API loads
@@ -86,13 +91,9 @@ const initialForm = {
   items: [{ name: '', quantity: 1, rate: 0, discount: 0, tax: 0, amount: 0 }],
 };
 
-const rowLabelSx = {
-  width: 170,
-  minWidth: 170,
-  pr: 2,
-  fontSize: '0.8125rem',
-  color: '#2d3748',
-  lineHeight: 1.4,
+const formFieldSx = {
+  ...fieldSx,
+  width: '100%',
 };
 
 const tableInputSx = {
@@ -110,23 +111,27 @@ const tableInputSx = {
   },
 };
 
-const CellField = ({ value, onChange, type = 'number', width = 90, inputProps, placeholder }) => (
+const CellField = ({ value, onChange, type = 'number', width = 90, inputProps, placeholder, inputRef }) => (
   <TextField
     size="small"
     type={type}
     value={value}
     onChange={onChange}
     placeholder={placeholder}
+    inputRef={inputRef}
     inputProps={inputProps}
     sx={{ ...tableInputSx, width }}
   />
 );
 
 const AddEditInvoice = ({ onSuccess, onCancel }) => {
+  const { t, i18n } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const invoiceId = id;
+  const quickCreateCustomerId = location.state?.quickCreateCustomerId || '';
+  const shouldFocusItemInput = Boolean(location.state?.focusItemInput);
   const { prefs } = useInvoicePreferences();
   const [form, setForm] = useState(initialForm);
   const [customers, setCustomers] = useState([]);
@@ -140,8 +145,17 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
   const [tdsTaxOption, setTdsTaxOption] = useState('');
   const [tcsTaxOption, setTcsTaxOption] = useState('');
   const formRef = useRef(null);
+  const firstItemInputRef = useRef(null);
   const [taxRates, setTaxRates] = useState(FALLBACK_TAX_OPTIONS);
   const [gstBreakdown, setGstBreakdown] = useState({ cgst: 0, sgst: 0, igst: 0, tax_type: 'NONE' });
+  const [focusItemPending, setFocusItemPending] = useState(shouldFocusItemInput);
+
+  const submitWithShortcut = useCallback(() => {
+    setSubmitMode('send');
+    formRef.current?.requestSubmit();
+  }, []);
+
+  useFormSubmitShortcut(submitWithShortcut, !pageLoading && !loading);
 
   const activeWithholdingOptions = tdsMode === 'tds' ? tdsTaxOptions : tcsTaxOptions;
   const activeWithholdingValue = tdsMode === 'tds' ? tdsTaxOption : tcsTaxOption;
@@ -216,6 +230,7 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                 invoice_number:   nextNumber,
                 issue_date:       today,
                 due_date:         calcDueDate(today),
+                customer_id:      quickCreateCustomerId || prev.customer_id || '',
                 payment_terms:    prefs.default_payment_terms || 'Net 30',
                 notes:            prefs.default_notes         || '',
                 terms_conditions: prefs.default_terms         || '',
@@ -229,6 +244,7 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
               invoice_number:   'INV-00001',
               issue_date:       today,
               due_date:         calcDueDate(today),
+              customer_id:      quickCreateCustomerId || prev.customer_id || '',
               payment_terms:    prefs.default_payment_terms || 'Net 30',
               notes:            prefs.default_notes         || '',
               terms_conditions: prefs.default_terms         || '',
@@ -237,7 +253,7 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
           }
         }
       } catch {
-        if (active) setError('Failed to load invoice details.');
+        if (active) setError(t('invoiceForm.loadFailed'));
       } finally {
         if (active) setPageLoading(false);
       }
@@ -248,7 +264,22 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invoiceId]);
+  }, [invoiceId, quickCreateCustomerId, t]);
+
+  useEffect(() => {
+    if (!focusItemPending || pageLoading) return;
+    if (!form.customer_id) return;
+
+    const timer = setTimeout(() => {
+      firstItemInputRef.current?.focus();
+      if (typeof firstItemInputRef.current?.select === 'function') {
+        firstItemInputRef.current.select();
+      }
+      setFocusItemPending(false);
+    }, 80);
+
+    return () => clearTimeout(timer);
+  }, [focusItemPending, form.customer_id, pageLoading]);
 
   useEffect(() => {
     const lineSubtotal = (form.items || []).reduce((sum, item) => {
@@ -381,7 +412,7 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
       if (onSuccess) onSuccess();
       navigate('/invoices');
     } catch {
-      setError('Failed to save invoice');
+      setError(t('invoiceForm.saveFailed'));
     }
 
     setLoading(false);
@@ -412,14 +443,13 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
               <>
                 <Box sx={{ px: 0.5, pt: 0.25, pb: 1.5, borderBottom: `1px solid ${C.divider}` }}>
                   <Typography sx={{ fontSize: '2rem', fontWeight: 500, color: '#151a25', textAlign: 'left' }}>
-                    {invoiceId ? 'Edit Invoice' : 'New Invoice'}
+                    {invoiceId ? t('invoiceForm.editTitle') : t('invoiceForm.newTitle')}
                   </Typography>
                 </Box>
 
-                <Box sx={{ px: 0.5 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', py: 2, borderBottom: `1px solid ${C.divider}` }}>
-                    <Typography sx={{ ...rowLabelSx, color: '#e53935' }}>Customer Name*</Typography>
-                    <Box sx={{ flex: 1, maxWidth: 520 }}>
+                <Box sx={{ px: 0.5, py: 3, borderBottom: `1px solid ${C.divider}` }}>
+                  <FormLayout>
+                    <AppFormField label={t('invoiceForm.customerName')} required testId="invoice-field-customer">
                       <CustomerSelect
                         customers={customers}
                         value={form.customer_id}
@@ -427,97 +457,86 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                         name="customer_id"
                         required
                       />
-                    </Box>
-                  </Box>
+                    </AppFormField>
 
-                  <Box
-                    sx={{
-                      display: 'grid',
-                      gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-                      columnGap: 2,
-                      rowGap: 1.2,
-                      py: 2,
-                      borderBottom: `1px solid ${C.divider}`,
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
-                      <Typography sx={{ ...rowLabelSx, color: '#e53935' }}>Invoice#*</Typography>
+                    <AppFormField label={t('invoiceForm.invoiceNumber')} required layout="half" testId="invoice-field-number">
                       <TextField
                         name="invoice_number"
                         value={form.invoice_number}
                         onChange={handleChange}
                         size="small"
+                        fullWidth
                         InputProps={{ readOnly: prefs.auto_generate_invoice_number }}
-                        sx={{ ...fieldSx, width: 240, '& .MuiOutlinedInput-root': { bgcolor: prefs.auto_generate_invoice_number ? '#f8fafc' : C.white } }}
+                        sx={{ ...formFieldSx, '& .MuiOutlinedInput-root': { ...fieldSx['& .MuiOutlinedInput-root'], bgcolor: prefs.auto_generate_invoice_number ? '#f8fafc' : C.white } }}
                       />
-                    </Box>
+                    </AppFormField>
 
-                    <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
-                      <Typography sx={rowLabelSx}>Order Number</Typography>
+                    <AppFormField label={t('invoiceForm.orderNumber')} layout="half" testId="invoice-field-order-number">
                       <TextField
                         size="small"
                         value={orderNumber}
                         onChange={(e) => setOrderNumber(e.target.value)}
-                        sx={{ ...fieldSx, width: 240 }}
+                        fullWidth
+                        sx={formFieldSx}
                       />
-                    </Box>
+                    </AppFormField>
 
-                    <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
-                      <Typography sx={{ ...rowLabelSx, color: '#e53935' }}>Invoice Date*</Typography>
+                    <AppFormField label={t('invoiceForm.invoiceDate')} required layout="half" testId="invoice-field-issue-date">
                       <TextField
                         name="issue_date"
                         value={form.issue_date}
                         onChange={handleChange}
                         type="date"
                         size="small"
-                        sx={{ ...fieldSx, width: 240 }}
+                        fullWidth
+                        sx={formFieldSx}
                       />
-                    </Box>
+                    </AppFormField>
 
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2, minWidth: 0 }}>
-                      <Typography sx={rowLabelSx}>Terms</Typography>
-                      <Box sx={{ width: 160 }}>
-                        <AppSelect name="payment_terms" value={form.payment_terms} onChange={handleChange}>
-                          {paymentTermsOptions.map((term) => (
-                            <MenuItem key={term} value={term} sx={menuItemSx}>{term}</MenuItem>
-                          ))}
-                        </AppSelect>
-                      </Box>
-                      <Typography sx={{ fontSize: '0.8125rem', color: '#374151', minWidth: 62 }}>Due Date</Typography>
+                    <AppFormField label={t('invoiceForm.dueDate')} layout="half" testId="invoice-field-due-date">
                       <TextField
                         name="due_date"
                         value={form.due_date}
                         onChange={handleChange}
                         type="date"
                         size="small"
-                        sx={{ ...fieldSx, width: 166 }}
+                        fullWidth
+                        sx={formFieldSx}
                       />
-                    </Box>
-                  </Box>
+                    </AppFormField>
 
-                  <Box sx={{ display: 'flex', alignItems: 'center', py: 2, borderBottom: `1px solid ${C.divider}` }}>
-                    <Typography sx={rowLabelSx}>Salesperson</Typography>
-                    <TextField
-                      name="salesperson"
-                      value={form.salesperson}
-                      onChange={handleChange}
-                      size="small"
-                      placeholder="Select or Add Salesperson"
-                      sx={{ ...fieldSx, width: 240 }}
-                    />
-                  </Box>
+                    <AppFormField label={t('invoiceForm.terms')} layout="half" testId="invoice-field-payment-terms">
+                      <AppSelect name="payment_terms" value={form.payment_terms} onChange={handleChange}>
+                        {paymentTermsOptions.map((term) => (
+                          <MenuItem key={term} value={term} sx={menuItemSx}>{term}</MenuItem>
+                        ))}
+                      </AppSelect>
+                    </AppFormField>
 
-                  <Box sx={{ display: 'flex', alignItems: 'center', py: 2, borderBottom: `1px solid ${C.divider}` }}>
-                    <Typography sx={rowLabelSx}>Subject</Typography>
-                    <TextField
-                      name="subject"
-                      value={form.subject}
-                      onChange={handleChange}
-                      size="small"
-                      placeholder="Let your customer know what this invoice is for"
-                      sx={{ ...fieldSx, width: 520, maxWidth: '100%' }}
-                    />
-                  </Box>
+                    <AppFormField label={t('invoiceForm.salesperson')} layout="half" testId="invoice-field-salesperson">
+                      <TextField
+                        name="salesperson"
+                        value={form.salesperson}
+                        onChange={handleChange}
+                        size="small"
+                        placeholder={t('invoiceForm.salespersonPlaceholder')}
+                        fullWidth
+                        sx={formFieldSx}
+                      />
+                    </AppFormField>
+
+                    <AppFormField label={t('invoiceForm.subject')} testId="invoice-field-subject">
+                      <TextField
+                        name="subject"
+                        value={form.subject}
+                        onChange={handleChange}
+                        size="small"
+                        fullWidth
+                        placeholder={t('invoiceForm.subjectPlaceholder')}
+                        sx={formFieldSx}
+                      />
+                    </AppFormField>
+                  </FormLayout>
 
                   <Box sx={{ py: 3, borderBottom: `1px solid ${C.divider}` }}>
                     <Box sx={{
@@ -532,10 +551,10 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                       borderTopLeftRadius: '4px',
                       borderTopRightRadius: '4px',
                     }}>
-                      <Typography sx={{ fontSize: '0.84rem', fontWeight: 600, color: '#1f2937' }}>Item Table</Typography>
+                      <Typography sx={{ fontSize: '0.84rem', fontWeight: 600, color: '#1f2937' }}>{t('invoiceForm.itemTable')}</Typography>
                       <Box sx={{ display: 'flex', gap: 1.5 }}>
-                        <Button size="small" sx={{ textTransform: 'none', minWidth: 'auto', fontSize: '0.78rem', p: 0 }}>Scan Item</Button>
-                        <Button size="small" sx={{ textTransform: 'none', minWidth: 'auto', fontSize: '0.78rem', p: 0 }}>Bulk Actions</Button>
+                        <Button size="small" sx={{ textTransform: 'none', minWidth: 'auto', fontSize: '0.78rem', p: 0 }}>{t('invoiceForm.scanItem')}</Button>
+                        <Button size="small" sx={{ textTransform: 'none', minWidth: 'auto', fontSize: '0.78rem', p: 0 }}>{t('invoiceForm.bulkActions')}</Button>
                       </Box>
                     </Box>
 
@@ -543,12 +562,12 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                       <Table size="small" sx={{ tableLayout: 'fixed', width: '100%' }}>
                         <TableHead>
                           <TableRow sx={{ bgcolor: '#fafbfd' }}>
-                            <TableCell align="left" sx={{ width: '45%', fontSize: '0.69rem', fontWeight: 700, color: '#687385', py: 0.8, px: 2, textAlign: 'left' }}>ITEM DETAILS</TableCell>
-                            <TableCell sx={{ width: 90, fontSize: '0.69rem', fontWeight: 700, color: '#687385', py: 0.8 }}>QUANTITY</TableCell>
-                            <TableCell sx={{ width: 90, fontSize: '0.69rem', fontWeight: 700, color: '#687385', py: 0.8 }}>RATE</TableCell>
-                            <TableCell sx={{ width: 80, fontSize: '0.69rem', fontWeight: 700, color: '#687385', py: 0.8 }}>DISCOUNT</TableCell>
-                            <TableCell sx={{ width: 105, fontSize: '0.69rem', fontWeight: 700, color: '#687385', py: 0.8 }}>TAX</TableCell>
-                            <TableCell align="right" sx={{ width: 95, fontSize: '0.69rem', fontWeight: 700, color: '#687385', py: 0.8 }}>AMOUNT</TableCell>
+                            <TableCell align="left" sx={{ width: '45%', fontSize: '0.69rem', fontWeight: 700, color: '#687385', py: 0.8, px: 2, textAlign: 'left' }}>{t('invoiceForm.itemDetails').toUpperCase()}</TableCell>
+                            <TableCell sx={{ width: 90, fontSize: '0.69rem', fontWeight: 700, color: '#687385', py: 0.8 }}>{t('invoiceForm.quantity').toUpperCase()}</TableCell>
+                            <TableCell sx={{ width: 90, fontSize: '0.69rem', fontWeight: 700, color: '#687385', py: 0.8 }}>{t('invoiceForm.rate').toUpperCase()}</TableCell>
+                            <TableCell sx={{ width: 80, fontSize: '0.69rem', fontWeight: 700, color: '#687385', py: 0.8 }}>{t('invoiceForm.discount').toUpperCase()}</TableCell>
+                            <TableCell sx={{ width: 105, fontSize: '0.69rem', fontWeight: 700, color: '#687385', py: 0.8 }}>{t('invoiceForm.tax').toUpperCase()}</TableCell>
+                            <TableCell align="right" sx={{ width: 95, fontSize: '0.69rem', fontWeight: 700, color: '#687385', py: 0.8 }}>{t('invoiceForm.amount').toUpperCase()}</TableCell>
                             <TableCell sx={{ width: 40, py: 0.8 }} />
                           </TableRow>
                         </TableHead>
@@ -559,9 +578,13 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                                 <CellField
                                   type="text"
                                   value={item.name || ''}
-                                  placeholder="Type or click to select an item."
+                                  placeholder={t('invoiceForm.itemPlaceholder')}
                                   onChange={(e) => updateItem(idx, 'name', e.target.value)}
+                                  inputProps={{
+                                    ...(idx === 0 ? { 'data-quick-item-input': 'true' } : {}),
+                                  }}
                                   width="100%"
+                                  inputRef={idx === 0 ? firstItemInputRef : undefined}
                                 />
                               </TableCell>
 
@@ -605,11 +628,11 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                               </TableCell>
 
                               <TableCell align="right" sx={{ fontSize: '0.8125rem', fontWeight: 700, color: '#161f2f', borderColor: C.divider }}>
-                                {itemTotal(item).toFixed(2)}
+                                {formatCurrencyByLocale(itemTotal(item), i18n.language)}
                               </TableCell>
 
                               <TableCell align="center" sx={{ borderColor: C.divider }}>
-                                <Tooltip title="Remove row">
+                                <Tooltip title={t('invoiceForm.removeRow')}>
                                   <IconButton
                                     size="small"
                                     onClick={() => removeItem(idx)}
@@ -645,7 +668,7 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                             '&:hover': { bgcolor: '#eef2f8', borderColor: '#cfd8e6' },
                           }}
                         >
-                          Add New Row
+                          {t('invoiceForm.addNewRow')}
                         </Button>
                         <Button
                           size="small"
@@ -663,14 +686,14 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                             '&:hover': { bgcolor: '#eef2f8', borderColor: '#cfd8e6' },
                           }}
                         >
-                          Add Items in Bulk
+                          {t('invoiceForm.addItemsInBulk')}
                         </Button>
                       </Box>
 
                       <Paper variant="outlined" sx={{ p: 1.5, width: { xs: '100%', sm: 360 }, borderColor: C.divider, bgcolor: '#fafbfd' }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                          <Typography sx={{ fontSize: '0.84rem', color: '#1f2937', fontWeight: 600 }}>Sub Total</Typography>
-                          <Typography sx={{ fontSize: '0.84rem', color: '#111827', fontWeight: 700 }}>{Number(form.subtotal || 0).toFixed(2)}</Typography>
+                          <Typography sx={{ fontSize: '0.84rem', color: '#1f2937', fontWeight: 600 }}>{t('invoiceForm.subTotal')}</Typography>
+                          <Typography sx={{ fontSize: '0.84rem', color: '#111827', fontWeight: 700 }}>{formatCurrencyByLocale(form.subtotal || 0, i18n.language)}</Typography>
                         </Box>
 
                         {/* ── GST Breakdown ── */}
@@ -697,11 +720,11 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                           <RadioGroup row value={tdsMode} onChange={(e) => setTdsMode(e.target.value)}>
                             <Box sx={{ display: 'flex', alignItems: 'center', mr: 1.6 }}>
                               <Radio size="small" value="tds" sx={{ p: 0.3 }} />
-                              <Typography sx={{ fontSize: '0.8rem' }}>TDS</Typography>
+                              <Typography sx={{ fontSize: '0.8rem' }}>{t('invoiceForm.tds')}</Typography>
                             </Box>
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               <Radio size="small" value="tcs" sx={{ p: 0.3 }} />
-                              <Typography sx={{ fontSize: '0.8rem' }}>TCS</Typography>
+                              <Typography sx={{ fontSize: '0.8rem' }}>{t('invoiceForm.tcs')}</Typography>
                             </Box>
                           </RadioGroup>
                           <Typography sx={{ fontSize: '0.8rem', color: '#6b7280' }}>- 0.00</Typography>
@@ -723,7 +746,7 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                             renderInput={(params) => (
                               <TextField
                                 {...params}
-                                placeholder="Search or select a Tax"
+                                placeholder={t('invoiceForm.taxPlaceholder')}
                                 sx={fieldSx}
                               />
                             )}
@@ -733,7 +756,7 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                           <TextField
                             size="small"
-                            value="Adjustment"
+                            value={t('invoiceForm.adjustment')}
                             InputProps={{ readOnly: true }}
                             sx={{ ...fieldSx, width: 120 }}
                           />
@@ -749,9 +772,9 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                         <Divider sx={{ borderColor: C.divider, my: 1 }} />
 
                         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <Typography sx={{ fontSize: '1.03rem', fontWeight: 700, color: '#111827' }}>Total (₹)</Typography>
+                          <Typography sx={{ fontSize: '1.03rem', fontWeight: 700, color: '#111827' }}>{t('invoiceForm.total')}</Typography>
                           <Typography sx={{ fontSize: '1.03rem', fontWeight: 700, color: '#111827' }}>
-                            {Number(form.total_amount || 0).toFixed(2)}
+                            {formatCurrencyByLocale(form.total_amount || 0, i18n.language)}
                           </Typography>
                         </Box>
                       </Paper>
@@ -760,7 +783,7 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
 
                   <Box sx={{ py: 3, borderBottom: `1px solid ${C.divider}` }}>
                     <Box sx={{ ml: 0, pl: 0 }}>
-                      <Typography sx={{ fontSize: '0.8125rem', color: '#2f3a4d', mb: 1.5, textAlign: 'left' }}>Customer Notes</Typography>
+                      <Typography sx={{ fontSize: '0.8125rem', color: '#2f3a4d', mb: 1.5, textAlign: 'left' }}>{t('invoiceForm.customerNotes')}</Typography>
                       <Box sx={{ ml: 0, pl: 0, width: '100%' }}>
                         <TextField
                           name="notes"
@@ -769,40 +792,40 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                           multiline
                           rows={2}
                           fullWidth
-                          placeholder="Thank you for the payment. You just made our day."
+                          placeholder={t('invoiceForm.customerNotesPlaceholder')}
                           sx={{ ...fieldSx, width: '100%', ml: 0, '& .MuiInputBase-input': { textAlign: 'left' } }}
                         />
                       </Box>
-                      <Typography sx={{ fontSize: '0.72rem', color: '#8b95a6', mt: 1.5, textAlign: 'left' }}>Will be displayed on the invoice</Typography>
+                      <Typography sx={{ fontSize: '0.72rem', color: '#8b95a6', mt: 1.5, textAlign: 'left' }}>{t('invoiceForm.customerNotesHint')}</Typography>
                     </Box>
                   </Box>
 
                   <Box sx={{ py: 3, borderBottom: `1px solid ${C.divider}`, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
                     <Box sx={{ flex: '1 1 460px' }}>
-                      <Typography sx={{ fontSize: '0.8125rem', color: '#2f3a4d', mb: 0.8 }}>Terms & Conditions</Typography>
+                      <Typography sx={{ fontSize: '0.8125rem', color: '#2f3a4d', mb: 0.8 }}>{t('invoiceForm.termsAndConditions')}</Typography>
                       <TextField
                         name="terms_conditions"
                         value={form.terms_conditions}
                         onChange={handleChange}
                         multiline
                         rows={3}
-                        placeholder="Enter the terms and conditions of your business to be displayed in your transaction"
+                        placeholder={t('invoiceForm.termsPlaceholder')}
                         sx={{ ...fieldSx, width: '100%' }}
                       />
                     </Box>
 
                     <Box sx={{ width: { xs: '100%', md: 280 } }}>
-                      <Typography sx={{ fontSize: '0.8125rem', color: '#2f3a4d', mb: 0.8 }}>Attach File(s) to Invoice</Typography>
-                      <Button variant="outlined" size="small" sx={{ textTransform: 'none' }}>Upload File</Button>
+                      <Typography sx={{ fontSize: '0.8125rem', color: '#2f3a4d', mb: 0.8 }}>{t('invoiceForm.attachFiles')}</Typography>
+                      <Button variant="outlined" size="small" sx={{ textTransform: 'none' }}>{t('invoiceForm.uploadFile')}</Button>
                       <Typography sx={{ fontSize: '0.72rem', color: '#8b95a6', mt: 0.8 }}>
-                        You can upload a maximum of 10 files, 10MB each
+                        {t('invoiceForm.uploadHint')}
                       </Typography>
                     </Box>
                   </Box>
 
                   <Box sx={{ py: 1.5 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-                      <Typography sx={{ fontSize: '0.79rem', color: '#111827' }}>Select an online payment option to get paid faster</Typography>
+                      <Typography sx={{ fontSize: '0.79rem', color: '#111827' }}>{t('invoiceForm.paymentOptionHint')}</Typography>
                       <Button size="small" variant="outlined" sx={{ textTransform: 'none', fontSize: '0.75rem' }}>Razorpay</Button>
                       <Button size="small" variant="outlined" sx={{ textTransform: 'none', fontSize: '0.75rem' }}>Zoho Payments</Button>
                     </Box>
@@ -821,7 +844,7 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                         formRef.current?.requestSubmit();
                       }}
                     >
-                      Save as Draft
+                      {t('invoiceForm.saveDraft')}
                     </Button>
 
                     <Button
@@ -834,7 +857,7 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                         formRef.current?.requestSubmit();
                       }}
                     >
-                      {loading ? 'Saving...' : 'Save and Send'}
+                      {loading ? t('common.saving') : t('invoiceForm.saveAndSend')}
                     </Button>
 
                     <Button
@@ -846,16 +869,16 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                         navigate('/invoices');
                       }}
                     >
-                      Cancel
+                      {t('common.cancel')}
                     </Button>
                   </Box>
 
                   <Box sx={{ textAlign: 'right' }}>
                     <Typography sx={{ fontSize: '0.8rem', color: '#111827', fontWeight: 700 }}>
-                      Total Amount: ₹ {Number(form.total_amount || 0).toFixed(2)}
+                      {t('invoiceForm.totalAmount')}: {formatCurrencyByLocale(form.total_amount || 0, i18n.language)}
                     </Typography>
                     <Typography sx={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                      Total Quantity: {(form.items || []).reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)}
+                      {t('invoiceForm.totalQuantity')}: {formatNumber((form.items || []).reduce((sum, item) => sum + (Number(item.quantity) || 0), 0), i18n.language)}
                     </Typography>
                   </Box>
                 </Box>

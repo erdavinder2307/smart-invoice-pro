@@ -50,9 +50,11 @@ import ReceiptIcon from "@mui/icons-material/Receipt";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import { useTranslation } from "react-i18next";
 
 const PurchaseOrderList = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [purchaseOrders, setPurchaseOrders] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -83,7 +85,7 @@ const PurchaseOrderList = () => {
       setPurchaseOrders(posResponse.data);
       setVendors(vendorsResponse.data);
     } catch (error) {
-      setError("Failed to fetch purchase orders");
+      setError(t('purchaseOrderList.failedFetch'));
       console.error(error);
     }
     setLoading(false);
@@ -96,7 +98,7 @@ const PurchaseOrderList = () => {
       await fetchData();
       setConfirmDeleteId(null);
     } catch (error) {
-      setError(error.response?.data?.error || "Failed to delete purchase order");
+      setError(error.response?.data?.error || t('purchaseOrderList.failedDelete'));
     }
     setLoading(false);
   };

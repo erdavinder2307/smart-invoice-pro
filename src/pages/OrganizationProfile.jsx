@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import MainLayout from "../components/Layout/MainLayout";
 import {
+  Autocomplete,
   Box,
   Button,
   CircularProgress,
@@ -18,6 +19,7 @@ import {
   ListItemText,
   Snackbar,
   Alert,
+  TextField,
 } from "@mui/material";
 import BusinessIcon from "@mui/icons-material/Business";
 import BrushIcon from "@mui/icons-material/Brush";
@@ -35,16 +37,18 @@ import { useAuth } from "../context/AuthContext";
 import {
   C,
   ZohoRow,
+  fieldSx,
   footerSx,
   saveBtnSx,
 } from "../components/common/formStyles";
-import FormInput from "../components/common/FormInput";
-import FormSelect from "../components/common/FormSelect";
+import AppFormField from "../components/common/Form/AppFormField";
+import FormLayout from "../components/common/Form/FormLayout";
 import {
   getOrgProfile,
   updateOrgProfile,
   uploadOrgLogo,
 } from "../services/organizationProfileService";
+import { useTranslation } from "react-i18next";
 
 // ── Static dropdown options ───────────────────────────────────────────────────
 const INDUSTRIES = [
@@ -133,6 +137,7 @@ const SETTINGS_NAV = [
 function SettingsSubNav() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { t } = useTranslation();
 
   return (
     <Paper
@@ -162,11 +167,11 @@ function SettingsSubNav() {
             letterSpacing: "0.06em",
           }}
         >
-          Settings
+          {t('settingsNav.settings')}
         </Typography>
       </Box>
       <List disablePadding>
-        {SETTINGS_NAV.map(({ label, path, icon }) => {
+        {SETTINGS_NAV.map(({ labelKey, path, icon }) => {
           const isActive = pathname === path || pathname.startsWith(path);
           return (
             <ListItemButton
@@ -193,7 +198,7 @@ function SettingsSubNav() {
                 {icon}
               </ListItemIcon>
               <ListItemText
-                primary={label}
+                primary={t(labelKey)}
                 primaryTypographyProps={{
                   fontSize: "0.8125rem",
                   fontWeight: isActive ? 600 : 400,
@@ -724,14 +729,9 @@ export default function OrganizationProfile() {
     <MainLayout title="Organization Profile">
       <Box sx={{ bgcolor: C.pageBg, minHeight: "100vh", pb: 6 }}>
         <Container maxWidth={false} sx={{ pt: 3, px: 2.5 }}>
-          <Box
-            sx={{ display: "flex", gap: 2.5, alignItems: "flex-start" }}
-          >
-            {/* Left settings sub-nav */}
-            <SettingsSubNav />
-
+          <Box sx={{ minWidth: 0 }}>
             {/* Main form card */}
-            <Box sx={{ flex: 1 }}>
+            <Box>
               <Paper
                 elevation={0}
                 sx={{
@@ -878,55 +878,77 @@ export default function OrganizationProfile() {
                 >
                   <SectionHeader>Organization Details</SectionHeader>
 
-                  <FormInput
-                    label="Organization Name"
-                    required
-                    value={form.organization_name}
-                    onChange={(e) => setField("organization_name", e.target.value)}
-                    error={!!errors.organization_name}
-                    helperText={errors.organization_name}
-                    placeholder="e.g. Acme Corp"
-                  />
+                  <FormLayout>
+                    <AppFormField label="Organization Name" required testId="org-profile-field-name">
+                      <TextField
+                        value={form.organization_name}
+                        onChange={(e) => setField("organization_name", e.target.value)}
+                        size="small"
+                        fullWidth
+                        error={!!errors.organization_name}
+                        helperText={errors.organization_name}
+                        placeholder="e.g. Acme Corp"
+                        sx={fieldSx}
+                      />
+                    </AppFormField>
 
-                  <FormSelect
-                    label="Industry"
-                    searchable
-                    name="industry"
-                    value={form.industry}
-                    onChange={(e) => setField("industry", e.target.value)}
-                    placeholder="Select or search industry"
-                    options={INDUSTRIES.map((i) => ({ value: i, label: i }))}
-                  />
+                    <AppFormField label="Industry" layout="half" testId="org-profile-field-industry">
+                      <Autocomplete
+                        options={INDUSTRIES}
+                        value={form.industry || null}
+                        onChange={(_event, value) => setField("industry", value || "")}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            size="small"
+                            placeholder="Select or search industry"
+                            sx={fieldSx}
+                          />
+                        )}
+                      />
+                    </AppFormField>
 
-                  <FormSelect
-                    label="Country"
-                    required
-                    searchable
-                    name="country"
-                    value={form.country}
-                    onChange={(e) => setField("country", e.target.value)}
-                    placeholder="Select or search country"
-                    error={!!errors.country}
-                    helperText={errors.country}
-                    options={COUNTRIES.map((c) => ({ value: c, label: c }))}
-                  />
+                    <AppFormField label="Country" required layout="half" testId="org-profile-field-country">
+                      <Autocomplete
+                        options={COUNTRIES}
+                        value={form.country || null}
+                        onChange={(_event, value) => setField("country", value || "")}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            size="small"
+                            placeholder="Select or search country"
+                            error={!!errors.country}
+                            helperText={errors.country}
+                            sx={fieldSx}
+                          />
+                        )}
+                      />
+                    </AppFormField>
 
-                  <FormInput
-                    label="GSTIN"
-                    hint="e.g. 22AAAAA0000A1Z5 (15 characters)"
-                    value={form.gstin}
-                    onChange={(e) => setField("gstin", e.target.value.toUpperCase().replace(/\s+/g, ""))}
-                    placeholder="22AAAAA0000A1Z5"
-                    inputProps={{ maxLength: 15 }}
-                  />
+                    <AppFormField label="GSTIN" hint="e.g. 22AAAAA0000A1Z5 (15 characters)" layout="half" testId="org-profile-field-gstin">
+                      <TextField
+                        value={form.gstin}
+                        onChange={(e) => setField("gstin", e.target.value.toUpperCase().replace(/\s+/g, ""))}
+                        size="small"
+                        fullWidth
+                        placeholder="22AAAAA0000A1Z5"
+                        inputProps={{ maxLength: 15 }}
+                        sx={fieldSx}
+                      />
+                    </AppFormField>
 
-                  <FormInput
-                    label="Website URL"
-                    noDivider
-                    value={form.website_url}
-                    onChange={(e) => setField("website_url", e.target.value)}
-                    placeholder="https://example.com"
-                  />
+                    <AppFormField label="Website URL" layout="half" testId="org-profile-field-website">
+                      <TextField
+                        value={form.website_url}
+                        onChange={(e) => setField("website_url", e.target.value)}
+                        size="small"
+                        fullWidth
+                        placeholder="https://example.com"
+                        sx={fieldSx}
+                      />
+                    </AppFormField>
+                  </FormLayout>
                 </Box>
 
                 {/* ══ ADDRESS ════════════════════════════════════════════════ */}
@@ -938,38 +960,59 @@ export default function OrganizationProfile() {
                 >
                   <SectionHeader>Address</SectionHeader>
 
-                  <FormInput
-                    label="Address Line 1"
-                    value={form.address.line1}
-                    onChange={(e) => setAddressField("line1", e.target.value)}
-                    placeholder="Street address"
-                  />
+                  <FormLayout>
+                    <AppFormField label="Address Line 1" testId="org-profile-field-line1">
+                      <TextField
+                        value={form.address.line1}
+                        onChange={(e) => setAddressField("line1", e.target.value)}
+                        size="small"
+                        fullWidth
+                        placeholder="Street address"
+                        sx={fieldSx}
+                      />
+                    </AppFormField>
 
-                  <FormInput
-                    label="Address Line 2"
-                    value={form.address.line2}
-                    onChange={(e) => setAddressField("line2", e.target.value)}
-                    placeholder="Apartment, suite, floor, etc."
-                  />
+                    <AppFormField label="Address Line 2" testId="org-profile-field-line2">
+                      <TextField
+                        value={form.address.line2}
+                        onChange={(e) => setAddressField("line2", e.target.value)}
+                        size="small"
+                        fullWidth
+                        placeholder="Apartment, suite, floor, etc."
+                        sx={fieldSx}
+                      />
+                    </AppFormField>
 
-                  <FormInput
-                    label="City"
-                    value={form.address.city}
-                    onChange={(e) => setAddressField("city", e.target.value)}
-                  />
+                    <AppFormField label="City" layout="half" testId="org-profile-field-city">
+                      <TextField
+                        value={form.address.city}
+                        onChange={(e) => setAddressField("city", e.target.value)}
+                        size="small"
+                        fullWidth
+                        sx={fieldSx}
+                      />
+                    </AppFormField>
 
-                  <FormInput
-                    label="State / Province"
-                    value={form.address.state}
-                    onChange={(e) => setAddressField("state", e.target.value)}
-                  />
+                    <AppFormField label="State / Province" layout="half" testId="org-profile-field-state">
+                      <TextField
+                        value={form.address.state}
+                        onChange={(e) => setAddressField("state", e.target.value)}
+                        size="small"
+                        fullWidth
+                        sx={fieldSx}
+                      />
+                    </AppFormField>
 
-                  <FormInput
-                    label="Postal / PIN Code"
-                    noDivider
-                    value={form.address.pincode}
-                    onChange={(e) => setAddressField("pincode", e.target.value)}
-                  />
+                    <AppFormField label="Postal / PIN Code" layout="half" testId="org-profile-field-pincode">
+                      <TextField
+                        value={form.address.pincode}
+                        onChange={(e) => setAddressField("pincode", e.target.value)}
+                        size="small"
+                        fullWidth
+                        sx={fieldSx}
+                      />
+                    </AppFormField>
+                  </FormLayout>
                 </Box>
 
                 {/* ══ CONTACT INFO ═══════════════════════════════════════════ */}
@@ -981,20 +1024,28 @@ export default function OrganizationProfile() {
                 >
                   <SectionHeader>Contact Info</SectionHeader>
 
-                  <FormInput
-                    label="Phone"
-                    hint="Include country code, e.g. +91-9876543210"
-                    value={form.address.phone}
-                    onChange={(e) => setAddressField("phone", e.target.value)}
-                    placeholder="+91-9876543210"
-                  />
+                  <FormLayout>
+                    <AppFormField label="Phone" hint="Include country code, e.g. +91-9876543210" layout="half" testId="org-profile-field-phone">
+                      <TextField
+                        value={form.address.phone}
+                        onChange={(e) => setAddressField("phone", e.target.value)}
+                        size="small"
+                        fullWidth
+                        placeholder="+91-9876543210"
+                        sx={fieldSx}
+                      />
+                    </AppFormField>
 
-                  <FormInput
-                    label="Fax"
-                    noDivider
-                    value={form.address.fax}
-                    onChange={(e) => setAddressField("fax", e.target.value)}
-                  />
+                    <AppFormField label="Fax" layout="half" testId="org-profile-field-fax">
+                      <TextField
+                        value={form.address.fax}
+                        onChange={(e) => setAddressField("fax", e.target.value)}
+                        size="small"
+                        fullWidth
+                        sx={fieldSx}
+                      />
+                    </AppFormField>
+                  </FormLayout>
                 </Box>
 
                 {/* ══ FOOTER ════════════════════════════════════════════════ */}

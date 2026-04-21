@@ -42,11 +42,13 @@ import {
     Cancel as CancelIcon,
     NotificationsActive as NotificationsActiveIcon,
 } from "@mui/icons-material";
+import { useTranslation } from 'react-i18next';
 
 
 const Profile = () => {
     const navigate = useNavigate();
     const { isAuthenticated } = useAuth();
+    const { t } = useTranslation();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
@@ -79,9 +81,9 @@ const Profile = () => {
         setReminderSaving(true);
         try {
             await saveReminderSettings(reminders);
-            setReminderToast({ open: true, message: 'Reminder settings saved successfully.', severity: 'success' });
+            setReminderToast({ open: true, message: t('profile.reminderSaved'), severity: 'success' });
         } catch (err) {
-            setReminderToast({ open: true, message: 'Failed to save reminder settings.', severity: 'error' });
+            setReminderToast({ open: true, message: t('profile.reminderFailed'), severity: 'error' });
         } finally {
             setReminderSaving(false);
         }

@@ -371,16 +371,10 @@ export default function IntegrationSettings() {
           mx: "auto",
           px: { xs: 2, md: 3 },
           py: 3,
-          display: "flex",
-          gap: 3,
-          alignItems: "flex-start",
         }}
       >
-        {/* Sub-nav */}
-        <SettingsSubNav />
-
         {/* Content */}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Box sx={{ minWidth: 0 }}>
           {/* Header */}
           <Box sx={{ mb: 3, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <Box>

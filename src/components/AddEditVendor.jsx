@@ -10,6 +10,7 @@ import {
 import { C, footerSx, cancelBtnSx, saveBtnSx } from './common/formStyles';
 import FormInput from './common/FormInput';
 import FormSelect from './common/FormSelect';
+import { useTranslation } from 'react-i18next';
 
 const INITIAL_FORM = {
   vendor_name: '', contact_person: '', email: '',
@@ -20,6 +21,7 @@ const INITIAL_FORM = {
 const AddEditVendor = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [form, setForm] = useState(INITIAL_FORM);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -30,7 +32,7 @@ const AddEditVendor = () => {
     try {
       const res = await axios.get(createApiUrl(`/api/vendors/${id}`));
       setForm(res.data);
-    } catch { setError('Failed to fetch vendor details'); }
+    } catch { setError(t('addEditVendor.failedFetch')); }
     setLoading(false);
   }, [id]);
 
@@ -49,7 +51,7 @@ const AddEditVendor = () => {
       if (id) await axios.put(createApiUrl(`/api/vendors/${id}`), form);
       else await axios.post(createApiUrl('/api/vendors'), form);
       navigate('/vendors');
-    } catch (err) { setError(err.response?.data?.error || 'Failed to save vendor'); }
+    } catch (err) { setError(err.response?.data?.error || t('addEditVendor.failedSave')); }
     setSaving(false);
   };
 
@@ -62,7 +64,7 @@ const AddEditVendor = () => {
   );
 
   return (
-    <MainLayout title={id ? 'Edit Vendor' : 'New Vendor'}>
+    <MainLayout title={id ? t('addEditVendor.editTitle') : t('addEditVendor.newTitle')}>
       <Box sx={{ bgcolor: C.pageBg, minHeight: '100vh', pb: 6 }}>
         <Container maxWidth="lg" sx={{ pt: 3 }}>
 
@@ -81,7 +83,7 @@ const AddEditVendor = () => {
             <Box sx={{ px: 3 }}>
               <Box sx={{ py: 1.5, borderBottom: `1px solid ${C.divider}` }}>
                 <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>
-                  Vendor Information
+                  {t('addEditVendor.vendorInfo')}
                 </Typography>
               </Box>
 
@@ -98,7 +100,7 @@ const AddEditVendor = () => {
             <Box sx={{ px: 3, borderTop: `1px solid ${C.divider}` }}>
               <Box sx={{ py: 1.5, borderBottom: `1px solid ${C.divider}` }}>
                 <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>
-                  Address & Tax Details
+                  {t('addEditVendor.addressTax')}
                 </Typography>
               </Box>
 
@@ -115,7 +117,7 @@ const AddEditVendor = () => {
             <Box sx={{ px: 3, borderTop: `1px solid ${C.divider}` }}>
               <Box sx={{ py: 1.5, borderBottom: `1px solid ${C.divider}` }}>
                 <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>
-                  Payment & Status
+                  {t('addEditVendor.paymentStatus')}
                 </Typography>
               </Box>
 
@@ -137,14 +139,14 @@ const AddEditVendor = () => {
             {/* ══ FOOTER ═════════════════════════════════════════════════ */}
             <Box sx={footerSx}>
               <Button variant="outlined" onClick={() => navigate('/vendors')} disabled={saving} sx={cancelBtnSx}>
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button
                 type="submit" variant="contained" disabled={saving}
                 startIcon={saving ? <CircularProgress size={14} color="inherit" /> : null}
                 sx={saveBtnSx}
               >
-                {saving ? 'Saving…' : id ? 'Update' : 'Save'}
+                {saving ? t('common.saving') : id ? t('common.update') : t('common.save')}
               </Button>
             </Box>
           </Paper>

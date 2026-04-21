@@ -27,8 +27,8 @@ import MainLayout from './Layout/MainLayout';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CustomerSelect from './common/CustomerSelect';
-import AppFormField from './common/Form/AppFormField';
-import FormLayout from './common/Form/FormLayout';
+import AppFormField from './common/form/AppFormField';
+import FormLayout from './common/form/FormLayout';
 import {
   C,
   AppSelect,

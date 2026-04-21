@@ -29,8 +29,8 @@ import {
   footerSx,
   saveBtnSx,
 } from "../components/common/formStyles";
-import AppFormField from "../components/common/Form/AppFormField";
-import FormLayout from "../components/common/Form/FormLayout";
+import AppFormField from "../components/common/form/AppFormField";
+import FormLayout from "../components/common/form/FormLayout";
 import {
   getOrgProfile,
   updateOrgProfile,

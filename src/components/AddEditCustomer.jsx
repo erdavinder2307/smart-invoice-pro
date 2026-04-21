@@ -34,8 +34,8 @@ import {
   Add as AddIcon,
 } from '@mui/icons-material';
 import MainLayout from './Layout/MainLayout';
-import AppFormField from './common/Form/AppFormField';
-import FormLayout from './common/Form/FormLayout';
+import AppFormField from './common/form/AppFormField';
+import FormLayout from './common/form/FormLayout';
 import { C, fieldSx, selectSx, menuItemSx, ZohoRow, FieldLabel, AppSelect } from './common/formStyles';
 import { createApiUrl } from '../config/api';
 import axios from 'axios';

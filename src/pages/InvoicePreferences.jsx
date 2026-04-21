@@ -27,8 +27,8 @@ import {
   footerSx,
   saveBtnSx,
 } from '../components/common/formStyles';
-import AppFormField from '../components/common/Form/AppFormField';
-import FormLayout from '../components/common/Form/FormLayout';
+import AppFormField from '../components/common/form/AppFormField';
+import FormLayout from '../components/common/form/FormLayout';
 import { updateInvoicePreferences } from '../services/invoicePreferencesService';
 
 const PAYMENT_TERMS_OPTIONS = ['Due on Receipt', 'Net 7', 'Net 15', 'Net 30', 'Net 45', 'Net 60', 'Custom'];

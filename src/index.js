@@ -11,6 +11,7 @@ import { PermissionProvider } from './context/PermissionContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { SidebarProvider } from './context/SidebarContext';
 import { KeyboardShortcutsProvider } from './context/KeyboardShortcutsContext';
+import { DashboardFilterProvider } from './context/DashboardFilterContext';
 import axios from 'axios';
 import authService from './services/authService';
 
@@ -97,8 +98,10 @@ root.render(
             <PermissionProvider>
               <NotificationProvider>
                 <KeyboardShortcutsProvider>
-                  <App />
-                </KeyboardShortcutsProvider>
+                          <DashboardFilterProvider>
+                            <App />
+                          </DashboardFilterProvider>
+                        </KeyboardShortcutsProvider>
               </NotificationProvider>
             </PermissionProvider>
           </InvoicePreferencesProvider>

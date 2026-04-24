@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import MainLayout from "../components/Layout/MainLayout";
@@ -15,11 +15,10 @@ import Divider from "@mui/material/Divider";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
-import Paper from "@mui/material/Paper";
 import IconButton from "@mui/material/IconButton";
-import InputBase from "@mui/material/InputBase";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
+import TextField from "@mui/material/TextField";
 import { useTheme } from "@mui/material/styles";
 import { Bar } from "react-chartjs-2";
 import {
@@ -40,7 +39,6 @@ import {
   AttachMoney,
   Add,
   MoreVert,
-  Search,
   AccountBalance,
   ReceiptLong,
   Payments,
@@ -58,6 +56,8 @@ import FeatureCard from "../components/common/FeatureCard";
 import SectionHeader from "../components/common/SectionHeader";
 import StatusBadge from "../components/common/StatusBadge";
 import { featureCapabilities } from "../data/dashboardData";
+import { useDashboardFilter } from "../context/DashboardFilterContext";
+import DashboardSearchBox from "../components/Dashboard/DashboardSearchBox";
 import "./Dashboard.css";
 
 ChartJS.register(
@@ -94,18 +94,60 @@ const DashboardPage = () => {
   const [recentLoading, setRecentLoading] = useState(true);
 
   // ── UI state ─────────────────────────────────────────────────────────────
-  const [searchQuery, setSearchQuery] = useState("");
-  const [revenueRange, setRevenueRange] = useState("this_year");
+  // ── Time range from global context (persisted in localStorage) ────────────
+  const {
+    revenueRange,
+    setRevenueRange,
+    customStartDate,
+    setCustomStartDate,
+    customEndDate,
+    setCustomEndDate,
+  } = useDashboardFilter();
+
+  const getRangeStart = (range) => {
+    const now = new Date();
+    const start = new Date(now);
+
+    if (range === "this_week") {
+      start.setDate(now.getDate() - 6);
+      start.setHours(0, 0, 0, 0);
+      return start;
+    }
+
+    if (range === "this_month") {
+      return new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+
+    if (range === "this_quarter") {
+      const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
+      return new Date(now.getFullYear(), quarterStartMonth, 1);
+    }
+
+    return new Date(now.getFullYear(), 0, 1);
+  };
+
+  const getRangeEnd = (range) => {
+    const now = new Date();
+    now.setHours(23, 59, 59, 999);
+    return now;
+  };
+
+  const parseInvoiceDate = (value) => {
+    if (!value || typeof value !== "string") return null;
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+    return null;
+  };
+
+  const parseRevenueBucket = (monthValue) => {
+    if (!monthValue) return null;
+    const parsed = new Date(`${monthValue}-01T00:00:00`);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+    return null;
+  };
 
   // ── API calls ─────────────────────────────────────────────────────────────
   useEffect(() => {
-    setSummaryLoading(true);
-    axios
-      .get(createApiUrl("/api/dashboard/summary"))
-      .then((res) => setSummary(res.data))
-      .catch(() => setSummaryError(t('dashboard.failedSummary')))
-      .finally(() => setSummaryLoading(false));
-
     setLowStockLoading(true);
     axios
       .get(createApiUrl("/api/dashboard/low-stock"))
@@ -113,29 +155,110 @@ const DashboardPage = () => {
       .catch(() => setLowStockError(t('dashboard.failedLowStock')))
       .finally(() => setLowStockLoading(false));
 
-    setRevenueLoading(true);
-    axios
-      .get(createApiUrl("/api/dashboard/monthly-revenue"))
-      .then((res) => setRevenue(res.data))
-      .catch(() => setRevenueError(t('dashboard.failedRevenue')))
-      .finally(() => setRevenueLoading(false));
-
     setRecentLoading(true);
     axios
-      .get(createApiUrl("/api/dashboard/recent-invoices"))
+      .get(createApiUrl("/api/dashboard/recent-invoices?limit=50"))
       .then((res) => setRecentInvoices(res.data))
       .catch(() => setRecentInvoices([]))
       .finally(() => setRecentLoading(false));
   }, [t]);
 
+  useEffect(() => {
+    if (revenueRange === "custom") {
+      if (!customStartDate || !customEndDate || new Date(customStartDate) > new Date(customEndDate)) {
+        return;
+      }
+    }
+
+    const params = new URLSearchParams({ range: revenueRange });
+    if (revenueRange === "custom") {
+      params.set("start_date", customStartDate);
+      params.set("end_date", customEndDate);
+    }
+
+    setSummaryLoading(true);
+    setSummaryError("");
+    axios
+      .get(createApiUrl(`/api/dashboard/summary?${params.toString()}`))
+      .then((res) => setSummary(res.data))
+      .catch(() => setSummaryError(t('dashboard.failedSummary')))
+      .finally(() => setSummaryLoading(false));
+  }, [revenueRange, customStartDate, customEndDate, t]);
+
+  useEffect(() => {
+    setRevenueLoading(true);
+    setRevenueError("");
+
+    if (revenueRange === "custom") {
+      if (!customStartDate || !customEndDate || new Date(customStartDate) > new Date(customEndDate)) {
+        setRevenue([]);
+        setRevenueError(t('dashboard.invalidCustomRange'));
+        setRevenueLoading(false);
+        return;
+      }
+    }
+
+    const params = new URLSearchParams({ range: revenueRange });
+    if (revenueRange === "custom") {
+      params.set("start_date", customStartDate);
+      params.set("end_date", customEndDate);
+    }
+
+    axios
+      .get(createApiUrl(`/api/dashboard/monthly-revenue?${params.toString()}`))
+      .then((res) => setRevenue(res.data))
+      .catch(() => setRevenueError(t('dashboard.failedRevenue')))
+      .finally(() => setRevenueLoading(false));
+  }, [revenueRange, customStartDate, customEndDate, t]);
+
+  const rangeStart = useMemo(() => {
+    if (revenueRange === "custom") {
+      const parsed = new Date(customStartDate);
+      return Number.isNaN(parsed.getTime()) ? getRangeStart("this_year") : parsed;
+    }
+    return getRangeStart(revenueRange);
+  }, [revenueRange, customStartDate]);
+
+  const rangeEnd = useMemo(() => {
+    if (revenueRange === "custom") {
+      const parsed = new Date(customEndDate);
+      if (Number.isNaN(parsed.getTime())) return getRangeEnd("this_year");
+      parsed.setHours(23, 59, 59, 999);
+      return parsed;
+    }
+    return getRangeEnd(revenueRange);
+  }, [revenueRange, customEndDate]);
+
+  const filteredRecentInvoices = useMemo(() => {
+    return recentInvoices.filter((inv) => {
+      const invoiceDate = parseInvoiceDate(inv.issue_date);
+      const inSelectedRange = invoiceDate ? invoiceDate >= rangeStart && invoiceDate <= rangeEnd : true;
+      if (!inSelectedRange) return false;
+
+      return true;
+    });
+  }, [recentInvoices, rangeStart, rangeEnd]);
+
+  const filteredRevenue = useMemo(() => {
+    if (!Array.isArray(revenue)) return [];
+
+    return revenue.filter((bucket) => {
+      const bucketDate = parseRevenueBucket(bucket.month);
+      if (!bucketDate) return false;
+
+      const bucketEnd = new Date(bucketDate.getFullYear(), bucketDate.getMonth() + 1, 0, 23, 59, 59, 999);
+      return bucketEnd >= rangeStart && bucketDate <= rangeEnd;
+    });
+  }, [revenue, rangeStart, rangeEnd]);
+
   // ── Chart data ────────────────────────────────────────────────────────────
-  const revenueChartData = revenue && Array.isArray(revenue) && revenue.length > 0
+  const revenueChartData = filteredRevenue.length > 0
     ? {
-      labels: revenue.map((r) => r.month),
+      labels: filteredRevenue.map((r) => r.month),
       datasets: [
         {
           label: t('dashboard.chart.monthlyRevenueDataset'),
-          data: revenue.map((r) => r.revenue),
+          data: filteredRevenue.map((r) => r.revenue),
           backgroundColor: theme.palette.primary.main,
           borderRadius: 6,
           borderSkipped: false,
@@ -206,30 +329,10 @@ const DashboardPage = () => {
 
           {/* Search + date filter */}
           <Box sx={{ display: "flex", gap: 1.5, alignItems: "center", flexWrap: "wrap" }}>
-            <Paper
-              elevation={0}
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                px: 2,
-                py: 0.75,
-                border: "1px solid",
-                borderColor: "divider",
-                borderRadius: 2,
-                bgcolor: "background.paper",
-                minWidth: 220,
-              }}
-            >
-              <Search sx={{ color: "text.secondary", fontSize: 20, mr: 1 }} />
-              <InputBase
-                placeholder={t('dashboard.searchPlaceholder')}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                sx={{ fontSize: "0.875rem", flex: 1 }}
-                inputProps={{ "aria-label": t('dashboard.searchAriaLabel') }}
-              />
-            </Paper>
-
+            <DashboardSearchBox
+              placeholder={t('dashboard.searchPlaceholder')}
+              minWidth={240}
+            />
             <Select
               size="small"
               value={revenueRange}
@@ -245,7 +348,33 @@ const DashboardPage = () => {
               <MenuItem value="this_month">{t('dashboard.filters.thisMonth')}</MenuItem>
               <MenuItem value="this_quarter">{t('dashboard.filters.thisQuarter')}</MenuItem>
               <MenuItem value="this_year">{t('dashboard.filters.thisYear')}</MenuItem>
+              <MenuItem value="custom">{t('dashboard.filters.customRange')}</MenuItem>
             </Select>
+
+            {revenueRange === "custom" && (
+              <>
+                <TextField
+                  size="small"
+                  type="date"
+                  label={t('dashboard.customStartLabel')}
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ "aria-label": t('dashboard.customStartAriaLabel') }}
+                  sx={{ minWidth: 160, bgcolor: "background.paper", borderRadius: 2 }}
+                />
+                <TextField
+                  size="small"
+                  type="date"
+                  label={t('dashboard.customEndLabel')}
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ "aria-label": t('dashboard.customEndAriaLabel') }}
+                  sx={{ minWidth: 160, bgcolor: "background.paper", borderRadius: 2 }}
+                />
+              </>
+            )}
           </Box>
         </Box>
 
@@ -289,6 +418,7 @@ const DashboardPage = () => {
                 trend={12}
                 accentColor="primary.main"
                 iconBg="primary.50"
+                onClick={() => navigate("/customers")}
                 sx={{ height: "100%" }}
               />
             </Grid>
@@ -301,6 +431,7 @@ const DashboardPage = () => {
                 trend={8}
                 accentColor="secondary.main"
                 iconBg="secondary.50"
+                onClick={() => navigate("/products")}
                 sx={{ height: "100%" }}
               />
             </Grid>
@@ -313,6 +444,7 @@ const DashboardPage = () => {
                 trend={15}
                 accentColor="info.main"
                 iconBg="info.50"
+                onClick={() => navigate("/invoices")}
                 sx={{ height: "100%" }}
               />
             </Grid>
@@ -325,6 +457,7 @@ const DashboardPage = () => {
                 trend={18}
                 accentColor="success.main"
                 iconBg="success.50"
+                onClick={() => navigate("/reports/sales-summary")}
                 sx={{ height: "100%" }}
               />
             </Grid>
@@ -340,6 +473,7 @@ const DashboardPage = () => {
                 loading={summaryLoading}
                 accentColor="warning.main"
                 iconBg="warning.50"
+                onClick={() => navigate("/reports/ar-aging")}
                 sx={{ height: "100%" }}
               />
             </Grid>
@@ -351,6 +485,7 @@ const DashboardPage = () => {
                 loading={summaryLoading}
                 accentColor="error.main"
                 iconBg="error.50"
+                onClick={() => navigate("/reports/ap-aging")}
                 sx={{ height: "100%" }}
               />
             </Grid>
@@ -362,6 +497,7 @@ const DashboardPage = () => {
                 loading={summaryLoading}
                 accentColor="error.main"
                 iconBg="error.50"
+                onClick={() => navigate("/invoices")}
                 sx={{ height: "100%" }}
               />
             </Grid>
@@ -372,6 +508,7 @@ const DashboardPage = () => {
                 value={t('dashboard.kpi.comingSoon')}
                 accentColor="secondary.main"
                 iconBg="secondary.50"
+                onClick={() => navigate("/recurring-profiles")}
                 sx={{ height: "100%" }}
               />
             </Grid>
@@ -393,7 +530,22 @@ const DashboardPage = () => {
               subtitle={t('dashboard.chart.monthlyRevenueSubtitle')}
               action={
                 <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-                  <Chip label={t('dashboard.chart.thisYearChip')} size="small" variant="outlined" sx={{ borderColor: "divider" }} />
+                  <Chip
+                    label={
+                      revenueRange === "this_week"
+                        ? t('dashboard.filters.thisWeek')
+                        : revenueRange === "this_month"
+                          ? t('dashboard.filters.thisMonth')
+                          : revenueRange === "this_quarter"
+                            ? t('dashboard.filters.thisQuarter')
+                            : revenueRange === "custom"
+                              ? t('dashboard.filters.customRange')
+                              : t('dashboard.filters.thisYear')
+                    }
+                    size="small"
+                    variant="outlined"
+                    sx={{ borderColor: "divider" }}
+                  />
                   <IconButton size="small">
                     <MoreVert fontSize="small" />
                   </IconButton>
@@ -530,13 +682,13 @@ const DashboardPage = () => {
                 <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
                   <CircularProgress size={28} />
                 </Box>
-              ) : recentInvoices.length === 0 ? (
+              ) : filteredRecentInvoices.length === 0 ? (
                 <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
                   {t('dashboard.recentInvoices.empty')}
                 </Typography>
               ) : (
                 <List disablePadding sx={{ mt: 0.5 }}>
-                  {recentInvoices.map((inv, idx) => (
+                  {filteredRecentInvoices.map((inv, idx) => (
                     <React.Fragment key={inv.id}>
                       <ListItem
                         disablePadding
@@ -569,7 +721,7 @@ const DashboardPage = () => {
                           </Typography>
                         </Box>
                       </ListItem>
-                      {idx < recentInvoices.length - 1 && <Divider component="li" />}
+                      {idx < filteredRecentInvoices.length - 1 && <Divider component="li" />}
                     </React.Fragment>
                   ))}
                 </List>

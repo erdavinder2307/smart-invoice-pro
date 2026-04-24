@@ -252,10 +252,15 @@
     "failedSummary": "Failed to load summary (सारांश लोड नहीं हो सका)",
     "failedLowStock": "Failed to load low stock items (कम स्टॉक आइटम लोड नहीं हो सका)",
     "failedRevenue": "Failed to load revenue chart (राजस्व चार्ट लोड नहीं हो सका)",
+    "invalidCustomRange": "कृपया वैध कस्टम तिथि सीमा चुनें",
     "greeting": "Hello, {{name}} 👋 (नमस्ते, {{name}} 👋)",
     "greetingSubtitle": "Here's an overview of your business today (आपके व्यवसाय का आजका अवलोकन)",
     "searchPlaceholder": "Search invoices, customers (इनवॉइस, ग्राहक खोजें)…",
     "searchAriaLabel": "डैशबोर्ड खोजें",
+    "customStartLabel": "से",
+    "customEndLabel": "तक",
+    "customStartAriaLabel": "कस्टम प्रारंभ तिथि",
+    "customEndAriaLabel": "कस्टम समाप्ति तिथि",
     "viewInvoices": "चालान देखें",
     "overdueMessage_one": "{{count}} चालान की समयसीमा समाप्त हो गई है।",
     "overdueMessage_other": "{{count}} चालान की समयसीमा समाप्त हो गई है।",
@@ -273,7 +278,8 @@
       "thisWeek": "इस सप्ताह",
       "thisMonth": "इस महीने",
       "thisQuarter": "इस तिमाही",
-      "thisYear": "इस वर्ष"
+      "thisYear": "इस वर्ष",
+      "customRange": "कस्टम रेंज"
     },
     "kpi": {
       "totalCustomers": "कुल ग्राहक",

@@ -28,11 +28,17 @@ const StatCard = ({
     loading = false,
     iconBg = "primary.50",
     sx = {},
+    onClick,
 }) => {
     const trendPositive = trend >= 0;
+    const isClickable = typeof onClick === "function";
 
     return (
         <Paper
+            component={isClickable ? "button" : "div"}
+            type={isClickable ? "button" : undefined}
+            onClick={onClick}
+            aria-label={isClickable ? label : undefined}
             elevation={1}
             sx={[
                 {
@@ -47,10 +53,20 @@ const StatCard = ({
                     flexDirection: "column",
                     gap: 1,
                     transition: "transform 0.2s ease, box-shadow 0.2s ease",
-                    "&:hover": {
-                        transform: "translateY(-2px)",
-                        boxShadow: 3,
-                    },
+                    textAlign: "left",
+                    borderLeft: "none",
+                    borderRight: "none",
+                    borderBottom: "none",
+                    borderColor: "transparent",
+                    ...(isClickable
+                        ? {
+                            cursor: "pointer",
+                            "&:hover": {
+                                transform: "translateY(-2px)",
+                                boxShadow: 3,
+                            },
+                        }
+                        : {}),
                 },
                 sx,
             ]}

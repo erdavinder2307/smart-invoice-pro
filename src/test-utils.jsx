@@ -123,6 +123,19 @@ jest.mock('./context/SidebarContext', () => ({
   SidebarProvider: ({ children }) => children,
 }));
 
+jest.mock('./context/DashboardFilterContext', () => ({
+  ...jest.requireActual('./context/DashboardFilterContext'),
+  useDashboardFilter: jest.fn(() => ({
+    revenueRange: 'this_year',
+    setRevenueRange: jest.fn(),
+    customStartDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10),
+    setCustomStartDate: jest.fn(),
+    customEndDate: new Date().toISOString().slice(0, 10),
+    setCustomEndDate: jest.fn(),
+  })),
+  DashboardFilterProvider: ({ children }) => children,
+}));
+
 // ── Theme ────────────────────────────────────────────────────────────────────
 
 const testTheme = createTheme({

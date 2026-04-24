@@ -252,10 +252,15 @@
     "failedSummary": "Failed to load summary",
     "failedLowStock": "Failed to load low stock items",
     "failedRevenue": "Failed to load revenue chart",
+    "invalidCustomRange": "Please select a valid custom date range",
     "greeting": "Hello, {{name}} 👋",
     "greetingSubtitle": "Here's an overview of your business today",
     "searchPlaceholder": "Search invoices, customers…",
     "searchAriaLabel": "search dashboard",
+    "customStartLabel": "From",
+    "customEndLabel": "To",
+    "customStartAriaLabel": "Custom start date",
+    "customEndAriaLabel": "Custom end date",
     "viewInvoices": "View Invoices",
     "overdueMessage_one": "{{count}} invoice is overdue.",
     "overdueMessage_other": "{{count}} invoices are overdue.",
@@ -273,7 +278,8 @@
       "thisWeek": "This Week",
       "thisMonth": "This Month",
       "thisQuarter": "This Quarter",
-      "thisYear": "This Year"
+      "thisYear": "This Year",
+      "customRange": "Custom Range"
     },
     "kpi": {
       "totalCustomers": "Total Customers",

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Typography, Button } from '@mui/material';
 import { InboxOutlined as DefaultIcon } from '@mui/icons-material';
+import { safeClick } from '../../utils/safeClick';
 
 /**
  * EmptyState — Consistent empty/no-data placeholder.
@@ -40,7 +41,8 @@ const EmptyState = ({ icon, title, subtitle, action }) => (
       <Button
         variant="contained"
         size="small"
-        onClick={action.onClick}
+        onClick={safeClick(action.onClick)}
+        disabled={typeof action.onClick !== 'function'}
         sx={{
           textTransform: 'none',
           borderRadius: '4px',

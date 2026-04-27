@@ -266,4 +266,69 @@ describe('DashboardPage', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/recurring-profiles');
   });
 
+  it('keeps all dashboard click targets safe and actionable', async () => {
+    axios.get.mockImplementation((url) => {
+      if (url.includes('/api/dashboard/summary')) {
+        return Promise.resolve({
+          data: {
+            total_customers: 12,
+            total_products: 8,
+            total_invoices: 20,
+            total_revenue: 150000,
+            overdue_count: 1,
+          },
+        });
+      }
+      if (url.includes('/api/dashboard/low-stock')) {
+        return Promise.resolve({ data: [{ id: 'p-1', name: 'Paper', stock: 2 }] });
+      }
+      if (url.includes('/api/dashboard/monthly-revenue')) {
+        return Promise.resolve({ data: [{ month: '2026-04', revenue: 50000 }] });
+      }
+      if (url.includes('/api/dashboard/recent-invoices')) {
+        return Promise.resolve({ data: [{ id: 'inv-1', invoice_number: 'INV-001', total_amount: 1000 }] });
+      }
+      if (url.includes('/api/products/stock-summary')) {
+        return Promise.resolve({ data: [{ id: 'prod-1', name: 'Paper', sku: 'P-1', stock: 4 }] });
+      }
+      return Promise.resolve({ data: [] });
+    });
+
+    renderWithProviders(<DashboardPage />);
+    await screen.findByText('Total Customers');
+
+    expect(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'View Invoices' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Total Customers' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Total Products' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Total Invoices' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Total Revenue' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Total Receivables' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Total Payables' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Overdue Invoices' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Monthly Recurring Revenue' }));
+      fireEvent.click(screen.getByRole('button', { name: 'View All' }));
+      fireEvent.click(screen.getByRole('button', { name: 'New Invoice' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Add Customer' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Add Product' }));
+      fireEvent.click(screen.getByRole('button', { name: 'View All Products' }));
+      fireEvent.click(screen.getByLabelText('Refresh'));
+    }).not.toThrow();
+
+    expect(mockNavigate).toHaveBeenCalledWith('/invoices?filter=overdue');
+    expect(mockNavigate).toHaveBeenCalledWith('/customers');
+    expect(mockNavigate).toHaveBeenCalledWith('/products');
+    expect(mockNavigate).toHaveBeenCalledWith('/invoices');
+    expect(mockNavigate).toHaveBeenCalledWith('/reports/sales-summary');
+    expect(mockNavigate).toHaveBeenCalledWith('/reports/ar-aging');
+    expect(mockNavigate).toHaveBeenCalledWith('/reports/ap-aging');
+    expect(mockNavigate).toHaveBeenCalledWith('/recurring-profiles');
+    expect(mockNavigate).toHaveBeenCalledWith('/invoices/add');
+    expect(mockNavigate).toHaveBeenCalledWith('/customers/add');
+    expect(mockNavigate).toHaveBeenCalledWith('/products/add');
+
+    const disabledButtons = screen.getAllByRole('button').filter((btn) => btn.disabled);
+    expect(disabledButtons.length).toBeGreaterThan(0);
+  });
+
 });

@@ -19,6 +19,7 @@ import MailOutlineIcon from '@mui/icons-material/MailOutline';
 import InventoryOutlinedIcon from '@mui/icons-material/InventoryOutlined';
 import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
 import { useNotifications } from '../../context/NotificationContext';
+import { safeClick } from '../../utils/safeClick';
 
 const TYPE_ICON = {
   invoice_created: <ReceiptOutlinedIcon fontSize="small" sx={{ color: 'primary.main' }} />,
@@ -117,13 +118,13 @@ const NotificationDropdown = ({ anchorEl, onClose }) => {
           {unreadCount > 0 && (
             <Button
               size="small"
-              onClick={markAllAsRead}
+              onClick={safeClick(markAllAsRead)}
               sx={{ textTransform: 'none', fontSize: '0.75rem' }}
             >
               Mark all read
             </Button>
           )}
-          <IconButton size="small" onClick={onClose}>
+          <IconButton size="small" onClick={safeClick(onClose)}>
             <CloseIcon fontSize="small" />
           </IconButton>
         </Box>
@@ -204,7 +205,7 @@ const NotificationDropdown = ({ anchorEl, onClose }) => {
         <Button
           size="small"
           fullWidth
-          onClick={handleViewAll}
+          onClick={safeClick(handleViewAll)}
           sx={{ textTransform: 'none', fontWeight: 600 }}
         >
           View all notifications

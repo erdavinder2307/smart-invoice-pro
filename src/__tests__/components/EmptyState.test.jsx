@@ -47,4 +47,15 @@ describe('EmptyState', () => {
     const svg = document.querySelector('svg');
     expect(svg).toBeInTheDocument();
   });
+
+  it('disables malformed action handlers safely', () => {
+    renderEmpty({
+      title: 'No data',
+      action: { label: 'Broken Action', onClick: { not: 'a function' } },
+    });
+
+    const btn = screen.getByRole('button', { name: 'Broken Action' });
+    expect(btn).toBeDisabled();
+    expect(() => fireEvent.click(btn)).not.toThrow();
+  });
 });

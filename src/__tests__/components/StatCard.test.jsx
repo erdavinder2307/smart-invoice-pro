@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import StatCard from '../../components/common/StatCard';
 import { People as PeopleIcon } from '@mui/icons-material';
@@ -38,5 +38,17 @@ describe('StatCard', () => {
     renderCard({ label: 'Items', value: 100, icon: <PeopleIcon /> });
     expect(screen.getByText('100')).toBeInTheDocument();
     expect(screen.queryByText(/from last month/)).not.toBeInTheDocument();
+  });
+
+  it('does not attach invalid click handlers', () => {
+    const { container } = renderCard({
+      label: 'Broken',
+      value: 1,
+      icon: <PeopleIcon />,
+      onClick: { bad: true },
+    });
+
+    expect(screen.queryByRole('button', { name: 'Broken' })).not.toBeInTheDocument();
+    expect(() => fireEvent.click(container.firstChild)).not.toThrow();
   });
 });

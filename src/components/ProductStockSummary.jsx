@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import { createApiUrl } from "../config/api";
 import {
   Box,
@@ -16,6 +17,7 @@ import {
   Chip,
   Button,
   IconButton,
+  Tooltip,
 } from "@mui/material";
 import {
   Inventory,
@@ -25,11 +27,15 @@ import {
   Refresh
 } from "@mui/icons-material";
 import EmptyState from "./common/EmptyState";
+import { safeClick } from "../utils/safeClick";
+import { dashboardActions } from "../pages/dashboardActions";
 
 const ProductStockSummary = () => {
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const goToProducts = dashboardActions.goToProducts(navigate);
 
   const fetchData = () => {
     setLoading(true);
@@ -83,7 +89,8 @@ const ProductStockSummary = () => {
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <IconButton
-              onClick={fetchData}
+              onClick={safeClick(fetchData)}
+              aria-label="Refresh"
               size="small"
               sx={{
                 bgcolor: 'background.paper',
@@ -94,17 +101,22 @@ const ProductStockSummary = () => {
             >
               <Refresh />
             </IconButton>
-            <IconButton
-              size="small"
-              sx={{
-                bgcolor: 'background.paper',
-                border: '1px solid',
-                borderColor: 'divider',
-                '&:hover': { bgcolor: 'grey.100' }
-              }}
-            >
-              <MoreVert />
-            </IconButton>
+            <Tooltip title="Coming Soon">
+              <span>
+                <IconButton
+                  size="small"
+                  aria-label="More options"
+                  disabled
+                  sx={{
+                    bgcolor: 'background.paper',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                  }}
+                >
+                  <MoreVert />
+                </IconButton>
+              </span>
+            </Tooltip>
           </Box>
         </Box>
 
@@ -192,7 +204,7 @@ const ProductStockSummary = () => {
                     severity="error"
                     sx={{ maxWidth: 400, mx: 'auto' }}
                     action={
-                      <Button size="small" onClick={fetchData}>
+                      <Button size="small" onClick={safeClick(fetchData)}>
                         Retry
                       </Button>
                     }
@@ -284,6 +296,7 @@ const ProductStockSummary = () => {
           <Button
             size="small"
             variant="outlined"
+            onClick={safeClick(goToProducts)}
             sx={{ textTransform: 'none', fontWeight: 600 }}
           >
             View All Products

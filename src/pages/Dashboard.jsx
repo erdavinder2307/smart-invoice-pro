@@ -19,6 +19,7 @@ import IconButton from "@mui/material/IconButton";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import TextField from "@mui/material/TextField";
+import MuiTooltip from "@mui/material/Tooltip";
 import { useTheme } from "@mui/material/styles";
 import { Bar } from "react-chartjs-2";
 import {
@@ -58,6 +59,8 @@ import StatusBadge from "../components/common/StatusBadge";
 import { featureCapabilities } from "../data/dashboardData";
 import { useDashboardFilter } from "../context/DashboardFilterContext";
 import DashboardSearchBox from "../components/Dashboard/DashboardSearchBox";
+import { dashboardActions } from "./dashboardActions";
+import { safeClick } from "../utils/safeClick";
 import "./Dashboard.css";
 
 ChartJS.register(
@@ -76,6 +79,19 @@ const DashboardPage = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const actionHandlers = useMemo(() => ({
+    goToCustomers: dashboardActions.goToCustomers(navigate),
+    goToProducts: dashboardActions.goToProducts(navigate),
+    goToInvoices: dashboardActions.goToInvoices(navigate),
+    goToSalesSummary: dashboardActions.goToSalesSummary(navigate),
+    goToOverdue: dashboardActions.goToOverdue(navigate),
+    goToArAging: dashboardActions.goToArAging(navigate),
+    goToApAging: dashboardActions.goToApAging(navigate),
+    goToRecurringProfiles: dashboardActions.goToRecurringProfiles(navigate),
+    goToAddInvoice: dashboardActions.goToAddInvoice(navigate),
+    goToAddCustomer: dashboardActions.goToAddCustomer(navigate),
+    goToAddProduct: dashboardActions.goToAddProduct(navigate),
+  }), [navigate]);
 
   // ── API state ─────────────────────────────────────────────────────────────
   const [summary, setSummary] = useState(null);
@@ -388,7 +404,7 @@ const DashboardPage = () => {
             icon={<Warning fontSize="inherit" />}
             sx={{ mb: 3, borderRadius: 2 }}
             action={
-              <Button color="inherit" size="small" onClick={() => navigate("/invoices")}>
+              <Button color="inherit" size="small" onClick={safeClick(actionHandlers.goToOverdue)}>
                 {t('dashboard.viewInvoices')}
               </Button>
             }
@@ -418,7 +434,7 @@ const DashboardPage = () => {
                 trend={12}
                 accentColor="primary.main"
                 iconBg="primary.50"
-                onClick={() => navigate("/customers")}
+                onClick={safeClick(actionHandlers.goToCustomers)}
                 sx={{ height: "100%" }}
               />
             </Grid>
@@ -431,7 +447,7 @@ const DashboardPage = () => {
                 trend={8}
                 accentColor="secondary.main"
                 iconBg="secondary.50"
-                onClick={() => navigate("/products")}
+                onClick={safeClick(actionHandlers.goToProducts)}
                 sx={{ height: "100%" }}
               />
             </Grid>
@@ -444,7 +460,7 @@ const DashboardPage = () => {
                 trend={15}
                 accentColor="info.main"
                 iconBg="info.50"
-                onClick={() => navigate("/invoices")}
+                onClick={safeClick(actionHandlers.goToInvoices)}
                 sx={{ height: "100%" }}
               />
             </Grid>
@@ -457,7 +473,7 @@ const DashboardPage = () => {
                 trend={18}
                 accentColor="success.main"
                 iconBg="success.50"
-                onClick={() => navigate("/reports/sales-summary")}
+                onClick={safeClick(actionHandlers.goToSalesSummary)}
                 sx={{ height: "100%" }}
               />
             </Grid>
@@ -473,7 +489,7 @@ const DashboardPage = () => {
                 loading={summaryLoading}
                 accentColor="warning.main"
                 iconBg="warning.50"
-                onClick={() => navigate("/reports/ar-aging")}
+                onClick={safeClick(actionHandlers.goToArAging)}
                 sx={{ height: "100%" }}
               />
             </Grid>
@@ -485,7 +501,7 @@ const DashboardPage = () => {
                 loading={summaryLoading}
                 accentColor="error.main"
                 iconBg="error.50"
-                onClick={() => navigate("/reports/ap-aging")}
+                onClick={safeClick(actionHandlers.goToApAging)}
                 sx={{ height: "100%" }}
               />
             </Grid>
@@ -497,7 +513,7 @@ const DashboardPage = () => {
                 loading={summaryLoading}
                 accentColor="error.main"
                 iconBg="error.50"
-                onClick={() => navigate("/invoices")}
+                onClick={safeClick(actionHandlers.goToInvoices)}
                 sx={{ height: "100%" }}
               />
             </Grid>
@@ -508,7 +524,7 @@ const DashboardPage = () => {
                 value={t('dashboard.kpi.comingSoon')}
                 accentColor="secondary.main"
                 iconBg="secondary.50"
-                onClick={() => navigate("/recurring-profiles")}
+                onClick={safeClick(actionHandlers.goToRecurringProfiles)}
                 sx={{ height: "100%" }}
               />
             </Grid>
@@ -546,9 +562,13 @@ const DashboardPage = () => {
                     variant="outlined"
                     sx={{ borderColor: "divider" }}
                   />
-                  <IconButton size="small">
-                    <MoreVert fontSize="small" />
-                  </IconButton>
+                  <MuiTooltip title={t('dashboard.kpi.comingSoon')}>
+                    <span>
+                      <IconButton size="small" disabled>
+                        <MoreVert fontSize="small" />
+                      </IconButton>
+                    </span>
+                  </MuiTooltip>
                 </Box>
               }
               sx={{ minHeight: 340 }}
@@ -672,7 +692,7 @@ const DashboardPage = () => {
                   size="small"
                   endIcon={<OpenInNew fontSize="small" />}
                   sx={{ textTransform: "none", fontWeight: 600 }}
-                  onClick={() => navigate("/invoices")}
+                  onClick={safeClick(actionHandlers.goToInvoices)}
                 >
                   {t('dashboard.recentInvoices.viewAll')}
                 </Button>
@@ -743,7 +763,7 @@ const DashboardPage = () => {
               variant="contained"
               startIcon={<Add />}
               sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2, minWidth: 150 }}
-              onClick={() => navigate("/invoices/add")}
+              onClick={safeClick(actionHandlers.goToAddInvoice)}
             >
               {t('dashboard.quickActions.newInvoice')}
             </Button>
@@ -751,7 +771,7 @@ const DashboardPage = () => {
               variant="outlined"
               startIcon={<Add />}
               sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2, minWidth: 150 }}
-              onClick={() => navigate("/customers/add")}
+              onClick={safeClick(actionHandlers.goToAddCustomer)}
             >
               {t('dashboard.quickActions.addCustomer')}
             </Button>
@@ -759,7 +779,7 @@ const DashboardPage = () => {
               variant="outlined"
               startIcon={<Add />}
               sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2, minWidth: 150 }}
-              onClick={() => navigate("/products/add")}
+              onClick={safeClick(actionHandlers.goToAddProduct)}
             >
               {t('dashboard.quickActions.addProduct')}
             </Button>

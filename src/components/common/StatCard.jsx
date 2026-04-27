@@ -4,6 +4,7 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import CircularProgress from "@mui/material/CircularProgress";
 import { TrendingUp, TrendingDown } from "@mui/icons-material";
+import { safeClick } from "../../utils/safeClick";
 
 /**
  * StatCard — Zoho-inspired metric summary card.
@@ -31,13 +32,17 @@ const StatCard = ({
     onClick,
 }) => {
     const trendPositive = trend >= 0;
+    // isClickable is based on the original prop so StatCard only renders as a
+    // button when an intentional handler is passed.  safeClick ensures MUI
+    // never receives undefined (which causes "onClick is not a function").
     const isClickable = typeof onClick === "function";
+    const clickHandler = safeClick(onClick);
 
     return (
         <Paper
             component={isClickable ? "button" : "div"}
             type={isClickable ? "button" : undefined}
-            onClick={onClick}
+            onClick={clickHandler}
             aria-label={isClickable ? label : undefined}
             elevation={1}
             sx={[

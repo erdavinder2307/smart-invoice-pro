@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Autocomplete,
@@ -42,9 +42,11 @@ import axios from 'axios';
 import { getCustomers } from '../services/customerService';
 import { findDuplicateCustomer, getDuplicateFieldLabel } from '../utils/customerData';
 import useAutoFill from '../hooks/useAutoFill';
+import { useFormSubmitShortcut } from '../hooks/useFormSubmitShortcut';
 import DevAutoFillButton from './common/DevAutoFillButton';
 import { generateCustomerMockData } from '../utils/mockDataGenerators';
 import { parseApiError, applyApiErrors } from '../utils/apiErrors';
+import { scrollToFirstError } from '../utils/validation';
 
 // ─── constants ─────────────────────────────────────────────────────────────────
 const INDIAN_STATES = [
@@ -81,6 +83,43 @@ const EMPTY_CP = {
   mobile: '',
   designation: '',
 };
+
+const TAB_CONFIG = [
+  {
+    labelKey: 'customerForm.tabs.otherDetails',
+    fields: [
+      'gst_treatment', 'place_of_supply', 'gst_number', 'pan', 'tax_preference',
+      'currency', 'opening_balance', 'payment_terms', 'custom_payment_terms',
+      'website_url', 'department', 'designation', 'x_handle', 'skype', 'facebook',
+      'portal_enabled', 'portal_password', 'documents',
+    ],
+  },
+  {
+    labelKey: 'customerForm.tabs.address',
+    fields: [
+      'billing_attention', 'billing_country', 'billing_street', 'billing_street2', 'billing_city',
+      'billing_state', 'billing_zip', 'billing_phone_code', 'billing_phone', 'billing_fax',
+      'shipping_attention', 'shipping_country', 'shipping_street', 'shipping_street2', 'shipping_city',
+      'shipping_state', 'shipping_zip', 'shipping_phone_code', 'shipping_phone', 'shipping_fax',
+    ],
+  },
+  {
+    labelKey: 'customerForm.tabs.contactPersons',
+    fields: ['contact_persons', 'contact_persons_editor'],
+  },
+  {
+    labelKey: 'customerForm.tabs.customFields',
+    fields: ['custom_fields', 'custom_fields_editor'],
+  },
+  {
+    labelKey: 'customerForm.tabs.reportingTags',
+    fields: ['reporting_tags'],
+  },
+  {
+    labelKey: 'customerForm.tabs.remarks',
+    fields: ['remarks'],
+  },
+];
 
 // ─── validation helpers ─────────────────────────────────────────────────────
 const isValidEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
@@ -336,6 +375,7 @@ const AddEditCustomer = () => {
   const [apiError, setApiError] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveMode, setSaveMode] = useState('save');
   const [gstPrefilling, setGstPrefilling] = useState(false);
   const [gstPrefillError, setGstPrefillError] = useState('');
   const [tab, setTab] = useState(0);
@@ -350,11 +390,67 @@ const AddEditCustomer = () => {
   const [pendingDocuments, setPendingDocuments] = useState([]);
   const [existingCustomers, setExistingCustomers] = useState([]);
   const documentInputRef = useRef(null);
-  const { applyAutoFill } = useAutoFill({
+  const formRef = useRef(null);
+  const saveModeRef = useRef('save');
+  const { isAutoFillEnabled, applyAutoFill: applyFullAutoFill } = useAutoFill({
     setForm,
     generator: generateCustomerMockData,
-    fillEmptyOnly: true,
+    scenario: 'full',
+    fillEmptyOnly: false,
   });
+  const { applyAutoFill: applyMinimalAutoFill } = useAutoFill({
+    setForm,
+    generator: generateCustomerMockData,
+    scenario: 'minimal',
+    fillEmptyOnly: true,
+    enableShortcut: false,
+  });
+
+  const tabErrors = useMemo(() => (
+    TAB_CONFIG.map((config) =>
+      config.fields.reduce((count, field) => count + (errors[field] ? 1 : 0), 0)
+    )
+  ), [errors]);
+
+  const focusErrorContext = useCallback((fieldErrors) => {
+    const fields = Object.keys(fieldErrors || {});
+    if (!fields.length) return;
+
+    const nextTabIndex = TAB_CONFIG.findIndex((config) =>
+      fields.some((field) => config.fields.includes(field))
+    );
+    if (nextTabIndex >= 0) {
+      setTab(nextTabIndex);
+    }
+
+    scrollToFirstError(fieldErrors);
+  }, []);
+
+  const requestSubmit = useCallback((nextMode = 'save') => {
+    if (saving || loading || cpEditorOpen || cfOpen) return;
+    saveModeRef.current = nextMode;
+    setSaveMode(nextMode);
+    formRef.current?.requestSubmit?.();
+  }, [cfOpen, cpEditorOpen, loading, saving]);
+
+  const submitWithShortcut = useCallback(() => {
+    requestSubmit('save');
+  }, [requestSubmit]);
+
+  useFormSubmitShortcut(submitWithShortcut, !loading && !saving && !cpEditorOpen && !cfOpen);
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      const isCmdOrCtrl = event.metaKey || event.ctrlKey;
+      if (!isCmdOrCtrl || String(event.key).toLowerCase() !== 's') return;
+      if (cpEditorOpen || cfOpen || loading || saving) return;
+      event.preventDefault();
+      requestSubmit('save');
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [cfOpen, cpEditorOpen, loading, requestSubmit, saving]);
 
   const loadExistingCustomers = useCallback(async () => {
     try {
@@ -509,6 +605,9 @@ const AddEditCustomer = () => {
       e.custom_payment_terms = 'Enter custom payment terms';
     }
     setErrors(e);
+    if (Object.keys(e).length) {
+      focusErrorContext(e);
+    }
     return !Object.keys(e).length;
   };
 
@@ -540,6 +639,7 @@ const AddEditCustomer = () => {
   const handleSubmit = async e => {
     e.preventDefault();
     setApiError('');
+    const action = saveModeRef.current;
     if (!validate()) return;
 
     const duplicate = findDuplicateCustomer(existingCustomers, form, customerId);
@@ -547,6 +647,8 @@ const AddEditCustomer = () => {
       const duplicateField = getDuplicateFieldLabel(existingCustomers, form, customerId);
       const duplicateName = duplicate.display_name || duplicate.name || duplicate.company_name || 'existing customer';
       setApiError(`Duplicate customer detected via ${duplicateField}. Matches ${duplicateName}.`);
+      saveModeRef.current = 'save';
+      setSaveMode('save');
       return;
     }
 
@@ -582,12 +684,23 @@ const AddEditCustomer = () => {
       if (customerId) await axios.put(createApiUrl(`/api/customers/${customerId}`), payload);
       else await axios.post(createApiUrl('/api/customers'), payload);
       window.dispatchEvent(new Event('customer:created'));
-      navigate('/customers', { state: { successMessage: customerId ? t('customerForm.updateSuccess') : t('customerForm.createSuccess') } });
+      if (!customerId && action === 'save_new') {
+        navigate('/customers/add', { state: { successMessage: t('customerForm.createSuccess') } });
+      } else {
+        navigate('/customers', { state: { successMessage: customerId ? t('customerForm.updateSuccess') : t('customerForm.createSuccess') } });
+      }
     } catch (err) {
       const parsed = parseApiError(err, t('customerForm.saveFailed'));
       const msg = applyApiErrors(parsed, setErrors);
       setApiError(msg);
-    } finally { setSaving(false); }
+      if (Object.keys(parsed.fields || {}).length) {
+        focusErrorContext(parsed.fields);
+      }
+    } finally {
+      setSaving(false);
+      saveModeRef.current = 'save';
+      setSaveMode('save');
+    }
   };
 
   const openAddCp = () => {
@@ -648,10 +761,8 @@ const AddEditCustomer = () => {
   // ─── render ─────────────────────────────────────────────────────────────
   return (
     <MainLayout title={customerId ? t('customerForm.editTitle') : t('customerForm.newTitle')}>
-      <Box sx={{ bgcolor: '#fff', minHeight: '100vh', pb: 6 }}>
+      <Box sx={{ bgcolor: C.pageBg, minHeight: '100vh', pb: 10 }}>
         <Container maxWidth={false} sx={{ pt: 2, px: 2.5 }}>
-          <Box sx={{ maxWidth: 1020 }}>
-
           {/* GST Prefill notice */}
           {!customerId && (
             <Box sx={{
@@ -675,19 +786,52 @@ const AddEditCustomer = () => {
             </Alert>
           )}
 
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.25 }}>
-            <DevAutoFillButton onClick={applyAutoFill} />
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1.5, mb: 1.25, flexWrap: 'wrap' }}>
+            <Box>
+              <Typography sx={{ fontSize: '0.875rem', color: '#475467', fontWeight: 600 }}>
+                {customerId ? t('customerForm.editTitle') : t('customerForm.newTitle')}
+              </Typography>
+              <Typography sx={{ fontSize: '0.8125rem', color: C.hint }}>
+                Create a complete customer profile with primary contacts, tax details, addresses, and notes.
+              </Typography>
+            </Box>
+            {isAutoFillEnabled && (
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                <Button
+                  type="button"
+                  variant="outlined"
+                  size="small"
+                  onClick={applyMinimalAutoFill}
+                  sx={{ textTransform: 'none', borderRadius: 1.5 }}
+                >
+                  Minimal Fill
+                </Button>
+                <DevAutoFillButton onClick={applyFullAutoFill} />
+              </Box>
+            )}
           </Box>
 
           {/* ── FORM PAPER ─────────────────────────────────────────────────── */}
           <Box
+            ref={formRef}
             component="form"
             onSubmit={handleSubmit}
-            sx={{ bgcolor: C.white }}
+            sx={{
+              bgcolor: C.white,
+              border: `1px solid ${C.border}`,
+              borderRadius: '8px',
+              overflow: 'hidden',
+              boxShadow: '0 1px 2px rgba(16, 24, 40, 0.04)',
+            }}
           >
 
-            {/* ══ SECTION 1 — CUSTOMER TYPE ══════════════════════════════════ */}
+            {/* ══ SECTION 1 — BASIC INFO ═════════════════════════════════════ */}
             <Box sx={{ px: 3, borderBottom: `1px solid ${C.divider}` }}>
+              <Box sx={{ py: 1.5, borderBottom: `1px solid ${C.divider}` }}>
+                <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>
+                  Basic Info
+                </Typography>
+              </Box>
               <ZohoRow label={t('customerForm.customerType')} noDivider>
                 <RadioGroup
                   row name="customer_type" value={form.customer_type}
@@ -704,7 +848,7 @@ const AddEditCustomer = () => {
               </ZohoRow>
             </Box>
 
-            {/* ══ SECTION 2 — PRIMARY CONTACT ════════════════════════════════ */}
+            {/* ══ SECTION 2 — BUSINESS INFO ══════════════════════════════════ */}
             <Box sx={{ px: 3 }}>
               <Box sx={{ py: 3 }}>
                 <FormLayout>
@@ -757,6 +901,19 @@ const AddEditCustomer = () => {
                       sx={fieldSx}
                     />
                   </AppFormField>
+                </FormLayout>
+              </Box>
+            </Box>
+
+            {/* ══ SECTION 3 — CONTACT INFO ═══════════════════════════════════ */}
+            <Box sx={{ px: 3, borderTop: `1px solid ${C.divider}` }}>
+              <Box sx={{ py: 1.5, borderBottom: `1px solid ${C.divider}` }}>
+                <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>
+                  Contact Info
+                </Typography>
+              </Box>
+              <Box sx={{ py: 3 }}>
+                <FormLayout>
 
                   <AppFormField label={t('customerForm.emailAddress')} layout="half" testId="customer-field-email">
                     <TextField
@@ -820,8 +977,13 @@ const AddEditCustomer = () => {
               </Box>
             </Box>
 
-            {/* ══ SECTION 3 — TABS ═══════════════════════════════════════════ */}
+            {/* ══ SECTION 4 — ADDITIONAL DETAILS ═════════════════════════════ */}
             <Box sx={{ borderTop: `1px solid ${C.divider}` }}>
+              <Box sx={{ px: 3, py: 1.5, borderBottom: `1px solid ${C.divider}` }}>
+                <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>
+                  Additional Details
+                </Typography>
+              </Box>
               <Tabs
                 value={tab}
                 onChange={(_, v) => setTab(v)}
@@ -837,15 +999,36 @@ const AddEditCustomer = () => {
                   '& .MuiTabs-indicator': { height: 2, backgroundColor: C.primary },
                 }}
               >
-                {[
-                  t('customerForm.tabs.otherDetails'),
-                  t('customerForm.tabs.address'),
-                  t('customerForm.tabs.contactPersons'),
-                  t('customerForm.tabs.customFields'),
-                  t('customerForm.tabs.reportingTags'),
-                  t('customerForm.tabs.remarks'),
-                ].map((tabLabel) => (
-                  <Tab key={tabLabel} label={tabLabel} disableRipple={false} />
+                {TAB_CONFIG.map((config, index) => (
+                  <Tab
+                    key={config.labelKey}
+                    label={
+                      <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
+                        <span>{t(config.labelKey)}</span>
+                        {tabErrors[index] > 0 && (
+                          <Box
+                            component="span"
+                            sx={{
+                              minWidth: 18,
+                              height: 18,
+                              px: 0.5,
+                              borderRadius: 99,
+                              bgcolor: '#fef2f2',
+                              color: C.red,
+                              fontSize: '0.6875rem',
+                              fontWeight: 700,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            {tabErrors[index]}
+                          </Box>
+                        )}
+                      </Box>
+                    }
+                    disableRipple={false}
+                  />
                 ))}
               </Tabs>
 
@@ -1497,11 +1680,20 @@ const AddEditCustomer = () => {
 
             {/* ══ SECTION 4 — FOOTER ACTIONS ═════════════════════════════════ */}
             <Box sx={{
+              position: 'sticky',
+              bottom: 0,
+              zIndex: 3,
               px: 3, py: 2,
               bgcolor: C.sectionBg,
               borderTop: `1px solid ${C.divider}`,
-              display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1.5,
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1.5,
+              flexWrap: 'wrap',
+              boxShadow: '0 -8px 24px rgba(15, 23, 42, 0.06)',
             }}>
+              <Typography sx={{ fontSize: '0.8125rem', color: C.hint }}>
+                Required fields are marked. Use Cmd/Ctrl+Enter to submit or Cmd/Ctrl+S to save.
+              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
               <Button
                 variant="outlined" size="medium"
                 onClick={() => navigate('/customers')} disabled={saving}
@@ -1514,8 +1706,30 @@ const AddEditCustomer = () => {
               >
                 {t('common.cancel')}
               </Button>
+              {!customerId && (
+                <Button
+                  type="submit"
+                  variant="outlined"
+                  size="medium"
+                  disabled={saving}
+                  onClick={() => {
+                    saveModeRef.current = 'save_new';
+                    setSaveMode('save_new');
+                  }}
+                  sx={{
+                    textTransform: 'none', borderRadius: '4px', fontWeight: 500,
+                    fontSize: '0.875rem', px: 3,
+                  }}
+                >
+                  Save & New
+                </Button>
+              )}
               <Button
                 type="submit" variant="contained" size="medium" disabled={saving}
+                onClick={() => {
+                  saveModeRef.current = 'save';
+                  setSaveMode('save');
+                }}
                 startIcon={saving ? <CircularProgress size={14} color="inherit" /> : null}
                 sx={{
                   textTransform: 'none', borderRadius: '4px', fontWeight: 500,
@@ -1527,9 +1741,8 @@ const AddEditCustomer = () => {
               >
                 {saving ? t('common.saving') : customerId ? t('common.update') : t('common.save')}
               </Button>
+              </Box>
             </Box>
-          </Box>
-
           </Box>
 
         </Container>

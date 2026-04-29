@@ -33,6 +33,7 @@ const setInput = (container, name, value) => {
 describe('AddEditCustomer', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    window.HTMLElement.prototype.scrollIntoView = jest.fn();
     getCustomers.mockResolvedValue([]);
   });
 
@@ -74,6 +75,10 @@ describe('AddEditCustomer', () => {
     ['customer-detail-field-payment-terms', 'customer-detail-field-portal', 'customer-detail-field-documents'].forEach((testId) => {
       expect(screen.getByTestId(testId)).toHaveAttribute('data-layout', 'full');
     });
+
+    expect(screen.getByText('Basic Info')).toBeInTheDocument();
+    expect(screen.getByText('Contact Info')).toBeInTheDocument();
+    expect(screen.getByText('Additional Details')).toBeInTheDocument();
   });
 
   it('shows required-field validation errors', async () => {
@@ -102,6 +107,26 @@ describe('AddEditCustomer', () => {
 
     await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
     expect(mockNavigate).toHaveBeenCalledWith('/customers', {
+      state: { successMessage: 'Customer created successfully.' },
+    });
+  });
+
+  it('supports save and new for creating another customer immediately', async () => {
+    const { container } = renderWithProviders(<AddEditCustomer />);
+
+    await waitFor(() => expect(container.querySelector('input[name="display_name"]')).toBeInTheDocument());
+
+    setInput(container, 'company_name', 'Acme Pvt Ltd');
+    setInput(container, 'display_name', 'Acme Billing');
+    setInput(container, 'email', 'billing@acme.com');
+    setInput(container, 'phone', '9999999999');
+
+    axios.post.mockResolvedValue({ data: { id: 'c-9' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save & New' }));
+
+    await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
+    expect(mockNavigate).toHaveBeenCalledWith('/customers/add', {
       state: { successMessage: 'Customer created successfully.' },
     });
   });

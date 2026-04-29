@@ -2,10 +2,14 @@ import React from 'react';
 import axios from 'axios';
 import { renderWithProviders, screen, fireEvent, waitFor } from '../../test-utils';
 import AddEditCustomer from '../../components/AddEditCustomer';
+import { getCustomers } from '../../services/customerService';
 
 const mockNavigate = jest.fn();
 
 jest.mock('axios');
+jest.mock('../../services/customerService', () => ({
+  getCustomers: jest.fn(),
+}));
 
 jest.mock('../../components/Layout/MainLayout', () => ({
   __esModule: true,
@@ -29,6 +33,7 @@ const setInput = (container, name, value) => {
 describe('AddEditCustomer', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    getCustomers.mockResolvedValue([]);
   });
 
   it('renders customer form fields', async () => {
@@ -125,5 +130,31 @@ describe('AddEditCustomer', () => {
 
     resolvePost({ data: { id: 'c-2' } });
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/customers', expect.any(Object)));
+  });
+
+  it('blocks duplicate customers by email or phone or GSTIN', async () => {
+    getCustomers.mockResolvedValue([
+      {
+        id: 'cust-1',
+        display_name: 'Acme Corp',
+        email: 'billing@acme.com',
+        phone: '9999999999',
+        gst_number: '27ABCDE1234F1Z5',
+      },
+    ]);
+
+    const { container } = renderWithProviders(<AddEditCustomer />);
+
+    await waitFor(() => expect(container.querySelector('input[name="display_name"]')).toBeInTheDocument());
+
+    setInput(container, 'company_name', 'Acme Pvt Ltd');
+    setInput(container, 'display_name', 'Acme Billing');
+    setInput(container, 'email', 'billing@acme.com');
+    setInput(container, 'phone', '9999999999');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText('Duplicate customer detected via email. Matches Acme Corp.')).toBeInTheDocument();
+    expect(axios.post).not.toHaveBeenCalled();
   });
 });

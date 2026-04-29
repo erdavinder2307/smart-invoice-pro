@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
 import MainLayout from "../components/Layout/MainLayout";
 import {
   Alert,
@@ -8,25 +7,13 @@ import {
   CircularProgress,
   FormControlLabel,
   InputAdornment,
-  List,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
   Paper,
   Snackbar,
   Switch,
   TextField,
   Typography,
 } from "@mui/material";
-import BusinessIcon from "@mui/icons-material/Business";
-import BrushIcon from "@mui/icons-material/Brush";
-import DescriptionIcon from "@mui/icons-material/Description";
-import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
-import PeopleIcon from "@mui/icons-material/People";
-import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
-import ExtensionIcon from "@mui/icons-material/Extension";
-import HistoryIcon from "@mui/icons-material/History";
 import EmailIcon from "@mui/icons-material/Email";
 import EventIcon from "@mui/icons-material/Event";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
@@ -34,79 +21,6 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 
 import { C, fieldSx } from "../components/common/formStyles";
 import { getAutomationSettings, saveAutomationSettings } from "../services/automationService";
-
-// ── Settings sub-nav ──────────────────────────────────────────────────────────
-const SETTINGS_NAV = [
-  { label: "Organization Profile", path: "/settings/organization-profile", icon: <BusinessIcon sx={{ fontSize: 18 }} /> },
-  { label: "Branding",             path: "/settings/branding",             icon: <BrushIcon sx={{ fontSize: 18 }} /> },
-  { label: "Invoice Preferences",  path: "/settings/invoice-preferences",  icon: <DescriptionIcon sx={{ fontSize: 18 }} /> },
-  { label: "Taxes",                path: "/settings/taxes",                icon: <ReceiptLongIcon sx={{ fontSize: 18 }} /> },
-  { label: "User Management",      path: "/settings/users",                icon: <PeopleIcon sx={{ fontSize: 18 }} /> },
-  { label: "Roles",                path: "/settings/roles",                icon: <AdminPanelSettingsIcon sx={{ fontSize: 18 }} /> },
-  { label: "Automation",           path: "/settings/automation",           icon: <NotificationsActiveIcon sx={{ fontSize: 18 }} /> },
-  { label: "Integrations",         path: "/settings/integrations",         icon: <ExtensionIcon sx={{ fontSize: 18 }} /> },
-  { label: "Audit Log",             path: "/settings/audit-log",             icon: <HistoryIcon sx={{ fontSize: 18 }} /> },
-];
-
-// ── SettingsSubNav ─────────────────────────────────────────────────────────────
-function SettingsSubNav() {
-  const navigate = useNavigate();
-  const { pathname } = useLocation();
-  return (
-    <Paper
-      elevation={0}
-      sx={{
-        width: 210,
-        flexShrink: 0,
-        bgcolor: C.white,
-        border: `1px solid ${C.border}`,
-        borderRadius: "4px",
-        alignSelf: "flex-start",
-      }}
-    >
-      <Box sx={{ px: 2, py: 1.25, borderBottom: `1px solid ${C.divider}` }}>
-        <Typography
-          sx={{
-            fontSize: "0.6875rem",
-            fontWeight: 600,
-            color: C.hint,
-            textTransform: "uppercase",
-            letterSpacing: "0.06em",
-          }}
-        >
-          Settings
-        </Typography>
-      </Box>
-      <List dense disablePadding>
-        {SETTINGS_NAV.map((item) => {
-          const active = pathname === item.path;
-          return (
-            <ListItemButton
-              key={item.path}
-              selected={active}
-              onClick={() => navigate(item.path)}
-              sx={{
-                borderRadius: 0,
-                px: 2,
-                py: 0.75,
-                "&.Mui-selected": { bgcolor: "#e8f0fe", color: C.primary },
-                "&.Mui-selected .MuiListItemIcon-root": { color: C.primary },
-              }}
-            >
-              <ListItemIcon sx={{ minWidth: 28, color: active ? C.primary : C.hint }}>
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText
-                primary={item.label}
-                primaryTypographyProps={{ fontSize: "0.8125rem", fontWeight: active ? 600 : 400 }}
-              />
-            </ListItemButton>
-          );
-        })}
-      </List>
-    </Paper>
-  );
-}
 
 // ── Reminder type metadata ─────────────────────────────────────────────────────
 const REMINDER_META = {

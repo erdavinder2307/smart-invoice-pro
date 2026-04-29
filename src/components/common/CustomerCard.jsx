@@ -1,6 +1,7 @@
 import React from "react";
 import {
   Box,
+  Button,
   Card,
   CardContent,
   Chip,
@@ -12,6 +13,8 @@ import {
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
+import NoteAddIcon from "@mui/icons-material/NoteAdd";
+import PaymentsIcon from "@mui/icons-material/Payments";
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat("en-IN", {
@@ -27,10 +30,12 @@ const formatCurrency = (amount) =>
  * Props:
  *   customer  {object}  — normalized customer data
  *   onClick   {fn}      — handler when name is tapped (navigate to detail)
- *   onEdit    {fn}      — edit action handler
- *   onDelete  {fn}      — delete action handler
+ *   onEdit           {fn}  — edit action handler
+ *   onDelete         {fn}  — delete action handler
+ *   onCreateInvoice  {fn}  — create invoice action handler
+ *   onRecordPayment  {fn}  — record payment action handler
  */
-const CustomerCard = ({ customer, onClick, onEdit, onDelete }) => (
+const CustomerCard = ({ customer, onClick, onEdit, onDelete, onCreateInvoice, onRecordPayment }) => (
   <Card
     elevation={0}
     sx={{
@@ -41,10 +46,10 @@ const CustomerCard = ({ customer, onClick, onEdit, onDelete }) => (
         borderColor: "#c7d2e8",
         boxShadow: "0 2px 8px rgba(37, 99, 235, 0.08)",
       },
+      bgcolor: customer.overdueAmount > 0 ? "#fff7f7" : customer.receivables > 0 ? "#fffaf0" : "#ffffff",
     }}
   >
     <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
-      {/* Row 1: name + status badge */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1.25 }}>
         <Typography
           onClick={onClick}
@@ -61,16 +66,25 @@ const CustomerCard = ({ customer, onClick, onEdit, onDelete }) => (
         >
           {customer.name || "Untitled Customer"}
         </Typography>
-        <Chip
-          label={customer.status || "Active"}
-          size="small"
-          color={customer.status === "Inactive" ? "default" : "success"}
-          variant="outlined"
-          sx={{ fontSize: "0.7rem", fontWeight: 600, flexShrink: 0, height: 22 }}
-        />
+        <Stack spacing={0.5} alignItems="flex-end">
+          <Chip
+            label={customer.activityStatus || customer.status || "Active"}
+            size="small"
+            color={(customer.activityStatus || customer.status) === "Inactive" ? "default" : "success"}
+            variant="outlined"
+            sx={{ fontSize: "0.7rem", fontWeight: 600, flexShrink: 0, height: 22 }}
+          />
+          {customer.health?.label ? (
+            <Chip
+              label={customer.health.label}
+              size="small"
+              color={customer.health.color || "default"}
+              sx={{ fontSize: "0.7rem", fontWeight: 600, flexShrink: 0, height: 22 }}
+            />
+          ) : null}
+        </Stack>
       </Box>
 
-      {/* Row 2: email + phone */}
       <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1.5, gap: 1 }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography
@@ -117,10 +131,32 @@ const CustomerCard = ({ customer, onClick, onEdit, onDelete }) => (
         </Box>
       </Box>
 
+      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 1.5 }}>
+        <Chip
+          size="small"
+          variant="outlined"
+          label={`Revenue ${formatCurrency(customer.totalRevenue)}`}
+          color="primary"
+        />
+        <Chip
+          size="small"
+          variant="outlined"
+          label={`Outstanding ${formatCurrency(customer.receivables)}`}
+          color={customer.receivables > 0 ? "warning" : "default"}
+        />
+        {customer.overdueAmount > 0 ? (
+          <Chip
+            size="small"
+            label={`Overdue ${formatCurrency(customer.overdueAmount)}`}
+            color="error"
+            sx={{ fontWeight: 600 }}
+          />
+        ) : null}
+      </Stack>
+
       <Divider sx={{ borderColor: "#f0f2f5", mb: 1.25 }} />
 
-      {/* Row 3: receivables + action buttons */}
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 1.5 }}>
         <Stack direction="row" spacing={2}>
           <Box>
             <Typography
@@ -144,9 +180,47 @@ const CustomerCard = ({ customer, onClick, onEdit, onDelete }) => (
               {formatCurrency(customer.receivables)}
             </Typography>
           </Box>
+          <Box>
+            <Typography
+              sx={{
+                fontSize: "0.68rem",
+                color: "#9aa0a6",
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.04em",
+              }}
+            >
+              Last Transaction
+            </Typography>
+            <Typography sx={{ fontSize: "0.875rem", fontWeight: 700, color: "#111827" }}>
+              {customer.lastTransactionDate ? new Date(customer.lastTransactionDate).toLocaleDateString("en-IN") : "—"}
+            </Typography>
+          </Box>
         </Stack>
 
         <Box sx={{ display: "flex", gap: 0.5, flexShrink: 0 }}>
+          {onCreateInvoice ? (
+            <Tooltip title="Create invoice">
+              <IconButton
+                size="small"
+                onClick={onCreateInvoice}
+                sx={{ color: "#2563eb", "&:hover": { bgcolor: "#eff6ff" }, width: 34, height: 34 }}
+              >
+                <NoteAddIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
+          ) : null}
+          {onRecordPayment ? (
+            <Tooltip title="Record payment">
+              <IconButton
+                size="small"
+                onClick={onRecordPayment}
+                sx={{ color: "#059669", "&:hover": { bgcolor: "#ecfdf5" }, width: 34, height: 34 }}
+              >
+                <PaymentsIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
+          ) : null}
           <Tooltip title="Edit customer">
             <IconButton
               size="small"
@@ -167,6 +241,21 @@ const CustomerCard = ({ customer, onClick, onEdit, onDelete }) => (
           </Tooltip>
         </Box>
       </Box>
+
+      {(onCreateInvoice || onRecordPayment) && (
+        <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
+          {onCreateInvoice ? (
+            <Button size="small" variant="outlined" startIcon={<NoteAddIcon />} onClick={onCreateInvoice} sx={{ textTransform: "none", borderRadius: 2 }}>
+              Create Invoice
+            </Button>
+          ) : null}
+          {onRecordPayment ? (
+            <Button size="small" variant="contained" startIcon={<PaymentsIcon />} onClick={onRecordPayment} sx={{ textTransform: "none", borderRadius: 2, boxShadow: "none" }}>
+              Record Payment
+            </Button>
+          ) : null}
+        </Stack>
+      )}
     </CardContent>
   </Card>
 );

@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
 import MainLayout from "../components/Layout/MainLayout";
 import {
   Alert,
@@ -10,10 +9,6 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
-  List,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
   MenuItem,
   Paper,
   Select,
@@ -28,14 +23,6 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import BusinessIcon from "@mui/icons-material/Business";
-import BrushIcon from "@mui/icons-material/Brush";
-import DescriptionIcon from "@mui/icons-material/Description";
-import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
-import PeopleIcon from "@mui/icons-material/People";
-import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
-import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
-import ExtensionIcon from "@mui/icons-material/Extension";
 import HistoryIcon from "@mui/icons-material/History";
 import CloseIcon from "@mui/icons-material/Close";
 
@@ -104,47 +91,6 @@ function formatValue(v) {
   if (v === undefined || v === null) return <em style={{ color: "#aaa" }}>—</em>;
   if (typeof v === "object") return <pre style={{ margin: 0, fontSize: 12 }}>{JSON.stringify(v, null, 2)}</pre>;
   return String(v);
-}
-
-// ── Sub-nav ───────────────────────────────────────────────────────────────────
-function SettingsSubNav() {
-  const navigate = useNavigate();
-  const { pathname } = useLocation();
-  const { t } = useTranslation();
-  const SETTINGS_NAV = [
-    { labelKey: "settingsNav.organization", path: "/settings/organization-profile", icon: <BusinessIcon sx={{ fontSize: 18 }} /> },
-    { labelKey: "settingsNav.branding",     path: "/settings/branding",             icon: <BrushIcon sx={{ fontSize: 18 }} /> },
-    { labelKey: "settingsNav.invoicePreferences", path: "/settings/invoice-preferences", icon: <DescriptionIcon sx={{ fontSize: 18 }} /> },
-    { labelKey: "settingsNav.taxes",         path: "/settings/taxes",                icon: <ReceiptLongIcon sx={{ fontSize: 18 }} /> },
-    { labelKey: "settingsNav.userManagement", path: "/settings/users",              icon: <PeopleIcon sx={{ fontSize: 18 }} /> },
-    { labelKey: "settingsNav.roles",         path: "/settings/roles",               icon: <AdminPanelSettingsIcon sx={{ fontSize: 18 }} /> },
-    { labelKey: "settingsNav.automation",    path: "/settings/automation",          icon: <NotificationsActiveIcon sx={{ fontSize: 18 }} /> },
-    { labelKey: "settingsNav.integrations",  path: "/settings/integrations",        icon: <ExtensionIcon sx={{ fontSize: 18 }} /> },
-    { labelKey: "settingsNav.auditLog",      path: "/settings/audit-log",           icon: <HistoryIcon sx={{ fontSize: 18 }} /> },
-  ];
-  return (
-    <Paper
-      elevation={0}
-      sx={{ width: 220, flexShrink: 0, border: "1px solid #e0e0e0", borderRadius: 2, p: 1, height: "fit-content" }}
-    >
-      <List dense disablePadding>
-        {SETTINGS_NAV.map(({ labelKey, path, icon }) => {
-          const active = pathname === path || pathname.startsWith(path + "/");
-          return (
-            <ListItemButton
-              key={path}
-              selected={active}
-              onClick={() => navigate(path)}
-              sx={{ borderRadius: 1, mb: 0.25, "&.Mui-selected": { bgcolor: "#e8f5e9" } }}
-            >
-              <ListItemIcon sx={{ minWidth: 32 }}>{icon}</ListItemIcon>
-              <ListItemText primary={<Typography variant="body2" fontWeight={active ? 600 : 400}>{t(labelKey)}</Typography>} />
-            </ListItemButton>
-          );
-        })}
-      </List>
-    </Paper>
-  );
 }
 
 // ── Detail dialog ─────────────────────────────────────────────────────────────
@@ -296,7 +242,7 @@ export default function AuditLogPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, entityType, action, fromDate, toDate]);
+  }, [page, rowsPerPage, entityType, action, fromDate, toDate, t]);
 
   useEffect(() => { fetchLogs(); }, [fetchLogs]);
 

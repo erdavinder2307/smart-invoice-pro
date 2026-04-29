@@ -3,8 +3,12 @@ import { createApiUrl } from '../config/api';
 
 const API_URL = createApiUrl('/api/products');
 
-export const getProducts = async () => {
-  const response = await axios.get(API_URL);
+export const getProducts = async (params = {}) => {
+  const query = new URLSearchParams(
+    Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== "")
+  ).toString();
+  const path = query ? `/api/products?${query}` : "/api/products";
+  const response = await axios.get(createApiUrl(path));
   return response.data;
 };
 
@@ -20,5 +24,10 @@ export const updateProduct = async (id, product) => {
 
 export const deleteProduct = async (id) => {
   const response = await axios.delete(`${API_URL}/${id}`);
+  return response.data;
+};
+
+export const getProductStockSummary = async () => {
+  const response = await axios.get(createApiUrl('/api/products/stock-summary'));
   return response.data;
 };

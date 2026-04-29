@@ -1,5 +1,6 @@
 import React from "react";
 import { Box, Typography, Button, Stack } from "@mui/material";
+import { safeClick } from "../../utils/safeClick";
 
 const SectionHeader = ({
   title,
@@ -36,10 +37,10 @@ const SectionHeader = ({
           <Button
             key={action.key || action.label}
             variant={action.variant || "outlined"}
-            onClick={action.onClick}
+            onClick={safeClick(action.onClick)}
             startIcon={action.icon}
             color={action.color || "inherit"}
-            disabled={action.disabled}
+            disabled={action.disabled || typeof action.onClick !== "function"}
           >
             {action.label}
           </Button>
@@ -48,9 +49,9 @@ const SectionHeader = ({
         {primaryAction && (
           <Button
             variant="contained"
-            onClick={primaryAction.onClick}
+            onClick={safeClick(primaryAction.onClick)}
             startIcon={primaryAction.icon}
-            disabled={primaryAction.disabled}
+            disabled={primaryAction.disabled || typeof primaryAction.onClick !== "function"}
             color={primaryAction.color || "primary"}
           >
             {primaryAction.label}

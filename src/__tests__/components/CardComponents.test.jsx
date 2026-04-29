@@ -212,10 +212,10 @@ describe('ItemCard', () => {
     renderWithProviders(
       <ItemCard product={product} onEdit={jest.fn()} onDelete={jest.fn()} onRestock={onRestock} />
     );
-    // With onRestock: buttons order is edit(0), restock(1), delete(2)
+    // With onRestock: buttons order is add-stock(0), edit(1), restock(2), delete(3)
     const buttons = screen.getAllByRole('button');
-    expect(buttons.length).toBe(3);
-    fireEvent.click(buttons[1]);
+    expect(buttons.length).toBe(4);
+    fireEvent.click(buttons[2]);
     expect(onRestock).toHaveBeenCalledTimes(1);
   });
 
@@ -223,8 +223,8 @@ describe('ItemCard', () => {
     renderWithProviders(
       <ItemCard product={product} onEdit={jest.fn()} onDelete={jest.fn()} />
     );
-    // Without onRestock: only edit and delete buttons
-    expect(screen.getAllByRole('button').length).toBe(2);
+    // Without onRestock: add-stock, edit, and delete buttons
+    expect(screen.getAllByRole('button').length).toBe(3);
   });
 });
 

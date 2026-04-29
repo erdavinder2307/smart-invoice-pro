@@ -10,6 +10,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
@@ -28,21 +29,15 @@ const formatCurrency = (amount) =>
  * Props:
  *   product      {object}  — product data object
  *   availableQty {number}  — computed available stock quantity
- *   stockBucket  {string}  — "In Stock" | "Low Stock" | "Out of Stock"
+ *   stockMeta    {object}  — stock display metadata
  *   onEdit       {fn}      — edit action handler
  *   onDelete     {fn}      — delete action handler
+ *   onAddStock   {fn}      — stock adjustment action
  *   onRestock    {fn|null} — restock action handler (omit if no preferred vendor)
  */
-const ItemCard = ({ product, availableQty, stockBucket, onEdit, onDelete, onRestock }) => {
-  const stockChipColor =
-    stockBucket === "Out of Stock" ? "error" : stockBucket === "Low Stock" ? "warning" : "success";
-
-  const stockTextColor =
-    stockBucket === "Out of Stock"
-      ? "#dc2626"
-      : stockBucket === "Low Stock"
-      ? "#b45309"
-      : "#16a34a";
+const ItemCard = ({ product, availableQty, stockMeta, onEdit, onDelete, onAddStock, onRestock }) => {
+  const stockChipColor = stockMeta?.chipColor || "default";
+  const stockTextColor = stockMeta?.textColor || "#2b3340";
 
   return (
     <Card
@@ -76,7 +71,7 @@ const ItemCard = ({ product, availableQty, stockBucket, onEdit, onDelete, onRest
             {product.name || "Untitled Item"}
           </Typography>
           <Chip
-            label={stockBucket}
+            label={stockMeta?.label || "In Stock"}
             size="small"
             color={stockChipColor}
             variant="outlined"
@@ -117,8 +112,7 @@ const ItemCard = ({ product, availableQty, stockBucket, onEdit, onDelete, onRest
               Stock
             </Typography>
             <Typography sx={{ fontSize: "0.95rem", fontWeight: 700, color: stockTextColor }}>
-              {availableQty}
-              {product.unit ? ` ${product.unit}` : ""}
+              {availableQty} ({stockMeta?.label || "In Stock"})
             </Typography>
           </Box>
         </Box>
@@ -128,24 +122,6 @@ const ItemCard = ({ product, availableQty, stockBucket, onEdit, onDelete, onRest
         {/* Row 3: secondary info + action buttons */}
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
           <Stack direction="row" spacing={2}>
-            {product.hsn_sac && (
-              <Box>
-                <Typography
-                  sx={{
-                    fontSize: "0.68rem",
-                    color: "#9aa0a6",
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.04em",
-                  }}
-                >
-                  HSN/SAC
-                </Typography>
-                <Typography sx={{ fontSize: "0.78rem", color: "#374151" }}>
-                  {product.hsn_sac}
-                </Typography>
-              </Box>
-            )}
             {product.category && (
               <Box>
                 <Typography
@@ -168,6 +144,20 @@ const ItemCard = ({ product, availableQty, stockBucket, onEdit, onDelete, onRest
 
           {/* Action buttons */}
           <Box sx={{ display: "flex", gap: 0.5, flexShrink: 0 }}>
+            <Tooltip title="Add stock">
+              <IconButton
+                size="small"
+                onClick={onAddStock}
+                sx={{
+                  color: "#0369a1",
+                  "&:hover": { bgcolor: "#eff6ff" },
+                  width: 34,
+                  height: 34,
+                }}
+              >
+                <AddCircleOutlineIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
             <Tooltip title="Edit item">
               <IconButton
                 size="small"

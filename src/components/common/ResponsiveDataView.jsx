@@ -42,6 +42,9 @@ const ResponsiveDataView = ({
   pagination,
   toolbar,
   onRowClick,
+  sortBy,
+  sortOrder,
+  onSort,
 }) => {
   if (isMobile && renderCard) {
     return (
@@ -123,6 +126,9 @@ const ResponsiveDataView = ({
       toolbar={toolbar}
       onRowClick={onRowClick}
       skeletonRows={skeletonRows}
+      sortBy={sortBy}
+      sortOrder={sortOrder}
+      onSort={onSort}
     />
   );
 };

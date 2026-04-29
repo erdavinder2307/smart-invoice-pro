@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 
@@ -12,15 +12,15 @@ export const SidebarProvider = ({ children }) => {
   );
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const toggleSidebar = () => {
+  const toggleSidebar = useCallback(() => {
     const next = !isCollapsed;
     setIsCollapsed(next);
     localStorage.setItem("sidebarCollapsed", String(next));
-  };
+  }, [isCollapsed]);
 
-  const toggleMobileDrawer = () => {
+  const toggleMobileDrawer = useCallback(() => {
     setMobileOpen((prev) => !prev);
-  };
+  }, []);
 
   const value = useMemo(
     () => ({
@@ -32,7 +32,7 @@ export const SidebarProvider = ({ children }) => {
       toggleMobileDrawer,
       isMobile,
     }),
-    [isCollapsed, mobileOpen, isMobile]
+    [isCollapsed, mobileOpen, isMobile, toggleSidebar, toggleMobileDrawer]
   );
 
   return <SidebarContext.Provider value={value}>{children}</SidebarContext.Provider>;

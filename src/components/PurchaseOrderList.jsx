@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { createApiUrl } from "../config/api";
 import MainLayout from "./Layout/MainLayout";
@@ -35,7 +35,6 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import StandardDataTable from "./common/StandardDataTable";
 import ResponsiveDataView from "./common/ResponsiveDataView";
 import PurchaseOrderCard from "./common/PurchaseOrderCard";
 import { useNavigate } from "react-router-dom";
@@ -51,6 +50,7 @@ import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import { useTranslation } from "react-i18next";
+import useTableSorting from "../hooks/useTableSorting";
 
 const PurchaseOrderList = () => {
   const navigate = useNavigate();
@@ -71,15 +71,13 @@ const PurchaseOrderList = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const { sortBy, sortOrder, handleSort, sortParams } = useTableSorting("created_at", "desc", "purchase_orders");
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [posResponse, vendorsResponse] = await Promise.all([
-        axios.get(createApiUrl("/api/purchase-orders")),
+        axios.get(createApiUrl("/api/purchase-orders"), { params: sortParams }),
         axios.get(createApiUrl("/api/vendors"))
       ]);
       setPurchaseOrders(posResponse.data);
@@ -89,7 +87,11 @@ const PurchaseOrderList = () => {
       console.error(error);
     }
     setLoading(false);
-  };
+  }, [sortParams, t]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData, sortBy, sortOrder]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDelete = async (id) => {
     setLoading(true);
@@ -360,15 +362,18 @@ const PurchaseOrderList = () => {
             );
           }}
           columns={[
-            { key: 'po_number', label: 'PO #' },
+            { key: 'po_number', label: 'PO #', sortable: true },
             { key: 'vendor', label: 'Vendor' },
             { key: 'subject', label: 'Subject' },
-            { key: 'order_date', label: 'Order Date' },
+            { key: 'order_date', label: 'Order Date', sortable: true },
             { key: 'delivery_date', label: 'Delivery Date' },
-            { key: 'amount', label: 'Amount' },
+            { key: 'total_amount', label: 'Amount', sortable: true },
             { key: 'status', label: 'Status' },
             { key: 'actions', label: 'Actions', align: 'center' },
           ]}
+          sortBy={sortBy}
+          sortOrder={sortOrder}
+          onSort={handleSort}
           rows={paginatedPOs}
           loading={loading}
           emptyIcon={<ShoppingCartIcon sx={{ fontSize: 48 }} />}

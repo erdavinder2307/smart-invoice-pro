@@ -32,6 +32,9 @@ import FormDatePicker from './common/FormDatePicker';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CustomerSelect from './common/CustomerSelect';
+import useAutoFill from '../hooks/useAutoFill';
+import DevAutoFillButton from './common/DevAutoFillButton';
+import { generateRecurringProfileMockData } from '../utils/mockDataGenerators';
 
 const frequencyOptions = ["Daily", "Weekly", "Monthly", "Quarterly", "Yearly"];
 const statusOptions = ["Active", "Paused", "Expired", "Stopped"];
@@ -73,6 +76,12 @@ const AddEditRecurringProfile = () => {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const { applyAutoFill } = useAutoFill({
+    setForm,
+    generator: generateRecurringProfileMockData,
+    context: { customers },
+    fillEmptyOnly: true,
+  });
 
   useEffect(() => {
     // Fetch customers
@@ -204,10 +213,11 @@ const AddEditRecurringProfile = () => {
           )}
 
           <Box component="form" onSubmit={handleSubmit} autoComplete="off" sx={{ bgcolor: '#fff' }}>
-            <Box sx={{ px: 0.5, pt: 0.25, pb: 1.5, borderBottom: `1px solid ${C.divider}` }}>
+            <Box sx={{ px: 0.5, pt: 0.25, pb: 1.5, borderBottom: `1px solid ${C.divider}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
               <Typography sx={{ fontSize: '2rem', fontWeight: 500, color: '#151a25', textAlign: 'left' }}>
                 {profileId ? t('addEditRecurringProfile.editTitle') : t('addEditRecurringProfile.newTitle')}
               </Typography>
+              <DevAutoFillButton onClick={applyAutoFill} />
             </Box>
 
             <Box sx={{ px: 0.5 }}>

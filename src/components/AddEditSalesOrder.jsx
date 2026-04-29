@@ -25,11 +25,14 @@ import MainLayout from "./Layout/MainLayout";
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CustomerSelect from './common/CustomerSelect';
-import AppFormField from './common/Form/AppFormField';
-import FormLayout from './common/Form/FormLayout';
+import AppFormField from './common/form/AppFormField';
+import FormLayout from './common/form/FormLayout';
 import { AppSelect, C, ZohoRow, fieldSx, footerSx, cancelBtnSx, saveBtnSx } from './common/formStyles';
 import { useTranslation } from 'react-i18next';
 import FormInput from './common/FormInput';
+import useAutoFill from '../hooks/useAutoFill';
+import DevAutoFillButton from './common/DevAutoFillButton';
+import { generateSalesOrderMockData } from '../utils/mockDataGenerators';
 
 const statusOptions = ["Draft", "Confirmed", "Closed", "Invoiced", "Cancelled"];
 
@@ -67,6 +70,12 @@ const AddEditSalesOrder = () => {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const { applyAutoFill } = useAutoFill({
+    setForm,
+    generator: generateSalesOrderMockData,
+    context: { customers },
+    fillEmptyOnly: true,
+  });
 
   useEffect(() => {
     // Fetch customers
@@ -189,6 +198,10 @@ const AddEditSalesOrder = () => {
               {error}
             </Alert>
           )}
+
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.25 }}>
+            <DevAutoFillButton onClick={applyAutoFill} />
+          </Box>
 
           <Paper
             component="form" onSubmit={handleSubmit}

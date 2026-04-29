@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { createApiUrl } from "../config/api";
 import MainLayout from "./Layout/MainLayout";
@@ -34,7 +34,6 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import StandardDataTable from "./common/StandardDataTable";
 import ResponsiveDataView from "./common/ResponsiveDataView";
 import SalesOrderCard from "./common/SalesOrderCard";
 import { useNavigate } from "react-router-dom";
@@ -53,6 +52,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import PendingIcon from "@mui/icons-material/Pending";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import { useTranslation } from "react-i18next";
+import useTableSorting from "../hooks/useTableSorting";
 
 const SalesOrderList = () => {
   const [salesOrders, setSalesOrders] = useState([]);
@@ -73,10 +73,12 @@ const SalesOrderList = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const navigate = useNavigate();
 
-  const fetchSalesOrders = async () => {
+  const { sortBy, sortOrder, handleSort, sortParams } = useTableSorting("created_at", "desc", "sales_orders");
+
+  const fetchSalesOrders = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await axios.get(createApiUrl("/api/sales-orders"));
+      const response = await axios.get(createApiUrl("/api/sales-orders"), { params: sortParams });
       setSalesOrders(response.data);
       setError("");
     } catch (err) {
@@ -84,7 +86,7 @@ const SalesOrderList = () => {
       console.error(err);
     }
     setLoading(false);
-  };
+  }, [sortParams, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchCustomers = async () => {
     try {
@@ -98,7 +100,7 @@ const SalesOrderList = () => {
   useEffect(() => {
     fetchSalesOrders();
     fetchCustomers();
-  }, []);
+  }, [fetchSalesOrders, sortBy, sortOrder]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredSalesOrders = salesOrders.filter((so) => {
     const customer = customers.find((c) => c.id === so.customer_id);
@@ -421,15 +423,18 @@ const SalesOrderList = () => {
                 />
               )}
               columns={[
-                { key: 'so_number', label: 'SO #' },
+                { key: 'so_number', label: 'SO #', sortable: true },
                 { key: 'customer', label: 'Customer' },
                 { key: 'subject', label: 'Subject' },
-                { key: 'order_date', label: 'Order Date' },
+                { key: 'order_date', label: 'Order Date', sortable: true },
                 { key: 'delivery_date', label: 'Delivery Date' },
-                { key: 'amount', label: 'Amount' },
+                { key: 'total_amount', label: 'Amount', sortable: true },
                 { key: 'status', label: 'Status' },
                 { key: 'actions', label: 'Actions', align: 'center' },
               ]}
+              sortBy={sortBy}
+              sortOrder={sortOrder}
+              onSort={handleSort}
               rows={paginatedSalesOrders}
               loading={loading}
               emptyIcon={<ShoppingCartIcon sx={{ fontSize: 48 }} />}

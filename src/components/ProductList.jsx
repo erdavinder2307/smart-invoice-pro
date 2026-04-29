@@ -1,13 +1,13 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import {
   Alert,
   Box,
   Button,
   Checkbox,
+  Chip,
   CircularProgress,
-  Container,
   Dialog,
   DialogActions,
   DialogContent,
@@ -15,11 +15,12 @@ import {
   Fade,
   FormControl,
   IconButton,
-  InputAdornment,
   MenuItem,
   Select,
+  Stack,
   TableCell,
   TableRow,
+  TableSortLabel,
   TextField,
   Tooltip,
   Typography,
@@ -30,106 +31,204 @@ import ResponsiveDataView from "./common/ResponsiveDataView";
 import { CHECKBOX_COLUMN_WIDTH } from "./common/StandardDataTable";
 import ItemCard from "./common/ItemCard";
 import AddIcon from "@mui/icons-material/Add";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutline";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
-import SearchIcon from "@mui/icons-material/Search";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
-import MainLayout from "./Layout/MainLayout";
+import ListPageLayout from "./list/ListPageLayout";
+import ListHeader from "./list/ListHeader";
+import FilterBar from "./list/FilterBar";
+import ListSummary from "./list/ListSummary";
+import BulkActionBar from "./list/BulkActionBar";
 import { createApiUrl } from "../config/api";
 import { deleteProduct, getProducts } from "../services/productService";
+import { updateProductStock } from "../services/stockService";
 import { useTranslation } from "react-i18next";
+import { useDebouncedValue } from "../hooks/useDebouncedValue";
+import useTableSorting from "../hooks/useTableSorting";
 
 const VIEW_OPTIONS = [
   { value: "All", labelKey: "productList.allItems" },
-  { value: "In Stock", labelKey: "productList.inStock" },
+  { value: "Critical", label: "Critical" },
   { value: "Low Stock", labelKey: "productList.lowStock" },
-  { value: "Out of Stock", labelKey: "productList.outOfStock" },
+  { value: "In Stock", labelKey: "productList.inStock" },
 ];
 
-const formatCurrency = (amount) => new Intl.NumberFormat("en-IN", {
-  style: "currency",
-  currency: "INR",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-}).format(Number(amount || 0));
+const SORT_OPTIONS = [
+  { value: "stock_asc", label: "Stock: Low to High" },
+  { value: "stock_desc", label: "Stock: High to Low" },
+  { value: "name_asc", label: "Name: A to Z" },
+  { value: "name_desc", label: "Name: Z to A" },
+  { value: "price_asc", label: "Rate: Low to High" },
+  { value: "price_desc", label: "Rate: High to Low" },
+];
+
+const formatCurrency = (amount) =>
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(amount || 0));
 
 const toFiniteNumber = (value, fallback = 0) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
-const getAvailableQuantity = (product) => (
+const getAvailableQuantity = (product) =>
   product.stock !== undefined && product.stock !== null && product.stock !== ""
     ? toFiniteNumber(product.stock)
-    : toFiniteNumber(product.opening_stock) - toFiniteNumber(product.sold)
-);
+    : toFiniteNumber(product.opening_stock) - toFiniteNumber(product.sold);
 
-const getStockBucket = (product) => {
+const getStockMeta = (product) => {
   const availableQty = getAvailableQuantity(product);
   const reorderLevel = toFiniteNumber(product.reorder_level, 10);
 
-  if (availableQty <= 0) return "Out of Stock";
-  if (availableQty <= reorderLevel) return "Low Stock";
-  return "In Stock";
+  if (availableQty <= 0) {
+    return {
+      bucket: "Critical",
+      label: "Out of Stock",
+      chipColor: "error",
+      textColor: "#dc2626",
+      highlight: true,
+    };
+  }
+
+  if (availableQty <= reorderLevel) {
+    return {
+      bucket: "Low Stock",
+      label: "Low Stock",
+      chipColor: "warning",
+      textColor: "#b45309",
+      highlight: false,
+    };
+  }
+
+  return {
+    bucket: "In Stock",
+    label: "In Stock",
+    chipColor: "success",
+    textColor: "#166534",
+    highlight: false,
+  };
+};
+
+const buildCsv = (items) => {
+  const headers = ["Name", "Category", "Selling Price", "Cost Price", "Stock", "Status"];
+  const lines = items.map((item) => {
+    const stock = getAvailableQuantity(item);
+    const status = getStockMeta(item).label;
+
+    return [
+      item.name || "",
+      item.category || "",
+      Number(item.price || 0),
+      Number(item.purchase_rate || 0),
+      stock,
+      status,
+    ]
+      .map((value) => `"${String(value).replace(/"/g, '""')}"`)
+      .join(",");
+  });
+
+  return [headers.join(","), ...lines].join("\n");
 };
 
 const ProductList = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const { t } = useTranslation();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [viewFilter, setViewFilter] = useState("All");
+  const [viewFilter, setViewFilter] = useState(() => {
+    const params = new URLSearchParams(location.search);
+    const urlFilter = params.get("filter");
+    const validOptions = VIEW_OPTIONS.map((o) => o.value);
+    return urlFilter && validOptions.includes(urlFilter) ? urlFilter : "All";
+  });
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [categoryFilter, setCategoryFilter] = useState("All Categories");
+  const { sortBy: colSortBy, sortOrder: colSortOrder, handleSort, setSort } = useTableSorting("name", "asc", "products");
+  const [stockDialog, setStockDialog] = useState({ open: false, mode: "single", product: null });
+  const [stockDelta, setStockDelta] = useState(1);
+  const [bulkStockMode, setBulkStockMode] = useState("increment");
+  const [singleStockMode, setSingleStockMode] = useState("increment");
+  const debouncedSearch = useDebouncedValue(searchTerm, 300);
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async (params = {}) => {
     setLoading(true);
     setError("");
     try {
-      const data = await getProducts();
+      const data = await getProducts(params);
       setProducts(Array.isArray(data) ? data : []);
     } catch {
       setProducts([]);
-      setError(t('productList.failedFetch'));
+      setError(t("productList.failedFetch"));
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
 
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    // Pass sort params to backend only for name/price (not stock — stock is computed)
+    const backendSortBy = colSortBy === "stock" ? null : colSortBy;
+    fetchProducts(backendSortBy ? { sort_by: backendSortBy, sort_order: colSortOrder } : {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [colSortBy, colSortOrder]);
 
   useEffect(() => {
     setPage(0);
-  }, [searchTerm, viewFilter]);
+  }, [debouncedSearch, viewFilter, categoryFilter, colSortBy, colSortOrder]);
 
-  const filteredProducts = products.filter((product) => {
-    const term = searchTerm.trim().toLowerCase();
-    const matchesSearch = !term || [
-      product.name,
-      product.description,
-      product.category,
-      product.hsn_sac,
-      product.unit,
-    ].some((value) => String(value || "").toLowerCase().includes(term));
+  const categories = useMemo(() => {
+    const values = Array.from(
+      new Set(products.map((product) => String(product.category || "").trim()).filter(Boolean))
+    );
+    return ["All Categories", ...values.sort((a, b) => a.localeCompare(b))];
+  }, [products]);
 
-    const stockBucket = getStockBucket(product);
-    const matchesView = viewFilter === "All" || stockBucket === viewFilter;
+  const filteredProducts = useMemo(() => {
+    const term = debouncedSearch.trim().toLowerCase();
 
-    return matchesSearch && matchesView;
-  });
+    const list = products.filter((product) => {
+      const matchesSearch =
+        !term ||
+        [product.name, product.category]
+          .some((value) => String(value || "").toLowerCase().includes(term));
 
-  const paginatedProducts = filteredProducts.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage,
-  );
+      const stockMeta = getStockMeta(product);
+      const matchesView = viewFilter === "All" || stockMeta.bucket === viewFilter;
+      const matchesCategory =
+        categoryFilter === "All Categories" || String(product.category || "").trim() === categoryFilter;
+
+      return matchesSearch && matchesView && matchesCategory;
+    });
+
+    return [...list].sort((a, b) => {
+      const stockA = getAvailableQuantity(a);
+      const stockB = getAvailableQuantity(b);
+      const nameA = String(a.name || "").toLowerCase();
+      const nameB = String(b.name || "").toLowerCase();
+      const rateA = Number(a.price || 0);
+      const rateB = Number(b.price || 0);
+
+      const dir = colSortOrder === "asc" ? 1 : -1;
+      if (colSortBy === "name") return dir * nameA.localeCompare(nameB);
+      if (colSortBy === "price") return dir * (rateA - rateB);
+      return dir * (stockA - stockB);
+    });
+  }, [categoryFilter, colSortBy, colSortOrder, debouncedSearch, products, viewFilter]);
+
+  const paginatedProducts = filteredProducts.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   const handleDelete = async (id) => {
     setLoading(true);
@@ -139,9 +238,38 @@ const ProductList = () => {
       setSelectedProducts((prev) => prev.filter((productId) => productId !== id));
       await fetchProducts();
     } catch {
-      setError(t('productList.failedDelete'));
+      setError(t("productList.failedDelete"));
       setLoading(false);
     }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!selectedProducts.length) return;
+    setLoading(true);
+    try {
+      await Promise.all(selectedProducts.map((id) => deleteProduct(id)));
+      setSelectedProducts([]);
+      await fetchProducts();
+    } catch {
+      setError("Failed to delete selected items.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExportSelected = () => {
+    if (!selectedProducts.length) return;
+    const selectedItems = filteredProducts.filter((item) => selectedProducts.includes(item.id));
+    const csv = buildCsv(selectedItems);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "inventory-export.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const handleRestock = async (product) => {
@@ -170,11 +298,9 @@ const ProductList = () => {
   };
 
   const handleSelectOne = (productId) => {
-    setSelectedProducts((prev) => (
-      prev.includes(productId)
-        ? prev.filter((id) => id !== productId)
-        : [...prev, productId]
-    ));
+    setSelectedProducts((prev) =>
+      prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]
+    );
   };
 
   const handleChangePage = (_event, newPage) => {
@@ -186,327 +312,459 @@ const ProductList = () => {
     setPage(0);
   };
 
-  const allVisibleSelected = paginatedProducts.length > 0
-    && paginatedProducts.every((product) => selectedProducts.includes(product.id));
+  const handleOpenStockDialog = (mode, product = null) => {
+    setStockDelta(1);
+    setBulkStockMode("increment");
+    setSingleStockMode("increment");
+    setStockDialog({ open: true, mode, product });
+  };
+
+  const handleCloseStockDialog = () => {
+    setStockDialog({ open: false, mode: "single", product: null });
+  };
+
+  const handleConfirmStockAdjustment = async () => {
+    const quantity = Math.max(0, Number(stockDelta || 0));
+    if (!quantity) return;
+
+    setLoading(true);
+    try {
+      if (stockDialog.mode === "single" && stockDialog.product) {
+        await updateProductStock({
+          productId: stockDialog.product.id,
+          quantity,
+          operation: singleStockMode,
+          source: "Manual adjustment",
+        });
+      }
+
+      if (stockDialog.mode === "bulk") {
+        const selectedItems = products.filter((item) => selectedProducts.includes(item.id));
+        await Promise.all(
+          selectedItems.map((item) =>
+            updateProductStock({
+              productId: item.id,
+              quantity,
+              operation: bulkStockMode,
+              source: "Bulk manual adjustment",
+            })
+          )
+        );
+      }
+
+      handleCloseStockDialog();
+      await fetchProducts();
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to adjust stock.");
+      setLoading(false);
+    }
+  };
+
+  const allVisibleSelected =
+    paginatedProducts.length > 0 && paginatedProducts.every((product) => selectedProducts.includes(product.id));
   const someVisibleSelected = paginatedProducts.some((product) => selectedProducts.includes(product.id));
 
+  const lowStockCount = filteredProducts.filter((product) => getStockMeta(product).bucket === "Low Stock").length;
+  const criticalCount = filteredProducts.filter((product) => getStockMeta(product).bucket === "Critical").length;
+  const negativeStockCount = filteredProducts.filter((product) => getAvailableQuantity(product) < 0).length;
+
   return (
-    <MainLayout>
-      <Container
-        maxWidth={false}
-        sx={{
-          px: { xs: 2, md: 3 },
-          py: { xs: 2, md: 2.5 },
-          bgcolor: "#f7f8fb",
-          minHeight: "100%",
-        }}
-      >
-        <Box>
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: { xs: "stretch", md: "center" },
-              justifyContent: "space-between",
-              gap: 2,
-              flexDirection: { xs: "column", md: "row" },
-              mb: 1.5,
-            }}
+    <ListPageLayout>
+      <ListHeader
+        title={t("productList.title")}
+        summary={`${filteredProducts.length} items`}
+        rightAction={
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => navigate("/products/add")}
+            sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
           >
-            <FormControl
-              size="small"
-              sx={{
-                minWidth: 180,
-                maxWidth: 240,
-                "& .MuiOutlinedInput-root": {
-                  bgcolor: "transparent",
-                  borderRadius: "8px",
-                  fontSize: "1.5rem",
-                  fontWeight: 600,
-                  color: "#202124",
-                  "& fieldset": { border: "none" },
-                  "&:hover fieldset": { border: "none" },
-                  "&.Mui-focused fieldset": { border: "none" },
-                },
-                "& .MuiSelect-select": {
-                  px: 0,
-                  py: 0,
-                  pr: "28px !important",
-                },
-                "& .MuiSelect-icon": {
-                  right: -2,
-                  color: "#5f6368",
-                },
-              }}
-            >
-              <Select value={viewFilter} onChange={(event) => setViewFilter(event.target.value)}>
-                {VIEW_OPTIONS.map((option) => (
-                  <MenuItem key={option.value} value={option.value}>
-                    {t(option.labelKey)}
+            {t("productList.new")}
+          </Button>
+        }
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder={t("productList.searchPlaceholder")}
+      />
+
+      <FilterBar
+        statusValue={viewFilter}
+        onStatusChange={(value) => setViewFilter(value)}
+        statusOptions={VIEW_OPTIONS.map((option) => ({
+          value: option.value,
+          label: option.label || t(option.labelKey),
+        }))}
+        rightSlot={
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            spacing={1}
+            sx={{ width: { xs: "100%", md: "auto" } }}
+          >
+            <FormControl size="small" sx={{ minWidth: 180 }}>
+              <Select
+                value={categoryFilter}
+                onChange={(event) => setCategoryFilter(event.target.value)}
+                inputProps={{ "aria-label": "Category filter" }}
+              >
+                {categories.map((category) => (
+                  <MenuItem key={category} value={category}>
+                    {category}
                   </MenuItem>
                 ))}
               </Select>
             </FormControl>
+            <FormControl size="small" sx={{ minWidth: 190 }}>
+              <Select
+                value={`${colSortBy || "stock"}_${colSortOrder || "asc"}`}
+                onChange={(event) => {
+                  const [nextSortBy, nextSortOrder] = String(event.target.value).split("_");
+                  setSort(nextSortBy || "stock", nextSortOrder || "asc");
+                }}
+                inputProps={{ "aria-label": "Sort inventory" }}
+              >
+                {SORT_OPTIONS.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Stack>
+        }
+      />
 
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => navigate("/products/add")}
-              sx={{
-                alignSelf: { xs: "flex-start", md: "center" },
-                borderRadius: "7px",
-                px: 1.8,
-                py: 0.8,
-                minWidth: "auto",
-                textTransform: "none",
-                fontSize: "0.875rem",
-                fontWeight: 600,
-                boxShadow: "none",
-                bgcolor: "#3b82f6",
-                "&:hover": { bgcolor: "#2563eb", boxShadow: "none" },
-              }}
-            >
-              {t('productList.new')}
-            </Button>
-          </Box>
+      <ListSummary
+        items={[
+          { label: "Total", value: filteredProducts.length },
+          { label: "Critical", value: criticalCount, color: "error" },
+          { label: "Low Stock", value: lowStockCount, color: "warning" },
+        ]}
+      />
 
-          <ResponsiveDataView
-            isMobile={isMobile}
-            columns={[
-              { key: 'checkbox', label: '', width: CHECKBOX_COLUMN_WIDTH },
-              { key: 'name', label: t('productList.columns.name'), width: '22%' },
-              { key: 'purchase_description', label: t('productList.columns.purchaseDescription'), width: '13%' },
-              { key: 'purchase_rate', label: t('productList.columns.purchaseRate'), align: 'right', width: '9%' },
-              { key: 'description', label: t('productList.columns.description'), width: '13%' },
-              { key: 'rate', label: t('productList.columns.rate'), align: 'right', width: '8%' },
-              { key: 'hsn_sac', label: t('productList.columns.hsnSac'), width: '7%' },
-              { key: 'unit', label: t('productList.columns.usageUnit'), width: '6%' },
-              { key: 'stock', label: 'STOCK', align: 'right', width: '5%' },
-              { key: 'actions', label: '', align: 'center', width: 72 },
-            ]}
-            rows={paginatedProducts}
-            renderCard={(product) => {
-              const availableQty = getAvailableQuantity(product);
-              const stockBucket = getStockBucket(product);
-              return (
-                <ItemCard
-                  product={product}
-                  availableQty={availableQty}
-                  stockBucket={stockBucket}
-                  onEdit={() => navigate(`/products/edit/${product.id}`)}
-                  onDelete={() => setConfirmDeleteId(product.id)}
-                  onRestock={product.preferred_vendor_id ? () => handleRestock(product) : undefined}
-                />
-              );
-            }}
-            loading={loading}
-            emptyTitle={searchTerm ? t('productList.noItemsSearch') : t('productList.noItems')}
-            toolbar={
-              <>
-                <Box
-                  sx={{
-                    px: 2,
-                    py: 1.25,
-                    borderBottom: "1px solid #edf0f3",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 2,
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, minHeight: 36 }}>
-                    {selectedProducts.length > 0 && (
-                      <Typography sx={{ fontSize: "0.8125rem", color: "#5f6368" }}>
-                        {selectedProducts.length} selected
-                      </Typography>
-                    )}
-                  </Box>
+      {negativeStockCount > 0 && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {negativeStockCount} items have negative stock. Restock immediately.
+        </Alert>
+      )}
 
-                  <TextField
-                    size="small"
-                    placeholder={t('productList.searchPlaceholder')}
-                    value={searchTerm}
-                    onChange={(event) => setSearchTerm(event.target.value)}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <SearchIcon sx={{ fontSize: 18, color: "#9aa0a6" }} />
-                        </InputAdornment>
-                      ),
-                    }}
-                    sx={{
-                      width: { xs: "100%", md: 280 },
-                      "& .MuiOutlinedInput-root": {
-                        borderRadius: "8px",
-                        bgcolor: "#fbfcfe",
-                        fontSize: "0.875rem",
-                        "& fieldset": { borderColor: "#e3e7ee" },
-                        "&:hover fieldset": { borderColor: "#cfd6df" },
-                        "&.Mui-focused fieldset": { borderColor: "#4f8df7" },
-                      },
-                    }}
-                  />
-                </Box>
+      <BulkActionBar
+        selectedCount={selectedProducts.length}
+        actions={[
+          {
+            label: "Update Stock",
+            color: "primary",
+            onClick: () => handleOpenStockDialog("bulk"),
+            disabled: selectedProducts.length === 0,
+          },
+          {
+            label: "Delete Selected",
+            color: "error",
+            onClick: handleBulkDelete,
+            disabled: selectedProducts.length === 0,
+          },
+          {
+            label: "Export",
+            color: "secondary",
+            onClick: handleExportSelected,
+            disabled: selectedProducts.length === 0,
+          },
+        ]}
+      />
 
-                {error && (
-                  <Fade in={!!error}>
-                    <Alert severity="error" onClose={() => setError("")} sx={{ m: 2, borderRadius: 2 }}>
-                      {error}
-                    </Alert>
-                  </Fade>
-                )}
-              </>
-            }
-            renderHeader={() => (
-              <TableRow sx={{ bgcolor: "#fafbfc" }}>
-                <TableCell sx={{ width: CHECKBOX_COLUMN_WIDTH, padding: "0 4px", borderBottomColor: "#edf0f3" }}>
-                  <Checkbox
-                    indeterminate={someVisibleSelected && !allVisibleSelected}
-                    checked={allVisibleSelected}
-                    onChange={handleSelectAll}
-                    sx={{ color: "#b6bdc7" }}
-                  />
-                </TableCell>
-                {[
-                  { label: t('productList.columns.name'), width: "22%" },
-                  { label: t('productList.columns.purchaseDescription'), width: "13%" },
-                  { label: t('productList.columns.purchaseRate'), width: "9%", align: "right" },
-                  { label: t('productList.columns.description'), width: "13%" },
-                  { label: t('productList.columns.rate'), width: "8%", align: "right" },
-                  { label: t('productList.columns.hsnSac'), width: "7%" },
-                  { label: t('productList.columns.usageUnit'), width: "6%" },
-                  { label: t('productList.columns.stock'), width: "5%", align: "right" },
-                  { label: "", width: 72, align: "center" },
-                ].map((column, index) => (
-                  <TableCell
-                    key={`${column.label}-${index}`}
-                    align={column.align || "left"}
-                    sx={{
-                      width: column.width,
-                      maxWidth: column.width,
-                      borderBottomColor: "#edf0f3",
-                      py: 1.2,
-                      color: "#8b95a7",
-                      fontSize: "0.68rem",
-                      letterSpacing: "0.05em",
-                      fontWeight: 700,
-                      whiteSpace: "nowrap",
-                    }}
+      <ResponsiveDataView
+        isMobile={isMobile}
+        columns={[
+          { key: "checkbox", label: "", width: CHECKBOX_COLUMN_WIDTH },
+          { key: "name", label: "NAME", width: "28%" },
+          { key: "rate", label: "SELLING PRICE", align: "right", width: "14%" },
+          { key: "purchase_rate", label: "COST PRICE", align: "right", width: "14%" },
+          { key: "stock", label: "STOCK", width: "20%" },
+          { key: "status", label: "STATUS", width: "14%" },
+          { key: "actions", label: "", align: "center", width: "10%" },
+        ]}
+        rows={paginatedProducts}
+        renderCard={(product) => {
+          const availableQty = getAvailableQuantity(product);
+          const stockMeta = getStockMeta(product);
+          return (
+            <ItemCard
+              product={product}
+              availableQty={availableQty}
+              stockMeta={stockMeta}
+              onEdit={() => navigate(`/products/edit/${product.id}`)}
+              onDelete={() => setConfirmDeleteId(product.id)}
+              onAddStock={() => handleOpenStockDialog("single", product)}
+              onRestock={product.preferred_vendor_id ? () => handleRestock(product) : undefined}
+            />
+          );
+        }}
+        loading={loading}
+        emptyTitle={searchTerm ? t("productList.noItemsSearch") : t("productList.noItems")}
+        toolbar={
+          <>
+            {error && (
+              <Fade in={!!error}>
+                <Alert severity="error" onClose={() => setError("")} sx={{ m: 2, borderRadius: 2 }}>
+                  {error}
+                </Alert>
+              </Fade>
+            )}
+          </>
+        }
+        renderHeader={() => (
+          <TableRow sx={{ bgcolor: "#fafbfc" }}>
+            <TableCell sx={{ width: CHECKBOX_COLUMN_WIDTH, padding: "0 4px", borderBottomColor: "#edf0f3" }}>
+              <Checkbox
+                indeterminate={someVisibleSelected && !allVisibleSelected}
+                checked={allVisibleSelected}
+                onChange={handleSelectAll}
+                inputProps={{ "aria-label": "Select all products" }}
+                sx={{ color: "#b6bdc7" }}
+              />
+            </TableCell>
+            {[
+              { label: "NAME", width: "28%", sortKey: "name" },
+              { label: "SELLING PRICE", width: "14%", align: "right", sortKey: "price" },
+              { label: "COST PRICE", width: "14%", align: "right" },
+              { label: "STOCK", width: "20%", sortKey: "stock" },
+              { label: "STATUS", width: "14%" },
+              { label: "", width: "10%", align: "center" },
+            ].map((column, index) => (
+              <TableCell
+                key={`${column.label}-${index}`}
+                align={column.align || "left"}
+                sx={{
+                  width: column.width,
+                  maxWidth: column.width,
+                  borderBottomColor: "#edf0f3",
+                  py: 1.2,
+                  color: colSortBy === column.sortKey ? "primary.main" : "#8b95a7",
+                  fontSize: "0.68rem",
+                  letterSpacing: "0.05em",
+                  fontWeight: 700,
+                  whiteSpace: "nowrap",
+                  ...(column.sortKey ? {
+                    cursor: "pointer",
+                    userSelect: "none",
+                    bgcolor: colSortBy === column.sortKey ? "action.selected" : undefined,
+                    "&:hover": { bgcolor: "action.hover" },
+                  } : {}),
+                }}
+              >
+                {column.sortKey ? (
+                  <TableSortLabel
+                    active={colSortBy === column.sortKey}
+                    direction={colSortBy === column.sortKey ? colSortOrder : "asc"}
+                    onClick={() => handleSort(column.sortKey)}
+                    hideSortIcon={colSortBy !== column.sortKey}
+                    sx={{ fontSize: "inherit", letterSpacing: "inherit", fontWeight: "inherit", color: "inherit" }}
                   >
                     {column.label}
-                  </TableCell>
-                ))}
-              </TableRow>
-            )}
-            renderRow={(product) => {
-              const isSelected = selectedProducts.includes(product.id);
-              const availableQty = getAvailableQuantity(product);
-              const stockBucket = getStockBucket(product);
-              const purchaseRate = product.purchase_rate ?? 0;
-              const rate = product.price ?? 0;
-              return (
-                <TableRow
-                  key={product.id}
-                  hover
-                  selected={isSelected}
+                  </TableSortLabel>
+                ) : column.label}
+              </TableCell>
+            ))}
+          </TableRow>
+        )}
+        renderRow={(product) => {
+          const isSelected = selectedProducts.includes(product.id);
+          const availableQty = getAvailableQuantity(product);
+          const stockMeta = getStockMeta(product);
+          const purchaseRate = product.purchase_rate ?? 0;
+          const rate = product.price ?? 0;
+
+          return (
+            <TableRow
+              key={product.id}
+              hover
+              selected={isSelected}
+              onClick={() => navigate(`/products/edit/${product.id}`)}
+              sx={{
+                "& td": { borderBottomColor: "#edf0f3", py: 1.5 },
+                "&:hover": { bgcolor: stockMeta.highlight ? "#fef2f2" : "#fafcff" },
+                bgcolor: stockMeta.highlight ? "#fff8f8" : "transparent",
+                cursor: "pointer",
+              }}
+            >
+              <TableCell sx={{ width: CHECKBOX_COLUMN_WIDTH, padding: "0 4px" }} onClick={(event) => event.stopPropagation()}>
+                <Checkbox
+                  checked={isSelected}
+                  onChange={() => handleSelectOne(product.id)}
+                  inputProps={{ "aria-label": `Select ${product.name || "product"}` }}
+                  sx={{ color: "#b6bdc7" }}
+                />
+              </TableCell>
+              <TableCell>
+                <Typography
+                  title={product.name || "Untitled Item"}
                   sx={{
-                    "& td": { borderBottomColor: "#edf0f3", py: 1.5 },
-                    "&:hover": { bgcolor: "#fafcff" },
+                    display: "block",
+                    width: "100%",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    fontSize: "0.825rem",
+                    fontWeight: 600,
+                    color: "#2563eb",
                   }}
                 >
-                  <TableCell sx={{ width: CHECKBOX_COLUMN_WIDTH, padding: "0 4px" }}>
-                    <Checkbox
-                      checked={isSelected}
-                      onChange={() => handleSelectOne(product.id)}
-                      sx={{ color: "#b6bdc7" }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Typography
-                      title={product.name || "Untitled Item"}
-                      onClick={() => navigate(`/products/edit/${product.id}`)}
-                      sx={{
-                        display: "block",
-                        width: "100%",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                        fontSize: "0.825rem",
-                        fontWeight: 600,
-                        color: "#2563eb",
-                        cursor: "pointer",
-                        "&:hover": { textDecoration: "underline" },
-                      }}
-                    >
-                      {product.name || "Untitled Item"}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography title={product.purchase_description || product.category || "-"} sx={{ fontSize: "0.8125rem", color: "#2b3340", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {product.purchase_description || product.category || "-"}
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="right">
-                    <Typography sx={{ fontSize: "0.8125rem", color: "#2b3340" }}>{formatCurrency(purchaseRate)}</Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography title={product.description || "-"} sx={{ fontSize: "0.8125rem", color: "#2b3340", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {product.description || "-"}
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="right">
-                    <Typography sx={{ fontSize: "0.8125rem", color: "#2b3340" }}>{formatCurrency(rate)}</Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography title={product.hsn_sac || "-"} sx={{ fontSize: "0.8125rem", color: "#2b3340", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {product.hsn_sac || "-"}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography title={product.unit || "-"} sx={{ fontSize: "0.8125rem", color: "#2b3340", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {product.unit || "-"}
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="right">
-                    <Typography sx={{ fontSize: "0.8125rem", fontWeight: 500, color: stockBucket === "Out of Stock" ? "#dc2626" : stockBucket === "Low Stock" ? "#b45309" : "#2b3340" }}>
-                      {availableQty}
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="center">
-                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0.15 }}>
-                      <Tooltip title="Edit item">
-                        <IconButton size="small" onClick={() => navigate(`/products/edit/${product.id}`)} sx={{ color: "#5f87e7" }}>
-                          <EditIcon sx={{ fontSize: 17 }} />
-                        </IconButton>
-                      </Tooltip>
-                      {product.preferred_vendor_id && (
-                        <Tooltip title="Restock item">
-                          <IconButton size="small" onClick={() => handleRestock(product)} sx={{ color: "#16a34a" }}>
-                            <ShoppingCartIcon sx={{ fontSize: 17 }} />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      <Tooltip title="Delete item">
-                        <IconButton size="small" onClick={() => setConfirmDeleteId(product.id)} sx={{ color: "#ef4444" }}>
-                          <DeleteIcon sx={{ fontSize: 17 }} />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              );
-            }}
-            pagination={{
-              rowsPerPageOptions: [10, 25, 50],
-              count: filteredProducts.length,
-              rowsPerPage,
-              page,
-              onPageChange: handleChangePage,
-              onRowsPerPageChange: handleChangeRowsPerPage,
-            }}
+                  {product.name || "Untitled Item"}
+                </Typography>
+                <Typography sx={{ fontSize: "0.75rem", color: "#6b7280" }}>
+                  {product.category || "Uncategorized"}
+                </Typography>
+              </TableCell>
+              <TableCell align="right">
+                <Typography sx={{ fontSize: "0.8125rem", color: "#2b3340" }}>{formatCurrency(rate)}</Typography>
+              </TableCell>
+              <TableCell align="right">
+                <Typography sx={{ fontSize: "0.8125rem", color: "#2b3340" }}>{formatCurrency(purchaseRate)}</Typography>
+              </TableCell>
+              <TableCell>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Typography sx={{ fontSize: "0.825rem", fontWeight: 600, color: stockMeta.textColor }}>
+                    {availableQty}
+                  </Typography>
+                  <Typography sx={{ fontSize: "0.75rem", color: "#6b7280" }}>{stockMeta.label}</Typography>
+                </Stack>
+              </TableCell>
+              <TableCell>
+                <Chip
+                  size="small"
+                  color={stockMeta.chipColor}
+                  variant={stockMeta.bucket === "In Stock" ? "outlined" : "filled"}
+                  label={stockMeta.label}
+                />
+              </TableCell>
+              <TableCell align="center" onClick={(event) => event.stopPropagation()}>
+                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0.15 }}>
+                  <Tooltip title="Add stock">
+                    <IconButton aria-label="Add stock" size="small" onClick={() => handleOpenStockDialog("single", product)} sx={{ color: "#0369a1" }}>
+                      <AddCircleOutlineIcon sx={{ fontSize: 17 }} />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Edit item">
+                    <IconButton aria-label="Edit item" size="small" onClick={() => navigate(`/products/edit/${product.id}`)} sx={{ color: "#5f87e7" }}>
+                      <EditIcon sx={{ fontSize: 17 }} />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Delete item">
+                    <IconButton aria-label="Delete item" size="small" onClick={() => setConfirmDeleteId(product.id)} sx={{ color: "#ef4444" }}>
+                      <DeleteIcon sx={{ fontSize: 17 }} />
+                    </IconButton>
+                  </Tooltip>
+                  {product.preferred_vendor_id && (
+                    <Tooltip title="Restock item">
+                      <IconButton aria-label="Restock item" size="small" onClick={() => handleRestock(product)} sx={{ color: "#16a34a" }}>
+                        <ShoppingCartIcon sx={{ fontSize: 17 }} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </Box>
+              </TableCell>
+            </TableRow>
+          );
+        }}
+        pagination={{
+          rowsPerPageOptions: [10, 25, 50],
+          count: filteredProducts.length,
+          rowsPerPage,
+          page,
+          onPageChange: handleChangePage,
+          onRowsPerPageChange: handleChangeRowsPerPage,
+        }}
+      />
+
+      <Dialog open={stockDialog.open} onClose={handleCloseStockDialog} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ pb: 1 }}>
+          <Typography sx={{ fontSize: "1rem", fontWeight: 700, color: "#1f2937" }}>
+            {stockDialog.mode === "bulk" ? "Bulk stock update" : "Adjust stock"}
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          {stockDialog.mode === "bulk" ? (
+            <Typography sx={{ mb: 1.5, fontSize: "0.875rem", color: "#6b7280" }}>
+              Apply stock change to {selectedProducts.length} selected items.
+            </Typography>
+          ) : (
+            <Typography sx={{ mb: 1.5, fontSize: "0.875rem", color: "#6b7280" }}>
+              {stockDialog.product?.name || "Item"} current stock: {stockDialog.product ? getAvailableQuantity(stockDialog.product) : 0}
+            </Typography>
+          )}
+
+          {(stockDialog.mode === "bulk" || stockDialog.mode === "single") && (
+            <FormControl size="small" fullWidth sx={{ mb: 1.5 }}>
+              <Select
+                value={stockDialog.mode === "bulk" ? bulkStockMode : singleStockMode}
+                onChange={(event) => {
+                  if (stockDialog.mode === "bulk") {
+                    setBulkStockMode(event.target.value);
+                  } else {
+                    setSingleStockMode(event.target.value);
+                  }
+                }}
+                inputProps={{ "aria-label": stockDialog.mode === "bulk" ? "Bulk stock mode" : "Stock mode" }}
+              >
+                <MenuItem value="increment">Increase stock</MenuItem>
+                <MenuItem value="decrement">Decrease stock</MenuItem>
+              </Select>
+            </FormControl>
+          )}
+
+          <TextField
+            type="number"
+            value={stockDelta}
+            onChange={(event) => setStockDelta(Math.max(0, Number(event.target.value || 0)))}
+            fullWidth
+            size="small"
+            inputProps={{ min: 0, step: 1 }}
+            label="Quantity"
           />
-        </Box>
-      </Container>
+
+          {stockDialog.mode === "single" && (
+            <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<RemoveCircleOutlineIcon />}
+                onClick={() => {
+                  setSingleStockMode("decrement");
+                  setStockDelta((prev) => Number(prev || 0) + 1);
+                }}
+                sx={{ textTransform: "none" }}
+              >
+                Decrease
+              </Button>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<AddCircleOutlineIcon />}
+                onClick={() => {
+                  setSingleStockMode("increment");
+                  setStockDelta((prev) => Number(prev || 0) + 1);
+                }}
+                sx={{ textTransform: "none" }}
+              >
+                Increase
+              </Button>
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5, pt: 1.5, gap: 1 }}>
+          <Button onClick={handleCloseStockDialog} variant="outlined" sx={{ textTransform: "none" }}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirmStockAdjustment}
+            variant="contained"
+            disabled={loading || Number(stockDelta || 0) <= 0}
+            sx={{ textTransform: "none" }}
+          >
+            Apply
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={!!confirmDeleteId}
@@ -560,7 +818,7 @@ const ProductList = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </MainLayout>
+    </ListPageLayout>
   );
 };
 

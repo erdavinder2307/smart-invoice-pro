@@ -15,6 +15,9 @@ import { useTranslation } from 'react-i18next';
 import FormInput from './common/FormInput';
 import FormSelect from './common/FormSelect';
 import FormDatePicker from './common/FormDatePicker';
+import useAutoFill from '../hooks/useAutoFill';
+import DevAutoFillButton from './common/DevAutoFillButton';
+import { generatePurchaseOrderMockData } from '../utils/mockDataGenerators';
 
 const initialForm = {
   po_number: "",
@@ -41,6 +44,12 @@ const AddEditPurchaseOrder = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const { applyAutoFill } = useAutoFill({
+    setForm,
+    generator: generatePurchaseOrderMockData,
+    context: { vendors },
+    fillEmptyOnly: true,
+  });
 
   const fetchVendors = async () => {
     try {
@@ -199,6 +208,10 @@ const AddEditPurchaseOrder = () => {
               {error}
             </Alert>
           )}
+
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.25 }}>
+            <DevAutoFillButton onClick={applyAutoFill} />
+          </Box>
 
           <Paper
             component="form" onSubmit={handleSubmit}

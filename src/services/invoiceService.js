@@ -3,8 +3,12 @@ import { createApiUrl } from '../config/api';
 
 const API_URL = createApiUrl('/api/invoices');
 
-export const getInvoices = async () => {
-  const response = await axios.get(API_URL);
+export const getInvoices = async (params = {}) => {
+  const query = new URLSearchParams(
+    Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== "")
+  ).toString();
+  const path = query ? `/api/invoices?${query}` : "/api/invoices";
+  const response = await axios.get(createApiUrl(path));
   return response.data;
 };
 

@@ -32,11 +32,15 @@ import MainLayout from './Layout/MainLayout';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CustomerSelect from './common/CustomerSelect';
-import AppFormField from './common/Form/AppFormField';
-import FormLayout from './common/Form/FormLayout';
+import AppFormField from './common/form/AppFormField';
+import FormLayout from './common/form/FormLayout';
 import { C, AppSelect, fieldSx, menuItemSx, footerSx, cancelBtnSx, saveBtnSx } from './common/formStyles';
 import { useFormSubmitShortcut } from '../hooks/useFormSubmitShortcut';
 import { formatCurrency as formatCurrencyByLocale, formatNumber } from '../utils/intlFormatters';
+import useAutoFill from '../hooks/useAutoFill';
+import DevAutoFillButton from './common/DevAutoFillButton';
+import { generateInvoiceMockData } from '../utils/mockDataGenerators';
+import { parseApiError } from '../utils/apiErrors';
 
 const paymentTermsOptions = ['Due on Receipt', 'Net 15', 'Net 30', 'Net 45'];
 // taxOptions now loaded from API; these are fallback values used until API loads
@@ -149,6 +153,12 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
   const [taxRates, setTaxRates] = useState(FALLBACK_TAX_OPTIONS);
   const [gstBreakdown, setGstBreakdown] = useState({ cgst: 0, sgst: 0, igst: 0, tax_type: 'NONE' });
   const [focusItemPending, setFocusItemPending] = useState(shouldFocusItemInput);
+  const { applyAutoFill } = useAutoFill({
+    setForm,
+    generator: generateInvoiceMockData,
+    context: { customers },
+    fillEmptyOnly: true,
+  });
 
   const submitWithShortcut = useCallback(() => {
     setSubmitMode('send');
@@ -389,6 +399,19 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
     setLoading(true);
     setError('');
 
+    // Client-side validation
+    if (!form.customer_id) {
+      setError(t('invoiceForm.customerRequired', 'Please select a customer.'));
+      setLoading(false);
+      return;
+    }
+    const validItems = (form.items || []).filter(item => item.name && item.name.trim());
+    if (validItems.length === 0) {
+      setError(t('invoiceForm.itemRequired', 'Please add at least one item.'));
+      setLoading(false);
+      return;
+    }
+
     try {
       const nextStatus = submitMode === 'draft'
         ? 'Draft'
@@ -411,8 +434,9 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
 
       if (onSuccess) onSuccess();
       navigate('/invoices');
-    } catch {
-      setError(t('invoiceForm.saveFailed'));
+    } catch (err) {
+      const parsed = parseApiError(err, t('invoiceForm.saveFailed'));
+      setError(parsed.message);
     }
 
     setLoading(false);
@@ -441,10 +465,11 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
               </Box>
             ) : (
               <>
-                <Box sx={{ px: 0.5, pt: 0.25, pb: 1.5, borderBottom: `1px solid ${C.divider}` }}>
+                <Box sx={{ px: 0.5, pt: 0.25, pb: 1.5, borderBottom: `1px solid ${C.divider}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
                   <Typography sx={{ fontSize: '2rem', fontWeight: 500, color: '#151a25', textAlign: 'left' }}>
                     {invoiceId ? t('invoiceForm.editTitle') : t('invoiceForm.newTitle')}
                   </Typography>
+                  <DevAutoFillButton onClick={applyAutoFill} />
                 </Box>
 
                 <Box sx={{ px: 0.5, py: 3, borderBottom: `1px solid ${C.divider}` }}>

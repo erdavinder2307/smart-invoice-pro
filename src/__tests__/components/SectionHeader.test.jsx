@@ -50,4 +50,26 @@ describe('SectionHeader', () => {
     renderHeader({ title: 'Products' });
     expect(screen.queryByText('Manage')).not.toBeInTheDocument();
   });
+
+  it('disables malformed primary action handlers', () => {
+    renderHeader({
+      title: 'Invoices',
+      primaryAction: { label: 'Broken Action', onClick: { bad: true } },
+    });
+
+    const btn = screen.getByRole('button', { name: 'Broken Action' });
+    expect(btn).toBeDisabled();
+    expect(() => fireEvent.click(btn)).not.toThrow();
+  });
+
+  it('disables malformed secondary action handlers', () => {
+    renderHeader({
+      title: 'Invoices',
+      secondaryActions: [{ label: 'Broken Secondary', onClick: null }],
+    });
+
+    const btn = screen.getByRole('button', { name: 'Broken Secondary' });
+    expect(btn).toBeDisabled();
+    expect(() => fireEvent.click(btn)).not.toThrow();
+  });
 });

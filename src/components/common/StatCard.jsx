@@ -3,7 +3,9 @@ import Paper from "@mui/material/Paper";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import CircularProgress from "@mui/material/CircularProgress";
+import Button from "@mui/material/Button";
 import { TrendingUp, TrendingDown } from "@mui/icons-material";
+import { safeClick } from "../../utils/safeClick";
 
 /**
  * StatCard — Zoho-inspired metric summary card.
@@ -28,11 +30,33 @@ const StatCard = ({
     loading = false,
     iconBg = "primary.50",
     sx = {},
+    onClick,
+    emptyState,
 }) => {
     const trendPositive = trend >= 0;
+    // isClickable is based on the original prop so StatCard only renders as a
+    // button when an intentional handler is passed.  safeClick ensures MUI
+    // never receives undefined (which causes "onClick is not a function").
+    const isClickable = typeof onClick === "function";
+    const clickHandler = safeClick(onClick);
+    const hasEmptyState = !loading && Boolean(emptyState?.message);
+
+    const onKeyDown = (event) => {
+        if (!isClickable) return;
+        if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            clickHandler(event);
+        }
+    };
 
     return (
         <Paper
+            component="div"
+            onClick={clickHandler}
+            onKeyDown={onKeyDown}
+            role={isClickable ? "button" : undefined}
+            tabIndex={isClickable ? 0 : undefined}
+            aria-label={isClickable ? label : undefined}
             elevation={1}
             sx={[
                 {
@@ -47,10 +71,20 @@ const StatCard = ({
                     flexDirection: "column",
                     gap: 1,
                     transition: "transform 0.2s ease, box-shadow 0.2s ease",
-                    "&:hover": {
-                        transform: "translateY(-2px)",
-                        boxShadow: 3,
-                    },
+                    textAlign: "left",
+                    borderLeft: "none",
+                    borderRight: "none",
+                    borderBottom: "none",
+                    borderColor: "transparent",
+                    ...(isClickable
+                        ? {
+                            cursor: "pointer",
+                            "&:hover": {
+                                transform: "translateY(-2px)",
+                                boxShadow: 3,
+                            },
+                        }
+                        : {}),
                 },
                 sx,
             ]}
@@ -108,9 +142,32 @@ const StatCard = ({
             </Box>
 
             {/* Metric value */}
-            <Typography variant="h5" fontWeight={700} color="text.primary" lineHeight={1.2}>
-                {loading ? <CircularProgress size={22} thickness={5} /> : (value ?? "—")}
-            </Typography>
+            {loading ? (
+                <CircularProgress size={22} thickness={5} />
+            ) : hasEmptyState ? (
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                    <Typography variant="body2" color="text.secondary" fontWeight={600}>
+                        {emptyState.message}
+                    </Typography>
+                    {emptyState.actionLabel && typeof emptyState.onAction === "function" && (
+                        <Button
+                            size="small"
+                            variant="outlined"
+                            sx={{ alignSelf: "flex-start", textTransform: "none", fontWeight: 600 }}
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                emptyState.onAction();
+                            }}
+                        >
+                            {emptyState.actionLabel}
+                        </Button>
+                    )}
+                </Box>
+            ) : (
+                <Typography variant="h5" fontWeight={700} color="text.primary" lineHeight={1.2}>
+                    {value ?? "—"}
+                </Typography>
+            )}
 
             {/* Label */}
             <Typography variant="body2" color="text.secondary" fontWeight={500}>
@@ -118,7 +175,7 @@ const StatCard = ({
             </Typography>
 
             {/* Trend context */}
-            {trendLabel && trend !== undefined && (
+            {trendLabel && trend !== undefined && !hasEmptyState && (
                 <Typography variant="caption" color="text.disabled">
                     {trendLabel}
                 </Typography>

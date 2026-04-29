@@ -1,12 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { getInvoices, deleteInvoice, sendInvoiceEmail, recordPayment } from "../services/invoiceService";
 import { createApiUrl } from "../config/api";
 import "./InvoiceList.css";
-import MainLayout from "./Layout/MainLayout";
 import StatusBadge from "./common/StatusBadge";
 import SummaryCard from "./common/SummaryCard";
-import SectionHeader from "./common/SectionHeader";
-import StandardDataTable, { CHECKBOX_COLUMN_WIDTH } from "./common/StandardDataTable";
+import { CHECKBOX_COLUMN_WIDTH } from "./common/StandardDataTable";
 import ResponsiveDataView from "./common/ResponsiveDataView";
 import InvoiceCard from "./common/InvoiceCard";
 import axios from "axios";
@@ -17,6 +15,7 @@ import {
   Paper,
   TableCell,
   TableRow,
+  TableSortLabel,
   CircularProgress,
   Alert,
   Checkbox,
@@ -44,9 +43,8 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
-import SearchIcon from "@mui/icons-material/Search";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
@@ -68,6 +66,17 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import PayNowModal from "./PayNowModal";
 import { useAuth } from "../context/AuthContext";
 import { useTranslation } from "react-i18next";
+import ListPageLayout from "./list/ListPageLayout";
+import ListHeader from "./list/ListHeader";
+import FilterBar from "./list/FilterBar";
+import BulkActionBar from "./list/BulkActionBar";
+import { useDebouncedValue } from "../hooks/useDebouncedValue";
+import {
+  buildApiDateFilterParams,
+  formatDateFilterLabel,
+  readDateFilterQuery,
+} from "../utils/dateRangeFilters";
+import useTableSorting from "../hooks/useTableSorting";
 
 const initialForm = {
   invoice_number: "",
@@ -92,13 +101,20 @@ const initialForm = {
 };
 
 const InvoiceList = () => {
+  const location = useLocation();
+  const { search } = location;
+
   const [invoices, setInvoices] = useState([]);
   const [form, setForm] = useState(initialForm);
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState(() => {
+    const params = new URLSearchParams(location.search);
+    const urlStatus = params.get("status");
+    return urlStatus ? (urlStatus.charAt(0).toUpperCase() + urlStatus.slice(1)) : "All";
+  });
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
@@ -113,6 +129,7 @@ const InvoiceList = () => {
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const debouncedSearch = useDebouncedValue(searchTerm, 300);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   // Approval-specific state
@@ -122,11 +139,27 @@ const InvoiceList = () => {
   const { user, canApprove } = useAuth();
   const { t } = useTranslation();
 
+  // Date range filter from URL (created_range / created_from / created_to)
+  const createdFilter = useMemo(() => readDateFilterQuery(search, "created"), [search]);
+  const apiDateFilters = useMemo(() => buildApiDateFilterParams(createdFilter, "created"), [createdFilter]);
+  const createdFilterLabel = useMemo(() => formatDateFilterLabel(createdFilter, t), [createdFilter, t]);
+
+  const { sortBy, sortOrder, handleSort, sortParams } = useTableSorting("created_at", "desc", "invoices");
+
+  // Sync status filter when URL changes (e.g. browser back/forward)
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    const urlStatus = params.get("status");
+    if (urlStatus) {
+      setStatusFilter(urlStatus.charAt(0).toUpperCase() + urlStatus.slice(1));
+    }
+  }, [search]);
+
   const filteredInvoices = invoices.filter((invoice) => {
     const customer = customers.find((c) => c.id === invoice.customer_id);
     const customerName = customer ? customer.name : "";
 
-    const lowerSearch = searchTerm.toLowerCase();
+    const lowerSearch = debouncedSearch.toLowerCase();
     const matchesSearch =
       (invoice.invoice_number || "").toLowerCase().includes(lowerSearch) ||
       (customerName || "").toLowerCase().includes(lowerSearch) ||
@@ -137,6 +170,10 @@ const InvoiceList = () => {
 
     return matchesSearch && matchesStatus;
   });
+
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedSearch, statusFilter]);
 
   // Paginated invoices
   const paginatedInvoices = filteredInvoices.slice(
@@ -174,10 +211,10 @@ const InvoiceList = () => {
 
   const avgDaysToGetPaid = invoices.length > 0 ? Math.floor(Math.random() * 15) + 10 : 0; // Mock data
 
-  const fetchInvoices = async () => {
+  const fetchInvoices = async (dateFilters = {}) => {
     setLoading(true);
     try {
-      const data = await getInvoices();
+      const data = await getInvoices(dateFilters);
       setInvoices(data);
     } catch (err) {
       setError("Failed to fetch invoices");
@@ -185,11 +222,14 @@ const InvoiceList = () => {
     setLoading(false);
   };
 
+  // Re-fetch invoices when date filter from URL changes, or sort changes
   useEffect(() => {
-    fetchInvoices();
-    // Fetch customers for dropdown
+    fetchInvoices({ ...apiDateFilters, ...sortParams });
+  }, [apiDateFilters, sortBy, sortOrder]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch static data once on mount
+  useEffect(() => {
     axios.get(createApiUrl("/api/customers")).then(res => setCustomers(res.data)).catch(() => setCustomers([]));
-    // Optionally, fetch next invoice number
     axios.get(createApiUrl("/api/invoices/next-number")).then(res => setForm(f => ({ ...f, invoice_number: res.data.invoice_number }))).catch(() => { });
   }, []);
 
@@ -226,10 +266,23 @@ const InvoiceList = () => {
     setLoading(true);
     try {
       await deleteInvoice(id);
-      fetchInvoices();
+      fetchInvoices(apiDateFilters);
       setConfirmDeleteId(null);
     } catch (err) {
       setError("Failed to delete invoice");
+    }
+    setLoading(false);
+  };
+
+  const handleBulkDelete = async () => {
+    if (!selectedInvoices.length) return;
+    setLoading(true);
+    try {
+      await Promise.all(selectedInvoices.map((id) => deleteInvoice(id)));
+      setSelectedInvoices([]);
+      fetchInvoices(apiDateFilters);
+    } catch (err) {
+      setError("Failed to delete selected invoices");
     }
     setLoading(false);
   };
@@ -282,7 +335,7 @@ const InvoiceList = () => {
         { headers: { 'X-User-Id': user?.id || '' } }
       );
       setApprovalToast({ open: true, message: 'Invoice submitted for approval.', severity: 'info' });
-      fetchInvoices();
+      fetchInvoices(apiDateFilters);
     } catch (err) {
       setApprovalToast({ open: true, message: err.response?.data?.error || 'Submit failed.', severity: 'error' });
     }
@@ -296,7 +349,7 @@ const InvoiceList = () => {
         { headers: { 'X-User-Id': user?.id || '' } }
       );
       setApprovalToast({ open: true, message: 'Invoice approved and set to Issued.', severity: 'success' });
-      fetchInvoices();
+      fetchInvoices(apiDateFilters);
     } catch (err) {
       setApprovalToast({ open: true, message: err.response?.data?.error || 'Approval failed.', severity: 'error' });
     }
@@ -312,7 +365,7 @@ const InvoiceList = () => {
       );
       setApprovalToast({ open: true, message: 'Invoice rejected and returned to Draft.', severity: 'warning' });
       setRejectDialog({ open: false, invoiceId: null, reason: '' });
-      fetchInvoices();
+      fetchInvoices(apiDateFilters);
     } catch (err) {
       setApprovalToast({ open: true, message: err.response?.data?.error || 'Rejection failed.', severity: 'error' });
     }
@@ -341,7 +394,7 @@ const InvoiceList = () => {
       await sendInvoiceEmail(invoice.id, { recipient_email: recipientEmail.trim(), message, attach_pdf: attachPdf });
       setEmailDialog({ open: false, invoice: null, recipientEmail: '', subject: '', message: '', attachPdf: false });
       setApprovalToast({ open: true, message: `Invoice emailed to ${recipientEmail} successfully.`, severity: 'success' });
-      fetchInvoices();
+      fetchInvoices(apiDateFilters);
     } catch (err) {
       setApprovalToast({ open: true, message: err.response?.data?.error || 'Failed to send email. Please try again.', severity: 'error' });
     } finally {
@@ -461,19 +514,48 @@ const InvoiceList = () => {
 
 
   return (
-    <MainLayout>
+    <ListPageLayout maxWidth="xl">
       <Container maxWidth="xl" sx={{ py: 4 }}>
         {/* Page Header */}
         <Box sx={{ mb: 4 }}>
-          <SectionHeader
-            title={t('invoiceList.title')}
-            subtitle={t('invoiceList.subtitle')}
-            primaryAction={{
-              label: t('invoiceList.newInvoice'),
-              icon: <AddIcon />,
-              onClick: handleAdd,
-            }}
-            sx={{ mb: 3 }}
+          <ListHeader
+            title={t("invoiceList.title")}
+            summary={`${filteredInvoices.length} invoices`}
+            rightAction={(
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={handleAdd}
+                sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
+              >
+                {t("invoiceList.newInvoice")}
+              </Button>
+            )}
+            searchValue={searchTerm}
+            onSearchChange={setSearchTerm}
+            searchPlaceholder="Search invoices"
+          />
+
+          <FilterBar
+            statusValue={statusFilter}
+            onStatusChange={setStatusFilter}
+            statusOptions={[
+              { value: "All", label: "All Status" },
+              { value: "Paid", label: "Paid" },
+              { value: "Pending", label: "Pending" },
+              { value: "Overdue", label: "Overdue" },
+              { value: "Draft", label: "Draft" },
+            ]}
+            rightSlot={createdFilterLabel ? (
+              <Chip
+                label={createdFilterLabel}
+                onDelete={() => navigate("/invoices")}
+                size="small"
+                color="primary"
+                variant="outlined"
+                sx={{ borderRadius: 2 }}
+              />
+            ) : null}
           />
 
           {/* Payment Summary Strip */}
@@ -534,57 +616,19 @@ const InvoiceList = () => {
               </Grid>
             </Grid>
           </Paper>
-
-          {/* Filters and Search */}
-          <Box
-            display="flex"
-            gap={2}
-            flexWrap="wrap"
-            alignItems="center"
-            sx={{
-              bgcolor: "background.paper",
-              p: 2,
-              borderRadius: 3,
-              border: "1px solid",
-              borderColor: "grey.200"
-            }}
-          >
-            <FormControl size="small" sx={{ minWidth: 150 }}>
-              <Select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                displayEmpty
-                sx={{ borderRadius: 2 }}
-              >
-                <MenuItem value="All">All Status</MenuItem>
-                <MenuItem value="Paid">Paid</MenuItem>
-                <MenuItem value="Pending">Pending</MenuItem>
-                <MenuItem value="Overdue">Overdue</MenuItem>
-                <MenuItem value="Draft">Draft</MenuItem>
-              </Select>
-            </FormControl>
-            <TextField
-              size="small"
-              placeholder="Search invoices..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon fontSize="small" />
-                  </InputAdornment>
-                )
-              }}
-              sx={{
-                flex: 1,
-                minWidth: 250,
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 2
-                }
-              }}
-            />
-          </Box>
         </Box>
+
+        <BulkActionBar
+          selectedCount={selectedInvoices.length}
+          actions={[
+            {
+              label: "Delete Selected",
+              color: "error",
+              onClick: handleBulkDelete,
+              disabled: selectedInvoices.length === 0,
+            },
+          ]}
+        />
 
         {error && (
           <Fade in={!!error}>
@@ -653,14 +697,14 @@ const InvoiceList = () => {
                       />
                     </TableCell>
                     {[
-                      { label: t('invoiceList.columns.date') },
-                      { label: t('invoiceList.columns.invoiceNumber') },
+                      { label: t('invoiceList.columns.date'), sortKey: "issue_date" },
+                      { label: t('invoiceList.columns.invoiceNumber'), sortKey: "invoice_number" },
                       { label: t('invoiceList.columns.orderNumber') },
                       { label: t('invoiceList.columns.customerName') },
                       { label: t('invoiceList.columns.status') },
                       { label: "EMAIL", align: "center" },
-                      { label: t('invoiceList.columns.dueDate') },
-                      { label: t('invoiceList.columns.amount'), align: "right" },
+                      { label: t('invoiceList.columns.dueDate'), sortKey: "due_date" },
+                      { label: t('invoiceList.columns.amount'), align: "right", sortKey: "total_amount" },
                       { label: t('invoiceList.columns.balanceDue'), align: "right" },
                       { label: "", align: "center" },
                     ].map((col, index) => (
@@ -670,14 +714,30 @@ const InvoiceList = () => {
                         sx={{
                           borderBottomColor: "#edf0f3",
                           py: 1.2,
-                          color: "#8b95a7",
+                          color: sortBy === col.sortKey ? "primary.main" : "#8b95a7",
                           fontSize: "0.68rem",
                           letterSpacing: "0.05em",
                           fontWeight: 700,
                           whiteSpace: "nowrap",
+                          ...(col.sortKey ? {
+                            cursor: "pointer",
+                            userSelect: "none",
+                            bgcolor: sortBy === col.sortKey ? "action.selected" : undefined,
+                            "&:hover": { bgcolor: "action.hover" },
+                          } : {}),
                         }}
                       >
-                        {col.label}
+                        {col.sortKey ? (
+                          <TableSortLabel
+                            active={sortBy === col.sortKey}
+                            direction={sortBy === col.sortKey ? sortOrder : "asc"}
+                            onClick={() => handleSort(col.sortKey)}
+                            hideSortIcon={sortBy !== col.sortKey}
+                            sx={{ fontSize: "inherit", letterSpacing: "inherit", fontWeight: "inherit", color: "inherit" }}
+                          >
+                            {col.label}
+                          </TableSortLabel>
+                        ) : col.label}
                       </TableCell>
                     ))}
                   </TableRow>
@@ -1096,7 +1156,7 @@ const InvoiceList = () => {
           setPayNowOpen(false);
           setPaymentSuccess(`Payment initiated! Transaction ID: ${txnId}. The invoice will be marked as Paid once confirmed.`);
           setTimeout(() => setPaymentSuccess(''), 8000);
-          fetchInvoices();
+          fetchInvoices(apiDateFilters);
         }}
       />
 
@@ -1379,7 +1439,7 @@ const InvoiceList = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </MainLayout>
+    </ListPageLayout>
   );
 };
 

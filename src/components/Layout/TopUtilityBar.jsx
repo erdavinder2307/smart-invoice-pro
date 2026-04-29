@@ -9,6 +9,7 @@ import { useNotifications } from "../../context/NotificationContext";
 import GlobalSearchInput from "../search/GlobalSearchInput";
 import { useKeyboardShortcutsContext } from "../../context/KeyboardShortcutsContext";
 import { useTranslation } from "react-i18next";
+import { safeClick } from "../../utils/safeClick";
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
 
@@ -46,7 +47,7 @@ const TopUtilityBar = ({ searchPlaceholder = "", onSearchChange, onMenuClick }) 
       <Box sx={{ display: "flex", alignItems: "center", width: "100%", maxWidth: 560, gap: 1 }}>
         <IconButton
           color="inherit"
-          onClick={onMenuClick}
+          onClick={safeClick(onMenuClick)}
           sx={{ display: { xs: "flex", md: "none" } }}
           aria-label={t('topBar.openNavigation')}
         >
@@ -81,7 +82,7 @@ const TopUtilityBar = ({ searchPlaceholder = "", onSearchChange, onMenuClick }) 
         </Tooltip>
         <NotificationDropdown anchorEl={notifAnchor} onClose={() => setNotifAnchor(null)} />
         <Tooltip title={t('topBar.keyboardShortcuts', { combo: isMac ? '⌘/' : 'Ctrl+/' })}>
-          <IconButton color="inherit" onClick={openShortcutsModal} aria-label="keyboard shortcuts">
+          <IconButton color="inherit" onClick={safeClick(openShortcutsModal)} aria-label="keyboard shortcuts">
             <KeyboardIcon fontSize="small" />
           </IconButton>
         </Tooltip>

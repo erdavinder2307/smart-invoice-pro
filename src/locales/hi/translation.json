@@ -267,6 +267,9 @@
     "overdueFollowUp": "बकाया भुगतान एकत्र करने के लिए ग्राहकों से अनुवर्ती करें।",
     "sections": {
       "businessOverview": "व्यवसाय अवलोकन",
+      "performance": "प्रदर्शन",
+      "currentState": "वर्तमान स्थिति",
+      "businessSize": "व्यवसाय का आकार",
       "revenueAnalytics": "राजस्व विश्लेषण",
       "stockDetail": "स्टॉक विवरण",
       "recentActivity": "हालिया गतिविधि",
@@ -282,6 +285,18 @@
       "customRange": "कस्टम रेंज"
     },
     "kpi": {
+      "customersAdded": "जोड़े गए ग्राहक",
+      "invoicesCreated": "बनाए गए चालान",
+      "revenue": "राजस्व",
+      "paymentsReceived": "प्राप्त भुगतान",
+      "receivables": "प्राप्तियां",
+      "expensesPayables": "खर्च / देय",
+      "overdueInvoicesCurrent": "अतिदेय चालान (वर्तमान)",
+      "inventoryAlertsCurrent": "इन्वेंटरी अलर्ट (वर्तमान)",
+      "currentState": "वर्तमान स्थिति (समय सीमा आधारित नहीं)",
+      "staticMetric": "स्थिर व्यवसाय-आकार मेट्रिक",
+      "previousPeriod": "पिछली अवधि",
+      "vs": "की तुलना में",
       "totalCustomers": "कुल ग्राहक",
       "totalProducts": "कुल उत्पाद",
       "totalInvoices": "कुल चालान",
@@ -294,10 +309,30 @@
     },
     "chart": {
       "monthlyRevenue": "मासिक राजस्व",
-      "monthlyRevenueSubtitle": "वित्तीय वर्ष में राजस्व रुझान",
+      "monthlyRevenueTitle": "राजस्व रुझान ({{range}})",
+      "monthlyRevenueSubtitle": "{{comparison}} की तुलना में",
       "monthlyRevenueDataset": "मासिक राजस्व (₹)",
       "thisYearChip": "इस वर्ष",
       "noData": "कोई राजस्व डेटा उपलब्ध नहीं"
+    },
+    "comparison": {
+      "vsLastWeek": "पिछले सप्ताह की तुलना में",
+      "vsLastMonth": "पिछले महीने की तुलना में",
+      "vsLastQuarter": "पिछली तिमाही की तुलना में",
+      "vsLastYear": "पिछले वर्ष की तुलना में",
+      "vsPreviousCustomRange": "पिछली कस्टम सीमा ({{start}} से {{end}}) की तुलना में",
+      "vsPreviousPeriod": "पिछली अवधि की तुलना में"
+    },
+    "empty": {
+      "customersAdded": "{{range}} में कोई नया ग्राहक नहीं",
+      "invoicesCreated": "{{range}} में कोई चालान नहीं",
+      "revenue": "{{range}} में कोई राजस्व नहीं",
+      "paymentsReceived": "{{range}} में कोई भुगतान प्राप्त नहीं",
+      "payables": "{{range}} में कोई देय या खर्च नहीं",
+      "createInvoice": "चालान बनाएं",
+      "addCustomer": "ग्राहक जोड़ें",
+      "viewInvoices": "चालान देखें",
+      "addExpense": "खर्च जोड़ें"
     },
     "inventory": {
       "title": "इन्वेंटरी अवलोकन",
@@ -326,11 +361,74 @@
     }
   },
   "customerList": {
+    "title": "ग्राहक प्रबंधन डैशबोर्ड",
+    "summary": "{{count}} ग्राहक",
     "allCustomers": "सभी ग्राहक",
     "activeCustomers": "सक्रिय ग्राहक",
     "inactiveCustomers": "निष्क्रिय ग्राहक",
     "failedToLoad": "ग्राहकों को लोड नहीं किया जा सका।",
-    "new": "नया"
+    "deleteFailed": "ग्राहक हटाया नहीं जा सका।",
+    "new": "नया",
+    "searchPlaceholder": "ग्राहकों में खोजें",
+    "duplicateCollapseNotice": "डैशबोर्ड दृश्य से {{count}} डुप्लिकेट ग्राहक रिकॉर्ड समेट दिए गए हैं।",
+    "topCustomersTitle": "शीर्ष ग्राहक",
+    "topCustomersSubtitle": "राजस्व और स्वास्थ्य के आधार पर शीर्ष 5 ग्राहक।",
+    "noTopCustomers": "अभी ग्राहक राजस्व डेटा उपलब्ध नहीं है।",
+    "healthScore": "हेल्थ",
+    "empty": "कोई ग्राहक उपलब्ध नहीं है।",
+    "emptySearch": "आपकी खोज से कोई ग्राहक मेल नहीं खाया।",
+    "recordPaymentTitle": "भुगतान दर्ज करें",
+    "paymentAmount": "राशि",
+    "paymentDate": "भुगतान तिथि",
+    "paymentSuccess": "भुगतान सफलतापूर्वक दर्ज किया गया।",
+    "paymentLoadFailed": "बकाया चालान लोड नहीं किए जा सके।",
+    "paymentSaveFailed": "भुगतान दर्ज नहीं किया जा सका।",
+    "noOutstandingInvoices": "इस ग्राहक के लिए कोई बकाया चालान नहीं है।",
+    "deleteTitle": "ग्राहक हटाएं?",
+    "deleteMessage": "यह ग्राहक स्थायी रूप से हटा दिया जाएगा। इस क्रिया को वापस नहीं किया जा सकता।",
+    "metrics": {
+      "total": "कुल ग्राहक",
+      "active": "सक्रिय",
+      "inactive": "निष्क्रिय",
+      "receivables": "प्राप्य",
+      "overdue": "अतिदेय"
+    },
+    "filters": {
+      "all": "सभी",
+      "active": "सक्रिय",
+      "inactive": "निष्क्रिय",
+      "withDues": "बकाया वाले",
+      "overdue": "अतिदेय",
+      "createdPrefix": "बनाया गया",
+      "createdCustomRange": "बनाया गया: {{from}} से {{to}}",
+      "thisWeek": "इस सप्ताह",
+      "thisMonth": "इस महीने",
+      "thisQuarter": "इस तिमाही",
+      "thisYear": "इस वर्ष"
+    },
+    "status": {
+      "active": "सक्रिय",
+      "inactive": "निष्क्रिय",
+      "highValue": "उच्च मूल्य",
+      "atRisk": "जोखिम में"
+    },
+    "columns": {
+      "customer": "ग्राहक",
+      "status": "स्थिति",
+      "totalRevenue": "कुल राजस्व",
+      "outstanding": "बकाया",
+      "overdue": "अतिदेय",
+      "lastTransaction": "अंतिम लेनदेन"
+    },
+    "actions": {
+      "createInvoice": "चालान बनाएं",
+      "recordPayment": "भुगतान दर्ज करें",
+      "edit": "संपादित करें",
+      "delete": "हटाएं"
+    },
+    "bulk": {
+      "delete": "चयनित हटाएं"
+    }
   },
   "status": {
     "draft": "Draft (ड्राफ्ट)",
@@ -422,6 +520,7 @@
     }
   },
   "productList": {
+    "title": "आइटम",
     "new": "नया आइटम",
     "allItems": "सभी आइटम",
     "inStock": "स्टॉक में",

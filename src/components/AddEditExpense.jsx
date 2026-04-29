@@ -5,7 +5,7 @@ import { createApiUrl } from '../config/api';
 import MainLayout from './Layout/MainLayout';
 import {
   Alert, Box, Button, Card, CardContent, CardMedia,
-  CircularProgress, Container, IconButton, MenuItem,
+  CircularProgress, Container, FormHelperText, IconButton, MenuItem,
   Paper, TextField, Typography,
 } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -16,6 +16,11 @@ import FormInput from './common/FormInput';
 import FormSelect from './common/FormSelect';
 import FormDatePicker from './common/FormDatePicker';
 import { useTranslation } from 'react-i18next';
+import useAutoFill from '../hooks/useAutoFill';
+import DevAutoFillButton from './common/DevAutoFillButton';
+import { generateExpenseMockData } from '../utils/mockDataGenerators';
+import { runValidation, validators, scrollToFirstError } from '../utils/validation';
+import { parseApiError, applyApiErrors } from '../utils/apiErrors';
 
 const CATEGORIES = [
   'Office Supplies', 'Travel', 'Utilities', 'Marketing', 'Software',
@@ -34,13 +39,19 @@ const AddEditExpense = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [form, setForm] = useState(INITIAL_FORM);
+  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [apiError, setApiError] = useState('');
   const [receiptFile, setReceiptFile] = useState(null);
   const [receiptPreview, setReceiptPreview] = useState(null);
   const [existingReceipt, setExistingReceipt] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+  const { applyAutoFill } = useAutoFill({
+    setForm,
+    generator: generateExpenseMockData,
+    fillEmptyOnly: true,
+  });
 
   const fetchExpense = useCallback(async () => {
     setLoading(true);
@@ -49,7 +60,7 @@ const AddEditExpense = () => {
       const e = res.data;
       setForm({ vendor_name: e.vendor_name, date: e.date, category: e.category, amount: e.amount, currency: e.currency, notes: e.notes || '' });
       if (e.receipt_url) setExistingReceipt(e.receipt_url);
-    } catch { setError(t('addEditExpense.failedFetch')); }
+    } catch { setApiError(t('addEditExpense.failedFetch')); }
     setLoading(false);
   }, [id, t]);
 
@@ -61,15 +72,25 @@ const AddEditExpense = () => {
   const handleChange = e => {
     const { name, value } = e.target;
     setForm(p => ({ ...p, [name]: value }));
+    if (errors[name]) setErrors(p => ({ ...p, [name]: '' }));
+  };
+
+  const validate = () => {
+    return runValidation(form, {
+      vendor_name: [validators.required('Vendor / Payee')],
+      date:        [validators.date('Date')],
+      category:    [validators.required('Category')],
+      amount:      [validators.positiveNumber('Amount', { allowZero: false })],
+    });
   };
 
   const processFile = file => {
     if (!file) return;
     const allowed = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'application/pdf'];
-    if (!allowed.includes(file.type)) { setError('Please upload PNG, JPG, GIF or PDF (max 5 MB)'); return; }
-    if (file.size > 5 * 1024 * 1024) { setError('File size must be less than 5 MB'); return; }
+    if (!allowed.includes(file.type)) { setApiError('Please upload PNG, JPG, GIF or PDF (max 5 MB)'); return; }
+    if (file.size > 5 * 1024 * 1024) { setApiError('File size must be less than 5 MB'); return; }
     setReceiptFile(file);
-    setError('');
+    setApiError('');
     if (file.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.onload = e => setReceiptPreview(e.target.result);
@@ -85,8 +106,14 @@ const AddEditExpense = () => {
 
   const handleSubmit = async e => {
     e.preventDefault();
+    setApiError('');
+    const fieldErrors = validate();
+    if (Object.keys(fieldErrors).length) {
+      setErrors(fieldErrors);
+      scrollToFirstError(fieldErrors);
+      return;
+    }
     setSaving(true);
-    setError('');
     try {
       const payload = { ...form };
       if (receiptFile) {
@@ -102,9 +129,14 @@ const AddEditExpense = () => {
       if (id) await axios.put(createApiUrl(`/api/expenses/${id}`), payload);
       else await axios.post(createApiUrl('/api/expenses'), payload);
       navigate('/expenses');
-    } catch (err) { setError(err.response?.data?.error || t('addEditExpense.failedSave')); }
+    } catch (err) {
+      const parsed = parseApiError(err, t('addEditExpense.failedSave'));
+      const msg = applyApiErrors(parsed, setErrors);
+      setApiError(msg);
+      if (Object.keys(parsed.fields).length) scrollToFirstError(parsed.fields);
+    }
     setSaving(false);
-  };
+  };;
 
   if (loading) return (
     <MainLayout title="Expense">
@@ -119,11 +151,15 @@ const AddEditExpense = () => {
       <Box sx={{ bgcolor: C.pageBg, minHeight: '100vh', pb: 6 }}>
         <Container maxWidth="lg" sx={{ pt: 3 }}>
 
-          {error && (
-            <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2, borderRadius: '4px' }}>
-              {error}
+          {apiError && (
+            <Alert severity="error" onClose={() => setApiError('')} sx={{ mb: 2, borderRadius: '4px' }}>
+              {apiError}
             </Alert>
           )}
+
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.25 }}>
+            <DevAutoFillButton onClick={applyAutoFill} />
+          </Box>
 
           <Paper
             component="form" onSubmit={handleSubmit}
@@ -139,26 +175,35 @@ const AddEditExpense = () => {
               </Box>
 
               <FormInput label="Vendor / Payee" required name="vendor_name" value={form.vendor_name} onChange={handleChange}
-                placeholder="e.g. Amazon, Uber, Office Depot" />
+                placeholder="e.g. Amazon, Uber, Office Depot"
+                error={!!errors.vendor_name} helperText={errors.vendor_name} />
 
-              <FormDatePicker label="Date" required name="date" value={form.date} onChange={handleChange} />
+              <FormDatePicker label="Date" required name="date" value={form.date} onChange={handleChange}
+                error={!!errors.date} helperText={errors.date} />
 
               <FormSelect label="Category" required name="category" value={form.category} onChange={handleChange}
-                options={CATEGORIES.map(c => ({ value: c, label: c }))} width={280} />
+                options={CATEGORIES.map(c => ({ value: c, label: c }))} width={280}
+                error={!!errors.category} helperText={errors.category} />
 
               <ZohoRow label="Amount" required>
-                <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
-                  <TextField
-                    name="amount" value={form.amount} onChange={handleChange}
-                    type="number" size="small" required
-                    inputProps={{ step: '0.01', min: '0' }}
-                    sx={{ ...fieldSx, width: 200 }}
-                  />
-                  <Box sx={{ width: 120 }}>
-                    <AppSelect name="currency" value={form.currency} onChange={handleChange}>
-                      {CURRENCIES.map(c => <MenuItem key={c} value={c} sx={menuItemSx}>{c}</MenuItem>)}
-                    </AppSelect>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                  <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+                    <TextField
+                      name="amount" value={form.amount} onChange={handleChange}
+                      type="number" size="small" required
+                      inputProps={{ step: '0.01', min: '0' }}
+                      sx={{ ...fieldSx, width: 200 }}
+                      error={!!errors.amount}
+                    />
+                    <Box sx={{ width: 120 }}>
+                      <AppSelect name="currency" value={form.currency} onChange={handleChange}>
+                        {CURRENCIES.map(c => <MenuItem key={c} value={c} sx={menuItemSx}>{c}</MenuItem>)}
+                      </AppSelect>
+                    </Box>
                   </Box>
+                  {errors.amount && (
+                    <FormHelperText error sx={{ mx: 0 }}>{errors.amount}</FormHelperText>
+                  )}
                 </Box>
               </ZohoRow>
 

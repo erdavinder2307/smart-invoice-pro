@@ -8,6 +8,7 @@ import {
   TableHead,
   TableRow,
   TablePagination,
+  TableSortLabel,
   Box,
   Typography,
 } from "@mui/material";
@@ -49,6 +50,10 @@ export const CHECKBOX_COLUMN_WIDTH = 48;
  *   emptyAction    — { label, onClick } for empty state action button
  *   skeletonRows   — Number of skeleton rows during loading (default 5)
  *   renderHeader   — () => TableRow JSX, replaces auto-generated header row
+ *   sortBy         — Active sort column key (matches column.key)
+ *   sortOrder      — 'asc' | 'desc'
+ *   onSort         — (columnKey) => void  — column header click handler
+ *                    When provided and column.sortable=true, renders TableSortLabel
  */
 const StandardDataTable = ({
   columns = [],
@@ -66,7 +71,10 @@ const StandardDataTable = ({
   toolbar,
   onRowClick,
   skeletonRows = 5,
-}) => {
+  sortBy,
+  sortOrder = "asc",
+  onSort,
+})  => {
   return (
     <Paper>
       {toolbar && (
@@ -84,19 +92,37 @@ const StandardDataTable = ({
               <TableRow>
                 {columns.map((column) => {
                   const isCheckboxCol = column.key === "checkbox" || column.key === "select";
+                  const isSortable = !!column.sortable && !!onSort;
+                  const isActive = sortBy === column.key;
                   return (
                     <TableCell
                       key={column.key}
                       align={column.align || "left"}
+                      onClick={isSortable ? () => onSort(column.key) : undefined}
                       sx={{
                         width: column.width,
                         ...(isCheckboxCol ? { padding: "0 4px" } : {}),
+                        ...(isSortable ? {
+                          cursor: "pointer",
+                          userSelect: "none",
+                          bgcolor: isActive ? "action.selected" : undefined,
+                          "&:hover": { bgcolor: isActive ? "action.selected" : "action.hover" },
+                        } : {}),
                         fontWeight: 600,
                         fontSize: "0.8125rem",
                         whiteSpace: "nowrap",
                       }}
                     >
-                      {column.label}
+                      {isSortable ? (
+                        <TableSortLabel
+                          active={isActive}
+                          direction={isActive ? sortOrder : "asc"}
+                          onClick={() => onSort(column.key)}
+                          hideSortIcon={!isActive}
+                        >
+                          {column.label}
+                        </TableSortLabel>
+                      ) : column.label}
                     </TableCell>
                   );
                 })}

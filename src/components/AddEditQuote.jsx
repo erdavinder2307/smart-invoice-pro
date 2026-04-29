@@ -39,6 +39,9 @@ import {
   saveBtnSx,
 } from './common/formStyles';
 import { useTranslation } from 'react-i18next';
+import useAutoFill from '../hooks/useAutoFill';
+import DevAutoFillButton from './common/DevAutoFillButton';
+import { generateQuoteMockData } from '../utils/mockDataGenerators';
 
 const TAX_OPTIONS = [0, 5, 12, 18, 28];
 const EMPTY_ITEM = { name: '', quantity: 1, rate: 0, discount: 0, tax: 0, amount: 0 };
@@ -125,6 +128,12 @@ const AddEditQuote = () => {
   const [pageLoading, setPageLoading] = useState(false);
   const [error, setError] = useState('');
   const [pendingFiles, setPendingFiles] = useState([]);
+  const { applyAutoFill } = useAutoFill({
+    setForm,
+    generator: generateQuoteMockData,
+    context: { customers },
+    fillEmptyOnly: true,
+  });
 
   const selectedCustomer = useMemo(
     () => customers.find((customer) => String(customer.id) === String(form.customer_id)),
@@ -349,9 +358,12 @@ const AddEditQuote = () => {
               </Alert>
             )}
 
-            <Typography sx={{ fontSize: '1.1rem', fontWeight: 500, color: '#212121', mb: 1.2, textAlign: 'left' }}>
-              {quoteId ? t('addEditQuote.editTitle') : t('addEditQuote.newTitle')}
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.2, gap: 1 }}>
+              <Typography sx={{ fontSize: '1.1rem', fontWeight: 500, color: '#212121', textAlign: 'left' }}>
+                {quoteId ? t('addEditQuote.editTitle') : t('addEditQuote.newTitle')}
+              </Typography>
+              <DevAutoFillButton onClick={applyAutoFill} />
+            </Box>
 
             <Paper
               component="form"

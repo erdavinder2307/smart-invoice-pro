@@ -1,45 +1,42 @@
 import React, { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { createApiUrl } from "../config/api";
-import MainLayout from "./Layout/MainLayout";
 import StatusBadge from "./common/StatusBadge";
-import SummaryCard from "./common/SummaryCard";
 import {
   Box,
   Button,
+  Checkbox,
   Typography,
   TableRow,
   TableCell,
   CircularProgress,
   Alert,
-  InputAdornment,
-  TextField,
   Fade,
-  Grid,
   IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Container,
-  FormControl,
-  Select,
-  MenuItem,
   Tooltip,
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import ResponsiveDataView from "./common/ResponsiveDataView";
+import { CHECKBOX_COLUMN_WIDTH } from "./common/StandardDataTable";
 import BillCard from "./common/BillCard";
 import { useNavigate } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
-import SearchIcon from "@mui/icons-material/Search";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import ReceiptIcon from "@mui/icons-material/Receipt";
-import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
-import PaymentIcon from "@mui/icons-material/Payment";
 import { useTranslation } from "react-i18next";
+import ListPageLayout from "./list/ListPageLayout";
+import ListHeader from "./list/ListHeader";
+import FilterBar from "./list/FilterBar";
+import ListSummary from "./list/ListSummary";
+import DataTable from "./list/DataTable";
+import BulkActionBar from "./list/BulkActionBar";
+import { useDebouncedValue } from "../hooks/useDebouncedValue";
+import useTableSorting from "../hooks/useTableSorting";
 
 const BillList = () => {
   const navigate = useNavigate();
@@ -50,17 +47,22 @@ const BillList = () => {
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [dateRange, setDateRange] = useState("all");
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [selectedBills, setSelectedBills] = useState([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const debouncedSearch = useDebouncedValue(searchTerm, 300);
+
+  const { sortBy, sortOrder, handleSort, sortParams } = useTableSorting("created_at", "desc", "bills");
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [billsResponse, vendorsResponse] = await Promise.all([
-        axios.get(createApiUrl("/api/bills")),
+        axios.get(createApiUrl("/api/bills"), { params: sortParams }),
         axios.get(createApiUrl("/api/vendors"))
       ]);
       setBills(billsResponse.data);
@@ -70,7 +72,7 @@ const BillList = () => {
       console.error(error);
     }
     setLoading(false);
-  }, [t]);
+  }, [t, sortParams]);
 
   useEffect(() => {
     fetchData();
@@ -92,14 +94,28 @@ const BillList = () => {
   const filteredBills = bills.filter((bill) => {
     const vendor = vendors.find(v => v.id === bill.vendor_id);
     const vendorName = vendor ? vendor.vendor_name : "";
+    const term = debouncedSearch.trim().toLowerCase();
 
     const matchesSearch =
-      bill.bill_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      bill.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vendorName.toLowerCase().includes(searchTerm.toLowerCase());
+      !term
+      || bill.bill_number?.toLowerCase().includes(term)
+      || bill.subject?.toLowerCase().includes(term)
+      || vendorName.toLowerCase().includes(term);
 
     const matchesStatus = statusFilter === "All" || bill.payment_status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const createdAt = new Date(bill.bill_date || bill.created_at || 0).getTime();
+    const now = Date.now();
+    const oneDay = 24 * 60 * 60 * 1000;
+    const matchesDate =
+      dateRange === "all"
+        ? true
+        : dateRange === "this_week"
+          ? createdAt >= now - (7 * oneDay)
+          : dateRange === "this_month"
+            ? createdAt >= now - (31 * oneDay)
+            : createdAt >= now - (365 * oneDay);
+
+    return matchesSearch && matchesStatus && matchesDate;
   });
 
   // Paginated bills
@@ -115,6 +131,10 @@ const BillList = () => {
   const unpaidCount = filteredBills.filter(b => b.payment_status === "Unpaid").length;
   const paidCount = filteredBills.filter(b => b.payment_status === "Paid").length;
 
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedSearch, dateRange, statusFilter]);
+
   // Pagination handlers
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -125,130 +145,84 @@ const BillList = () => {
     setPage(0);
   };
 
+  const allVisibleSelected = paginatedBills.length > 0
+    && paginatedBills.every((bill) => selectedBills.includes(bill.id));
+  const someVisibleSelected = paginatedBills.some((bill) => selectedBills.includes(bill.id));
+
+  const handleSelectAll = (event) => {
+    if (event.target.checked) {
+      setSelectedBills(paginatedBills.map((bill) => bill.id));
+      return;
+    }
+    setSelectedBills([]);
+  };
+
+  const handleSelectOne = (billId) => {
+    setSelectedBills((prev) => (
+      prev.includes(billId) ? prev.filter((id) => id !== billId) : [...prev, billId]
+    ));
+  };
+
   return (
-    <MainLayout>
-      <Container maxWidth="xl" sx={{ py: 4 }}>
-        {/* Page Header */}
-        <Box sx={{ mb: 4 }}>
-          <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
-            flexWrap="wrap"
-            gap={2}
-            mb={3}
+    <ListPageLayout maxWidth="xl">
+      <ListHeader
+        title={t('billList.title')}
+        summary={`${filteredBills.length} bills`}
+        rightAction={
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => navigate('/bills/add')}
+            sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600 }}
           >
-            <Box>
-              <Typography variant="h4" fontWeight={700} gutterBottom>
-                {t('billList.title')}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {t('billList.subtitle')}
-              </Typography>
-            </Box>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => navigate('/bills/add')}
-              sx={{
-                borderRadius: 2,
-                px: 3,
-                py: 1.25,
-                fontWeight: 600,
-                textTransform: "none",
-                boxShadow: 2
-              }}
-            >
-              {t('billList.newBill')}
-            </Button>
-          </Box>
+            {t('billList.newBill')}
+          </Button>
+        }
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder="Search bills..."
+      />
 
-          {/* Summary Cards */}
-          <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={12} sm={6} md={3}>
-              <SummaryCard
-                label={t('billList.totalBills')}
-                value={`₹${totalBillAmount.toLocaleString()}`}
-                icon={<ReceiptIcon />}
-                accentColor="primary.main"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <SummaryCard
-                label={t('billList.totalPaid')}
-                value={`₹${totalPaid.toLocaleString()}`}
-                icon={<PaymentIcon />}
-                accentColor="success.main"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <SummaryCard
-                label={t('billList.totalDue')}
-                value={`₹${totalDue.toLocaleString()}`}
-                icon={<AttachMoneyIcon />}
-                accentColor="error.main"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <SummaryCard
-                label={t('billList.unpaidPaid')}
-                value={`${unpaidCount} / ${paidCount}`}
-                icon={<ReceiptIcon />}
-                accentColor="warning.main"
-              />
-            </Grid>
-          </Grid>
+      <FilterBar
+        statusValue={statusFilter}
+        onStatusChange={setStatusFilter}
+        statusOptions={[
+          { value: "All", label: t('common.allStatus') },
+          { value: "Unpaid", label: "Unpaid" },
+          { value: "Partially Paid", label: "Partially Paid" },
+          { value: "Paid", label: "Paid" },
+          { value: "Overdue", label: "Overdue" },
+        ]}
+        dateValue={dateRange}
+        onDateChange={setDateRange}
+        dateOptions={[
+          { value: "all", label: "All Time" },
+          { value: "this_week", label: "This Week" },
+          { value: "this_month", label: "This Month" },
+          { value: "this_year", label: "This Year" },
+        ]}
+      />
 
-          {/* Filters and Search */}
-          <Box
-            display="flex"
-            gap={2}
-            flexWrap="wrap"
-            alignItems="center"
-            sx={{
-              bgcolor: "background.paper",
-              p: 2,
-              borderRadius: 3,
-              border: "1px solid",
-              borderColor: "grey.200"
-            }}
-          >
-            <FormControl size="small" sx={{ minWidth: 150 }}>
-              <Select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                displayEmpty
-                sx={{ borderRadius: 2 }}
-              >
-                <MenuItem value="All">{t('common.allStatus')}</MenuItem>
-                <MenuItem value="Unpaid">Unpaid</MenuItem>
-                <MenuItem value="Partially Paid">Partially Paid</MenuItem>
-                <MenuItem value="Paid">Paid</MenuItem>
-                <MenuItem value="Overdue">Overdue</MenuItem>
-              </Select>
-            </FormControl>
-            <TextField
-              size="small"
-              placeholder="Search bills..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon fontSize="small" />
-                  </InputAdornment>
-                )
-              }}
-              sx={{
-                flex: 1,
-                minWidth: 250,
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 2
-                }
-              }}
-            />
-          </Box>
-        </Box>
+      <ListSummary
+        items={[
+          { label: "Total", value: `₹${totalBillAmount.toLocaleString()}`, color: "default" },
+          { label: "Paid", value: `₹${totalPaid.toLocaleString()}`, color: "success" },
+          { label: "Due", value: `₹${totalDue.toLocaleString()}`, color: "error" },
+          { label: "Unpaid/Paid", value: `${unpaidCount}/${paidCount}`, color: "warning" },
+        ]}
+      />
+
+      <BulkActionBar
+        selectedCount={selectedBills.length}
+        actions={[
+          {
+            label: "Delete Selected",
+            color: "error",
+            onClick: () => setConfirmDeleteId(selectedBills[0] || null),
+            disabled: selectedBills.length === 0,
+          },
+        ]}
+      />
 
         {error && (
           <Fade in={!!error}>
@@ -263,7 +237,7 @@ const BillList = () => {
         )}
 
         {/* Main Table */}
-        <ResponsiveDataView
+        <DataTable
           isMobile={isMobile}
           renderCard={(bill) => {
             const cardVendor = vendors.find(v => v.id === bill.vendor_id);
@@ -277,17 +251,21 @@ const BillList = () => {
             );
           }}
           columns={[
-            { key: 'bill_number', label: 'Bill #' },
+            { key: 'checkbox', label: '', width: CHECKBOX_COLUMN_WIDTH },
+            { key: 'bill_number', label: 'Bill #', sortable: true },
             { key: 'vendor', label: 'Vendor' },
             { key: 'subject', label: 'Subject' },
-            { key: 'bill_date', label: 'Bill Date' },
-            { key: 'due_date', label: 'Due Date' },
-            { key: 'amount', label: 'Amount' },
+            { key: 'bill_date', label: 'Bill Date', sortable: true },
+            { key: 'due_date', label: 'Due Date', sortable: true },
+            { key: 'total_amount', label: 'Amount', sortable: true },
             { key: 'paid', label: 'Paid' },
             { key: 'balance', label: 'Balance' },
             { key: 'status', label: 'Status' },
             { key: 'actions', label: 'Actions', align: 'center' },
           ]}
+          sortBy={sortBy}
+          sortOrder={sortOrder}
+          onSort={handleSort}
           rows={paginatedBills}
           loading={loading}
           emptyIcon={<ReceiptIcon sx={{ fontSize: 48 }} />}
@@ -296,7 +274,13 @@ const BillList = () => {
           renderRow={(bill) => {
             const vendor = vendors.find(v => v.id === bill.vendor_id);
             return (
-              <TableRow key={bill.id} hover>
+              <TableRow key={bill.id} hover onClick={() => navigate(`/bills/edit/${bill.id}`)} sx={{ cursor: "pointer" }}>
+                <TableCell padding="checkbox" onClick={(event) => event.stopPropagation()}>
+                  <Checkbox
+                    checked={selectedBills.includes(bill.id)}
+                    onChange={() => handleSelectOne(bill.id)}
+                  />
+                </TableCell>
                 <TableCell>
                   <Typography variant="body2" fontWeight={600}>{bill.bill_number}</Typography>
                 </TableCell>
@@ -325,7 +309,7 @@ const BillList = () => {
                   <StatusBadge status={bill.payment_status} />
                 </TableCell>
                 <TableCell align="center">
-                  <Box display="flex" gap={0.5} justifyContent="center">
+                  <Box display="flex" gap={0.5} justifyContent="center" onClick={(event) => event.stopPropagation()}>
                     <Tooltip title="Edit">
                       <IconButton size="small" onClick={() => navigate(`/bills/edit/${bill.id}`)} sx={{ color: 'primary.main' }}>
                         <EditIcon fontSize="small" />
@@ -349,8 +333,15 @@ const BillList = () => {
             onPageChange: handleChangePage,
             onRowsPerPageChange: handleChangeRowsPerPage,
           }}
+          headerCheckbox={
+            <Checkbox
+              checked={allVisibleSelected}
+              indeterminate={!allVisibleSelected && someVisibleSelected}
+              onChange={handleSelectAll}
+            />
+          }
         />
-      </Container>
+      
 
       {/* Delete Confirmation Dialog */}
       <Dialog
@@ -397,7 +388,7 @@ const BillList = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </MainLayout>
+    </ListPageLayout>
   );
 };
 

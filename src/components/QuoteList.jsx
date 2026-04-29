@@ -1,26 +1,21 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { createApiUrl } from "../config/api";
-import MainLayout from "./Layout/MainLayout";
 import {
   Alert,
   Box,
   Button,
   Checkbox,
-  Container,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-  FormControl,
   FormControlLabel,
   IconButton,
-  InputAdornment,
   ListItemIcon,
   ListItemText,
   Menu,
   MenuItem,
-  Select,
   Snackbar,
   TableCell,
   TableRow,
@@ -41,9 +36,16 @@ import EmailIcon from "@mui/icons-material/Email";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import ReceiptIcon from "@mui/icons-material/Receipt";
-import SearchIcon from "@mui/icons-material/Search";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import ListPageLayout from "./list/ListPageLayout";
+import ListHeader from "./list/ListHeader";
+import FilterBar from "./list/FilterBar";
+import ListSummary from "./list/ListSummary";
+import BulkActionBar from "./list/BulkActionBar";
+import { useDebouncedValue } from "../hooks/useDebouncedValue";
+import useTableSorting from "../hooks/useTableSorting";
+import TableSortLabel from "@mui/material/TableSortLabel";
 
 const statusStyle = {
   Draft: { color: "#9aa3af", bg: "transparent" },
@@ -73,11 +75,14 @@ const QuoteList = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const debouncedSearch = useDebouncedValue(searchTerm, 300);
+
+  const { sortBy, sortOrder, handleSort, sortParams } = useTableSorting("created_at", "desc", "quotes");
 
   const fetchQuotes = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await axios.get(createApiUrl("/api/quotes"));
+      const response = await axios.get(createApiUrl("/api/quotes"), { params: sortParams });
       setQuotes(response.data);
       setError("");
     } catch (err) {
@@ -85,7 +90,7 @@ const QuoteList = () => {
       console.error(err);
     }
     setLoading(false);
-  }, [t]);
+  }, [sortParams, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchCustomers = useCallback(async () => {
     try {
@@ -99,7 +104,7 @@ const QuoteList = () => {
   useEffect(() => {
     fetchQuotes();
     fetchCustomers();
-  }, [fetchQuotes, fetchCustomers]);
+  }, [fetchQuotes, fetchCustomers, sortBy, sortOrder]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const customerMap = useMemo(() => {
     const map = new Map();
@@ -108,7 +113,7 @@ const QuoteList = () => {
   }, [customers]);
 
   const filteredQuotes = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
+    const term = debouncedSearch.trim().toLowerCase();
 
     return quotes
       .filter((quote) => {
@@ -127,7 +132,11 @@ const QuoteList = () => {
         const bDate = new Date(b.issue_date || b.created_at || 0).getTime();
         return bDate - aDate;
       });
-  }, [customerMap, quotes, searchTerm, statusFilter]);
+  }, [customerMap, debouncedSearch, quotes, statusFilter]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedSearch, statusFilter]);
 
   const paginatedQuotes = filteredQuotes.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
@@ -265,46 +274,65 @@ const QuoteList = () => {
   };
 
   return (
-    <MainLayout>
-      <Container
-        maxWidth={false}
-        sx={{
-          py: 2.5,
-          px: { xs: 2, md: 3 },
-          bgcolor: "#f5f6f8",
-          minHeight: "calc(100vh - 72px)",
-        }}
-      >
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
-          <Typography sx={{ fontSize: "1.7rem", fontWeight: 600, color: "#1f2937", lineHeight: 1.2 }}>
-            All Quotes
-          </Typography>
+    <ListPageLayout>
+      <ListHeader
+        title="All Quotes"
+        summary={`${filteredQuotes.length} quotes`}
+        rightAction={
           <Button
             variant="contained"
             onClick={handleAdd}
             startIcon={<AddIcon fontSize="small" />}
-            sx={{
-              minWidth: 92,
-              borderRadius: "6px",
-              textTransform: "none",
-              fontWeight: 600,
-              fontSize: "0.85rem",
-              py: 0.7,
-              px: 1.8,
-              boxShadow: "none",
-              bgcolor: "#3b82f6",
-              "&:hover": { bgcolor: "#2563eb", boxShadow: "none" },
-            }}
+            sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
           >
             {t('quoteList.new')}
           </Button>
-        </Box>
+        }
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder={t('quoteList.searchPlaceholder')}
+      />
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 1.5 }} onClose={() => setError("")}>
-            {error}
-          </Alert>
-        )}
+      <FilterBar
+        statusValue={statusFilter}
+        onStatusChange={setStatusFilter}
+        statusOptions={[
+          { value: "All", label: "All Status" },
+          { value: "Draft", label: "Draft" },
+          { value: "Sent", label: "Sent" },
+          { value: "Accepted", label: "Accepted" },
+          { value: "Declined", label: "Declined" },
+          { value: "Expired", label: "Expired" },
+          { value: "Converted", label: "Converted" },
+        ]}
+      />
+
+      <ListSummary
+        items={[
+          { label: "Total", value: filteredQuotes.length },
+          { label: "Draft", value: filteredQuotes.filter((q) => q.status === "Draft").length, color: "default" },
+          { label: "Accepted", value: filteredQuotes.filter((q) => q.status === "Accepted").length, color: "success" },
+          { label: "Converted", value: filteredQuotes.filter((q) => q.status === "Converted").length, color: "info" },
+        ]}
+      />
+
+      <BulkActionBar
+        selectedCount={selectedIds.length}
+        actions={[
+          {
+            label: "Delete Selected",
+            color: "error",
+            onClick: () => setConfirmDeleteId(selectedIds[0] || null),
+            disabled: selectedIds.length === 0,
+          },
+        ]}
+      />
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 1.5 }} onClose={() => setError("")}>
+          {error}
+        </Alert>
+      )}
 
         <ResponsiveDataView
           isMobile={isMobile}
@@ -335,62 +363,13 @@ const QuoteList = () => {
               sx={{
                 display: "flex",
                 alignItems: "center",
-                gap: 1,
+                justifyContent: "space-between",
                 px: 1.5,
                 py: 1,
-                flexWrap: "wrap",
                 borderBottom: "1px solid #edf0f3",
                 bgcolor: "#fbfcfd",
               }}
             >
-              <TextField
-                size="small"
-              placeholder={t('quoteList.searchPlaceholder')}
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setPage(0);
-                }}
-                sx={{
-                  width: { xs: "100%", sm: 320 },
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: "6px",
-                    fontSize: "0.84rem",
-                    bgcolor: "#fff",
-                  },
-                }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon sx={{ color: "#8b96a6", fontSize: 18 }} />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-
-              <FormControl size="small" sx={{ minWidth: 145 }}>
-                <Select
-                  value={statusFilter}
-                  onChange={(e) => {
-                    setStatusFilter(e.target.value);
-                    setPage(0);
-                  }}
-                  sx={{
-                    borderRadius: "6px",
-                    fontSize: "0.84rem",
-                    bgcolor: "#fff",
-                  }}
-                >
-                  <MenuItem value="All">All Status</MenuItem>
-                  <MenuItem value="Draft">Draft</MenuItem>
-                  <MenuItem value="Sent">Sent</MenuItem>
-                  <MenuItem value="Accepted">Accepted</MenuItem>
-                  <MenuItem value="Declined">Declined</MenuItem>
-                  <MenuItem value="Expired">Expired</MenuItem>
-                  <MenuItem value="Converted">Converted</MenuItem>
-                </Select>
-              </FormControl>
-
               <Typography sx={{ fontSize: "0.82rem", color: "#6b7280" }}>
                 {filteredQuotes.length} quote{filteredQuotes.length === 1 ? "" : "s"}
               </Typography>
@@ -408,10 +387,20 @@ const QuoteList = () => {
                 />
               </TableCell>
               <TableCell sx={{ py: 0.8, borderBottom: "1px solid #e6e9ee" }}>
-                <Typography sx={{ fontSize: "0.68rem", fontWeight: 700, color: "#7b8493", letterSpacing: 0.3 }}>DATE</Typography>
+                <TableSortLabel
+                  active={sortBy === "created_at"}
+                  direction={sortBy === "created_at" ? sortOrder : "asc"}
+                  onClick={() => handleSort("created_at")}
+                  sx={{ fontSize: "0.68rem", fontWeight: 700, color: "#7b8493", letterSpacing: 0.3 }}
+                >DATE</TableSortLabel>
               </TableCell>
               <TableCell sx={{ py: 0.8, borderBottom: "1px solid #e6e9ee" }}>
-                <Typography sx={{ fontSize: "0.68rem", fontWeight: 700, color: "#7b8493", letterSpacing: 0.3 }}>QUOTE NUMBER</Typography>
+                <TableSortLabel
+                  active={sortBy === "quote_number"}
+                  direction={sortBy === "quote_number" ? sortOrder : "asc"}
+                  onClick={() => handleSort("quote_number")}
+                  sx={{ fontSize: "0.68rem", fontWeight: 700, color: "#7b8493", letterSpacing: 0.3 }}
+                >QUOTE NUMBER</TableSortLabel>
               </TableCell>
               <TableCell sx={{ py: 0.8, borderBottom: "1px solid #e6e9ee" }}>
                 <Typography sx={{ fontSize: "0.68rem", fontWeight: 700, color: "#7b8493", letterSpacing: 0.3 }}>REFERENCE NUMBER</Typography>
@@ -423,7 +412,12 @@ const QuoteList = () => {
                 <Typography sx={{ fontSize: "0.68rem", fontWeight: 700, color: "#7b8493", letterSpacing: 0.3 }}>STATUS</Typography>
               </TableCell>
               <TableCell sx={{ py: 0.8, borderBottom: "1px solid #e6e9ee", width: 120 }} align="right">
-                <Typography sx={{ fontSize: "0.68rem", fontWeight: 700, color: "#7b8493", letterSpacing: 0.3 }}>AMOUNT</Typography>
+                <TableSortLabel
+                  active={sortBy === "total_amount"}
+                  direction={sortBy === "total_amount" ? sortOrder : "asc"}
+                  onClick={() => handleSort("total_amount")}
+                  sx={{ fontSize: "0.68rem", fontWeight: 700, color: "#7b8493", letterSpacing: 0.3 }}
+                >AMOUNT</TableSortLabel>
               </TableCell>
               <TableCell sx={{ py: 0.8, borderBottom: "1px solid #e6e9ee", width: 62 }} align="center" />
             </TableRow>
@@ -501,7 +495,6 @@ const QuoteList = () => {
             onRowsPerPageChange: handleChangeRowsPerPage,
           }}
         />
-      </Container>
 
       <Menu
         anchorEl={actionMenuAnchor}
@@ -594,7 +587,7 @@ const QuoteList = () => {
         onClose={() => setToast({ open: false, message: '' })}
         message={toast.message}
       />
-    </MainLayout>
+    </ListPageLayout>
   );
 };
 

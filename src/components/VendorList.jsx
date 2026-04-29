@@ -1,44 +1,42 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createApiUrl } from "../config/api";
-import MainLayout from "./Layout/MainLayout";
 import StatusBadge from "./common/StatusBadge";
-import SummaryCard from "./common/SummaryCard";
 import axios from "axios";
 import {
   Box,
   Button,
+  Checkbox,
   Typography,
   TableRow,
   TableCell,
   Alert,
-  TextField,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   IconButton,
-  InputAdornment,
   Fade,
-  Grid,
   Tooltip,
-  MenuItem,
-  Select,
-  FormControl,
-  Container,
   CircularProgress,
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import ResponsiveDataView from "./common/ResponsiveDataView";
+import { CHECKBOX_COLUMN_WIDTH } from "./common/StandardDataTable";
 import VendorCard from "./common/VendorCard";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
-import SearchIcon from "@mui/icons-material/Search";
-import BusinessIcon from "@mui/icons-material/Business";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import { useTranslation } from "react-i18next";
+import ListPageLayout from "./list/ListPageLayout";
+import ListHeader from "./list/ListHeader";
+import FilterBar from "./list/FilterBar";
+import ListSummary from "./list/ListSummary";
+import DataTable from "./list/DataTable";
+import BulkActionBar from "./list/BulkActionBar";
+import { useDebouncedValue } from "../hooks/useDebouncedValue";
+import useTableSorting from "../hooks/useTableSorting";
 
 const VendorList = () => {
   const navigate = useNavigate();
@@ -48,16 +46,21 @@ const VendorList = () => {
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [dateRange, setDateRange] = useState("all");
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [selectedVendors, setSelectedVendors] = useState([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const debouncedSearch = useDebouncedValue(searchTerm, 300);
 
-  const fetchVendors = useCallback(async () => {
+  const { sortBy, sortOrder, handleSort, sortParams } = useTableSorting("vendor_name", "asc", "vendors");
+
+  const fetchVendors = useCallback(async (params = {}) => {
     setLoading(true);
     try {
-      const response = await axios.get(createApiUrl("/api/vendors"));
+      const response = await axios.get(createApiUrl("/api/vendors"), { params });
       setVendors(response.data);
     } catch (error) {
       setError(t('vendorList.failedFetch'));
@@ -67,8 +70,8 @@ const VendorList = () => {
   }, [t]);
 
   useEffect(() => {
-    fetchVendors();
-  }, [fetchVendors]);
+    fetchVendors(sortParams);
+  }, [sortBy, sortOrder]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDelete = async (id) => {
     setLoading(true);
@@ -84,14 +87,29 @@ const VendorList = () => {
 
   // Filter vendors
   const filteredVendors = vendors.filter((vendor) => {
+    const term = debouncedSearch.trim().toLowerCase();
     const matchesSearch =
-      vendor.vendor_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vendor.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vendor.phone?.includes(searchTerm) ||
-      vendor.contact_person?.toLowerCase().includes(searchTerm.toLowerCase());
+      !term
+      || vendor.vendor_name?.toLowerCase().includes(term)
+      || vendor.email?.toLowerCase().includes(term)
+      || vendor.phone?.includes(term)
+      || vendor.contact_person?.toLowerCase().includes(term);
 
     const matchesStatus = statusFilter === "All" || vendor.status === statusFilter;
-    return matchesSearch && matchesStatus;
+
+    const createdAt = new Date(vendor.created_at || vendor.date || 0).getTime();
+    const now = Date.now();
+    const oneDay = 24 * 60 * 60 * 1000;
+    const matchesDate =
+      dateRange === "all"
+        ? true
+        : dateRange === "this_week"
+          ? createdAt >= now - (7 * oneDay)
+          : dateRange === "this_month"
+            ? createdAt >= now - (31 * oneDay)
+            : createdAt >= now - (365 * oneDay);
+
+    return matchesSearch && matchesStatus && matchesDate;
   });
 
   // Paginated vendors
@@ -104,6 +122,10 @@ const VendorList = () => {
   const totalVendors = filteredVendors.length;
   const activeVendors = filteredVendors.filter(v => v.status === "Active").length;
 
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedSearch, dateRange, statusFilter]);
+
   // Pagination handlers
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -114,120 +136,81 @@ const VendorList = () => {
     setPage(0);
   };
 
+  const allVisibleSelected = paginatedVendors.length > 0
+    && paginatedVendors.every((vendor) => selectedVendors.includes(vendor.id));
+  const someVisibleSelected = paginatedVendors.some((vendor) => selectedVendors.includes(vendor.id));
+
+  const handleSelectAll = (event) => {
+    if (event.target.checked) {
+      setSelectedVendors(paginatedVendors.map((vendor) => vendor.id));
+      return;
+    }
+    setSelectedVendors([]);
+  };
+
+  const handleSelectOne = (vendorId) => {
+    setSelectedVendors((prev) => (
+      prev.includes(vendorId) ? prev.filter((id) => id !== vendorId) : [...prev, vendorId]
+    ));
+  };
+
   return (
-    <MainLayout>
-      <Container maxWidth="xl" sx={{ py: 4 }}>
-        {/* Page Header */}
-        <Box sx={{ mb: 4 }}>
-          <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
-            flexWrap="wrap"
-            gap={2}
-            mb={3}
+    <ListPageLayout maxWidth="xl">
+      <ListHeader
+        title={t('vendorList.title')}
+        summary={`${totalVendors} vendors`}
+        rightAction={
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => navigate('/vendors/add')}
+            sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600 }}
           >
-            <Box>
-              <Typography variant="h4" fontWeight={700} gutterBottom>
-                {t('vendorList.title')}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {t('vendorList.subtitle')}
-              </Typography>
-            </Box>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => navigate('/vendors/add')}
-              sx={{
-                borderRadius: 2,
-                px: 3,
-                py: 1.25,
-                fontWeight: 600,
-                textTransform: "none",
-                boxShadow: 2
-              }}
-            >
-              {t('vendorList.newVendor')}
-            </Button>
-          </Box>
+            {t('vendorList.newVendor')}
+          </Button>
+        }
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder="Search vendors..."
+      />
 
-          {/* Summary Cards */}
-          <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={12} sm={6} md={4}>
-              <SummaryCard
-                label={t('vendorList.totalVendors')}
-                value={totalVendors}
-                icon={<LocalShippingIcon />}
-                accentColor="primary.main"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={4}>
-              <SummaryCard
-                label={t('vendorList.activeVendors')}
-                value={activeVendors}
-                icon={<BusinessIcon />}
-                accentColor="success.main"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={4}>
-              <SummaryCard
-                label={t('vendorList.inactiveVendors')}
-                value={totalVendors - activeVendors}
-                icon={<BusinessIcon />}
-                accentColor="warning.main"
-              />
-            </Grid>
-          </Grid>
+      <FilterBar
+        statusValue={statusFilter}
+        onStatusChange={setStatusFilter}
+        statusOptions={[
+          { value: "All", label: t('common.allStatus') },
+          { value: "Active", label: "Active" },
+          { value: "Inactive", label: "Inactive" },
+        ]}
+        dateValue={dateRange}
+        onDateChange={setDateRange}
+        dateOptions={[
+          { value: "all", label: "All Time" },
+          { value: "this_week", label: "This Week" },
+          { value: "this_month", label: "This Month" },
+          { value: "this_year", label: "This Year" },
+        ]}
+      />
 
-          {/* Filters and Search */}
-          <Box
-            display="flex"
-            gap={2}
-            flexWrap="wrap"
-            alignItems="center"
-            sx={{
-              bgcolor: "background.paper",
-              p: 2,
-              borderRadius: 3,
-              border: "1px solid",
-              borderColor: "grey.200"
-            }}
-          >
-            <FormControl size="small" sx={{ minWidth: 150 }}>
-              <Select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                displayEmpty
-                sx={{ borderRadius: 2 }}
-              >
-                <MenuItem value="All">{t('common.allStatus')}</MenuItem>
-                <MenuItem value="Active">Active</MenuItem>
-                <MenuItem value="Inactive">Inactive</MenuItem>
-              </Select>
-            </FormControl>
-            <TextField
-              size="small"
-              placeholder="Search vendors..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon fontSize="small" />
-                  </InputAdornment>
-                )
-              }}
-              sx={{
-                flex: 1,
-                minWidth: 250,
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 2
-                }
-              }}
-            />
-          </Box>
-        </Box>
+      <ListSummary
+        items={[
+          { label: "Total", value: totalVendors, color: "default" },
+          { label: "Active", value: activeVendors, color: "success" },
+          { label: "Inactive", value: totalVendors - activeVendors, color: "warning" },
+        ]}
+      />
+
+      <BulkActionBar
+        selectedCount={selectedVendors.length}
+        actions={[
+          {
+            label: "Delete Selected",
+            color: "error",
+            onClick: () => setConfirmDeleteId(selectedVendors[0] || null),
+            disabled: selectedVendors.length === 0,
+          },
+        ]}
+      />
 
         {error && (
           <Fade in={!!error}>
@@ -242,7 +225,7 @@ const VendorList = () => {
         )}
 
         {/* Main Table */}
-        <ResponsiveDataView
+        <DataTable
           isMobile={isMobile}
           renderCard={(vendor) => (
             <VendorCard
@@ -252,7 +235,8 @@ const VendorList = () => {
             />
           )}
           columns={[
-            { key: 'vendor_name', label: t('vendorList.columns.vendorName') },
+            { key: 'checkbox', label: '', width: CHECKBOX_COLUMN_WIDTH },
+            { key: 'vendor_name', label: t('vendorList.columns.vendorName'), sortable: true },
             { key: 'contact_person', label: t('vendorList.columns.contactPerson') },
             { key: 'email', label: t('vendorList.columns.email') },
             { key: 'phone', label: t('vendorList.columns.phone') },
@@ -260,13 +244,22 @@ const VendorList = () => {
             { key: 'status', label: t('common.status'), align: 'center' },
             { key: 'actions', label: t('common.actions'), align: 'center' },
           ]}
+          sortBy={sortBy}
+          sortOrder={sortOrder}
+          onSort={handleSort}
           rows={paginatedVendors}
           loading={loading}
           emptyIcon={<LocalShippingIcon sx={{ fontSize: 48 }} />}
           emptyTitle={searchTerm ? t('vendorList.noVendors') : t('vendorList.noVendorsYet')}
           emptySubtitle={searchTerm ? "Try adjusting your search terms" : "Click 'New Vendor' to add your first vendor"}
           renderRow={(vendor) => (
-            <TableRow key={vendor.id} hover sx={{ cursor: 'pointer' }}>
+            <TableRow key={vendor.id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate(`/vendors/edit/${vendor.id}`)}>
+              <TableCell padding="checkbox" onClick={(event) => event.stopPropagation()}>
+                <Checkbox
+                  checked={selectedVendors.includes(vendor.id)}
+                  onChange={() => handleSelectOne(vendor.id)}
+                />
+              </TableCell>
               <TableCell>
                 <Typography variant="body2" fontWeight={600}>{vendor.vendor_name}</Typography>
               </TableCell>
@@ -286,7 +279,7 @@ const VendorList = () => {
                 <StatusBadge status={vendor.status || "Active"} />
               </TableCell>
               <TableCell align="center">
-                <Box display="flex" gap={0.5} justifyContent="center">
+                <Box display="flex" gap={0.5} justifyContent="center" onClick={(event) => event.stopPropagation()}>
                   <Tooltip title="Edit">
                     <IconButton size="small" onClick={() => navigate(`/vendors/edit/${vendor.id}`)} sx={{ color: 'primary.main' }}>
                       <EditIcon fontSize="small" />
@@ -309,8 +302,15 @@ const VendorList = () => {
             onPageChange: handleChangePage,
             onRowsPerPageChange: handleChangeRowsPerPage,
           }}
+          headerCheckbox={
+            <Checkbox
+              checked={allVisibleSelected}
+              indeterminate={!allVisibleSelected && someVisibleSelected}
+              onChange={handleSelectAll}
+            />
+          }
         />
-      </Container>
+      
 
       {/* Delete Confirmation Dialog */}
       <Dialog
@@ -358,7 +358,7 @@ const VendorList = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </MainLayout>
+    </ListPageLayout>
   );
 };
 

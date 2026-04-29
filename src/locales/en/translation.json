@@ -267,6 +267,9 @@
     "overdueFollowUp": "Follow up with customers to collect outstanding payments.",
     "sections": {
       "businessOverview": "Business Overview",
+      "performance": "Performance",
+      "currentState": "Current State",
+      "businessSize": "Business Size",
       "revenueAnalytics": "Revenue Analytics",
       "stockDetail": "Stock Detail",
       "recentActivity": "Recent Activity",
@@ -282,6 +285,18 @@
       "customRange": "Custom Range"
     },
     "kpi": {
+      "customersAdded": "Customers Added",
+      "invoicesCreated": "Invoices Created",
+      "revenue": "Revenue",
+      "paymentsReceived": "Payments Received",
+      "receivables": "Receivables",
+      "expensesPayables": "Expenses / Payables",
+      "overdueInvoicesCurrent": "Overdue Invoices (Current)",
+      "inventoryAlertsCurrent": "Inventory Alerts (Current)",
+      "currentState": "Current state (not time-range based)",
+      "staticMetric": "Static business-size metric",
+      "previousPeriod": "previous period",
+      "vs": "vs",
       "totalCustomers": "Total Customers",
       "totalProducts": "Total Products",
       "totalInvoices": "Total Invoices",
@@ -294,10 +309,30 @@
     },
     "chart": {
       "monthlyRevenue": "Monthly Revenue",
-      "monthlyRevenueSubtitle": "Revenue trend across the fiscal year",
+      "monthlyRevenueTitle": "Revenue Trend ({{range}})",
+      "monthlyRevenueSubtitle": "Compared to {{comparison}}",
       "monthlyRevenueDataset": "Monthly Revenue (₹)",
       "thisYearChip": "This Year",
       "noData": "No revenue data available"
+    },
+    "comparison": {
+      "vsLastWeek": "vs last week",
+      "vsLastMonth": "vs last month",
+      "vsLastQuarter": "vs last quarter",
+      "vsLastYear": "vs last year",
+      "vsPreviousCustomRange": "vs previous custom range ({{start}} to {{end}})",
+      "vsPreviousPeriod": "vs previous period"
+    },
+    "empty": {
+      "customersAdded": "No new customers in {{range}}",
+      "invoicesCreated": "No invoices in {{range}}",
+      "revenue": "No revenue in {{range}}",
+      "paymentsReceived": "No payments received in {{range}}",
+      "payables": "No payables or expenses in {{range}}",
+      "createInvoice": "Create Invoice",
+      "addCustomer": "Add Customer",
+      "viewInvoices": "View Invoices",
+      "addExpense": "Add Expense"
     },
     "inventory": {
       "title": "Inventory Overview",
@@ -326,11 +361,74 @@
     }
   },
   "customerList": {
+    "title": "Customer Management Dashboard",
+    "summary": "{{count}} customers",
     "allCustomers": "All Customers",
     "activeCustomers": "Active Customers",
     "inactiveCustomers": "Inactive Customers",
     "failedToLoad": "Failed to load customers.",
-    "new": "New"
+    "deleteFailed": "Failed to delete customer.",
+    "new": "New",
+    "searchPlaceholder": "Search customers",
+    "duplicateCollapseNotice": "{{count}} duplicate customer records were collapsed from the dashboard view.",
+    "topCustomersTitle": "Top Customers",
+    "topCustomersSubtitle": "Top 5 customers by revenue and health.",
+    "noTopCustomers": "No customer revenue data available yet.",
+    "healthScore": "Health",
+    "empty": "No customers available.",
+    "emptySearch": "No customers matched your search.",
+    "recordPaymentTitle": "Record Payment",
+    "paymentAmount": "Amount",
+    "paymentDate": "Payment Date",
+    "paymentSuccess": "Payment recorded successfully.",
+    "paymentLoadFailed": "Failed to load outstanding invoices.",
+    "paymentSaveFailed": "Failed to record payment.",
+    "noOutstandingInvoices": "No outstanding invoices for this customer.",
+    "deleteTitle": "Delete customer?",
+    "deleteMessage": "This customer will be removed permanently. This action cannot be undone.",
+    "metrics": {
+      "total": "Total customers",
+      "active": "Active",
+      "inactive": "Inactive",
+      "receivables": "Receivables",
+      "overdue": "Overdue"
+    },
+    "filters": {
+      "all": "All",
+      "active": "Active",
+      "inactive": "Inactive",
+      "withDues": "With Dues",
+      "overdue": "Overdue",
+      "createdPrefix": "Created",
+      "createdCustomRange": "Created: {{from}} to {{to}}",
+      "thisWeek": "This Week",
+      "thisMonth": "This Month",
+      "thisQuarter": "This Quarter",
+      "thisYear": "This Year"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "highValue": "High Value",
+      "atRisk": "At Risk"
+    },
+    "columns": {
+      "customer": "CUSTOMER",
+      "status": "STATUS",
+      "totalRevenue": "TOTAL REVENUE",
+      "outstanding": "OUTSTANDING",
+      "overdue": "OVERDUE",
+      "lastTransaction": "LAST TRANSACTION"
+    },
+    "actions": {
+      "createInvoice": "Create Invoice",
+      "recordPayment": "Record Payment",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "bulk": {
+      "delete": "Delete Selected"
+    }
   },
   "status": {
     "draft": "Draft",
@@ -422,6 +520,7 @@
     }
   },
   "productList": {
+    "title": "Items",
     "new": "New Item",
     "allItems": "All Items",
     "inStock": "In Stock Items",

@@ -37,6 +37,18 @@ jest.mock('../../components/Layout/MainLayout', () => ({
   default: ({ children }) => <div>{children}</div>,
 }));
 
+jest.mock('../../components/common/CustomerSelect', () => ({
+  __esModule: true,
+  default: ({ value, onChange, name }) => (
+    <input
+      data-testid="customer-select"
+      name={name}
+      value={value || ''}
+      onChange={(e) => onChange({ target: { name, value: e.target.value } })}
+    />
+  ),
+}));
+
 jest.mock('react-router-dom', () => {
   const actual = jest.requireActual('react-router-dom');
   return {
@@ -138,6 +150,11 @@ describe('AddEditInvoice', () => {
 
     await screen.findByText('New Invoice');
 
+    // Set required fields: customer and at least one item with a name
+    fireEvent.change(screen.getByTestId('customer-select'), { target: { name: 'customer_id', value: 'cust-1' } });
+    const itemInput = screen.getAllByPlaceholderText('Type or click to select an item.')[0];
+    fireEvent.change(itemInput, { target: { value: 'Test Item' } });
+
     createInvoice.mockResolvedValue({ id: 'inv-1' });
     fireEvent.click(screen.getByRole('button', { name: 'Save and Send' }));
 
@@ -149,6 +166,11 @@ describe('AddEditInvoice', () => {
     renderWithProviders(<AddEditInvoice />);
 
     await screen.findByText('New Invoice');
+
+    // Set required fields: customer and at least one item with a name
+    fireEvent.change(screen.getByTestId('customer-select'), { target: { name: 'customer_id', value: 'cust-1' } });
+    const itemInput = screen.getAllByPlaceholderText('Type or click to select an item.')[0];
+    fireEvent.change(itemInput, { target: { value: 'Test Item' } });
 
     let resolveCreate;
     createInvoice.mockImplementation(

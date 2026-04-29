@@ -36,6 +36,10 @@ import {
 import FormInput from './common/FormInput';
 import FormSelect from './common/FormSelect';
 import { useTranslation } from 'react-i18next';
+import useAutoFill from '../hooks/useAutoFill';
+import DevAutoFillButton from './common/DevAutoFillButton';
+import { generateProductMockData } from '../utils/mockDataGenerators';
+import { parseApiError, applyApiErrors } from '../utils/apiErrors';
 
 const unitOptions = ['pcs', 'kg', 'litre', 'box', 'pack', 'hrs', 'set'];
 const taxPreferenceOptions = [
@@ -106,6 +110,12 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
   const [vendors, setVendors] = useState([]);
   const [showInventoryFields, setShowInventoryFields] = useState(false);
   const [showTaxRateEditor, setShowTaxRateEditor] = useState(false);
+  const { applyAutoFill } = useAutoFill({
+    setForm,
+    generator: generateProductMockData,
+    context: { vendors },
+    fillEmptyOnly: true,
+  });
 
   const selectedTaxRate = taxRateOptions.find((option) => option.value === String(form.tax_rate ?? '18')) || taxRateOptions[3];
 
@@ -223,13 +233,11 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
       if (onSuccess) onSuccess();
       navigate('/products');
     } catch (err) {
-      const apiError = err.response?.data?.error || 'Failed to save product';
-      const apiField = err.response?.data?.field;
-      // Map server-side field errors to inline field errors
-      if (apiField === 'name') {
-        setErrors((prev) => ({ ...prev, name: apiError }));
-      } else {
-        setServerError(apiError);
+      const parsed = parseApiError(err, 'Failed to save product');
+      const msg = applyApiErrors(parsed, setErrors);
+      // If no field-level errors, show in banner
+      if (!Object.keys(parsed.fields).length) {
+        setServerError(msg);
       }
     } finally {
       setLoading(false);
@@ -256,9 +264,12 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
             </Alert>
           )}
 
-          <Typography sx={{ fontSize: '1.85rem', fontWeight: 500, color: '#212121', mb: 1.5, textAlign: 'left' }}>
-            {productId ? t('addEditProduct.editTitle') : t('addEditProduct.newTitle')}
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5, gap: 1 }}>
+            <Typography sx={{ fontSize: '1.85rem', fontWeight: 500, color: '#212121', textAlign: 'left' }}>
+              {productId ? t('addEditProduct.editTitle') : t('addEditProduct.newTitle')}
+            </Typography>
+            <DevAutoFillButton onClick={applyAutoFill} />
+          </Box>
 
           <Paper
             component="form"

@@ -52,6 +52,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import PendingIcon from "@mui/icons-material/Pending";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import { useTranslation } from "react-i18next";
+import useTableSorting from "../hooks/useTableSorting";
 
 const SalesOrderList = () => {
   const [salesOrders, setSalesOrders] = useState([]);
@@ -72,10 +73,12 @@ const SalesOrderList = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const navigate = useNavigate();
 
+  const { sortBy, sortOrder, handleSort, sortParams } = useTableSorting("created_at", "desc", "sales_orders");
+
   const fetchSalesOrders = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await axios.get(createApiUrl("/api/sales-orders"));
+      const response = await axios.get(createApiUrl("/api/sales-orders"), { params: sortParams });
       setSalesOrders(response.data);
       setError("");
     } catch (err) {
@@ -83,7 +86,7 @@ const SalesOrderList = () => {
       console.error(err);
     }
     setLoading(false);
-  }, [t]);
+  }, [sortParams, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchCustomers = async () => {
     try {
@@ -97,7 +100,7 @@ const SalesOrderList = () => {
   useEffect(() => {
     fetchSalesOrders();
     fetchCustomers();
-  }, [fetchSalesOrders]);
+  }, [fetchSalesOrders, sortBy, sortOrder]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredSalesOrders = salesOrders.filter((so) => {
     const customer = customers.find((c) => c.id === so.customer_id);
@@ -420,15 +423,18 @@ const SalesOrderList = () => {
                 />
               )}
               columns={[
-                { key: 'so_number', label: 'SO #' },
+                { key: 'so_number', label: 'SO #', sortable: true },
                 { key: 'customer', label: 'Customer' },
                 { key: 'subject', label: 'Subject' },
-                { key: 'order_date', label: 'Order Date' },
+                { key: 'order_date', label: 'Order Date', sortable: true },
                 { key: 'delivery_date', label: 'Delivery Date' },
-                { key: 'amount', label: 'Amount' },
+                { key: 'total_amount', label: 'Amount', sortable: true },
                 { key: 'status', label: 'Status' },
                 { key: 'actions', label: 'Actions', align: 'center' },
               ]}
+              sortBy={sortBy}
+              sortOrder={sortOrder}
+              onSort={handleSort}
               rows={paginatedSalesOrders}
               loading={loading}
               emptyIcon={<ShoppingCartIcon sx={{ fontSize: 48 }} />}

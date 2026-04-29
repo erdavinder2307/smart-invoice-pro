@@ -39,6 +39,12 @@ import FormLayout from './common/form/FormLayout';
 import { C, fieldSx, selectSx, menuItemSx, ZohoRow, FieldLabel, AppSelect } from './common/formStyles';
 import { createApiUrl } from '../config/api';
 import axios from 'axios';
+import { getCustomers } from '../services/customerService';
+import { findDuplicateCustomer, getDuplicateFieldLabel } from '../utils/customerData';
+import useAutoFill from '../hooks/useAutoFill';
+import DevAutoFillButton from './common/DevAutoFillButton';
+import { generateCustomerMockData } from '../utils/mockDataGenerators';
+import { parseApiError, applyApiErrors } from '../utils/apiErrors';
 
 // ─── constants ─────────────────────────────────────────────────────────────────
 const INDIAN_STATES = [
@@ -342,7 +348,22 @@ const AddEditCustomer = () => {
   const [cfKey, setCfKey] = useState('');
   const [cfValue, setCfValue] = useState('');
   const [pendingDocuments, setPendingDocuments] = useState([]);
+  const [existingCustomers, setExistingCustomers] = useState([]);
   const documentInputRef = useRef(null);
+  const { applyAutoFill } = useAutoFill({
+    setForm,
+    generator: generateCustomerMockData,
+    fillEmptyOnly: true,
+  });
+
+  const loadExistingCustomers = useCallback(async () => {
+    try {
+      const data = await getCustomers();
+      setExistingCustomers(Array.isArray(data) ? data : []);
+    } catch {
+      setExistingCustomers([]);
+    }
+  }, []);
 
   const loadCustomer = useCallback(async () => {
     try {
@@ -378,6 +399,7 @@ const AddEditCustomer = () => {
   }, [customerId]);
 
   useEffect(() => { if (customerId) loadCustomer(); }, [customerId, loadCustomer]);
+  useEffect(() => { loadExistingCustomers(); }, [loadExistingCustomers]);
 
   const handleGstPrefill = async () => {
     const gstin = form.gst_number?.trim();
@@ -519,6 +541,15 @@ const AddEditCustomer = () => {
     e.preventDefault();
     setApiError('');
     if (!validate()) return;
+
+    const duplicate = findDuplicateCustomer(existingCustomers, form, customerId);
+    if (duplicate) {
+      const duplicateField = getDuplicateFieldLabel(existingCustomers, form, customerId);
+      const duplicateName = duplicate.display_name || duplicate.name || duplicate.company_name || 'existing customer';
+      setApiError(`Duplicate customer detected via ${duplicateField}. Matches ${duplicateName}.`);
+      return;
+    }
+
     try {
       setSaving(true);
       const resolvedPaymentTerms = form.payment_terms === 'custom'
@@ -550,9 +581,12 @@ const AddEditCustomer = () => {
       delete payload.shipping_street2;
       if (customerId) await axios.put(createApiUrl(`/api/customers/${customerId}`), payload);
       else await axios.post(createApiUrl('/api/customers'), payload);
+      window.dispatchEvent(new Event('customer:created'));
       navigate('/customers', { state: { successMessage: customerId ? t('customerForm.updateSuccess') : t('customerForm.createSuccess') } });
     } catch (err) {
-      setApiError(err.response?.data?.error || t('customerForm.saveFailed'));
+      const parsed = parseApiError(err, t('customerForm.saveFailed'));
+      const msg = applyApiErrors(parsed, setErrors);
+      setApiError(msg);
     } finally { setSaving(false); }
   };
 
@@ -640,6 +674,10 @@ const AddEditCustomer = () => {
               {apiError}
             </Alert>
           )}
+
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.25 }}>
+            <DevAutoFillButton onClick={applyAutoFill} />
+          </Box>
 
           {/* ── FORM PAPER ─────────────────────────────────────────────────── */}
           <Box

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import MainLayout from '../components/Layout/MainLayout';
 import axios from 'axios';
 import { createApiUrl } from '../config/api';
@@ -37,6 +37,7 @@ import {
   Line
 } from 'recharts';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { getDateRange, formatDateOnly } from '../utils/dateRangeFilters';
 
 const MODE_COLORS = {
   'Cash': '#4CAF50',
@@ -49,14 +50,35 @@ const MODE_COLORS = {
 
 const PaymentsReceived = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const today = new Date();
   const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [reportData, setReportData] = useState(null);
-  const [startDate, setStartDate] = useState(firstOfMonth);
-  const [endDate, setEndDate] = useState(today.toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState(() => {
+    const params = new URLSearchParams(location.search);
+    const urlStart = params.get('start_date');
+    const urlRange = params.get('range');
+    if (urlStart) return urlStart;
+    if (urlRange) {
+      const dr = getDateRange(urlRange);
+      return dr ? formatDateOnly(dr.start) : firstOfMonth;
+    }
+    return firstOfMonth;
+  });
+  const [endDate, setEndDate] = useState(() => {
+    const params = new URLSearchParams(location.search);
+    const urlEnd = params.get('end_date');
+    const urlRange = params.get('range');
+    if (urlEnd) return urlEnd;
+    if (urlRange) {
+      const dr = getDateRange(urlRange);
+      return dr ? formatDateOnly(dr.end) : today.toISOString().split('T')[0];
+    }
+    return today.toISOString().split('T')[0];
+  });
 
   const userStr = localStorage.getItem('user');
   const userId = userStr ? JSON.parse(userStr).id : null;

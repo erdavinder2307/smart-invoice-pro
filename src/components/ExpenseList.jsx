@@ -33,7 +33,7 @@ import {
 } from "@mui/material";
 import ResponsiveDataView from "./common/ResponsiveDataView";
 import ExpenseCard from "./common/ExpenseCard";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
 import EditIcon from "@mui/icons-material/Edit";
@@ -44,6 +44,8 @@ import CategoryIcon from "@mui/icons-material/Category";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import ImageIcon from "@mui/icons-material/Image";
 import { useTranslation } from "react-i18next";
+import { getDateRange, formatDateOnly } from "../utils/dateRangeFilters";
+import useTableSorting from "../hooks/useTableSorting";
 
 const CATEGORIES = [
   "All",
@@ -62,6 +64,7 @@ const CATEGORIES = [
 
 const ExpenseList = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -71,10 +74,32 @@ const ExpenseList = () => {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [startDate, setStartDate] = useState(() => {
+    const params = new URLSearchParams(location.search);
+    const urlRange = params.get("range");
+    const urlStart = params.get("start_date");
+    if (urlStart) return urlStart;
+    if (urlRange) {
+      const dr = getDateRange(urlRange);
+      return dr ? formatDateOnly(dr.start) : "";
+    }
+    return "";
+  });
+  const [endDate, setEndDate] = useState(() => {
+    const params = new URLSearchParams(location.search);
+    const urlRange = params.get("range");
+    const urlEnd = params.get("end_date");
+    if (urlEnd) return urlEnd;
+    if (urlRange) {
+      const dr = getDateRange(urlRange);
+      return dr ? formatDateOnly(dr.end) : "";
+    }
+    return "";
+  });
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
+  const { sortBy, sortOrder, handleSort, sortParams } = useTableSorting("date", "desc", "expenses");
 
   const fetchExpenses = useCallback(async () => {
     setLoading(true);
@@ -91,6 +116,10 @@ const ExpenseList = () => {
       if (endDate) {
         params.append("end_date", endDate);
       }
+      if (sortParams.sort_by) {
+        params.append("sort_by", sortParams.sort_by);
+        params.append("sort_order", sortParams.sort_order);
+      }
       
       if (params.toString()) {
         url += `?${params.toString()}`;
@@ -103,11 +132,11 @@ const ExpenseList = () => {
       console.error(error);
     }
     setLoading(false);
-  }, [categoryFilter, startDate, endDate, t]);
+  }, [categoryFilter, startDate, endDate, sortParams, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetchExpenses();
-  }, [fetchExpenses]);
+  }, [fetchExpenses, sortBy, sortOrder]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDelete = async (id) => {
     setLoading(true);
@@ -298,6 +327,16 @@ const ExpenseList = () => {
                 }
               }}
             />
+            {(startDate || endDate) && (
+              <Chip
+                label={startDate && endDate ? `${startDate} – ${endDate}` : startDate || endDate}
+                onDelete={() => { setStartDate(""); setEndDate(""); navigate("/expenses"); }}
+                size="small"
+                color="primary"
+                variant="outlined"
+                sx={{ borderRadius: 2 }}
+              />
+            )}
           </Box>
         </Box>
 
@@ -324,15 +363,18 @@ const ExpenseList = () => {
             />
           )}
           columns={[
-            { key: 'date', label: 'Date' },
+            { key: 'date', label: 'Date', sortable: true },
             { key: 'vendor', label: 'Vendor/Payee' },
             { key: 'category', label: 'Category' },
-            { key: 'amount', label: 'Amount' },
+            { key: 'amount', label: 'Amount', sortable: true },
             { key: 'currency', label: 'Currency' },
             { key: 'receipt', label: 'Receipt' },
             { key: 'notes', label: 'Notes' },
             { key: 'actions', label: 'Actions', align: 'center' },
           ]}
+          sortBy={sortBy}
+          sortOrder={sortOrder}
+          onSort={handleSort}
           rows={paginatedExpenses}
           loading={loading}
           emptyIcon={<ReceiptIcon sx={{ fontSize: 48 }} />}

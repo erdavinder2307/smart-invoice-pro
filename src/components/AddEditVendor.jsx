@@ -11,6 +11,11 @@ import { C, footerSx, cancelBtnSx, saveBtnSx } from './common/formStyles';
 import FormInput from './common/FormInput';
 import FormSelect from './common/FormSelect';
 import { useTranslation } from 'react-i18next';
+import useAutoFill from '../hooks/useAutoFill';
+import DevAutoFillButton from './common/DevAutoFillButton';
+import { generateVendorMockData } from '../utils/mockDataGenerators';
+import { runValidation, validators, scrollToFirstError } from '../utils/validation';
+import { parseApiError, applyApiErrors } from '../utils/apiErrors';
 
 const INITIAL_FORM = {
   vendor_name: '', contact_person: '', email: '',
@@ -23,16 +28,22 @@ const AddEditVendor = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [form, setForm] = useState(INITIAL_FORM);
+  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [apiError, setApiError] = useState('');
+  const { applyAutoFill } = useAutoFill({
+    setForm,
+    generator: generateVendorMockData,
+    fillEmptyOnly: true,
+  });
 
   const fetchVendor = useCallback(async () => {
     setLoading(true);
     try {
       const res = await axios.get(createApiUrl(`/api/vendors/${id}`));
       setForm(res.data);
-    } catch { setError(t('addEditVendor.failedFetch')); }
+    } catch { setApiError(t('addEditVendor.failedFetch')); }
     setLoading(false);
   }, [id, t]);
 
@@ -41,17 +52,39 @@ const AddEditVendor = () => {
   const handleChange = e => {
     const { name, value } = e.target;
     setForm(p => ({ ...p, [name]: value }));
+    // Clear field error on edit
+    if (errors[name]) setErrors(p => ({ ...p, [name]: '' }));
+  };
+
+  const validate = () => {
+    return runValidation(form, {
+      vendor_name: [validators.required('Vendor Name')],
+      email:       [validators.email()],
+      phone:       [validators.mobile()],
+      gst_number:  [validators.gst()],
+    });
   };
 
   const handleSubmit = async e => {
     e.preventDefault();
+    setApiError('');
+    const fieldErrors = validate();
+    if (Object.keys(fieldErrors).length) {
+      setErrors(fieldErrors);
+      scrollToFirstError(fieldErrors);
+      return;
+    }
     setSaving(true);
-    setError('');
     try {
       if (id) await axios.put(createApiUrl(`/api/vendors/${id}`), form);
       else await axios.post(createApiUrl('/api/vendors'), form);
       navigate('/vendors');
-    } catch (err) { setError(err.response?.data?.error || t('addEditVendor.failedSave')); }
+    } catch (err) {
+      const parsed = parseApiError(err, t('addEditVendor.failedSave'));
+      const msg = applyApiErrors(parsed, setErrors);
+      setApiError(msg);
+      if (Object.keys(parsed.fields).length) scrollToFirstError(parsed.fields);
+    }
     setSaving(false);
   };
 
@@ -68,11 +101,15 @@ const AddEditVendor = () => {
       <Box sx={{ bgcolor: C.pageBg, minHeight: '100vh', pb: 6 }}>
         <Container maxWidth="lg" sx={{ pt: 3 }}>
 
-          {error && (
-            <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2, borderRadius: '4px' }}>
-              {error}
+          {apiError && (
+            <Alert severity="error" onClose={() => setApiError('')} sx={{ mb: 2, borderRadius: '4px' }}>
+              {apiError}
             </Alert>
           )}
+
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.25 }}>
+            <DevAutoFillButton onClick={applyAutoFill} />
+          </Box>
 
           <Paper
             component="form" onSubmit={handleSubmit}
@@ -87,13 +124,16 @@ const AddEditVendor = () => {
                 </Typography>
               </Box>
 
-              <FormInput label="Vendor Name" required name="vendor_name" value={form.vendor_name} onChange={handleChange} />
+              <FormInput label="Vendor Name" required name="vendor_name" value={form.vendor_name} onChange={handleChange}
+                error={!!errors.vendor_name} helperText={errors.vendor_name} />
 
               <FormInput label="Contact Person" name="contact_person" value={form.contact_person} onChange={handleChange} />
 
-              <FormInput label="Email Address" required name="email" value={form.email} onChange={handleChange} type="email" />
+              <FormInput label="Email Address" required name="email" value={form.email} onChange={handleChange} type="email"
+                error={!!errors.email} helperText={errors.email} />
 
-              <FormInput label="Phone" name="phone" value={form.phone} onChange={handleChange} />
+              <FormInput label="Phone" name="phone" value={form.phone} onChange={handleChange}
+                error={!!errors.phone} helperText={errors.phone} />
             </Box>
 
             {/* ══ ADDRESS & TAX ════════════════════════════════════════════ */}
@@ -110,6 +150,7 @@ const AddEditVendor = () => {
                 placeholder="e.g. 27AABCU9603R1ZX"
                 inputProps={{ style: { textTransform: 'uppercase' } }}
                 sx={{ maxWidth: 320 }}
+                error={!!errors.gst_number} helperText={errors.gst_number}
               />
             </Box>
 

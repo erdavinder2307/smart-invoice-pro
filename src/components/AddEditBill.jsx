@@ -15,6 +15,9 @@ import FormInput from './common/FormInput';
 import FormSelect from './common/FormSelect';
 import FormDatePicker from './common/FormDatePicker';
 import { useTranslation } from 'react-i18next';
+import useAutoFill from '../hooks/useAutoFill';
+import DevAutoFillButton from './common/DevAutoFillButton';
+import { generateBillMockData } from '../utils/mockDataGenerators';
 
 const TabPanel = ({ children, value, index }) => (
   <Box hidden={value !== index} sx={{ pt: 3 }}>
@@ -52,6 +55,12 @@ const AddEditBill = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState(0);
+  const { applyAutoFill } = useAutoFill({
+    setForm,
+    generator: generateBillMockData,
+    context: { vendors },
+    fillEmptyOnly: true,
+  });
 
   const fetchVendors = async () => {
     try {
@@ -228,6 +237,10 @@ const AddEditBill = () => {
               {error}
             </Alert>
           )}
+
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.25 }}>
+            <DevAutoFillButton onClick={applyAutoFill} />
+          </Box>
 
           <Paper
             component="form" onSubmit={handleSubmit}

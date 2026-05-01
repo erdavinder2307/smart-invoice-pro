@@ -61,6 +61,9 @@ describe('AddEditVendor', () => {
     const nameInput = document.querySelector('input[name="vendor_name"]');
     fireEvent.change(nameInput, { target: { name: 'vendor_name', value: 'ACME Corp' } });
 
+    const emailInput = document.querySelector('input[name="email"]');
+    fireEvent.change(emailInput, { target: { name: 'email', value: 'accounts@acmecorp.in' } });
+
     const saveBtn = screen.getByRole('button', { name: /save/i });
     fireEvent.click(saveBtn);
 
@@ -87,6 +90,9 @@ describe('AddEditVendor', () => {
 
     const nameInput = document.querySelector('input[name="vendor_name"]');
     fireEvent.change(nameInput, { target: { name: 'vendor_name', value: 'ACME Corp' } });
+
+    const emailInput = document.querySelector('input[name="email"]');
+    fireEvent.change(emailInput, { target: { name: 'email', value: 'ops@acmecorp.in' } });
 
     const saveBtn = screen.getByRole('button', { name: /save/i });
     fireEvent.click(saveBtn);

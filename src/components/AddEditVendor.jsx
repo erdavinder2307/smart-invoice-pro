@@ -4,14 +4,13 @@ import axios from 'axios';
 import { createApiUrl } from '../config/api';
 import MainLayout from './Layout/MainLayout';
 import {
-  Alert, Box, Button, CircularProgress, Container,
+  Alert, Box, Button, CircularProgress, Grid,
   Paper, Typography,
 } from '@mui/material';
 import { C, footerSx, cancelBtnSx, saveBtnSx } from './common/formStyles';
 import FormInput from './common/FormInput';
 import FormSelect from './common/FormSelect';
 import { useTranslation } from 'react-i18next';
-import useAutoFill from '../hooks/useAutoFill';
 import DevAutoFillButton from './common/DevAutoFillButton';
 import { generateVendorMockData } from '../utils/mockDataGenerators';
 import { runValidation, validators, scrollToFirstError } from '../utils/validation';
@@ -23,6 +22,15 @@ const INITIAL_FORM = {
   payment_terms: 'Net 30', status: 'Active', notes: '',
 };
 
+const IS_DEV_AUTOFILL = process.env.NODE_ENV === 'development';
+const PAYMENT_TERMS_OPTIONS = ['Due on Receipt', 'Net 15', 'Net 30', 'Net 45', 'Net 60'];
+
+const sectionTitleSx = {
+  fontSize: '0.875rem',
+  fontWeight: 600,
+  color: '#333',
+};
+
 const AddEditVendor = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -32,34 +40,47 @@ const AddEditVendor = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [apiError, setApiError] = useState('');
-  const { applyAutoFill } = useAutoFill({
-    setForm,
-    generator: generateVendorMockData,
-    fillEmptyOnly: true,
-  });
 
   const fetchVendor = useCallback(async () => {
     setLoading(true);
     try {
       const res = await axios.get(createApiUrl(`/api/vendors/${id}`));
-      setForm(res.data);
+      setForm({
+        ...INITIAL_FORM,
+        ...(res.data || {}),
+      });
     } catch { setApiError(t('addEditVendor.failedFetch')); }
     setLoading(false);
   }, [id, t]);
 
   useEffect(() => { if (id) fetchVendor(); }, [id, fetchVendor]);
 
-  const handleChange = e => {
+  const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm(p => ({ ...p, [name]: value }));
+    const nextValue = name === 'gst_number' ? String(value || '').toUpperCase() : value;
+    setForm((prev) => ({ ...prev, [name]: nextValue }));
     // Clear field error on edit
-    if (errors[name]) setErrors(p => ({ ...p, [name]: '' }));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
+  };
+
+  const handleAutofill = () => {
+    const generated = generateVendorMockData({ scenario: 'full' }) || {};
+    const nextForm = {
+      ...INITIAL_FORM,
+      ...generated,
+      gst_number: String(generated.gst_number || '').toUpperCase(),
+      payment_terms: generated.payment_terms || 'Net 30',
+      status: generated.status || 'Active',
+    };
+    setErrors({});
+    setApiError('');
+    setForm(nextForm);
   };
 
   const validate = () => {
     return runValidation(form, {
       vendor_name: [validators.required('Vendor Name')],
-      email:       [validators.email()],
+      email:       [validators.required('Email'), validators.email()],
       phone:       [validators.mobile()],
       gst_number:  [validators.gst()],
     });
@@ -74,10 +95,22 @@ const AddEditVendor = () => {
       scrollToFirstError(fieldErrors);
       return;
     }
+
+    const payload = {
+      ...form,
+      vendor_name: String(form.vendor_name || '').trim(),
+      contact_person: String(form.contact_person || '').trim(),
+      email: String(form.email || '').trim(),
+      phone: String(form.phone || '').trim(),
+      address: String(form.address || '').trim(),
+      gst_number: String(form.gst_number || '').trim().toUpperCase(),
+      notes: String(form.notes || '').trim(),
+    };
+
     setSaving(true);
     try {
-      if (id) await axios.put(createApiUrl(`/api/vendors/${id}`), form);
-      else await axios.post(createApiUrl('/api/vendors'), form);
+      if (id) await axios.put(createApiUrl(`/api/vendors/${id}`), payload);
+      else await axios.post(createApiUrl('/api/vendors'), payload);
       navigate('/vendors');
     } catch (err) {
       const parsed = parseApiError(err, t('addEditVendor.failedSave'));
@@ -97,9 +130,16 @@ const AddEditVendor = () => {
   );
 
   return (
-    <MainLayout title={id ? t('addEditVendor.editTitle') : t('addEditVendor.newTitle')}>
-      <Box sx={{ bgcolor: C.pageBg, minHeight: '100vh', pb: 6 }}>
-        <Container maxWidth="lg" sx={{ pt: 3 }}>
+    <MainLayout showBreadcrumbs={false}>
+      <Box sx={{ minHeight: '100vh', pb: 6 }}>
+        <Box sx={{ pt: 2 }}>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5, gap: 1 }}>
+            <Typography sx={{ fontSize: '1.85rem', fontWeight: 500, color: '#212121', textAlign: 'left' }}>
+              {id ? t('addEditVendor.editTitle') : t('addEditVendor.newTitle')}
+            </Typography>
+            {IS_DEV_AUTOFILL && <DevAutoFillButton onClick={handleAutofill} />}
+          </Box>
 
           {apiError && (
             <Alert severity="error" onClose={() => setApiError('')} sx={{ mb: 2, borderRadius: '4px' }}>
@@ -107,77 +147,147 @@ const AddEditVendor = () => {
             </Alert>
           )}
 
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.25 }}>
-            <DevAutoFillButton onClick={applyAutoFill} />
-          </Box>
-
           <Paper
             component="form" onSubmit={handleSubmit}
             elevation={0}
             sx={{ bgcolor: C.white, border: `1px solid ${C.border}`, borderRadius: '4px', overflow: 'hidden' }}
           >
-            {/* ══ VENDOR INFORMATION ════════════════════════════════════════ */}
             <Box sx={{ px: 3 }}>
               <Box sx={{ py: 1.5, borderBottom: `1px solid ${C.divider}` }}>
-                <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>
-                  {t('addEditVendor.vendorInfo')}
+                <Typography sx={sectionTitleSx}>
+                  Vendor Basics
                 </Typography>
               </Box>
 
-              <FormInput label="Vendor Name" required name="vendor_name" value={form.vendor_name} onChange={handleChange}
-                error={!!errors.vendor_name} helperText={errors.vendor_name} />
+              <Grid container columnSpacing={3}>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <FormInput
+                    label="Vendor Name"
+                    required
+                    name="vendor_name"
+                    value={form.vendor_name}
+                    onChange={handleChange}
+                    error={!!errors.vendor_name}
+                    helperText={errors.vendor_name}
+                  />
 
-              <FormInput label="Contact Person" name="contact_person" value={form.contact_person} onChange={handleChange} />
+                  <FormInput
+                    label="Contact Person"
+                    name="contact_person"
+                    value={form.contact_person}
+                    onChange={handleChange}
+                  />
+                </Grid>
 
-              <FormInput label="Email Address" required name="email" value={form.email} onChange={handleChange} type="email"
-                error={!!errors.email} helperText={errors.email} />
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <FormInput
+                    label="Email"
+                    required
+                    name="email"
+                    value={form.email}
+                    onChange={handleChange}
+                    type="email"
+                    error={!!errors.email}
+                    helperText={errors.email}
+                  />
 
-              <FormInput label="Phone" name="phone" value={form.phone} onChange={handleChange}
-                error={!!errors.phone} helperText={errors.phone} />
+                  <FormInput
+                    label="Phone"
+                    noDivider
+                    name="phone"
+                    value={form.phone}
+                    onChange={handleChange}
+                    error={!!errors.phone}
+                    helperText={errors.phone}
+                  />
+                </Grid>
+              </Grid>
             </Box>
 
-            {/* ══ ADDRESS & TAX ════════════════════════════════════════════ */}
             <Box sx={{ px: 3, borderTop: `1px solid ${C.divider}` }}>
               <Box sx={{ py: 1.5, borderBottom: `1px solid ${C.divider}` }}>
-                <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>
-                  {t('addEditVendor.addressTax')}
+                <Typography sx={sectionTitleSx}>
+                  Business Details
                 </Typography>
               </Box>
 
-              <FormInput label="Address" alignStart name="address" value={form.address} onChange={handleChange} multiline rows={2} />
+              <Grid container columnSpacing={3}>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <FormInput
+                    label="GST Number"
+                    noDivider
+                    name="gst_number"
+                    value={form.gst_number}
+                    onChange={handleChange}
+                    placeholder="e.g. 27AABCU9603R1ZX"
+                    inputProps={{ style: { textTransform: 'uppercase' } }}
+                    sx={{ maxWidth: 340 }}
+                    error={!!errors.gst_number}
+                    helperText={errors.gst_number || 'Optional. Enter a valid GSTIN if available.'}
+                  />
+                </Grid>
 
-              <FormInput label="GST Number" noDivider name="gst_number" value={form.gst_number} onChange={handleChange}
-                placeholder="e.g. 27AABCU9603R1ZX"
-                inputProps={{ style: { textTransform: 'uppercase' } }}
-                sx={{ maxWidth: 320 }}
-                error={!!errors.gst_number} helperText={errors.gst_number}
-              />
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <FormInput
+                    label="Address"
+                    noDivider
+                    alignStart
+                    name="address"
+                    value={form.address}
+                    onChange={handleChange}
+                    multiline
+                    rows={2}
+                  />
+                </Grid>
+              </Grid>
             </Box>
 
-            {/* ══ PAYMENT & STATUS ════════════════════════════════════════ */}
             <Box sx={{ px: 3, borderTop: `1px solid ${C.divider}` }}>
               <Box sx={{ py: 1.5, borderBottom: `1px solid ${C.divider}` }}>
-                <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>
-                  {t('addEditVendor.paymentStatus')}
+                <Typography sx={sectionTitleSx}>
+                  Financial Settings
                 </Typography>
               </Box>
 
-              <FormSelect label="Payment Terms" name="payment_terms" value={form.payment_terms} onChange={handleChange}
-                options={['Net 15', 'Net 30', 'Net 45', 'Net 60', 'Due on Receipt'].map(t => ({ value: t, label: t }))}
-                width={240}
-              />
+              <Grid container columnSpacing={3}>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <FormSelect
+                    label="Payment Terms"
+                    name="payment_terms"
+                    value={form.payment_terms}
+                    onChange={handleChange}
+                    options={PAYMENT_TERMS_OPTIONS.map((term) => ({ value: term, label: term }))}
+                    width={260}
+                    helperText="Default due terms for bills from this vendor."
+                  />
+                </Grid>
 
-              <FormSelect label="Status" name="status" value={form.status} onChange={handleChange}
-                options={[{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }]}
-                width={180}
-              />
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <FormSelect
+                    label="Status"
+                    noDivider
+                    name="status"
+                    value={form.status}
+                    onChange={handleChange}
+                    options={[{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }]}
+                    width={180}
+                  />
+                </Grid>
+              </Grid>
+            </Box>
 
-              <FormInput label="Notes" noDivider name="notes" value={form.notes} onChange={handleChange}
+            <Box sx={{ px: 3, borderTop: `1px solid ${C.divider}` }}>
+              <Box sx={{ py: 1.5, borderBottom: `1px solid ${C.divider}` }}>
+                <Typography sx={sectionTitleSx}>
+                  Additional Information
+                </Typography>
+              </Box>
+
+              <FormInput label="Notes" noDivider alignStart name="notes" value={form.notes} onChange={handleChange}
                 multiline rows={3} placeholder="Add any internal notes about this vendor…"
               />
             </Box>
 
-            {/* ══ FOOTER ═════════════════════════════════════════════════ */}
             <Box sx={footerSx}>
               <Button variant="outlined" onClick={() => navigate('/vendors')} disabled={saving} sx={cancelBtnSx}>
                 {t('common.cancel')}
@@ -191,7 +301,7 @@ const AddEditVendor = () => {
               </Button>
             </Box>
           </Paper>
-        </Container>
+        </Box>
       </Box>
     </MainLayout>
   );

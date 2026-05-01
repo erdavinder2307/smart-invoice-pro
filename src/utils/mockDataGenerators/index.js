@@ -110,12 +110,20 @@ export const generateCustomerMockData = ({ scenario = "full" } = {}) => {
 
 export const generateVendorMockData = ({ scenario = "full" } = {}) => {
   const name = makeCompany();
+  const contactPerson = makeName();
+  const localPart = contactPerson.toLowerCase().replace(/\s+/g, '.');
+  const domain = `${name.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '')}.in`;
+  const addressLine = `${rnd(12, 88)}, ${pick(['MIDC Industrial Estate', 'Phase II Commercial Hub', 'Trade Center Road', 'Logistics Park'])}`;
+  const city = pick(CITIES, 'Mumbai');
+  const state = pick(['Maharashtra', 'Karnataka', 'Delhi', 'Telangana', 'Gujarat']);
+  const pinCode = `${rnd(100000, 999999)}`;
+
   return {
     vendor_name: name,
-    contact_person: makeName(),
-    email: makeEmail(name),
+    contact_person: contactPerson,
+    email: `${localPart}@${domain}`,
     phone: makePhone(),
-    address: `${rnd(12, 88)}, ${pick(CITIES)} Industrial Area`,
+    address: `${addressLine}, ${city}, ${state} - ${pinCode}`,
     gst_number: makeGSTIN(),
     payment_terms: pick(PAYMENT_TERMS, "Net 30"),
     status: "Active",

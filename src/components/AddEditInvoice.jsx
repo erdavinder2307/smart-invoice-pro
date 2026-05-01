@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import { createInvoice, updateInvoice } from '../services/invoiceService';
 import { createApiUrl } from '../config/api';
@@ -16,6 +16,7 @@ import {
   Paper,
   Radio,
   RadioGroup,
+  Snackbar,
   Table,
   TableBody,
   TableCell,
@@ -37,12 +38,19 @@ import FormLayout from './common/form/FormLayout';
 import { C, AppSelect, fieldSx, menuItemSx, footerSx, cancelBtnSx, saveBtnSx } from './common/formStyles';
 import { useFormSubmitShortcut } from '../hooks/useFormSubmitShortcut';
 import { formatCurrency as formatCurrencyByLocale, formatNumber } from '../utils/intlFormatters';
-import useAutoFill from '../hooks/useAutoFill';
 import DevAutoFillButton from './common/DevAutoFillButton';
 import { generateInvoiceMockData } from '../utils/mockDataGenerators';
-import { parseApiError } from '../utils/apiErrors';
+import { applyApiErrors, parseApiError } from '../utils/apiErrors';
+import { calculateInvoiceTotals } from '../utils/invoiceCalculations';
+import { buildInvoicePayload } from '../utils/invoicePayload';
+import { deriveDueDate, validateInvoiceForm } from '../utils/invoiceFormValidation';
 
-const paymentTermsOptions = ['Due on Receipt', 'Net 15', 'Net 30', 'Net 45'];
+const paymentTermsOptions = ['Due on Receipt', 'Net 7', 'Net 15', 'Net 30', 'Net 45'];
+const AUTO_FILL_MODES = [
+  { value: 'minimal', label: 'Minimal Auto Fill (quick testing)' },
+  { value: 'full', label: 'Full Auto Fill (realistic scenario)' },
+  { value: 'edge', label: 'Edge Case Auto Fill (advanced testing)' },
+];
 // taxOptions now loaded from API; these are fallback values used until API loads
 const FALLBACK_TAX_OPTIONS = [
   { id: '0', name: 'Exempt (0%)', rate: 0 },
@@ -89,10 +97,11 @@ const initialForm = {
   invoice_number: '', customer_id: '', issue_date: '', due_date: '',
   payment_terms: '', subtotal: 0, cgst_amount: 0, sgst_amount: 0,
   igst_amount: 0, total_tax: 0, total_amount: 0, amount_paid: 0,
+  invoice_discount: 0, round_off: 0,
   balance_due: 0, status: 'Draft', payment_mode: '', notes: '',
   terms_conditions: '', is_gst_applicable: true,
   invoice_type: 'Tax Invoice', subject: '', salesperson: '',
-  items: [{ name: '', quantity: 1, rate: 0, discount: 0, tax: 0, amount: 0 }],
+  items: [{ name: '', description: '', quantity: 1, rate: 0, discount: 0, tax: 0, amount: 0 }],
 };
 
 const formFieldSx = {
@@ -129,6 +138,7 @@ const CellField = ({ value, onChange, type = 'number', width = 90, inputProps, p
 );
 
 const AddEditInvoice = ({ onSuccess, onCancel }) => {
+  const isDevAutoFillEnabled = process.env.NODE_ENV !== 'production';
   const { t, i18n } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
@@ -139,11 +149,15 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
   const { prefs } = useInvoicePreferences();
   const [form, setForm] = useState(initialForm);
   const [customers, setCustomers] = useState([]);
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(false);
   const [error, setError] = useState('');
+  const [errors, setErrors] = useState({});
+  const [itemErrors, setItemErrors] = useState([]);
+  const [toast, setToast] = useState({ open: false, severity: 'success', message: '' });
   const [orderNumber, setOrderNumber] = useState('');
-  const [adjustment, setAdjustment] = useState('0');
+  const [dueDateManuallyEdited, setDueDateManuallyEdited] = useState(false);
   const [submitMode, setSubmitMode] = useState('send');
   const [tdsMode, setTdsMode] = useState('tds');
   const [tdsTaxOption, setTdsTaxOption] = useState('');
@@ -153,12 +167,35 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
   const [taxRates, setTaxRates] = useState(FALLBACK_TAX_OPTIONS);
   const [gstBreakdown, setGstBreakdown] = useState({ cgst: 0, sgst: 0, igst: 0, tax_type: 'NONE' });
   const [focusItemPending, setFocusItemPending] = useState(shouldFocusItemInput);
-  const { applyAutoFill } = useAutoFill({
-    setForm,
-    generator: generateInvoiceMockData,
-    context: { customers },
-    fillEmptyOnly: true,
-  });
+
+  const autoFillInvoice = useCallback((mode = 'full') => {
+    if (!isDevAutoFillEnabled) return;
+    if (!customers.length) {
+      setError('Auto Fill requires at least one customer.');
+      return;
+    }
+
+    const generated = generateInvoiceMockData({
+      scenario: mode,
+      context: { customers, products },
+    }) || {};
+
+    setForm((prev) => ({
+      ...prev,
+      ...generated,
+      // Keep generated invoice number from API and current explicit status.
+      invoice_number: prev.invoice_number,
+      status: prev.status || 'Draft',
+      items: Array.isArray(generated.items) && generated.items.length
+        ? generated.items.map((item) => ({ ...initialForm.items[0], ...item }))
+        : prev.items,
+    }));
+
+    setDueDateManuallyEdited(false);
+    setErrors({});
+    setItemErrors([]);
+    setError('');
+  }, [customers, isDevAutoFillEnabled, products]);
 
   const submitWithShortcut = useCallback(() => {
     setSubmitMode('send');
@@ -176,13 +213,15 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
     const load = async () => {
       try {
         setPageLoading(true);
-        const [customersResponse, taxRatesData] = await Promise.all([
+        const [customersResponse, productsResponse, taxRatesData] = await Promise.all([
           axios.get(createApiUrl('/api/customers')),
+          axios.get(createApiUrl('/api/products')).catch(() => ({ data: [] })),
           getTaxRates().catch(() => null),
         ]);
         if (!active) return;
 
         setCustomers(Array.isArray(customersResponse.data) ? customersResponse.data : []);
+        setProducts(Array.isArray(productsResponse.data) ? productsResponse.data : []);
         if (Array.isArray(taxRatesData) && taxRatesData.length > 0) {
           setTaxRates(taxRatesData.map((r) => ({ id: r.id, name: r.name, rate: r.rate })));
         }
@@ -200,16 +239,6 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
           }));
         } else {
           const today = new Date().toISOString().slice(0, 10);
-          // Calculate due date from preferences
-          const calcDueDate = (issueDate) => {
-            const d = Number(prefs.default_due_days);
-            if (d > 0) {
-              const dt = new Date(issueDate);
-              dt.setDate(dt.getDate() + d);
-              return dt.toISOString().slice(0, 10);
-            }
-            return issueDate;
-          };
           const cloneSourceId = location.state?.cloneFrom?.id;
           try {
             const nextNumberResponse = await axios.get(createApiUrl('/api/invoices/next-number'));
@@ -226,7 +255,7 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                 id: undefined,
                 invoice_number: nextNumber,
                 issue_date: today,
-                due_date: calcDueDate(today),
+                due_date: deriveDueDate(today, src.payment_terms || prefs.default_payment_terms || 'Net 30'),
                 amount_paid: 0,
                 balance_due: src.total_amount || 0,
                 status: 'Draft',
@@ -239,7 +268,7 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                 ...prev,
                 invoice_number:   nextNumber,
                 issue_date:       today,
-                due_date:         calcDueDate(today),
+                due_date:         deriveDueDate(today, prefs.default_payment_terms || 'Net 30'),
                 customer_id:      quickCreateCustomerId || prev.customer_id || '',
                 payment_terms:    prefs.default_payment_terms || 'Net 30',
                 notes:            prefs.default_notes         || '',
@@ -253,7 +282,7 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
               ...prev,
               invoice_number:   'INV-00001',
               issue_date:       today,
-              due_date:         calcDueDate(today),
+              due_date:         deriveDueDate(today, prefs.default_payment_terms || 'Net 30'),
               customer_id:      quickCreateCustomerId || prev.customer_id || '',
               payment_terms:    prefs.default_payment_terms || 'Net 30',
               notes:            prefs.default_notes         || '',
@@ -274,7 +303,15 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invoiceId, quickCreateCustomerId, t]);
+  }, [invoiceId, prefs.default_payment_terms, quickCreateCustomerId, t]);
+
+  useEffect(() => {
+    if (!form.issue_date || !form.payment_terms || dueDateManuallyEdited) return;
+    const nextDueDate = deriveDueDate(form.issue_date, form.payment_terms);
+    if (nextDueDate && nextDueDate !== form.due_date) {
+      setForm((prev) => ({ ...prev, due_date: nextDueDate }));
+    }
+  }, [dueDateManuallyEdited, form.due_date, form.issue_date, form.payment_terms]);
 
   useEffect(() => {
     if (!focusItemPending || pageLoading) return;
@@ -292,40 +329,36 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
   }, [focusItemPending, form.customer_id, pageLoading]);
 
   useEffect(() => {
-    const lineSubtotal = (form.items || []).reduce((sum, item) => {
-      const baseAmount = Math.max(0, (Number(item.quantity) || 0) * (Number(item.rate) || 0) - (Number(item.discount) || 0));
-      return sum + baseAmount;
-    }, 0);
-
-    const lineTax = (form.items || []).reduce((sum, item) => {
-      const baseAmount = Math.max(0, (Number(item.quantity) || 0) * (Number(item.rate) || 0) - (Number(item.discount) || 0));
-      return sum + (baseAmount * (Number(item.tax) || 0)) / 100;
-    }, 0);
-
     const manualTax = Number(form.cgst_amount || 0) + Number(form.sgst_amount || 0) + Number(form.igst_amount || 0);
-    const totalTax = form.is_gst_applicable ? lineTax + manualTax : 0;
-    const adjustedTotal = lineSubtotal + totalTax + Number(adjustment || 0);
-    const balanceDue = adjustedTotal - Number(form.amount_paid || 0);
+    const totals = calculateInvoiceTotals({
+      items: form.items || [],
+      isGstApplicable: form.is_gst_applicable,
+      manualTax,
+      invoiceDiscount: Number(form.invoice_discount || 0),
+      roundOff: Number(form.round_off || 0),
+      amountPaid: Number(form.amount_paid || 0),
+    });
 
     setForm((prev) => {
       if (
-        Number(prev.subtotal) === Number(lineSubtotal)
-        && Number(prev.total_tax) === Number(totalTax)
-        && Number(prev.total_amount) === Number(adjustedTotal)
-        && Number(prev.balance_due) === Number(balanceDue)
+        Number(prev.subtotal) === Number(totals.subtotal)
+        && Number(prev.total_tax) === Number(totals.totalTax)
+        && Number(prev.total_amount) === Number(totals.total)
+        && Number(prev.balance_due) === Number(totals.balanceDue)
       ) {
         return prev;
       }
 
       return {
         ...prev,
-        subtotal: lineSubtotal,
-        total_tax: totalTax,
-        total_amount: adjustedTotal,
-        balance_due: balanceDue,
+        items: totals.items,
+        subtotal: totals.subtotal,
+        total_tax: totals.totalTax,
+        total_amount: totals.total,
+        balance_due: totals.balanceDue,
       };
     });
-  }, [adjustment, form.amount_paid, form.cgst_amount, form.igst_amount, form.is_gst_applicable, form.items, form.sgst_amount]);
+  }, [form.amount_paid, form.cgst_amount, form.igst_amount, form.invoice_discount, form.is_gst_applicable, form.items, form.round_off, form.sgst_amount]);
 
   // ── Live GST breakdown from server ────────────────────────────────────────
   useEffect(() => {
@@ -367,13 +400,49 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
+    if (name === 'due_date') setDueDateManuallyEdited(true);
+    if (name === 'payment_terms') setDueDateManuallyEdited(false);
     setForm((prev) => ({ ...prev, [name]: value }));
   };
+
+  const productOptions = useMemo(
+    () => (Array.isArray(products) ? products : []).map((product) => ({
+      id: product.id,
+      label: product.name || product.item_name || product.sku || 'Item',
+      description: product.description || '',
+      rate: Number(product.price || product.sales_rate || 0),
+      tax: Number(product.tax_rate || 0),
+    })),
+    [products]
+  );
 
   const updateItem = (idx, field, val) => {
     const items = [...form.items];
     items[idx] = { ...items[idx], [field]: val };
     setForm((prev) => ({ ...prev, items }));
+    if (itemErrors[idx]?.[field]) {
+      setItemErrors((prev) => {
+        const next = [...prev];
+        next[idx] = { ...(next[idx] || {}), [field]: '' };
+        return next;
+      });
+    }
+  };
+
+  const applyProductToItem = (idx, option) => {
+    if (!option) return;
+    setForm((prev) => {
+      const items = [...(prev.items || [])];
+      items[idx] = {
+        ...items[idx],
+        name: option.label,
+        description: option.description || items[idx]?.description || '',
+        rate: Number(option.rate || 0),
+        tax: Number(option.tax || 0),
+      };
+      return { ...prev, items };
+    });
   };
 
   const addItem = () => {
@@ -381,36 +450,32 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
       ...prev,
       items: [...(prev.items || []), { ...initialForm.items[0] }],
     }));
+    setItemErrors((prev) => [...prev, {}]);
   };
 
   const removeItem = (idx) => {
     const items = form.items.filter((_, i) => i !== idx);
     setForm((prev) => ({ ...prev, items: items.length ? items : [{ ...initialForm.items[0] }] }));
+    setItemErrors((prev) => {
+      const next = prev.filter((_, i) => i !== idx);
+      return next.length ? next : [{}];
+    });
   };
 
-  const itemTotal = (item) => {
-    const baseAmount = Math.max(0, (Number(item.quantity) || 0) * (Number(item.rate) || 0) - (Number(item.discount) || 0));
-    const taxAmount = form.is_gst_applicable ? (baseAmount * (Number(item.tax) || 0)) / 100 : 0;
-    return baseAmount + taxAmount;
-  };
+  const { isValid } = useMemo(() => validateInvoiceForm(form, t), [form, t]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const validation = validateInvoiceForm(form, t);
+    setErrors(validation.errors);
+    setItemErrors(validation.itemErrors);
+    if (!validation.isValid) {
+      setError(validation.errors.items || 'Please fix validation errors before saving.');
+      return;
+    }
+
     setLoading(true);
     setError('');
-
-    // Client-side validation
-    if (!form.customer_id) {
-      setError(t('invoiceForm.customerRequired', 'Please select a customer.'));
-      setLoading(false);
-      return;
-    }
-    const validItems = (form.items || []).filter(item => item.name && item.name.trim());
-    if (validItems.length === 0) {
-      setError(t('invoiceForm.itemRequired', 'Please add at least one item.'));
-      setLoading(false);
-      return;
-    }
 
     try {
       const nextStatus = submitMode === 'draft'
@@ -418,12 +483,8 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
         : (form.status === 'Paid' || form.status === 'Cancelled' ? form.status : 'Issued');
 
       const payload = {
-        ...form,
+        ...buildInvoicePayload({ ...form, status: nextStatus }),
         status: nextStatus,
-        items: (form.items || []).map((item) => ({
-          ...item,
-          amount: itemTotal(item),
-        })),
       };
 
       if (invoiceId) {
@@ -432,20 +493,23 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
         await createInvoice(payload);
       }
 
+      setToast({ open: true, severity: 'success', message: 'Invoice saved successfully.' });
       if (onSuccess) onSuccess();
       navigate('/invoices');
     } catch (err) {
       const parsed = parseApiError(err, t('invoiceForm.saveFailed'));
-      setError(parsed.message);
+      const message = applyApiErrors(parsed, setErrors);
+      setError(message);
+      setToast({ open: true, severity: 'error', message });
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
     <MainLayout>
       <Box sx={{ bgcolor: '#fff', minHeight: '100vh', py: 1.5 }}>
-        <Box sx={{ maxWidth: 1020, px: { xs: 1, md: 1.5 } }}>
+        <Box sx={{ width: '100%', px: { xs: 1, md: 1.5 } }}>
           {error && (
             <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2, borderRadius: '4px' }}>
               {error}
@@ -469,7 +533,12 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                   <Typography sx={{ fontSize: '2rem', fontWeight: 500, color: '#151a25', textAlign: 'left' }}>
                     {invoiceId ? t('invoiceForm.editTitle') : t('invoiceForm.newTitle')}
                   </Typography>
-                  <DevAutoFillButton onClick={applyAutoFill} />
+                  {isDevAutoFillEnabled && (
+                    <DevAutoFillButton
+                      modes={AUTO_FILL_MODES}
+                      onSelectMode={autoFillInvoice}
+                    />
+                  )}
                 </Box>
 
                 <Box sx={{ px: 0.5, py: 3, borderBottom: `1px solid ${C.divider}` }}>
@@ -481,6 +550,8 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                         onChange={handleChange}
                         name="customer_id"
                         required
+                        error={!!errors.customer_id}
+                        helperText={errors.customer_id}
                       />
                     </AppFormField>
 
@@ -514,6 +585,8 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                         type="date"
                         size="small"
                         fullWidth
+                        error={!!errors.issue_date}
+                        helperText={errors.issue_date || ''}
                         sx={formFieldSx}
                       />
                     </AppFormField>
@@ -526,6 +599,8 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                         type="date"
                         size="small"
                         fullWidth
+                        error={!!errors.due_date}
+                        helperText={errors.due_date || ''}
                         sx={formFieldSx}
                       />
                     </AppFormField>
@@ -599,48 +674,78 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                         <TableBody>
                           {(form.items || []).map((item, idx) => (
                             <TableRow key={idx}>
-                              <TableCell sx={{ py: 0, px: 2, borderColor: C.divider, textAlign: 'left' }}>
-                                <CellField
-                                  type="text"
-                                  value={item.name || ''}
-                                  placeholder={t('invoiceForm.itemPlaceholder')}
-                                  onChange={(e) => updateItem(idx, 'name', e.target.value)}
-                                  inputProps={{
-                                    ...(idx === 0 ? { 'data-quick-item-input': 'true' } : {}),
+                              <TableCell sx={{ py: 0.5, px: 2, borderColor: C.divider, textAlign: 'left' }}>
+                                <Autocomplete
+                                  size="small"
+                                  options={productOptions}
+                                  value={productOptions.find((option) => option.label === item.name) || item.name || null}
+                                  onChange={(_, option) => applyProductToItem(idx, option)}
+                                  freeSolo
+                                  getOptionLabel={(option) => (typeof option === 'string' ? option : option?.label || '')}
+                                  onInputChange={(_, inputValue, reason) => {
+                                    if (reason === 'input' || reason === 'clear') updateItem(idx, 'name', inputValue);
                                   }}
-                                  width="100%"
-                                  inputRef={idx === 0 ? firstItemInputRef : undefined}
+                                  renderInput={(params) => (
+                                    <TextField
+                                      {...params}
+                                      placeholder={t('invoiceForm.itemPlaceholder')}
+                                      inputRef={idx === 0 ? firstItemInputRef : undefined}
+                                      inputProps={{
+                                        ...params.inputProps,
+                                        ...(idx === 0 ? { 'data-quick-item-input': 'true' } : {}),
+                                      }}
+                                      error={!!itemErrors[idx]?.name}
+                                      helperText={itemErrors[idx]?.name || ''}
+                                      sx={{ ...tableInputSx, width: '100%' }}
+                                    />
+                                  )}
+                                />
+                                <TextField
+                                  size="small"
+                                  value={item.description || ''}
+                                  placeholder="Description"
+                                  onChange={(e) => updateItem(idx, 'description', e.target.value)}
+                                  sx={{ ...tableInputSx, width: '100%', mt: 0.5 }}
                                 />
                               </TableCell>
 
-                              <TableCell sx={{ py: 0, borderColor: C.divider }}>
+                              <TableCell sx={{ py: 0.5, borderColor: C.divider }}>
                                 <CellField
                                   value={item.quantity}
                                   inputProps={{ min: 0, step: 1 }}
                                   onChange={(e) => updateItem(idx, 'quantity', parseFloat(e.target.value) || 0)}
                                   width="100%"
                                 />
+                                {!!itemErrors[idx]?.quantity && (
+                                  <Typography sx={{ color: '#dc2626', fontSize: '0.68rem', mt: 0.4 }}>{itemErrors[idx].quantity}</Typography>
+                                )}
                               </TableCell>
 
-                              <TableCell sx={{ py: 0, borderColor: C.divider }}>
+                              <TableCell sx={{ py: 0.5, borderColor: C.divider }}>
                                 <CellField
                                   value={item.rate}
                                   inputProps={{ min: 0, step: 0.01 }}
                                   onChange={(e) => updateItem(idx, 'rate', parseFloat(e.target.value) || 0)}
                                   width="100%"
                                 />
+                                {!!itemErrors[idx]?.rate && (
+                                  <Typography sx={{ color: '#dc2626', fontSize: '0.68rem', mt: 0.4 }}>{itemErrors[idx].rate}</Typography>
+                                )}
                               </TableCell>
 
-                              <TableCell sx={{ py: 0, borderColor: C.divider }}>
+                              <TableCell sx={{ py: 0.5, borderColor: C.divider }}>
                                 <CellField
                                   value={item.discount}
                                   inputProps={{ min: 0, step: 0.01 }}
                                   onChange={(e) => updateItem(idx, 'discount', parseFloat(e.target.value) || 0)}
                                   width="100%"
                                 />
+                                {!!itemErrors[idx]?.discount && (
+                                  <Typography sx={{ color: '#dc2626', fontSize: '0.68rem', mt: 0.4 }}>{itemErrors[idx].discount}</Typography>
+                                )}
                               </TableCell>
 
-                              <TableCell sx={{ py: 0, borderColor: C.divider }}>
+                              <TableCell sx={{ py: 0.5, borderColor: C.divider }}>
                                 <AppSelect
                                   name={`tax-${idx}`}
                                   value={Number(item.tax) || 0}
@@ -650,10 +755,13 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                                     <MenuItem key={t.id || t.rate} value={t.rate} sx={menuItemSx}>{t.name}</MenuItem>
                                   ))}
                                 </AppSelect>
+                                {!!itemErrors[idx]?.tax && (
+                                  <Typography sx={{ color: '#dc2626', fontSize: '0.68rem', mt: 0.4 }}>{itemErrors[idx].tax}</Typography>
+                                )}
                               </TableCell>
 
                               <TableCell align="right" sx={{ fontSize: '0.8125rem', fontWeight: 700, color: '#161f2f', borderColor: C.divider }}>
-                                {formatCurrencyByLocale(itemTotal(item), i18n.language)}
+                                {formatCurrencyByLocale(item.amount || 0, i18n.language)}
                               </TableCell>
 
                               <TableCell align="center" sx={{ borderColor: C.divider }}>
@@ -716,6 +824,9 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                       </Box>
 
                       <Paper variant="outlined" sx={{ p: 1.5, width: { xs: '100%', sm: 360 }, borderColor: C.divider, bgcolor: '#fafbfd' }}>
+                        {!!errors.items && (
+                          <Alert severity="error" sx={{ mb: 1.2 }}>{errors.items}</Alert>
+                        )}
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                           <Typography sx={{ fontSize: '0.84rem', color: '#1f2937', fontWeight: 600 }}>{t('invoiceForm.subTotal')}</Typography>
                           <Typography sx={{ fontSize: '0.84rem', color: '#111827', fontWeight: 700 }}>{formatCurrencyByLocale(form.subtotal || 0, i18n.language)}</Typography>
@@ -781,14 +892,32 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                           <TextField
                             size="small"
-                            value={t('invoiceForm.adjustment')}
+                            value={'Invoice Discount'}
                             InputProps={{ readOnly: true }}
                             sx={{ ...fieldSx, width: 120 }}
                           />
                           <TextField
                             size="small"
-                            value={adjustment}
-                            onChange={(e) => setAdjustment(e.target.value)}
+                            value={form.invoice_discount}
+                            name="invoice_discount"
+                            onChange={handleChange}
+                            type="number"
+                            sx={{ ...fieldSx, width: 120 }}
+                          />
+                        </Box>
+
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                          <TextField
+                            size="small"
+                            value={'Round Off'}
+                            InputProps={{ readOnly: true }}
+                            sx={{ ...fieldSx, width: 120 }}
+                          />
+                          <TextField
+                            size="small"
+                            value={form.round_off}
+                            name="round_off"
+                            onChange={handleChange}
                             type="number"
                             sx={{ ...fieldSx, width: 120 }}
                           />
@@ -862,7 +991,7 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                     <Button
                       type="button"
                       variant="outlined"
-                      disabled={loading}
+                      disabled={loading || !isValid}
                       sx={cancelBtnSx}
                       onClick={() => {
                         setSubmitMode('draft');
@@ -875,7 +1004,7 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                     <Button
                       type="button"
                       variant="contained"
-                      disabled={loading}
+                      disabled={loading || !isValid}
                       sx={saveBtnSx}
                       onClick={() => {
                         setSubmitMode('send');
@@ -912,6 +1041,21 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
           </Box>
         </Box>
       </Box>
+
+      <Snackbar
+        open={toast.open}
+        autoHideDuration={3500}
+        onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+          severity={toast.severity}
+          sx={{ width: '100%' }}
+        >
+          {toast.message}
+        </Alert>
+      </Snackbar>
     </MainLayout>
   );
 };

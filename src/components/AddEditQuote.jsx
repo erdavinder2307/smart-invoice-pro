@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import { createApiUrl } from '../config/api';
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   CircularProgress,
@@ -31,20 +32,32 @@ import AppFormField from './common/form/AppFormField';
 import FormLayout from './common/form/FormLayout';
 import {
   C,
-  AppSelect,
   cancelBtnSx,
   fieldSx,
   footerSx,
-  menuItemSx,
   saveBtnSx,
 } from './common/formStyles';
 import { useTranslation } from 'react-i18next';
-import useAutoFill from '../hooks/useAutoFill';
 import DevAutoFillButton from './common/DevAutoFillButton';
-import { generateQuoteMockData } from '../utils/mockDataGenerators';
 
 const TAX_OPTIONS = [0, 5, 12, 18, 28];
-const EMPTY_ITEM = { name: '', quantity: 1, rate: 0, discount: 0, tax: 0, amount: 0 };
+const EMPTY_ITEM = {
+  product_id: '',
+  name: '',
+  quantity: 1,
+  rate: 0,
+  discount: 0,
+  tax: 0,
+  unit: '',
+  stock: null,
+  amount: 0,
+};
+
+const AUTO_FILL_MODES = [
+  { value: 'minimal', label: 'Minimal Auto Fill (quick testing)' },
+  { value: 'full', label: 'Full Auto Fill (realistic scenario)' },
+  { value: 'edge', label: 'Edge Case Auto Fill (advanced testing)' },
+];
 
 const initialForm = {
   quote_number: '',
@@ -117,6 +130,7 @@ const ActionTextButton = ({ children, ...props }) => (
 );
 
 const AddEditQuote = () => {
+  const isDevAutoFillEnabled = process.env.NODE_ENV !== 'production';
   const { id } = useParams();
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -124,21 +138,210 @@ const AddEditQuote = () => {
   const quoteId = id;
   const [form, setForm] = useState(initialForm);
   const [customers, setCustomers] = useState([]);
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showItemErrors, setShowItemErrors] = useState(false);
   const [pendingFiles, setPendingFiles] = useState([]);
-  const { applyAutoFill } = useAutoFill({
-    setForm,
-    generator: generateQuoteMockData,
-    context: { customers },
-    fillEmptyOnly: true,
-  });
+  const cellRefs = useRef({});
 
   const selectedCustomer = useMemo(
     () => customers.find((customer) => String(customer.id) === String(form.customer_id)),
     [customers, form.customer_id],
   );
+
+  const productOptions = useMemo(
+    () => (Array.isArray(products) ? products : []).map((product) => {
+      const price = Number(product.price ?? product.selling_price ?? product.rate ?? product.sales_rate ?? 0);
+      const tax = Number(product.tax_rate ?? product.gst_rate ?? product.tax ?? 18);
+      return {
+        id: product.id,
+        name: product.name || product.item_name || product.title || 'Unnamed Item',
+        rate: Number.isFinite(price) ? price : 0,
+        tax: Number.isFinite(tax) ? tax : 0,
+        unit: product.unit || product.uom || '',
+        stock: Number(product.stock ?? product.available_stock ?? product.quantity_on_hand ?? 0),
+      };
+    }),
+    [products],
+  );
+
+  const productMap = useMemo(
+    () => new Map(productOptions.map((product) => [String(product.name).toLowerCase(), product])),
+    [productOptions],
+  );
+
+  const itemErrors = useMemo(
+    () => (form.items || []).map((item) => ({
+      name: item.name && String(item.name).trim() ? '' : 'Item is required.',
+      quantity: Number(item.quantity) > 0 ? '' : 'Quantity must be greater than 0.',
+    })),
+    [form.items],
+  );
+
+  const randomFrom = useCallback((list) => {
+    if (!Array.isArray(list) || list.length === 0) return null;
+    return list[Math.floor(Math.random() * list.length)];
+  }, []);
+
+  const getDate = useCallback((days = 0) => {
+    const dt = new Date();
+    dt.setDate(dt.getDate() + days);
+    return dt.toISOString().slice(0, 10);
+  }, []);
+
+  const calculateAmount = useCallback((item) => {
+    const quantity = Number(item.quantity) || 0;
+    const rate = Number(item.rate) || 0;
+    const discount = Number(item.discount) || 0;
+    const tax = Number(item.tax) || 0;
+    const base = Math.max(0, quantity * rate - discount);
+    return base + (base * tax) / 100;
+  }, []);
+
+  const makeItemFromProduct = useCallback((product, overrides = {}) => {
+    const next = {
+      ...EMPTY_ITEM,
+      product_id: product?.id || '',
+      name: product?.name || '',
+      quantity: overrides.quantity ?? 1,
+      rate: overrides.rate ?? Number(product?.rate || 0),
+      discount: overrides.discount ?? 0,
+      tax: overrides.tax ?? Number(product?.tax || 0),
+      unit: overrides.unit ?? (product?.unit || ''),
+      stock: product?.stock ?? null,
+    };
+    return {
+      ...next,
+      amount: calculateAmount(next),
+    };
+  }, [calculateAmount]);
+
+  const setCellRef = useCallback((rowIndex, colName, node) => {
+    if (!cellRefs.current[rowIndex]) cellRefs.current[rowIndex] = {};
+    cellRefs.current[rowIndex][colName] = node;
+  }, []);
+
+  const focusCell = useCallback((rowIndex, colName) => {
+    const node = cellRefs.current?.[rowIndex]?.[colName];
+    if (node && typeof node.focus === 'function') {
+      node.focus();
+    }
+  }, []);
+
+  const autoFillQuote = useCallback((mode) => {
+    if (!isDevAutoFillEnabled) return;
+
+    if (!customers.length || !productOptions.length) {
+      setError('Auto Fill requires at least one customer and one product.');
+      return;
+    }
+
+    const customer = randomFrom(customers);
+    const pickProduct = () => randomFrom(productOptions);
+
+    const withBase = {
+      customer_id: customer?.id || '',
+      issue_date: getDate(0),
+      expiry_date: getDate(30),
+      payment_terms: 'Net 30',
+      is_gst_applicable: true,
+      adjustment_label: 'Adjustment',
+      tds_tcs_mode: 'tds',
+      tds_tcs_rate: '',
+      adjustment_amount: '',
+      notes: '',
+      terms_conditions: '',
+      subject: '',
+      salesperson: '',
+      project_name: '',
+    };
+
+    if (mode === 'minimal') {
+      const product = pickProduct();
+      const items = [makeItemFromProduct(product, { quantity: 1, discount: 0 })];
+      setForm((prev) => ({
+        ...prev,
+        ...withBase,
+        items,
+      }));
+      setShowItemErrors(false);
+      return;
+    }
+
+    if (mode === 'edge') {
+      const product = pickProduct();
+      const largeQty = Math.max(250, (Number(product?.stock || 0) + 200));
+      const item = makeItemFromProduct(product, {
+        quantity: largeQty,
+        discount: Number(product?.rate || 500) * 0.65,
+        tax: 0,
+      });
+      setForm((prev) => ({
+        ...prev,
+        ...withBase,
+        expiry_date: getDate(7),
+        subject: '',
+        salesperson: '',
+        project_name: '',
+        notes: 'Stress test quote with unusual pricing and quantity conditions.',
+        terms_conditions: '',
+        adjustment_amount: String(-Math.floor(Math.random() * 400 + 50)),
+        tds_tcs_mode: 'tcs',
+        tds_tcs_rate: '0',
+        items: [item],
+      }));
+      setShowItemErrors(false);
+      return;
+    }
+
+    // full
+    const rowCount = Math.max(2, Math.min(5, Math.floor(Math.random() * 4) + 2));
+    const items = [];
+    let lowStockApplied = false;
+
+    for (let i = 0; i < rowCount; i += 1) {
+      const product = pickProduct();
+      const stock = Number(product?.stock || 0);
+      const lowStockRow = !lowStockApplied && i === rowCount - 1;
+      const quantity = lowStockRow
+        ? (stock > 0 ? stock + Math.floor(Math.random() * 4 + 1) : Math.floor(Math.random() * 60 + 40))
+        : Math.floor(Math.random() * 10 + 1);
+      const item = makeItemFromProduct(product, {
+        quantity,
+        discount: Math.floor(Math.random() * 11),
+      });
+      items.push(item);
+      if (lowStockRow) lowStockApplied = true;
+    }
+
+    const withholdingRateOptions = ['0.1', '1', '2', '5'];
+    const modePick = Math.random() > 0.5 ? 'tds' : 'tcs';
+    setForm((prev) => ({
+      ...prev,
+      ...withBase,
+      issue_date: getDate(-2),
+      expiry_date: getDate(25),
+      subject: 'Comprehensive proposal for software rollout and onboarding',
+      salesperson: randomFrom(['Aarav Kapoor', 'Meera Shah', 'Rohan Gupta', 'Kavya Nair']) || 'Sales Team',
+      project_name: randomFrom(['ERP Migration', 'Warehouse Automation', 'Retail POS Upgrade']) || 'Implementation Project',
+      notes: 'Includes implementation support, onboarding, and 30-day hypercare window.',
+      terms_conditions: 'Payment due within 30 days. Delivery schedule subject to final approval.',
+      tds_tcs_mode: modePick,
+      tds_tcs_rate: randomFrom(withholdingRateOptions) || '1',
+      adjustment_amount: String((Math.random() > 0.5 ? 1 : -1) * Math.floor(Math.random() * 90 + 10)),
+      items,
+    }));
+    setShowItemErrors(false);
+  }, [
+    customers,
+    getDate,
+    isDevAutoFillEnabled,
+    makeItemFromProduct,
+    productOptions,
+    randomFrom,
+  ]);
 
   useEffect(() => {
     let active = true;
@@ -146,10 +349,14 @@ const AddEditQuote = () => {
     const load = async () => {
       try {
         setPageLoading(true);
-        const customersResponse = await axios.get(createApiUrl('/api/customers'));
+        const [customersResponse, productsResponse] = await Promise.all([
+          axios.get(createApiUrl('/api/customers')),
+          axios.get(createApiUrl('/api/products')),
+        ]);
         if (!active) return;
 
         setCustomers(Array.isArray(customersResponse.data) ? customersResponse.data : []);
+        setProducts(Array.isArray(productsResponse.data) ? productsResponse.data : []);
 
         if (quoteId) {
           const quoteResponse = await axios.get(createApiUrl(`/api/quotes/${quoteId}`));
@@ -262,14 +469,71 @@ const AddEditQuote = () => {
       items: prev.items.map((item, itemIndex) => {
         if (itemIndex !== index) return item;
         const nextItem = { ...item, [field]: value };
-        const baseAmount = Math.max(0, (Number(nextItem.quantity) || 0) * (Number(nextItem.rate) || 0) - (Number(nextItem.discount) || 0));
-        const total = baseAmount + (baseAmount * (Number(nextItem.tax) || 0)) / 100;
+        const total = calculateAmount(nextItem);
         return { ...nextItem, amount: total };
       }),
     }));
   };
 
+  const applyProductToItem = useCallback((index, product) => {
+    if (!product) return;
+    setForm((prev) => ({
+      ...prev,
+      items: prev.items.map((item, itemIndex) => {
+        if (itemIndex !== index) return item;
+        const nextItem = {
+          ...item,
+          product_id: product.id,
+          name: product.name,
+          rate: Number(product.rate || 0),
+          tax: Number(product.tax || 0),
+          unit: product.unit || '',
+          stock: product.stock ?? null,
+        };
+        return {
+          ...nextItem,
+          amount: calculateAmount(nextItem),
+        };
+      }),
+    }));
+  }, [calculateAmount]);
+
+  const handleItemNameChange = useCallback((index, value) => {
+    setForm((prev) => ({
+      ...prev,
+      items: prev.items.map((item, itemIndex) => {
+        if (itemIndex !== index) return item;
+        const nextItem = { ...item, name: value };
+        return { ...nextItem, amount: calculateAmount(nextItem) };
+      }),
+    }));
+    const matched = productMap.get(String(value || '').trim().toLowerCase());
+    if (matched) applyProductToItem(index, matched);
+  }, [applyProductToItem, calculateAmount, productMap]);
+
   const addItem = () => setForm((prev) => ({ ...prev, items: [...prev.items, { ...EMPTY_ITEM }] }));
+
+  const handleCellKeyDown = useCallback((event, rowIndex, colName) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+
+    const columns = ['name', 'quantity', 'rate', 'discount', 'tax'];
+    const colIndex = columns.indexOf(colName);
+    if (colIndex === -1) return;
+
+    if (colIndex < columns.length - 1) {
+      focusCell(rowIndex, columns[colIndex + 1]);
+      return;
+    }
+
+    const isLastRow = rowIndex === (form.items || []).length - 1;
+    if (isLastRow) {
+      addItem();
+      setTimeout(() => focusCell(rowIndex + 1, 'name'), 0);
+      return;
+    }
+    focusCell(rowIndex + 1, 'name');
+  }, [focusCell, form.items]);
 
   const removeItem = (index) => {
     setForm((prev) => ({
@@ -295,6 +559,7 @@ const AddEditQuote = () => {
 
     setLoading(true);
     setError('');
+    setShowItemErrors(true);
 
     if (!form.customer_id) {
       setError('Please select a customer.');
@@ -308,6 +573,27 @@ const AddEditQuote = () => {
       return;
     }
 
+    const sanitizedItems = (form.items || []).map((item) => ({
+      ...item,
+      name: String(item.name || '').trim(),
+      quantity: Number(item.quantity) || 0,
+      rate: Number(item.rate) || 0,
+      discount: Number(item.discount) || 0,
+      tax: Number(item.tax) || 0,
+      amount: Number(item.amount) || 0,
+    }));
+    const validItems = sanitizedItems.filter((item) => item.name);
+    if (!validItems.length) {
+      setError('Please add at least one valid item.');
+      setLoading(false);
+      return;
+    }
+    if (validItems.some((item) => item.quantity <= 0)) {
+      setError('Item quantity must be greater than 0.');
+      setLoading(false);
+      return;
+    }
+
     try {
       const payload = {
         ...form,
@@ -317,13 +603,13 @@ const AddEditQuote = () => {
         customer_phone: selectedCustomer?.phone || selectedCustomer?.mobile || '',
         customer_id: form.customer_id,
         adjustment_amount: Number(form.adjustment_amount || 0),
-        items: form.items.map((item) => ({
+        items: sanitizedItems.map((item) => ({
           ...item,
-          quantity: Number(item.quantity) || 0,
-          rate: Number(item.rate) || 0,
-          discount: Number(item.discount) || 0,
-          tax: Number(item.tax) || 0,
-          amount: Number(item.amount) || 0,
+          quantity: item.quantity,
+          rate: item.rate,
+          discount: item.discount,
+          tax: item.tax,
+          amount: item.amount,
         })),
       };
 
@@ -362,7 +648,12 @@ const AddEditQuote = () => {
               <Typography sx={{ fontSize: '1.1rem', fontWeight: 500, color: '#212121', textAlign: 'left' }}>
                 {quoteId ? t('addEditQuote.editTitle') : t('addEditQuote.newTitle')}
               </Typography>
-              <DevAutoFillButton onClick={applyAutoFill} />
+              {isDevAutoFillEnabled && (
+                <DevAutoFillButton
+                  modes={AUTO_FILL_MODES}
+                  onSelectMode={autoFillQuote}
+                />
+              )}
             </Box>
 
             <Paper
@@ -518,14 +809,36 @@ const AddEditQuote = () => {
                         return (
                           <TableRow key={index} sx={{ '& td': { borderColor: '#e6eaf0', py: 0, px: 0 }, '&:hover': { bgcolor: '#fcfdff' } }}>
                             <TableCell>
-                              <TextField
-                                size="small"
-                                value={item.name}
-                                onChange={(event) => updateItem(index, 'name', event.target.value)}
-                                placeholder="Type or click to select an item."
-                                fullWidth
-                                sx={tableInputSx}
+                              <Autocomplete
+                                freeSolo
+                                options={productOptions}
+                                getOptionLabel={(option) => (typeof option === 'string' ? option : option.name)}
+                                value={item.name || ''}
+                                onInputChange={(_, value) => handleItemNameChange(index, value)}
+                                onChange={(_, value) => {
+                                  if (value && typeof value === 'object') {
+                                    applyProductToItem(index, value);
+                                    return;
+                                  }
+                                  handleItemNameChange(index, value || '');
+                                }}
+                                renderInput={(params) => (
+                                  <TextField
+                                    {...params}
+                                    size="small"
+                                    placeholder="Type or click to select an item."
+                                    fullWidth
+                                    sx={tableInputSx}
+                                    inputRef={(node) => setCellRef(index, 'name', node)}
+                                    onKeyDown={(event) => handleCellKeyDown(event, index, 'name')}
+                                  />
+                                )}
                               />
+                              {showItemErrors && itemErrors[index]?.name && (
+                                <Typography sx={{ fontSize: '0.68rem', color: '#dc2626', px: 1, py: 0.4 }}>
+                                  {itemErrors[index].name}
+                                </Typography>
+                              )}
                             </TableCell>
                             <TableCell>
                               <TextField
@@ -536,7 +849,14 @@ const AddEditQuote = () => {
                                 inputProps={{ min: 0, step: 1 }}
                                 fullWidth
                                 sx={tableInputSx}
+                                inputRef={(node) => setCellRef(index, 'quantity', node)}
+                                onKeyDown={(event) => handleCellKeyDown(event, index, 'quantity')}
                               />
+                              {showItemErrors && itemErrors[index]?.quantity && (
+                                <Typography sx={{ fontSize: '0.68rem', color: '#dc2626', px: 1, py: 0.4 }}>
+                                  {itemErrors[index].quantity}
+                                </Typography>
+                              )}
                             </TableCell>
                             <TableCell>
                               <TextField
@@ -547,6 +867,8 @@ const AddEditQuote = () => {
                                 inputProps={{ min: 0, step: 0.01 }}
                                 fullWidth
                                 sx={tableInputSx}
+                                inputRef={(node) => setCellRef(index, 'rate', node)}
+                                onKeyDown={(event) => handleCellKeyDown(event, index, 'rate')}
                               />
                             </TableCell>
                             <TableCell>
@@ -558,14 +880,26 @@ const AddEditQuote = () => {
                                 inputProps={{ min: 0, step: 0.01 }}
                                 fullWidth
                                 sx={tableInputSx}
+                                inputRef={(node) => setCellRef(index, 'discount', node)}
+                                onKeyDown={(event) => handleCellKeyDown(event, index, 'discount')}
                               />
                             </TableCell>
                             <TableCell>
-                              <AppSelect name={`item-tax-${index}`} value={item.tax} onChange={(event) => updateItem(index, 'tax', Number(event.target.value) || 0)}>
+                              <TextField
+                                select
+                                size="small"
+                                name={`item-tax-${index}`}
+                                value={item.tax}
+                                onChange={(event) => updateItem(index, 'tax', Number(event.target.value) || 0)}
+                                fullWidth
+                                sx={tableInputSx}
+                                inputRef={(node) => setCellRef(index, 'tax', node)}
+                                onKeyDown={(event) => handleCellKeyDown(event, index, 'tax')}
+                              >
                                 {TAX_OPTIONS.map((rate) => (
-                                  <MenuItem key={rate} value={rate} sx={menuItemSx}>{rate === 0 ? 'Select a Tax' : `${rate}%`}</MenuItem>
+                                  <MenuItem key={rate} value={rate}>{rate}%</MenuItem>
                                 ))}
-                              </AppSelect>
+                              </TextField>
                             </TableCell>
                             <TableCell align="right" sx={{ pr: 1.2 }}>
                               <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#202124' }}>
@@ -596,7 +930,7 @@ const AddEditQuote = () => {
                     </ActionTextButton>
                   </Box>
 
-                  <Box sx={{ width: 245, maxWidth: '100%' }}>
+                  <Box sx={{ width: 245, maxWidth: '100%', position: { md: 'sticky' }, top: { md: 88 }, alignSelf: { md: 'flex-start' } }}>
                     <Paper elevation={0} sx={{ border: `1px solid ${C.border}`, bgcolor: '#fafbfc', borderRadius: '4px', p: 2 }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.2 }}>
                         <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>Sub Total</Typography>
@@ -639,6 +973,12 @@ const AddEditQuote = () => {
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.9 }}>
                           <Typography sx={{ fontSize: '0.8125rem', color: '#6b7280' }}>Tax</Typography>
                           <Typography sx={{ fontSize: '0.8125rem', color: '#111827' }}>{Number(form.total_tax || 0).toFixed(2)}</Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.9 }}>
+                          <Typography sx={{ fontSize: '0.8125rem', color: '#6b7280' }}>Withholding</Typography>
+                          <Typography sx={{ fontSize: '0.8125rem', color: '#111827' }}>
+                            {form.tds_tcs_rate ? `${form.tds_tcs_mode.toUpperCase()} ${form.tds_tcs_rate}%` : '—'}
+                          </Typography>
                         </Box>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                           <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: '#202124' }}>Total ( ₹ )</Typography>

@@ -89,6 +89,9 @@ describe('AddEditInvoice', () => {
       if (url.includes('/api/customers')) {
         return Promise.resolve({ data: [{ id: 'cust-1', name: 'Acme Corp' }] });
       }
+      if (url.includes('/api/products')) {
+        return Promise.resolve({ data: [{ id: 'p-1', name: 'Implementation Service', price: 1500, tax_rate: 18 }] });
+      }
       if (url.includes('/api/invoices/next-number')) {
         return Promise.resolve({ data: { next_invoice_number: 'INV-00999' } });
       }
@@ -160,6 +163,46 @@ describe('AddEditInvoice', () => {
 
     await waitFor(() => expect(createInvoice).toHaveBeenCalledTimes(1));
     expect(mockNavigate).toHaveBeenCalledWith('/invoices');
+  });
+
+  it('blocks save when due date is before invoice date', async () => {
+    renderWithProviders(<AddEditInvoice />);
+
+    await screen.findByText('New Invoice');
+
+    fireEvent.change(screen.getByTestId('customer-select'), { target: { name: 'customer_id', value: 'cust-1' } });
+    const itemInput = screen.getAllByPlaceholderText('Type or click to select an item.')[0];
+    fireEvent.change(itemInput, { target: { value: 'Test Item' } });
+
+    const issueInput = document.querySelector('input[name="issue_date"]');
+    const dueInput = document.querySelector('input[name="due_date"]');
+
+    fireEvent.change(issueInput, {
+      target: { name: 'issue_date', value: '2026-04-20' },
+    });
+    fireEvent.change(dueInput, {
+      target: { name: 'due_date', value: '2026-04-10' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save and Send' }));
+    await waitFor(() => expect(createInvoice).not.toHaveBeenCalled());
+  });
+
+  it('shows validation for invalid quantity', async () => {
+    renderWithProviders(<AddEditInvoice />);
+
+    await screen.findByText('New Invoice');
+
+    fireEvent.change(screen.getByTestId('customer-select'), { target: { name: 'customer_id', value: 'cust-1' } });
+    const itemInput = screen.getAllByPlaceholderText('Type or click to select an item.')[0];
+    fireEvent.change(itemInput, { target: { value: 'Test Item' } });
+
+    const quantityInput = screen.getAllByDisplayValue('1')[0];
+    fireEvent.change(quantityInput, { target: { value: '0' } });
+    const saveButton = screen.getByRole('button', { name: 'Save and Send' });
+
+    await waitFor(() => expect(saveButton).toBeDisabled());
+    expect(createInvoice).not.toHaveBeenCalled();
   });
 
   it('disables save action while submit is in progress', async () => {

@@ -1,470 +1,747 @@
-import React, { useCallback, useEffect, useState } from "react";
-import axios from "axios";
-import { createApiUrl } from "../config/api";
-import MainLayout from "./Layout/MainLayout";
-import StatusBadge from "./common/StatusBadge";
-import SummaryCard from "./common/SummaryCard";
+import React, { useEffect, useMemo, useState } from 'react';
 import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
+import {
+  Alert,
   Box,
   Button,
-  Typography,
-  Paper,
-  TableRow,
-  TableCell,
-  Alert,
-  InputAdornment,
-  TextField,
-  Fade,
-  Grid,
-  IconButton,
+  Checkbox,
+  CircularProgress,
   Dialog,
-  DialogTitle,
-  DialogContent,
   DialogActions,
-  Menu,
-  MenuItem,
+  DialogContent,
+  DialogTitle,
+  IconButton,
   ListItemIcon,
   ListItemText,
-  Container,
-  FormControl,
-  Select,
-  Chip,
-  useMediaQuery,
-  useTheme,
-} from "@mui/material";
-import ResponsiveDataView from "./common/ResponsiveDataView";
-import RecurringProfileCard from "./common/RecurringProfileCard";
-import { useNavigate } from "react-router-dom";
-import AddIcon from "@mui/icons-material/Add";
-import SearchIcon from "@mui/icons-material/Search";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
-import RepeatIcon from "@mui/icons-material/Repeat";
-import PauseIcon from "@mui/icons-material/Pause";
-import PlayArrowIcon from "@mui/icons-material/PlayArrow";
-import EventRepeatIcon from "@mui/icons-material/EventRepeat";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import AccessTimeIcon from "@mui/icons-material/AccessTime";
-import { useTranslation } from "react-i18next";
+  Menu,
+  MenuItem,
+  TableCell,
+  TableRow,
+  TableSortLabel,
+  TextField,
+  Tooltip,
+  Typography,
+} from '@mui/material';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import { useTranslation } from 'react-i18next';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import PauseCircleOutlineIcon from '@mui/icons-material/PauseCircleOutline';
+import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import RepeatIcon from '@mui/icons-material/Repeat';
+
+import { CHECKBOX_COLUMN_WIDTH } from './common/StandardDataTable';
+import ResponsiveDataView from './common/ResponsiveDataView';
+import RecurringProfileCard from './common/RecurringProfileCard';
+import ListPageLayout from './list/ListPageLayout';
+import ListHeader, { invalidateSearchHistoryCache } from './list/ListHeader';
+import FilterBar from './list/FilterBar';
+import ListSummary from './list/ListSummary';
+import BulkActionBar from './list/BulkActionBar';
+import useTableSorting from '../hooks/useTableSorting';
+import useListController from '../hooks/useListController';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
+import { saveSearchHistory } from '../services/searchService';
+import {
+  bulkRecurringProfileAction,
+  deleteRecurringProfile,
+  getRecurringProfilesList,
+  patchRecurringProfileAction,
+} from '../services/recurringProfileService';
+
+const DATE_OPTIONS = [
+  { value: 'all', label: 'All Time' },
+  { value: 'this_week', label: 'This Week' },
+  { value: 'this_month', label: 'This Month' },
+  { value: 'this_quarter', label: 'This Quarter' },
+  { value: 'this_year', label: 'This Year' },
+  { value: 'custom', label: 'Custom' },
+];
+
+const STATUS_OPTIONS = [
+  { value: 'All', label: 'All Status' },
+  { value: 'Active', label: 'Active' },
+  { value: 'Paused', label: 'Paused' },
+  { value: 'Completed', label: 'Completed' },
+  { value: 'Cancelled', label: 'Cancelled' },
+];
+
+const FREQUENCY_OPTIONS = [
+  { value: 'All', label: 'All Frequency' },
+  { value: 'Weekly', label: 'Weekly' },
+  { value: 'Monthly', label: 'Monthly' },
+  { value: 'Yearly', label: 'Yearly' },
+  { value: 'Custom', label: 'Custom' },
+];
+
+const statusStyle = {
+  Active: { color: '#1f7a36', bg: '#eaf7ee' },
+  Paused: { color: '#b45309', bg: '#fff7ed' },
+  Completed: { color: '#1d4ed8', bg: '#eaf2ff' },
+  Cancelled: { color: '#b91c1c', bg: '#fee2e2' },
+  Expired: { color: '#1d4ed8', bg: '#eaf2ff' },
+  Stopped: { color: '#b91c1c', bg: '#fee2e2' },
+};
+
+const normalizeStatusForUi = (status) => {
+  if (status === 'Expired') return 'Completed';
+  if (status === 'Stopped') return 'Cancelled';
+  return status;
+};
 
 const RecurringProfileList = () => {
-  const [profiles, setProfiles] = useState([]);
-  const [customers, setCustomers] = useState([]);
-  const { t } = useTranslation();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
-  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-  const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
-  const [selectedProfile, setSelectedProfile] = useState(null);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
+  const location = useLocation();
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
-  const fetchProfiles = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await axios.get(createApiUrl("/api/recurring-profiles"));
-      setProfiles(response.data);
-      setError("");
-    } catch (err) {
-      setError(t('recurringProfileList.failedFetch'));
-      console.error(err);
-    }
-    setLoading(false);
-  }, [t]);
-
-  const fetchCustomers = async () => {
-    try {
-      const response = await axios.get(createApiUrl("/api/customers"));
-      setCustomers(response.data);
-    } catch (err) {
-      console.error("Failed to fetch customers:", err);
-    }
-  };
-
-  useEffect(() => {
-    fetchProfiles();
-    fetchCustomers();
-  }, [fetchProfiles]);
-
-  const filteredProfiles = profiles.filter((profile) => {
-    const customer = customers.find((c) => c.id === profile.customer_id);
-    const customerName = customer ? customer.name : "";
-
-    const matchesSearch =
-      profile.profile_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      profile.frequency?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesStatus = statusFilter === "All" || profile.status === statusFilter;
-
-    return matchesSearch && matchesStatus;
+  const {
+    page,
+    setPage,
+    rowsPerPage,
+    setRowsPerPage,
+    search,
+    setSearch,
+    status,
+    setStatus,
+    dateRange,
+    setDateRange,
+    dateFrom,
+    setDateFrom,
+    dateTo,
+    setDateTo,
+  } = useListController({
+    location,
+    navigate,
+    defaults: {
+      page: 1,
+      pageSize: 10,
+      search: '',
+      status: 'All',
+      dateRange: 'all',
+    },
   });
 
-  const paginatedProfiles = filteredProfiles.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage
+  const [frequency, setFrequency] = useState(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('frequency') || 'All';
+  });
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
+  const [activeProfile, setActiveProfile] = useState(null);
+  const [uiError, setUiError] = useState('');
+
+  const debouncedSearch = useDebouncedValue(search, 300);
+  const { sortBy, sortOrder, handleSort, setSort } = useTableSorting('created_at', 'desc', 'recurring_profiles');
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const nextFrequency = params.get('frequency') || 'All';
+    if (nextFrequency !== frequency) {
+      setFrequency(nextFrequency);
+    }
+  }, [frequency, location.search]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const current = params.get('frequency') || 'All';
+    if (current === frequency) return;
+
+    if (frequency && frequency !== 'All') params.set('frequency', frequency);
+    else params.delete('frequency');
+    navigate(`${location.pathname}?${params.toString()}`, { replace: true });
+  }, [frequency, location.pathname, location.search, navigate]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const urlSortBy = params.get('sort_by') || 'created_at';
+    const urlSortOrder = (params.get('sort_order') || 'desc').toLowerCase();
+    if (urlSortBy !== sortBy || urlSortOrder !== sortOrder) {
+      setSort(urlSortBy, urlSortOrder === 'asc' ? 'asc' : 'desc');
+    }
+  }, [location.search, setSort, sortBy, sortOrder]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const currentSortBy = params.get('sort_by') || 'created_at';
+    const currentSortOrder = (params.get('sort_order') || 'desc').toLowerCase();
+    if (currentSortBy === sortBy && currentSortOrder === sortOrder) return;
+
+    params.set('sort_by', sortBy || 'created_at');
+    params.set('sort_order', sortOrder || 'desc');
+    navigate(`${location.pathname}?${params.toString()}`, { replace: true });
+  }, [location.pathname, location.search, navigate, sortBy, sortOrder]);
+
+  const queryParams = useMemo(
+    () => ({
+      page: page + 1,
+      limit: rowsPerPage,
+      sort_by: sortBy,
+      sort_order: sortOrder,
+      q: debouncedSearch,
+      status: status === 'All' ? '' : status,
+      frequency: frequency === 'All' ? '' : frequency,
+      date_range: dateRange,
+      date_from: dateRange === 'custom' ? dateFrom : '',
+      date_to: dateRange === 'custom' ? dateTo : '',
+    }),
+    [dateFrom, dateRange, dateTo, debouncedSearch, frequency, page, rowsPerPage, sortBy, sortOrder, status]
   );
 
-  // Calculate summary metrics
-  const activeCount = profiles.filter((p) => p.status === "Active").length;
-  
-  const upcomingInvoices = profiles.filter((p) => {
-    if (p.status !== "Active") return false;
-    const nextRun = new Date(p.next_run_date);
-    const today = new Date();
-    const diffDays = Math.ceil((nextRun - today) / (1000 * 60 * 60 * 24));
-    return diffDays >= 0 && diffDays <= 7;
-  }).length;
+  const recurringQuery = useQuery({
+    queryKey: ['recurring-profiles-list', queryParams],
+    queryFn: ({ signal }) => getRecurringProfilesList(queryParams, signal),
+    placeholderData: keepPreviousData,
+  });
 
-  const pausedCount = profiles.filter((p) => p.status === "Paused").length;
-
-  const totalInvoicesGenerated = profiles.reduce(
-    (sum, p) => sum + (p.occurrences_created || 0),
-    0
-  );
-
-  const handleEdit = (profile) => {
-    navigate(`/recurring-profiles/edit/${profile.id}`);
-  };
-
-  const handleAdd = () => {
-    navigate("/recurring-profiles/add");
-  };
-
-  const handleDelete = async (id) => {
-    setLoading(true);
-    try {
-      await axios.delete(createApiUrl(`/api/recurring-profiles/${id}`));
-      fetchProfiles();
+  const deleteMutation = useMutation({
+    mutationFn: deleteRecurringProfile,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recurring-profiles-list'] });
       setConfirmDeleteId(null);
-      setError("");
-    } catch (err) {
-      setError(t('recurringProfileList.failedDelete'));
-      console.error(err);
+      setUiError('');
+    },
+    onError: () => setUiError('Failed to delete recurring invoice.'),
+  });
+
+  const actionMutation = useMutation({
+    mutationFn: ({ id, action }) => patchRecurringProfileAction(id, action),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recurring-profiles-list'] });
+      setUiError('');
+      setActionMenuAnchor(null);
+      setActiveProfile(null);
+    },
+    onError: () => setUiError('Failed to update recurring invoice status.'),
+  });
+
+  const bulkMutation = useMutation({
+    mutationFn: bulkRecurringProfileAction,
+    onSuccess: () => {
+      setSelectedIds([]);
+      queryClient.invalidateQueries({ queryKey: ['recurring-profiles-list'] });
+      setUiError('');
+    },
+    onError: () => setUiError('Failed to apply bulk action.'),
+  });
+
+  useEffect(() => {
+    const query = debouncedSearch.trim();
+    if (query.length < 2) return;
+
+    Promise.resolve(
+      saveSearchHistory({
+        page: 'recurring-invoices',
+        query,
+        filters: {
+          status,
+          frequency,
+          date_range: dateRange,
+        },
+      })
+    )
+      .then(() => invalidateSearchHistoryCache('recurring-invoices'))
+      .catch(() => {});
+  }, [dateRange, debouncedSearch, frequency, status]);
+
+  const rows = useMemo(() => {
+    const payload = recurringQuery.data;
+    if (Array.isArray(payload)) return payload;
+    return Array.isArray(payload?.data) ? payload.data : [];
+  }, [recurringQuery.data]);
+
+  const totalCount = useMemo(() => {
+    const payload = recurringQuery.data;
+    if (Array.isArray(payload)) return payload.length;
+    return Number(payload?.total || 0);
+  }, [recurringQuery.data]);
+
+  const summary = useMemo(() => {
+    const defaults = {
+      total: totalCount,
+      Active: 0,
+      Paused: 0,
+      Completed: 0,
+      Cancelled: 0,
+    };
+
+    return rows.reduce((acc, row) => {
+      const next = { ...acc };
+      const normalized = normalizeStatusForUi(row.status);
+      next[normalized] = (next[normalized] || 0) + 1;
+      return next;
+    }, defaults);
+  }, [rows, totalCount]);
+
+  const liveSearchResults = useMemo(() => {
+    const term = String(search || '').trim().toLowerCase();
+    if (term.length < 1) return [];
+
+    return rows
+      .filter((row) => [row.profile_name, row.customer_name]
+        .some((value) => String(value || '').toLowerCase().includes(term)))
+      .slice(0, 7)
+      .map((row) => ({
+        id: row.id,
+        value: row.profile_name || row.customer_name || '',
+        label: row.profile_name || 'Recurring Invoice',
+        subtitle: row.customer_name || row.frequency || 'Recurring Invoice',
+      }));
+  }, [rows, search]);
+
+  const allVisibleSelected = rows.length > 0 && rows.every((row) => selectedIds.includes(row.id));
+
+  const handleSelectAllVisible = (checked) => {
+    if (checked) {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...rows.map((row) => row.id)])));
+      return;
     }
-    setLoading(false);
+    setSelectedIds((prev) => prev.filter((id) => !rows.some((row) => row.id === id)));
   };
 
-  const handlePause = async (profile) => {
-    try {
-      await axios.post(createApiUrl(`/api/recurring-profiles/${profile.id}/pause`));
-      fetchProfiles();
-      setError("");
-    } catch (err) {
-      setError("Failed to pause profile");
-      console.error(err);
-    }
-    handleActionMenuClose();
+  const handleRowSelect = (rowId, checked) => {
+    setSelectedIds((prev) => {
+      if (checked) return prev.includes(rowId) ? prev : [...prev, rowId];
+      return prev.filter((id) => id !== rowId);
+    });
   };
 
-  const handleResume = async (profile) => {
-    try {
-      await axios.post(createApiUrl(`/api/recurring-profiles/${profile.id}/resume`));
-      fetchProfiles();
-      setError("");
-    } catch (err) {
-      setError("Failed to resume profile");
-      console.error(err);
-    }
-    handleActionMenuClose();
+  const runBulkAction = (action) => {
+    if (!selectedIds.length) return;
+    bulkMutation.mutate({ action, ids: selectedIds });
   };
 
   const handleActionMenuOpen = (event, profile) => {
+    event.stopPropagation();
     setActionMenuAnchor(event.currentTarget);
-    setSelectedProfile(profile);
+    setActiveProfile(profile);
   };
 
   const handleActionMenuClose = () => {
     setActionMenuAnchor(null);
-    setSelectedProfile(null);
+    setActiveProfile(null);
   };
 
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
+  const formatDate = (value) => {
+    if (!value) return '—';
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? '—' : parsed.toLocaleDateString('en-GB');
   };
 
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
+  const formatAmount = (value) => `₹${Number(value || 0).toFixed(2)}`;
+
+  const getStatusChip = (status) => {
+    const normalized = normalizeStatusForUi(status || 'Active');
+    const style = statusStyle[normalized] || statusStyle.Active;
+    return (
+      <Box
+        component="span"
+        sx={{
+          display: 'inline-block',
+          px: 0.8,
+          py: 0.25,
+          borderRadius: '10px',
+          fontSize: '0.69rem',
+          fontWeight: 700,
+          letterSpacing: 0.22,
+          color: style.color,
+          bgcolor: style.bg,
+          textTransform: 'uppercase',
+        }}
+      >
+        {normalized}
+      </Box>
+    );
   };
 
-  const getCustomerName = (customerId) => {
-    const customer = customers.find((c) => c.id === customerId);
-    return customer ? customer.name : "Unknown";
-  };
-
-  const getStatusColor = (status) => {
-    const statusColors = {
-      Active: "success",
-      Paused: "warning",
-      Expired: "error",
-      Stopped: "default"
-    };
-    return statusColors[status] || "default";
-  };
-
-  const getFrequencyIcon = (frequency) => {
-    return <RepeatIcon fontSize="small" />;
-  };
+  const isInitialLoading = recurringQuery.isLoading && !recurringQuery.data;
+  const hasActiveFilters = Boolean(search || (status && status !== 'All') || (frequency && frequency !== 'All') || (dateRange && dateRange !== 'all'));
 
   return (
-    <MainLayout>
-      <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-        <Fade in timeout={500}>
-          <Box>
-            {/* Header */}
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 4 }}>
-              <Box>
-                <Typography variant="h4" fontWeight={700} sx={{ mb: 0.5, display: "flex", alignItems: "center", gap: 1 }}>
-                  <EventRepeatIcon fontSize="large" color="primary" />
-                  Recurring Invoices
-                </Typography>
-                <Typography variant="body1" color="text.secondary">
-                  {t('recurringProfileList.subtitle')}
-                </Typography>
-              </Box>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={handleAdd}
-                sx={{
-                  borderRadius: 2,
-                  px: 3,
-                  py: 1.5,
-                  textTransform: "none",
-                  fontWeight: 600,
-                  boxShadow: 2,
-                  "&:hover": { boxShadow: 4 }
-                }}
-              >
-                {t('recurringProfileList.newProfile')}
-              </Button>
-            </Box>
+    <ListPageLayout>
+      <ListHeader
+        title="Recurring Invoices"
+        summary={`${totalCount} recurring invoice${totalCount === 1 ? '' : 's'}`}
+        rightAction={(
+          <Button
+            variant="contained"
+            onClick={() => navigate('/recurring-profiles/add')}
+            startIcon={<AddIcon fontSize="small" />}
+            sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}
+          >
+            Create Recurring Invoice
+          </Button>
+        )}
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search recurring invoices"
+        searchPage="recurring-invoices"
+        liveResults={liveSearchResults}
+        onHistorySelect={setSearch}
+      />
 
-            {/* Summary Cards */}
-            <Grid container spacing={3} sx={{ mb: 4 }}>
-              <Grid item xs={12} sm={6} md={3}>
-                <SummaryCard
-                  title="Active Profiles"
-                  value={activeCount}
-                  icon={<CheckCircleIcon />}
-                  color="#48bb78"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <SummaryCard
-                  title="Upcoming (7 Days)"
-                  value={upcomingInvoices}
-                  icon={<AccessTimeIcon />}
-                  color="#ed8936"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <SummaryCard
-                  title="Paused"
-                  value={pausedCount}
-                  icon={<PauseIcon />}
-                  color="#667eea"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <SummaryCard
-                  title="Total Generated"
-                  value={totalInvoicesGenerated}
-                  icon={<RepeatIcon />}
-                  color="#9f7aea"
-                />
-              </Grid>
-            </Grid>
-
-            {error && (
-              <Fade in={!!error}>
-                <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }} onClose={() => setError("")}>
-                  {error}
-                </Alert>
-              </Fade>
-            )}
-
-            {/* Filters */}
-            <Paper sx={{ p: 3, mb: 3, borderRadius: 3, border: "1px solid", borderColor: "grey.200" }}>
-              <Grid container spacing={2} alignItems="center">
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    placeholder="Search by profile name, customer, or frequency..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <SearchIcon color="action" />
-                        </InputAdornment>
-                      ),
-                    }}
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        borderRadius: 2,
-                        bgcolor: "grey.50"
-                      }
-                    }}
-                  />
-                </Grid>
-                <Grid item xs={12} md={3}>
-                  <FormControl fullWidth>
-                    <Select
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value)}
-                      sx={{ borderRadius: 2, bgcolor: "grey.50" }}
-                    >
-                <MenuItem value="All">{t('common.allStatus')}</MenuItem>
-                      <MenuItem value="Active">Active</MenuItem>
-                      <MenuItem value="Paused">Paused</MenuItem>
-                      <MenuItem value="Expired">Expired</MenuItem>
-                      <MenuItem value="Stopped">Stopped</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} md={3}>
-                  <Typography variant="body2" color="text.secondary" textAlign="right">
-                    {filteredProfiles.length} profile{filteredProfiles.length !== 1 ? 's' : ''} found
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Paper>
-
-            {/* Table */}
-            <ResponsiveDataView
-              isMobile={isMobile}
-              renderCard={(profile) => (
-                <RecurringProfileCard
-                  profile={profile}
-                  customerName={getCustomerName(profile.customer_id)}
-                  onEdit={() => handleEdit(profile)}
-                  onActionMenu={(e) => { e.stopPropagation(); handleActionMenuOpen(e, profile); }}
-                  getStatusColor={getStatusColor}
-                  getFrequencyIcon={getFrequencyIcon}
-                />
-              )}
-              columns={[
-                { key: 'profile_name', label: 'Profile Name' },
-                { key: 'customer', label: 'Customer' },
-                { key: 'frequency', label: 'Frequency' },
-                { key: 'next_run', label: 'Next Run' },
-                { key: 'last_run', label: 'Last Run' },
-                { key: 'generated', label: 'Generated' },
-                { key: 'status', label: 'Status' },
-                { key: 'actions', label: 'Actions', align: 'center' },
-              ]}
-              rows={paginatedProfiles}
-              loading={loading}
-              emptyIcon={<EventRepeatIcon sx={{ fontSize: 48 }} />}
-              emptyTitle={t('recurringProfileList.noProfiles')}
-              emptySubtitle="Create a recurring profile to automate invoice generation"
-              onRowClick={(profile) => handleEdit(profile)}
-              renderRow={(profile) => (
-                <TableRow
-                  key={profile.id}
-                  hover
-                  sx={{ cursor: 'pointer' }}
-                  onClick={() => handleEdit(profile)}
-                >
-                  <TableCell>
-                    <Typography variant="body2" fontWeight={600}>{profile.profile_name}</Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">{getCustomerName(profile.customer_id)}</Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Chip icon={getFrequencyIcon(profile.frequency)} label={profile.frequency} size="small" color="primary" variant="outlined" />
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">{profile.next_run_date ? new Date(profile.next_run_date).toLocaleDateString() : "-"}</Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2" color="text.secondary">{profile.last_run_date ? new Date(profile.last_run_date).toLocaleDateString() : "Never"}</Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2" fontWeight={600}>{profile.occurrences_created || 0}{profile.occurrence_limit ? ` / ${profile.occurrence_limit}` : ''}</Typography>
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge status={profile.status} color={getStatusColor(profile.status)} />
-                  </TableCell>
-                  <TableCell align="center">
-                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleActionMenuOpen(e, profile); }}>
-                      <MoreVertIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              )}
-              pagination={{
-                rowsPerPageOptions: [5, 10, 25, 50],
-                count: filteredProfiles.length,
-                rowsPerPage,
-                page,
-                onPageChange: handleChangePage,
-                onRowsPerPageChange: handleChangeRowsPerPage,
+      <FilterBar
+        statusValue={status}
+        onStatusChange={setStatus}
+        statusOptions={STATUS_OPTIONS}
+        rightSlot={(
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+            <TextField
+              select
+              size="small"
+              label="Frequency"
+              value={frequency}
+              onChange={(event) => {
+                setFrequency(event.target.value);
+                setPage(0);
               }}
-            />
-          </Box>
-        </Fade>
-      </Container>
+              sx={{ minWidth: 150 }}
+            >
+              {FREQUENCY_OPTIONS.map((option) => (
+                <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
+              ))}
+            </TextField>
 
-      {/* Action Menu */}
-      <Menu
-        anchorEl={actionMenuAnchor}
-        open={Boolean(actionMenuAnchor)}
-        onClose={handleActionMenuClose}
-      >
-        <MenuItem onClick={() => { handleEdit(selectedProfile); handleActionMenuClose(); }}>
-          <ListItemIcon>
-            <EditIcon fontSize="small" />
-          </ListItemIcon>
+            <TextField
+              select
+              size="small"
+              label="Date"
+              value={dateRange}
+              onChange={(event) => setDateRange(event.target.value)}
+              sx={{ minWidth: 140 }}
+            >
+              {DATE_OPTIONS.map((option) => (
+                <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
+              ))}
+            </TextField>
+
+            {dateRange === 'custom' && (
+              <>
+                <TextField
+                  size="small"
+                  type="date"
+                  label="From"
+                  value={dateFrom}
+                  onChange={(event) => {
+                    setDateFrom(event.target.value);
+                    setPage(0);
+                  }}
+                  InputLabelProps={{ shrink: true }}
+                />
+                <TextField
+                  size="small"
+                  type="date"
+                  label="To"
+                  value={dateTo}
+                  onChange={(event) => {
+                    setDateTo(event.target.value);
+                    setPage(0);
+                  }}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </>
+            )}
+          </Box>
+        )}
+      />
+
+      <ListSummary
+        items={[
+          { label: 'Total', value: summary.total || 0, active: status === 'All', onClick: () => setStatus('All') },
+          { label: 'Active', value: summary.Active || 0, color: 'success', active: status === 'Active', onClick: () => setStatus('Active') },
+          { label: 'Paused', value: summary.Paused || 0, color: 'warning', active: status === 'Paused', onClick: () => setStatus('Paused') },
+          { label: 'Completed', value: summary.Completed || 0, color: 'primary', active: status === 'Completed', onClick: () => setStatus('Completed') },
+          { label: 'Cancelled', value: summary.Cancelled || 0, color: 'error', active: status === 'Cancelled', onClick: () => setStatus('Cancelled') },
+        ]}
+      />
+
+      <BulkActionBar
+        selectedCount={selectedIds.length}
+        actions={[
+          { label: 'Pause Selected', onClick: () => runBulkAction('pause'), disabled: bulkMutation.isPending },
+          { label: 'Resume Selected', onClick: () => runBulkAction('resume'), disabled: bulkMutation.isPending },
+          { label: 'Delete Selected', color: 'error', onClick: () => runBulkAction('delete'), disabled: bulkMutation.isPending },
+        ]}
+      />
+
+      {(uiError || recurringQuery.isError) && (
+        <Alert severity="error" sx={{ mb: 1.5 }} onClose={() => setUiError('')}>
+          {uiError || 'Failed to fetch recurring invoices.'}
+        </Alert>
+      )}
+
+      <ResponsiveDataView
+        isMobile={isMobile}
+        renderCard={(profile) => (
+          <RecurringProfileCard
+            profile={{
+              ...profile,
+              status: normalizeStatusForUi(profile.status),
+            }}
+            customerName={profile.customer_name || 'Unknown'}
+            onEdit={() => navigate(`/recurring-profiles/edit/${profile.id}`)}
+            onActionMenu={(event) => handleActionMenuOpen(event, profile)}
+            getStatusColor={(value) => {
+              const normalized = normalizeStatusForUi(value);
+              if (normalized === 'Active') return 'success';
+              if (normalized === 'Paused') return 'warning';
+              if (normalized === 'Cancelled') return 'error';
+              return 'primary';
+            }}
+            getFrequencyIcon={() => <RepeatIcon fontSize="small" />}
+          />
+        )}
+        columns={[
+          { key: 'checkbox', label: '', width: CHECKBOX_COLUMN_WIDTH },
+          { key: 'profile_name', label: 'PROFILE NAME' },
+          { key: 'customer_name', label: 'CUSTOMER' },
+          { key: 'amount', label: 'AMOUNT', align: 'right', width: 120 },
+          { key: 'frequency', label: 'FREQUENCY', width: 110 },
+          { key: 'next_run_date', label: 'NEXT RUN', width: 110 },
+          { key: 'last_run_date', label: 'LAST RUN', width: 110 },
+          { key: 'status', label: 'STATUS', width: 120 },
+          { key: 'actions', label: '', align: 'center', width: 130 },
+        ]}
+        rows={rows}
+        loading={isInitialLoading}
+        emptyTitle={hasActiveFilters ? 'No matching records' : 'No recurring invoices yet'}
+        emptySubtitle={hasActiveFilters ? 'Try changing your search or filters.' : 'Create recurring invoice'}
+        emptyAction={{
+          label: 'Create Recurring Invoice',
+          onClick: () => navigate('/recurring-profiles/add'),
+        }}
+        toolbar={(
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              px: 1.5,
+              py: 1,
+              borderBottom: '1px solid #edf0f3',
+              bgcolor: '#fbfcfd',
+            }}
+          >
+            <Typography sx={{ fontSize: '0.82rem', color: '#6b7280' }}>
+              {totalCount} recurring invoice{totalCount === 1 ? '' : 's'}
+            </Typography>
+            {recurringQuery.isFetching && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7 }}>
+                <CircularProgress size={14} />
+                <Typography sx={{ fontSize: '0.75rem', color: '#6b7280' }}>Updating…</Typography>
+              </Box>
+            )}
+          </Box>
+        )}
+        renderHeader={() => (
+          <TableRow>
+            <TableCell sx={{ width: CHECKBOX_COLUMN_WIDTH, padding: '0 4px', borderBottom: '1px solid #e6e9ee' }}>
+              <Checkbox
+                size="small"
+                checked={allVisibleSelected}
+                indeterminate={!allVisibleSelected && selectedIds.length > 0}
+                onChange={(event) => handleSelectAllVisible(event.target.checked)}
+                sx={{ p: 0.5 }}
+              />
+            </TableCell>
+            <TableCell sx={{ py: 0.8, borderBottom: '1px solid #e6e9ee' }}>
+              <Typography sx={{ fontSize: '0.68rem', fontWeight: 700, color: '#7b8493', letterSpacing: 0.3 }}>PROFILE NAME</Typography>
+            </TableCell>
+            <TableCell sx={{ py: 0.8, borderBottom: '1px solid #e6e9ee' }}>
+              <Typography sx={{ fontSize: '0.68rem', fontWeight: 700, color: '#7b8493', letterSpacing: 0.3 }}>CUSTOMER</Typography>
+            </TableCell>
+            <TableCell align="right" sx={{ py: 0.8, borderBottom: '1px solid #e6e9ee', width: 120 }}>
+              <TableSortLabel
+                active={sortBy === 'amount'}
+                direction={sortBy === 'amount' ? sortOrder : 'asc'}
+                onClick={() => handleSort('amount')}
+                sx={{ fontSize: '0.68rem', fontWeight: 700, color: '#7b8493', letterSpacing: 0.3 }}
+              >AMOUNT</TableSortLabel>
+            </TableCell>
+            <TableCell sx={{ py: 0.8, borderBottom: '1px solid #e6e9ee', width: 110 }}>
+              <Typography sx={{ fontSize: '0.68rem', fontWeight: 700, color: '#7b8493', letterSpacing: 0.3 }}>FREQUENCY</Typography>
+            </TableCell>
+            <TableCell sx={{ py: 0.8, borderBottom: '1px solid #e6e9ee', width: 110 }}>
+              <TableSortLabel
+                active={sortBy === 'next_run_date'}
+                direction={sortBy === 'next_run_date' ? sortOrder : 'asc'}
+                onClick={() => handleSort('next_run_date')}
+                sx={{ fontSize: '0.68rem', fontWeight: 700, color: '#7b8493', letterSpacing: 0.3 }}
+              >NEXT RUN</TableSortLabel>
+            </TableCell>
+            <TableCell sx={{ py: 0.8, borderBottom: '1px solid #e6e9ee', width: 110 }}>
+              <Typography sx={{ fontSize: '0.68rem', fontWeight: 700, color: '#7b8493', letterSpacing: 0.3 }}>LAST RUN</Typography>
+            </TableCell>
+            <TableCell sx={{ py: 0.8, borderBottom: '1px solid #e6e9ee', width: 120 }}>
+              <Typography sx={{ fontSize: '0.68rem', fontWeight: 700, color: '#7b8493', letterSpacing: 0.3 }}>STATUS</Typography>
+            </TableCell>
+            <TableCell sx={{ py: 0.8, borderBottom: '1px solid #e6e9ee', width: 130 }} align="center">
+              <TableSortLabel
+                active={sortBy === 'created_at'}
+                direction={sortBy === 'created_at' ? sortOrder : 'asc'}
+                onClick={() => handleSort('created_at')}
+                sx={{ fontSize: '0.68rem', fontWeight: 700, color: '#7b8493', letterSpacing: 0.3 }}
+              >ACTIONS</TableSortLabel>
+            </TableCell>
+          </TableRow>
+        )}
+        renderRow={(profile) => {
+          const normalizedStatus = normalizeStatusForUi(profile.status);
+          const checked = selectedIds.includes(profile.id);
+
+          return (
+            <TableRow
+              key={profile.id}
+              hover
+              onClick={() => navigate(`/recurring-profiles/edit/${profile.id}`)}
+              sx={{
+                cursor: 'pointer',
+                '& .MuiTableCell-root': {
+                  borderBottom: '1px solid #edf0f3',
+                  fontSize: '0.82rem',
+                  color: '#374151',
+                  py: 0.72,
+                },
+              }}
+            >
+              <TableCell sx={{ width: CHECKBOX_COLUMN_WIDTH, padding: '0 4px' }} onClick={(event) => event.stopPropagation()}>
+                <Checkbox
+                  size="small"
+                  checked={checked}
+                  onChange={(event) => handleRowSelect(profile.id, event.target.checked)}
+                  sx={{ p: 0.5 }}
+                />
+              </TableCell>
+
+              <TableCell>
+                <Typography sx={{ fontSize: '0.82rem', color: '#1565d8', fontWeight: 600 }}>
+                  {profile.profile_name || '—'}
+                </Typography>
+              </TableCell>
+
+              <TableCell>{profile.customer_name || '—'}</TableCell>
+
+              <TableCell align="right" sx={{ fontWeight: 600, color: '#111827' }}>
+                {formatAmount(profile.amount)}
+              </TableCell>
+
+              <TableCell>{profile.frequency || '—'}</TableCell>
+
+              <TableCell>{formatDate(profile.next_run_date)}</TableCell>
+
+              <TableCell>{formatDate(profile.last_run_date)}</TableCell>
+
+              <TableCell>{getStatusChip(normalizedStatus)}</TableCell>
+
+              <TableCell align="center" onClick={(event) => event.stopPropagation()}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.2 }}>
+                  <Tooltip title="View Details">
+                    <IconButton size="small" onClick={() => navigate(`/recurring-profiles/edit/${profile.id}`)}>
+                      <VisibilityIcon sx={{ fontSize: 16, color: '#334155' }} />
+                    </IconButton>
+                  </Tooltip>
+
+                  <Tooltip title="Edit">
+                    <IconButton size="small" onClick={() => navigate(`/recurring-profiles/edit/${profile.id}`)}>
+                      <EditIcon sx={{ fontSize: 16, color: '#0f6cbd' }} />
+                    </IconButton>
+                  </Tooltip>
+
+                  {normalizedStatus === 'Active' ? (
+                    <Tooltip title="Pause">
+                      <IconButton size="small" onClick={() => actionMutation.mutate({ id: profile.id, action: 'pause' })}>
+                        <PauseCircleOutlineIcon sx={{ fontSize: 16, color: '#b45309' }} />
+                      </IconButton>
+                    </Tooltip>
+                  ) : (
+                    <Tooltip title="Resume">
+                      <IconButton size="small" onClick={() => actionMutation.mutate({ id: profile.id, action: 'resume' })}>
+                        <PlayCircleOutlineIcon sx={{ fontSize: 16, color: '#1f7a36' }} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+
+                  <Tooltip title="Delete">
+                    <IconButton size="small" onClick={() => setConfirmDeleteId(profile.id)}>
+                      <DeleteIcon sx={{ fontSize: 16, color: '#b91c1c' }} />
+                    </IconButton>
+                  </Tooltip>
+
+                  <IconButton size="small" onClick={(event) => handleActionMenuOpen(event, profile)}>
+                    <MoreVertIcon sx={{ fontSize: 18, color: '#7b8493' }} />
+                  </IconButton>
+                </Box>
+              </TableCell>
+            </TableRow>
+          );
+        }}
+        pagination={{
+          rowsPerPageOptions: [10, 25, 50],
+          count: totalCount,
+          rowsPerPage,
+          page,
+          onPageChange: (_, nextPage) => setPage(nextPage),
+          onRowsPerPageChange: (event) => setRowsPerPage(Number.parseInt(event.target.value, 10)),
+        }}
+      />
+
+      <Menu anchorEl={actionMenuAnchor} open={Boolean(actionMenuAnchor)} onClose={handleActionMenuClose}>
+        <MenuItem onClick={() => { navigate(`/recurring-profiles/edit/${activeProfile?.id}`); handleActionMenuClose(); }}>
+          <ListItemIcon><VisibilityIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>View Details</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => { navigate(`/recurring-profiles/edit/${activeProfile?.id}`); handleActionMenuClose(); }}>
+          <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
           <ListItemText>Edit</ListItemText>
         </MenuItem>
-        {selectedProfile?.status === "Active" && (
-          <MenuItem onClick={() => handlePause(selectedProfile)}>
-            <ListItemIcon>
-              <PauseIcon fontSize="small" />
-            </ListItemIcon>
+        {normalizeStatusForUi(activeProfile?.status) === 'Active' ? (
+          <MenuItem onClick={() => actionMutation.mutate({ id: activeProfile?.id, action: 'pause' })}>
+            <ListItemIcon><PauseCircleOutlineIcon fontSize="small" /></ListItemIcon>
             <ListItemText>Pause</ListItemText>
           </MenuItem>
-        )}
-        {selectedProfile?.status === "Paused" && (
-          <MenuItem onClick={() => handleResume(selectedProfile)}>
-            <ListItemIcon>
-              <PlayArrowIcon fontSize="small" />
-            </ListItemIcon>
+        ) : (
+          <MenuItem onClick={() => actionMutation.mutate({ id: activeProfile?.id, action: 'resume' })}>
+            <ListItemIcon><PlayCircleOutlineIcon fontSize="small" /></ListItemIcon>
             <ListItemText>Resume</ListItemText>
           </MenuItem>
         )}
-        <MenuItem onClick={() => { setConfirmDeleteId(selectedProfile?.id); handleActionMenuClose(); }}>
-          <ListItemIcon>
-            <DeleteIcon fontSize="small" color="error" />
-          </ListItemIcon>
+        <MenuItem onClick={() => { setConfirmDeleteId(activeProfile?.id); handleActionMenuClose(); }}>
+          <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
           <ListItemText>Delete</ListItemText>
         </MenuItem>
       </Menu>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={!!confirmDeleteId} onClose={() => setConfirmDeleteId(null)}>
+      <Dialog open={Boolean(confirmDeleteId)} onClose={() => setConfirmDeleteId(null)}>
         <DialogTitle>Confirm Delete</DialogTitle>
         <DialogContent>
-          <Typography>Are you sure you want to delete this recurring profile? This action cannot be undone.</Typography>
+          <Typography>Are you sure you want to delete this recurring invoice? This action cannot be undone.</Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfirmDeleteId(null)}>Cancel</Button>
-          <Button onClick={() => handleDelete(confirmDeleteId)} color="error" variant="contained">
+          <Button
+            color="error"
+            variant="contained"
+            disabled={deleteMutation.isPending}
+            onClick={() => deleteMutation.mutate(confirmDeleteId)}
+          >
             Delete
           </Button>
         </DialogActions>
       </Dialog>
-    </MainLayout>
+    </ListPageLayout>
   );
 };
 

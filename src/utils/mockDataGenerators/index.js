@@ -30,6 +30,24 @@ export const generateCustomerMockData = ({ scenario = "full" } = {}) => {
   const first = fullName.split(" ")[0];
   const last = fullName.split(" ").slice(1).join(" ") || pick(LAST_NAMES);
   const company = makeCompany();
+  const city = pick(CITIES);
+  const zip = `${rnd(100000, 999999)}`;
+  const gstNumber = makeGSTIN();
+  const pan = gstNumber.slice(2, 12);
+
+  if (scenario === "minimal") {
+    return {
+      customer_type: "business",
+      salutation: "Mr.",
+      first_name: first,
+      last_name: last,
+      company_name: company,
+      display_name: company,
+      email: makeEmail(company),
+      work_phone_code: "+91",
+      phone: makePhone(),
+    };
+  }
 
   return {
     customer_type: "business",
@@ -43,24 +61,50 @@ export const generateCustomerMockData = ({ scenario = "full" } = {}) => {
     phone: makePhone(),
     mobile_code: "+91",
     mobile: makePhone(),
-    gst_number: makeGSTIN(),
-    pan: "ABCDE1234F",
-    gst_treatment: "business_gst",
+    gst_number: gstNumber,
+    pan,
+    gst_treatment: "regular",
     place_of_supply: "Maharashtra",
+    language: "en",
+    comm_email: true,
+    comm_sms: false,
     billing_country: "India",
-    billing_city: pick(CITIES),
+    billing_attention: `${first} ${last}`,
+    billing_city: city,
     billing_state: "Maharashtra",
-    billing_zip: `${rnd(100000, 999999)}`,
+    billing_zip: zip,
     billing_street: `${rnd(10, 99)} Business Park Road`,
+    billing_street2: `Suite ${rnd(100, 999)}`,
     shipping_country: "India",
-    shipping_city: pick(CITIES),
+    shipping_attention: `${first} ${last}`,
+    shipping_city: city,
     shipping_state: "Maharashtra",
-    shipping_zip: `${rnd(100000, 999999)}`,
+    shipping_zip: zip,
     shipping_street: `${rnd(10, 99)} Warehouse Street`,
+    shipping_street2: `Block ${rnd(1, 9)}`,
     payment_terms: "net_30",
     tax_preference: "taxable",
-    notes: scenario === "minimal" ? "" : "Preferred customer for monthly billing.",
-    remarks: scenario === "edge" ? "Requires manual approval for large orders." : "",
+    website_url: `https://${company.toLowerCase().replace(/\s+/g, "-")}.example.com`,
+    department: "Finance",
+    designation: "Accounts Lead",
+    portal_enabled: true,
+    contact_persons: [
+      {
+        salutation: "Ms.",
+        first_name: first,
+        last_name: last,
+        email: makeEmail(`${company}.contact`),
+        phone: makePhone(),
+        mobile: makePhone(),
+        designation: "Accounts Manager",
+      },
+    ],
+    custom_fields: {
+      customer_segment: "Enterprise",
+      internal_owner: pick(FIRST_NAMES),
+    },
+    reporting_tags: "VIP, Monthly Billing",
+    remarks: scenario === "edge" ? "Requires manual approval for large orders." : "Prefers invoices with PO references.",
   };
 };
 
@@ -108,29 +152,51 @@ export const generateProductMockData = ({ scenario = "full", context = {} } = {}
 };
 
 export const generateInvoiceMockData = ({ scenario = "full", context = {} } = {}) => {
-  const qty = scenario === "minimal" ? 1 : rnd(1, 5);
-  const rate = rnd(500, 5000);
-  const discount = scenario === "edge" ? rnd(50, 200) : 0;
-  const amount = qty * rate - discount;
+  const itemOneQty = scenario === "minimal" ? 1 : 2;
+  const itemOneRate = 4200;
+  const itemTwoQty = 3;
+  const itemTwoRate = 950;
+  const itemOneDiscount = scenario === "edge" ? 150 : 0;
+  const itemTwoDiscount = 0;
+
+  const itemOneBase = itemOneQty * itemOneRate - itemOneDiscount;
+  const itemTwoBase = itemTwoQty * itemTwoRate - itemTwoDiscount;
+
+  const itemOneTax = (itemOneBase * 18) / 100;
+  const itemTwoTax = (itemTwoBase * 18) / 100;
+
+  const issueDate = today();
   return {
     customer_id: context.customers?.[0]?.id || "",
-    issue_date: today(),
+    issue_date: issueDate,
     due_date: plusDays(15),
     payment_terms: "Net 15",
     invoice_type: "Tax Invoice",
-    subject: "Consulting and implementation services",
-    salesperson: makeName(),
-    notes: "Thank you for your business.",
-    terms_conditions: "Payment due within agreed terms.",
+    subject: "Website redesign and monthly support",
+    salesperson: "Karan Mehta",
+    notes: "Thanks for choosing Smart Invoice Pro. Please process payment within agreed terms.",
+    terms_conditions: "Late payment may attract interest as per agreement.",
     is_gst_applicable: true,
+    invoice_discount: scenario === "edge" ? 100 : 0,
+    round_off: 0,
     items: [
       {
-        name: "Implementation Service",
-        quantity: qty,
-        rate,
-        discount,
+        name: "UI/UX Revamp - Phase 1",
+        description: "Design system setup, responsive pages, and review cycle.",
+        quantity: itemOneQty,
+        rate: itemOneRate,
+        discount: itemOneDiscount,
         tax: 18,
-        amount,
+        amount: itemOneBase + itemOneTax,
+      },
+      {
+        name: "Monthly Support Retainer",
+        description: "Bug fixes, deployment support, and priority issue handling.",
+        quantity: itemTwoQty,
+        rate: itemTwoRate,
+        discount: itemTwoDiscount,
+        tax: 18,
+        amount: itemTwoBase + itemTwoTax,
       },
     ],
   };

@@ -8,15 +8,24 @@ export const searchGlobal = async (query, limit = 5) => {
   return response.data;
 };
 
-export const getSearchHistory = async (limit = 5) => {
+export const getSearchHistory = async (arg = 5) => {
+  const options = typeof arg === 'number' ? { limit: arg } : (arg || {});
+  const params = {
+    limit: options.limit ?? 5,
+    ...(options.page ? { page: options.page } : {}),
+  };
   const response = await axios.get(createApiUrl('/api/search/history'), {
-    params: { limit },
+    params,
   });
   return response.data;
 };
 
 export const saveSearchHistory = async (payload) => {
-  const response = await axios.post(createApiUrl('/api/search/history'), payload);
+  const normalizedPayload = {
+    ...payload,
+    query: (payload?.query || '').trim(),
+  };
+  const response = await axios.post(createApiUrl('/api/search/history'), normalizedPayload);
   return response.data;
 };
 
@@ -25,8 +34,10 @@ export const deleteSearchHistoryItem = async (historyId) => {
   return response.data;
 };
 
-export const clearSearchHistory = async () => {
-  const response = await axios.delete(createApiUrl('/api/search/history'));
+export const clearSearchHistory = async (page) => {
+  const response = await axios.delete(createApiUrl('/api/search/history'), {
+    params: page ? { page } : undefined,
+  });
   return response.data;
 };
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import axios from 'axios';
-import { screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { renderWithProviders } from '../../test-utils';
 import AddEditQuote from '../../components/AddEditQuote';
 
@@ -36,6 +36,21 @@ describe('AddEditQuote layout', () => {
     axios.get.mockImplementation((url) => {
       if (url.includes('/api/customers')) {
         return Promise.resolve({ data: [{ id: 'customer-1', name: 'Acme Corp' }] });
+      }
+
+      if (url.includes('/api/products')) {
+        return Promise.resolve({
+          data: [
+            {
+              id: 'product-1',
+              name: 'Premium Setup Service',
+              price: 2500,
+              tax_rate: 18,
+              unit: 'pcs',
+              stock: 12,
+            },
+          ],
+        });
       }
 
       if (url.includes('/api/quotes/next-number')) {
@@ -74,6 +89,43 @@ describe('AddEditQuote layout', () => {
       'quote-field-project-name',
     ].forEach((testId) => {
       expect(screen.getByTestId(testId)).toHaveAttribute('data-layout', 'half');
+    });
+  });
+
+  it('shows all auto fill modes in dev/test environments', async () => {
+    renderWithProviders(<AddEditQuote />);
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('QT-000123')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /auto fill/i }));
+
+    expect(screen.getByText('Minimal Auto Fill (quick testing)')).toBeInTheDocument();
+    expect(screen.getByText('Full Auto Fill (realistic scenario)')).toBeInTheDocument();
+    expect(screen.getByText('Edge Case Auto Fill (advanced testing)')).toBeInTheDocument();
+  });
+
+  it('blocks submit when an item quantity is zero', async () => {
+    renderWithProviders(<AddEditQuote />);
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('QT-000123')).toBeInTheDocument();
+    });
+
+    const customerInput = screen.getByLabelText('Customer Name');
+    fireEvent.change(customerInput, { target: { name: 'customer_id', value: 'customer-1' } });
+
+    const itemInput = screen.getByPlaceholderText('Type or click to select an item.');
+    fireEvent.change(itemInput, { target: { value: 'Premium Setup Service' } });
+
+    const quantityInputs = screen.getAllByRole('spinbutton');
+    fireEvent.change(quantityInputs[0], { target: { value: '0' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /save and send/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Item quantity must be greater than 0.')).toBeInTheDocument();
     });
   });
 });

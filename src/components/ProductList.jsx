@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import {
@@ -47,6 +47,8 @@ import { updateProductStock } from "../services/stockService";
 import { useTranslation } from "react-i18next";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import useTableSorting from "../hooks/useTableSorting";
+import { saveSearchHistory } from "../services/searchService";
+import { invalidateSearchHistoryCache } from "./list/ListHeader";
 
 const VIEW_OPTIONS = [
   { value: "All", labelKey: "productList.allItems" },
@@ -147,6 +149,7 @@ const ProductList = () => {
   const [error, setError] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [immediateSearchTerm, setImmediateSearchTerm] = useState("");
   const [viewFilter, setViewFilter] = useState(() => {
     const params = new URLSearchParams(location.search);
     const urlFilter = params.get("filter");
@@ -163,6 +166,8 @@ const ProductList = () => {
   const [bulkStockMode, setBulkStockMode] = useState("increment");
   const [singleStockMode, setSingleStockMode] = useState("increment");
   const debouncedSearch = useDebouncedValue(searchTerm, 300);
+  const effectiveSearchTerm = immediateSearchTerm || debouncedSearch;
+  const lastSavedQueryRef = useRef("");
 
   const fetchProducts = useCallback(async (params = {}) => {
     setLoading(true);
@@ -187,7 +192,32 @@ const ProductList = () => {
 
   useEffect(() => {
     setPage(0);
-  }, [debouncedSearch, viewFilter, categoryFilter, colSortBy, colSortOrder]);
+  }, [effectiveSearchTerm, viewFilter, categoryFilter, colSortBy, colSortOrder]);
+
+  useEffect(() => {
+    if (!immediateSearchTerm) return;
+    if (immediateSearchTerm.trim().toLowerCase() === debouncedSearch.trim().toLowerCase()) {
+      setImmediateSearchTerm("");
+    }
+  }, [debouncedSearch, immediateSearchTerm]);
+
+  useEffect(() => {
+    const query = debouncedSearch.trim();
+    const normalized = query.toLowerCase();
+    if (query.length < 2 || normalized === lastSavedQueryRef.current) return;
+
+    lastSavedQueryRef.current = normalized;
+    saveSearchHistory({
+      page: "items",
+      query,
+      filters: {
+        view: viewFilter,
+        category: categoryFilter,
+      },
+    }).then(() => {
+      invalidateSearchHistoryCache("items");
+    }).catch(() => {});
+  }, [categoryFilter, debouncedSearch, viewFilter]);
 
   const categories = useMemo(() => {
     const values = Array.from(
@@ -197,7 +227,7 @@ const ProductList = () => {
   }, [products]);
 
   const filteredProducts = useMemo(() => {
-    const term = debouncedSearch.trim().toLowerCase();
+    const term = effectiveSearchTerm.trim().toLowerCase();
 
     const list = products.filter((product) => {
       const matchesSearch =
@@ -226,7 +256,23 @@ const ProductList = () => {
       if (colSortBy === "price") return dir * (rateA - rateB);
       return dir * (stockA - stockB);
     });
-  }, [categoryFilter, colSortBy, colSortOrder, debouncedSearch, products, viewFilter]);
+  }, [categoryFilter, colSortBy, colSortOrder, effectiveSearchTerm, products, viewFilter]);
+
+  const liveSearchResults = useMemo(() => {
+    const term = String(searchTerm || "").trim().toLowerCase();
+    if (term.length < 1) return [];
+
+    return products
+      .filter((product) => [product.name, product.category, product.sku]
+        .some((value) => String(value || "").toLowerCase().includes(term)))
+      .slice(0, 7)
+      .map((product) => ({
+        id: product.id,
+        value: product.name || "",
+        label: product.name || "Unnamed Item",
+        subtitle: product.category || product.sku || "Item",
+      }));
+  }, [products, searchTerm]);
 
   const paginatedProducts = filteredProducts.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
@@ -385,6 +431,9 @@ const ProductList = () => {
         }
         searchValue={searchTerm}
         onSearchChange={setSearchTerm}
+        onHistorySelect={setImmediateSearchTerm}
+        searchPage="items"
+        liveResults={liveSearchResults}
         searchPlaceholder={t("productList.searchPlaceholder")}
       />
 

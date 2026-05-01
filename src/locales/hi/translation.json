@@ -703,10 +703,16 @@
   },
   "quoteList": {
     "title": "सभी कोटेशन",
+    "newQuote": "नया कोटेशन",
     "allStatus": "सभी स्थिति",
     "searchPlaceholder": "कोटेशन में खोजें",
     "noQuotes": "कोई कोटेशन नहीं मिला",
     "createFirst": "शुरू करने के लिए एक कोटेशन बनाएं",
+    "failedFetch": "कोटेशन लोड करने में विफल",
+    "failedDelete": "कोटेशन हटाने में विफल",
+    "failedBulk": "बल्क एक्शन लागू करने में विफल",
+    "failedDownload": "PDF डाउनलोड करने में विफल",
+    "failedSendEmail": "कोटेशन ईमेल भेजने में विफल",
     "columns": {
       "date": "तारीख",
       "quoteNumber": "कोटेशन नंबर",

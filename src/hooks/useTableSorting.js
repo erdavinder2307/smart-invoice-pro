@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 
 const STORAGE_PREFIX = "sip_sort_";
 
@@ -92,7 +92,10 @@ const useTableSorting = (defaultSortBy = null, defaultSortOrder = "asc", storage
     [defaultSortBy, defaultSortOrder, sortBy, sortOrder, storageKey]
   );
 
-  const sortParams = sortBy ? { sort_by: sortBy, sort_order: sortOrder } : {};
+  const sortParams = useMemo(
+    () => (sortBy ? { sort_by: sortBy, sort_order: sortOrder } : {}),
+    [sortBy, sortOrder]
+  );
 
   return { sortBy, sortOrder, handleSort, sortParams, setSort, clearSort };
 };

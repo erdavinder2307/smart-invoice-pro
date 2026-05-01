@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Alert,
@@ -58,6 +58,8 @@ import {
 } from "../utils/dateRangeFilters";
 import { dedupeCustomers } from "../utils/customerData";
 import useTableSorting from "../hooks/useTableSorting";
+import { saveSearchHistory } from "../services/searchService";
+import { invalidateSearchHistoryCache } from "./list/ListHeader";
 
 const VIEW_OPTIONS = ["All", "Active", "Inactive", "With Dues", "Overdue"];
 const PAYMENT_MODES = ["Cash", "Bank Transfer", "UPI", "Card", "Cheque"];
@@ -151,6 +153,7 @@ const CustomerList = () => {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [immediateSearchTerm, setImmediateSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState(() => {
     const value = new URLSearchParams(location.search).get("view") || "All";
     return VIEW_OPTIONS.includes(value) ? value : "All";
@@ -172,6 +175,8 @@ const CustomerList = () => {
     error: "",
   });
   const debouncedSearch = useDebouncedValue(searchTerm, 300);
+  const effectiveSearchTerm = immediateSearchTerm || debouncedSearch;
+  const lastSavedQueryRef = useRef("");
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const createdFilter = useMemo(() => readDateFilterQuery(location.search, "created"), [location.search]);
@@ -228,7 +233,32 @@ const CustomerList = () => {
 
   useEffect(() => {
     setPage(0);
-  }, [debouncedSearch, statusFilter, location.search]);
+  }, [effectiveSearchTerm, statusFilter, location.search]);
+
+  useEffect(() => {
+    if (!immediateSearchTerm) return;
+    if (immediateSearchTerm.trim().toLowerCase() === debouncedSearch.trim().toLowerCase()) {
+      setImmediateSearchTerm("");
+    }
+  }, [debouncedSearch, immediateSearchTerm]);
+
+  useEffect(() => {
+    const query = debouncedSearch.trim();
+    const normalized = query.toLowerCase();
+    if (query.length < 2 || normalized === lastSavedQueryRef.current) return;
+
+    lastSavedQueryRef.current = normalized;
+    saveSearchHistory({
+      page: "customers",
+      query,
+      filters: {
+        view: statusFilter,
+        created_range: createdFilter?.range || "",
+      },
+    }).then(() => {
+      invalidateSearchHistoryCache("customers");
+    }).catch(() => {});
+  }, [createdFilter?.range, debouncedSearch, statusFilter]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -260,7 +290,7 @@ const CustomerList = () => {
   ), [highValueThreshold, t, uniqueCustomers]);
 
   const filteredCustomers = useMemo(() => {
-    const term = debouncedSearch.trim().toLowerCase();
+    const term = effectiveSearchTerm.trim().toLowerCase();
 
     const filtered = enrichedCustomers.filter((customer) => {
       const matchesSearch = !term || [
@@ -300,7 +330,23 @@ const CustomerList = () => {
       if (a.receivables !== b.receivables) return b.receivables - a.receivables;
       return b.totalRevenue - a.totalRevenue;
     });
-  }, [debouncedSearch, enrichedCustomers, sortBy, sortOrder, statusFilter]);
+  }, [effectiveSearchTerm, enrichedCustomers, sortBy, sortOrder, statusFilter]);
+
+  const liveSearchResults = useMemo(() => {
+    const term = String(searchTerm || "").trim().toLowerCase();
+    if (term.length < 1) return [];
+
+    return enrichedCustomers
+      .filter((customer) => [customer.name, customer.company_name, customer.email, customer.phone]
+        .some((value) => String(value || "").toLowerCase().includes(term)))
+      .slice(0, 7)
+      .map((customer) => ({
+        id: customer.id,
+        value: customer.name,
+        label: customer.name,
+        subtitle: customer.email || customer.phone || "Customer",
+      }));
+  }, [enrichedCustomers, searchTerm]);
 
   const paginatedCustomers = filteredCustomers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
@@ -474,6 +520,9 @@ const CustomerList = () => {
         }
         searchValue={searchTerm}
         onSearchChange={setSearchTerm}
+        onHistorySelect={setImmediateSearchTerm}
+        searchPage="customers"
+        liveResults={liveSearchResults}
         searchPlaceholder={tl("customerList.searchPlaceholder", "Search customers")}
       />
 

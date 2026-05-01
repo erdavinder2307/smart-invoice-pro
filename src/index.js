@@ -14,6 +14,17 @@ import { KeyboardShortcutsProvider } from './context/KeyboardShortcutsContext';
 import { DashboardFilterProvider } from './context/DashboardFilterContext';
 import axios from 'axios';
 import authService from './services/authService';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 // ── Request interceptor: attach JWT to all outgoing requests ──────────────────
 axios.interceptors.request.use(
@@ -91,23 +102,25 @@ axios.interceptors.response.use(
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <AuthProvider>
-      <BrandingProvider>
-        <SidebarProvider>
-          <InvoicePreferencesProvider>
-            <PermissionProvider>
-              <NotificationProvider>
-                <KeyboardShortcutsProvider>
-                          <DashboardFilterProvider>
-                            <App />
-                          </DashboardFilterProvider>
-                        </KeyboardShortcutsProvider>
-              </NotificationProvider>
-            </PermissionProvider>
-          </InvoicePreferencesProvider>
-        </SidebarProvider>
-      </BrandingProvider>
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <BrandingProvider>
+          <SidebarProvider>
+            <InvoicePreferencesProvider>
+              <PermissionProvider>
+                <NotificationProvider>
+                  <KeyboardShortcutsProvider>
+                            <DashboardFilterProvider>
+                              <App />
+                            </DashboardFilterProvider>
+                          </KeyboardShortcutsProvider>
+                </NotificationProvider>
+              </PermissionProvider>
+            </InvoicePreferencesProvider>
+          </SidebarProvider>
+        </BrandingProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   </React.StrictMode>
 );
 

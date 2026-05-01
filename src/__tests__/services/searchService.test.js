@@ -27,23 +27,26 @@ describe('searchService', () => {
   it('getSearchHistory fetches recent items', async () => {
     axios.get.mockResolvedValue({ data: [{ id: 'h1', query: 'acme' }] });
 
-    const result = await getSearchHistory(7);
+    const result = await getSearchHistory({ page: 'customers', limit: 7 });
 
     expect(result).toEqual([{ id: 'h1', query: 'acme' }]);
     expect(axios.get).toHaveBeenCalledWith(
       expect.stringContaining('/api/search/history'),
-      expect.objectContaining({ params: { limit: 7 } })
+      expect.objectContaining({ params: { page: 'customers', limit: 7 } })
     );
   });
 
   it('saveSearchHistory posts a history payload', async () => {
     axios.post.mockResolvedValue({ data: { id: 'h2' } });
 
-    const payload = { query: 'INV-101', type: 'entity', entity_id: 'inv-1', entity_type: 'invoice' };
+    const payload = { page: 'invoices', query: '  INV-101  ', type: 'entity', entity_id: 'inv-1', entity_type: 'invoice' };
     const result = await saveSearchHistory(payload);
 
     expect(result).toEqual({ id: 'h2' });
-    expect(axios.post).toHaveBeenCalledWith(expect.stringContaining('/api/search/history'), payload);
+    expect(axios.post).toHaveBeenCalledWith(
+      expect.stringContaining('/api/search/history'),
+      expect.objectContaining({ page: 'invoices', query: 'INV-101' })
+    );
   });
 
   it('deleteSearchHistoryItem removes one history item', async () => {
@@ -58,9 +61,12 @@ describe('searchService', () => {
   it('clearSearchHistory removes all items', async () => {
     axios.delete.mockResolvedValue({ data: { message: 'Search history cleared' } });
 
-    const result = await clearSearchHistory();
+    const result = await clearSearchHistory('customers');
 
     expect(result.message).toContain('cleared');
-    expect(axios.delete).toHaveBeenCalledWith(expect.stringContaining('/api/search/history'));
+    expect(axios.delete).toHaveBeenCalledWith(
+      expect.stringContaining('/api/search/history'),
+      expect.objectContaining({ params: { page: 'customers' } })
+    );
   });
 });

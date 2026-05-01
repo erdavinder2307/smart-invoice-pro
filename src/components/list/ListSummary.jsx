@@ -13,8 +13,13 @@ const ListSummary = ({ items = [] }) => {
           key={item.label}
           label={`${item.label}: ${item.value}`}
           color={item.color || "default"}
-          variant={item.variant || "outlined"}
-          sx={{ fontWeight: 600 }}
+          variant={item.variant || (item.active ? "filled" : "outlined")}
+          onClick={item.onClick}
+          clickable={Boolean(item.onClick)}
+          sx={{
+            fontWeight: 600,
+            ...(item.active ? { boxShadow: 2 } : {}),
+          }}
         />
       ))}
       <Typography variant="caption" color="text.secondary" sx={{ alignSelf: "center", ml: 0.5 }}>

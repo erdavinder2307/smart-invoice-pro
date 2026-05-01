@@ -152,29 +152,51 @@ export const generateProductMockData = ({ scenario = "full", context = {} } = {}
 };
 
 export const generateInvoiceMockData = ({ scenario = "full", context = {} } = {}) => {
-  const qty = scenario === "minimal" ? 1 : rnd(1, 5);
-  const rate = rnd(500, 5000);
-  const discount = scenario === "edge" ? rnd(50, 200) : 0;
-  const amount = qty * rate - discount;
+  const itemOneQty = scenario === "minimal" ? 1 : 2;
+  const itemOneRate = 4200;
+  const itemTwoQty = 3;
+  const itemTwoRate = 950;
+  const itemOneDiscount = scenario === "edge" ? 150 : 0;
+  const itemTwoDiscount = 0;
+
+  const itemOneBase = itemOneQty * itemOneRate - itemOneDiscount;
+  const itemTwoBase = itemTwoQty * itemTwoRate - itemTwoDiscount;
+
+  const itemOneTax = (itemOneBase * 18) / 100;
+  const itemTwoTax = (itemTwoBase * 18) / 100;
+
+  const issueDate = today();
   return {
     customer_id: context.customers?.[0]?.id || "",
-    issue_date: today(),
+    issue_date: issueDate,
     due_date: plusDays(15),
     payment_terms: "Net 15",
     invoice_type: "Tax Invoice",
-    subject: "Consulting and implementation services",
-    salesperson: makeName(),
-    notes: "Thank you for your business.",
-    terms_conditions: "Payment due within agreed terms.",
+    subject: "Website redesign and monthly support",
+    salesperson: "Karan Mehta",
+    notes: "Thanks for choosing Smart Invoice Pro. Please process payment within agreed terms.",
+    terms_conditions: "Late payment may attract interest as per agreement.",
     is_gst_applicable: true,
+    invoice_discount: scenario === "edge" ? 100 : 0,
+    round_off: 0,
     items: [
       {
-        name: "Implementation Service",
-        quantity: qty,
-        rate,
-        discount,
+        name: "UI/UX Revamp - Phase 1",
+        description: "Design system setup, responsive pages, and review cycle.",
+        quantity: itemOneQty,
+        rate: itemOneRate,
+        discount: itemOneDiscount,
         tax: 18,
-        amount,
+        amount: itemOneBase + itemOneTax,
+      },
+      {
+        name: "Monthly Support Retainer",
+        description: "Bug fixes, deployment support, and priority issue handling.",
+        quantity: itemTwoQty,
+        rate: itemTwoRate,
+        discount: itemTwoDiscount,
+        tax: 18,
+        amount: itemTwoBase + itemTwoTax,
       },
     ],
   };

@@ -30,6 +30,7 @@
     "activate": "Activate",
     "deactivate": "Deactivate",
     "actions": "Actions",
+    "allStatus": "All Status",
     "status": "Status",
     "amount": "Amount",
     "date": "Date",
@@ -668,12 +669,56 @@
     "searchPlaceholder": "Search vendors...",
     "noVendors": "No vendors found",
     "noVendorsYet": "No vendors yet",
+    "createFirst": "Create your first vendor to get started",
+    "failedFetch": "Failed to fetch vendors",
+    "failedDelete": "Failed to delete vendor",
+    "failedBulk": "Failed to apply bulk action",
+    "filters": {
+      "allStatus": "All Status",
+      "active": "Active",
+      "inactive": "Inactive",
+      "withPayables": "With Payables",
+      "cleared": "Cleared",
+      "allOutstanding": "All Outstanding",
+      "paymentTerms": "Payment Terms"
+    },
+    "summary": {
+      "totalVendors": "Total Vendors",
+      "activeVendors": "Active Vendors",
+      "withPayables": "Vendors with Payables",
+      "highOutstanding": "High Outstanding Vendors"
+    },
+    "actions": {
+      "view": "View",
+      "createBill": "Create Bill",
+      "recordPayment": "Record Payment"
+    },
+    "bulk": {
+      "selectAll": "Select all vendors",
+      "selectOne": "Select vendor",
+      "markInactive": "Mark Inactive",
+      "export": "Export",
+      "delete": "Delete",
+      "deleteConfirmTitle": "Delete Selected Vendors",
+      "deleteConfirmMessage": "Delete {{count}} selected vendors?"
+    },
+    "deleteModal": {
+      "title": "Delete Vendor",
+      "message": "This action cannot be undone."
+    },
+    "outstanding": {
+      "cleared": "Cleared",
+      "duesoon": "Due Soon",
+      "payable": "Payable",
+      "highoutstanding": "High Outstanding"
+    },
     "columns": {
       "vendorName": "Vendor Name",
-      "contactPerson": "Contact Person",
-      "email": "Email",
-      "phone": "Phone",
+      "contact": "Contact",
+      "totalPurchases": "Total Purchases",
+      "outstandingPayable": "Outstanding Payable",
       "paymentTerms": "Payment Terms",
+      "lastTransaction": "Last Transaction",
       "status": "Status",
       "actions": "Actions"
     }
@@ -705,10 +750,16 @@
   },
   "quoteList": {
     "title": "All Quotes",
+    "newQuote": "New Quote",
     "allStatus": "All Status",
     "searchPlaceholder": "Search in Quotes",
     "noQuotes": "No quotes found",
     "createFirst": "Create a quote to get started",
+    "failedFetch": "Failed to fetch quotes",
+    "failedDelete": "Failed to delete quote",
+    "failedBulk": "Failed to apply bulk action",
+    "failedDownload": "Failed to download PDF",
+    "failedSendEmail": "Failed to send quote email",
     "columns": {
       "date": "DATE",
       "quoteNumber": "QUOTE NUMBER",

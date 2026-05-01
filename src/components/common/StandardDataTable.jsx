@@ -74,7 +74,9 @@ const StandardDataTable = ({
   sortBy,
   sortOrder = "asc",
   onSort,
-})  => {
+}) => {
+  const emptyColSpan = Math.max(columns?.length || 0, 1);
+
   return (
     <Paper>
       {toolbar && (
@@ -90,24 +92,28 @@ const StandardDataTable = ({
               renderHeader()
             ) : (
               <TableRow>
-                {columns.map((column) => {
-                  const isCheckboxCol = column.key === "checkbox" || column.key === "select";
+                {columns.map((column, colIndex) => {
+                  const columnKey = column.key || column.field || `col-${colIndex}`;
+                  const columnLabel = column.label || column.headerName || columnKey;
+                  const isCheckboxCol = columnKey === "checkbox" || columnKey === "select";
                   const isSortable = !!column.sortable && !!onSort;
-                  const isActive = sortBy === column.key;
+                  const isActive = sortBy === columnKey;
                   return (
                     <TableCell
-                      key={column.key}
+                      key={columnKey}
                       align={column.align || "left"}
-                      onClick={isSortable ? () => onSort(column.key) : undefined}
+                      onClick={isSortable ? () => onSort(columnKey) : undefined}
                       sx={{
                         width: column.width,
                         ...(isCheckboxCol ? { padding: "0 4px" } : {}),
-                        ...(isSortable ? {
-                          cursor: "pointer",
-                          userSelect: "none",
-                          bgcolor: isActive ? "action.selected" : undefined,
-                          "&:hover": { bgcolor: isActive ? "action.selected" : "action.hover" },
-                        } : {}),
+                        ...(isSortable
+                          ? {
+                              cursor: "pointer",
+                              userSelect: "none",
+                              bgcolor: isActive ? "action.selected" : undefined,
+                              "&:hover": { bgcolor: isActive ? "action.selected" : "action.hover" },
+                            }
+                          : {}),
                         fontWeight: 600,
                         fontSize: "0.8125rem",
                         whiteSpace: "nowrap",
@@ -117,12 +123,14 @@ const StandardDataTable = ({
                         <TableSortLabel
                           active={isActive}
                           direction={isActive ? sortOrder : "asc"}
-                          onClick={() => onSort(column.key)}
+                          onClick={() => onSort(columnKey)}
                           hideSortIcon={!isActive}
                         >
-                          {column.label}
+                          {columnLabel}
                         </TableSortLabel>
-                      ) : column.label}
+                      ) : (
+                        columnLabel
+                      )}
                     </TableCell>
                   );
                 })}
@@ -135,14 +143,16 @@ const StandardDataTable = ({
               <TableSkeleton columns={columns.length} rows={skeletonRows} />
             ) : rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={columns.length} sx={{ border: 0 }}>
+                <TableCell colSpan={emptyColSpan} sx={{ border: 0 }}>
                   {emptyIcon || emptyTitle || emptySubtitle ? (
-                    <EmptyState
-                      icon={emptyIcon}
-                      title={emptyTitle || emptyMessage}
-                      subtitle={emptySubtitle}
-                      action={emptyAction}
-                    />
+                    <Box sx={{ width: "100%", display: "flex", justifyContent: "center" }}>
+                      <EmptyState
+                        icon={emptyIcon}
+                        title={emptyTitle || emptyMessage}
+                        subtitle={emptySubtitle}
+                        action={emptyAction}
+                      />
+                    </Box>
                   ) : (
                     <Box sx={{ textAlign: "center", py: 6 }}>
                       <Typography variant="body2" color="text.secondary">
@@ -155,7 +165,9 @@ const StandardDataTable = ({
             ) : (
               rows.map((row, index) =>
                 renderRow ? (
-                  renderRow(row, index)
+                  <React.Fragment key={getRowKey(row)}>
+                    {renderRow(row, index)}
+                  </React.Fragment>
                 ) : (
                   <TableRow
                     key={getRowKey(row)}
@@ -163,21 +175,24 @@ const StandardDataTable = ({
                     onClick={onRowClick ? () => onRowClick(row, index) : undefined}
                     sx={onRowClick ? { cursor: "pointer" } : undefined}
                   >
-                    {columns.map((column) => (
-                      <TableCell
-                        key={column.key}
-                        align={column.align || "left"}
-                        sx={{
-                          fontSize: "0.8125rem",
-                          maxWidth: column.maxWidth,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {row[column.key]}
-                      </TableCell>
-                    ))}
+                    {columns.map((column, colIndex) => {
+                      const columnKey = column.key || column.field || `col-${colIndex}`;
+                      return (
+                        <TableCell
+                          key={columnKey}
+                          align={column.align || "left"}
+                          sx={{
+                            fontSize: "0.8125rem",
+                            maxWidth: column.maxWidth,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {row[columnKey]}
+                        </TableCell>
+                      );
+                    })}
                   </TableRow>
                 )
               )

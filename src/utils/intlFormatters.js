@@ -10,11 +10,25 @@ export function resolveLocale(languageCode) {
 }
 
 export function formatCurrency(amount, languageCode = 'en', currency = DEFAULT_CURRENCY) {
+  const currencyConfig =
+    currency && typeof currency === 'object'
+      ? currency
+      : { currency };
+
+  const safeCurrency =
+    typeof currencyConfig.currency === 'string' && currencyConfig.currency.trim()
+      ? currencyConfig.currency
+      : DEFAULT_CURRENCY;
+
   return new Intl.NumberFormat(resolveLocale(languageCode), {
     style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    currency: safeCurrency,
+    minimumFractionDigits: Number.isFinite(currencyConfig.minimumFractionDigits)
+      ? currencyConfig.minimumFractionDigits
+      : 2,
+    maximumFractionDigits: Number.isFinite(currencyConfig.maximumFractionDigits)
+      ? currencyConfig.maximumFractionDigits
+      : 2,
   }).format(Number(amount || 0));
 }
 

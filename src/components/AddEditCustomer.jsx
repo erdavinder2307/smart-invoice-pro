@@ -375,7 +375,7 @@ const AddEditCustomer = () => {
   const [apiError, setApiError] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [saveMode, setSaveMode] = useState('save');
+  const [, setSaveMode] = useState('save');
   const [gstPrefilling, setGstPrefilling] = useState(false);
   const [gstPrefillError, setGstPrefillError] = useState('');
   const [tab, setTab] = useState(0);

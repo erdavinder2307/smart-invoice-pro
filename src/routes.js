@@ -34,6 +34,7 @@ import AddEditVendor from './components/AddEditVendor';
 import PurchaseOrderList from './components/PurchaseOrderList';
 import AddEditPurchaseOrder from './components/AddEditPurchaseOrder';
 import BillList from './components/BillList';
+import BillDetails from './components/BillDetails';
 import AddEditBill from './components/AddEditBill';
 import ExpenseList from './components/ExpenseList';
 import AddEditExpense from './components/AddEditExpense';
@@ -97,6 +98,7 @@ const AppRoutes = () => {
           <Route path="/bills" element={<BillList />} />
           <Route path="/bills/add" element={<AddEditBill />} />
           <Route path="/bills/edit/:id" element={<AddEditBill />} />
+          <Route path="/bills/:id" element={<BillDetails />} />
           <Route path="/expenses" element={<ExpenseList />} />
           <Route path="/expenses/add" element={<AddEditExpense />} />
           <Route path="/expenses/edit/:id" element={<AddEditExpense />} />

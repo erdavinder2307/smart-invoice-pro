@@ -243,27 +243,94 @@ export const generateSalesOrderMockData = ({ context = {} } = {}) => ({
   items: [{ item_name: "Office Chair", description: "Ergonomic chair", quantity: 5, rate: 3500, discount: 0, tax: 18, amount: 17500 }],
 });
 
-export const generatePurchaseOrderMockData = ({ context = {} } = {}) => ({
-  vendor_id: context.vendors?.[0]?.id || "",
-  order_date: today(),
-  delivery_date: plusDays(10),
-  status: "Draft",
-  subject: "Procurement request",
-  notes: "Please confirm dispatch schedule.",
-  items: [{ item_name: "Raw Material", quantity: 10, rate: 800, tax: 18, amount: 8000 }],
-});
+export const generatePurchaseOrderMockData = ({ scenario = "full", context = {} } = {}) => {
+  const vendors = Array.isArray(context.vendors) ? context.vendors : [];
+  const products = Array.isArray(context.products) ? context.products : [];
 
-export const generateBillMockData = ({ context = {} } = {}) => ({
-  vendor_id: context.vendors?.[0]?.id || "",
-  bill_date: today(),
-  due_date: plusDays(15),
-  payment_status: "Unpaid",
-  subject: "Monthly procurement bill",
-  notes: "Auto-filled for QA testing.",
-  amount_paid: 0,
-  items: [{ item_name: "Purchased Goods", quantity: 4, rate: 2400, tax: 18, amount: 9600 }],
-  expenses: [{ description: "Freight", amount: 500 }],
-});
+  const selectedVendor = vendors[0] || null;
+  const pickProduct = (index) => products[index % Math.max(products.length, 1)] || null;
+
+  const lineOneProduct = pickProduct(0);
+  const lineTwoProduct = pickProduct(1);
+
+  const lineOneQty = scenario === "minimal" ? 2 : 5;
+  const lineTwoQty = scenario === "minimal" ? 1 : 3;
+
+  const lineOneRate = Number(lineOneProduct?.price || rnd(350, 1200));
+  const lineTwoRate = Number(lineTwoProduct?.price || rnd(200, 950));
+  const lineOneTax = Number(lineOneProduct?.tax_rate || 18);
+  const lineTwoTax = Number(lineTwoProduct?.tax_rate || 12);
+
+  const lineOneBase = lineOneQty * lineOneRate;
+  const lineTwoBase = lineTwoQty * lineTwoRate;
+
+  const lineOneAmount = lineOneBase + ((lineOneBase * lineOneTax) / 100);
+  const lineTwoAmount = lineTwoBase + ((lineTwoBase * lineTwoTax) / 100);
+
+  return {
+    po_number: `PO-${rnd(100, 999)}`,
+    vendor_id: selectedVendor?.id || "",
+    order_date: today(),
+    delivery_date: plusDays(10),
+    status: "Draft",
+    subject: "Monthly procurement - operations and supplies",
+    notes: "Please confirm dispatch schedule and expected delivery ETA.",
+    items: [
+      {
+        item_id: lineOneProduct?.id || "",
+        item_name: lineOneProduct?.name || "Industrial Packaging Material",
+        quantity: lineOneQty,
+        rate: lineOneRate,
+        tax: lineOneTax,
+        amount: lineOneAmount,
+      },
+      {
+        item_id: lineTwoProduct?.id || "",
+        item_name: lineTwoProduct?.name || "Warehouse Label Rolls",
+        quantity: lineTwoQty,
+        rate: lineTwoRate,
+        tax: lineTwoTax,
+        amount: lineTwoAmount,
+      },
+    ],
+  };
+};
+
+export const generateBillMockData = ({ scenario = "full", context = {} } = {}) => {
+  const vendors = Array.isArray(context.vendors) ? context.vendors : [];
+  const products = Array.isArray(context.products) ? context.products : [];
+
+  const selectedVendor = vendors[0] || null;
+  const pickProduct = (index) => products[index % Math.max(products.length, 1)] || null;
+  const lineProduct = pickProduct(0);
+
+  const lineQty = scenario === "minimal" ? 2 : 4;
+  const lineRate = Number(lineProduct?.price || lineProduct?.selling_price || rnd(500, 3000));
+  const lineTax = Number(lineProduct?.tax_rate || 18);
+  const lineBase = lineQty * lineRate;
+  const lineAmount = lineBase + (lineBase * lineTax) / 100;
+
+  return {
+    vendor_id: selectedVendor?.id || "",
+    bill_date: today(),
+    due_date: plusDays(15),
+    payment_status: "Unpaid",
+    subject: "Monthly procurement bill",
+    notes: "Auto-filled for QA testing.",
+    amount_paid: 0,
+    items: [
+      {
+        item_id: lineProduct?.id || "",
+        item_name: lineProduct?.name || "Purchased Goods",
+        quantity: lineQty,
+        rate: lineRate,
+        tax: lineTax,
+        amount: lineAmount,
+      },
+    ],
+    expenses: [{ expense_name: "Freight", amount: 500, description: "Shipping charges" }],
+  };
+};
 
 export const generateExpenseMockData = () => ({
   vendor_name: makeCompany(),

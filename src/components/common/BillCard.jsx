@@ -1,6 +1,7 @@
 import React from "react";
 import {
   Box,
+  Button,
   Card,
   CardContent,
   Divider,
@@ -10,7 +11,9 @@ import {
   Typography,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
+import DoneAllIcon from "@mui/icons-material/DoneAll";
 import EditIcon from "@mui/icons-material/Edit";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 import StatusBadge from "./StatusBadge";
 
 const formatCurrency = (value) => `₹${Number(value || 0).toLocaleString()}`;
@@ -21,10 +24,12 @@ const formatCurrency = (value) => `₹${Number(value || 0).toLocaleString()}`;
  * Props:
  *   bill       {object}  — bill data
  *   vendorName {string}  — resolved vendor name
+ *   onView     {fn}      — view handler
  *   onEdit     {fn}      — edit handler
  *   onDelete   {fn}      — delete handler (disabled when paid)
+ *   onMarkPaid {fn}      — mark paid handler (disabled when no balance)
  */
-const BillCard = ({ bill, vendorName, onEdit, onDelete }) => (
+const BillCard = ({ bill, vendorName, onView, onEdit, onDelete, onMarkPaid }) => (
   <Card
     elevation={0}
     sx={{
@@ -152,7 +157,16 @@ const BillCard = ({ bill, vendorName, onEdit, onDelete }) => (
           )}
         </Stack>
 
-        <Box sx={{ display: "flex", gap: 0.5, flexShrink: 0 }}>
+        <Box sx={{ display: "flex", gap: 0.25, flexShrink: 0 }}>
+          <Tooltip title="View bill">
+            <IconButton
+              size="small"
+              onClick={onView}
+              sx={{ color: "#334155", "&:hover": { bgcolor: "#f8fafc" }, width: 34, height: 34 }}
+            >
+              <VisibilityIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Tooltip>
           <Tooltip title="Edit bill">
             <IconButton
               size="small"
@@ -167,7 +181,7 @@ const BillCard = ({ bill, vendorName, onEdit, onDelete }) => (
               <IconButton
                 size="small"
                 onClick={onDelete}
-                disabled={bill.payment_status === "Paid"}
+                disabled={String(bill.payment_status || "").toLowerCase() === "paid"}
                 sx={{ color: "#ef4444", "&:hover": { bgcolor: "#fef2f2" }, width: 34, height: 34 }}
               >
                 <DeleteIcon sx={{ fontSize: 18 }} />
@@ -175,6 +189,20 @@ const BillCard = ({ bill, vendorName, onEdit, onDelete }) => (
             </span>
           </Tooltip>
         </Box>
+      </Box>
+
+      <Box sx={{ mt: 1.25 }}>
+        <Button
+          fullWidth
+          size="small"
+          variant="outlined"
+          startIcon={<DoneAllIcon fontSize="small" />}
+          onClick={onMarkPaid}
+          disabled={Number(bill.balance_due || 0) <= 0}
+          sx={{ textTransform: "none", fontWeight: 600 }}
+        >
+          Mark as Paid
+        </Button>
       </Box>
     </CardContent>
   </Card>

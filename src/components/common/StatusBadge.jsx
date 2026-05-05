@@ -10,6 +10,8 @@ import Chip from "@mui/material/Chip";
  */
 
 const STATUS_MAP = {
+    open: { label: "Open", color: "info" },
+    unpaid: { label: "Open", color: "info" },
     paid: { label: "Paid", color: "success" },
     "partially paid": { label: "Partially Paid", color: "warning" },
     overdue: { label: "Overdue", color: "error" },

@@ -34,7 +34,8 @@ describe('BillCard', () => {
     );
     expect(screen.getByText('BILL-001')).toBeInTheDocument();
     expect(screen.getByText('Acme Corp')).toBeInTheDocument();
-    expect(screen.getByText('Unpaid')).toBeInTheDocument();
+    // StatusBadge maps "Unpaid" to display label "Open".
+    expect(screen.getByText('Open')).toBeInTheDocument();
   });
 
   it('calls onEdit when bill number is clicked', () => {
@@ -51,9 +52,9 @@ describe('BillCard', () => {
     renderWithProviders(
       <BillCard bill={bill} vendorName="Acme Corp" onEdit={jest.fn()} onDelete={onDelete} />
     );
-    // Delete is the last button (edit comes first)
-    const buttons = screen.getAllByRole('button');
-    fireEvent.click(buttons[buttons.length - 1]);
+    const deleteButton = screen.getByTestId('DeleteIcon').closest('button');
+    expect(deleteButton).toBeTruthy();
+    fireEvent.click(deleteButton);
     expect(onDelete).toHaveBeenCalledTimes(1);
   });
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -12,7 +12,10 @@ import {
   Divider,
   Grid,
 } from '@mui/material';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import UndoIcon from '@mui/icons-material/Undo';
 import AdminLayout from '../components/AdminLayout';
+import { C, footerSx, saveBtnSx } from '../../components/common/formStyles';
 import {
   listTenants,
   getFeatureFlags,
@@ -43,6 +46,8 @@ const FeatureFlags = () => {
   const [success, setSuccess] = useState('');
   const [tenantsLoading, setTenantsLoading] = useState(true);
 
+  const savedFlags = useRef(null);
+
   useEffect(() => {
     const fetchTenants = async () => {
       try {
@@ -66,13 +71,16 @@ const FeatureFlags = () => {
       const data = await getFeatureFlags(tenantId);
       if (data.flags && Object.keys(data.flags).length > 0) {
         setFlags(data.flags);
+        savedFlags.current = data.flags;
         setIsNew(false);
       } else {
         setFlags({ ...DEFAULT_FLAGS });
+        savedFlags.current = { ...DEFAULT_FLAGS };
         setIsNew(true);
       }
     } catch {
       setFlags({ ...DEFAULT_FLAGS });
+      savedFlags.current = { ...DEFAULT_FLAGS };
       setIsNew(true);
     } finally {
       setLoading(false);
@@ -98,6 +106,7 @@ const FeatureFlags = () => {
       } else {
         await updateFeatureFlags(selectedTenantId, flags);
       }
+      savedFlags.current = flags;
       setIsNew(false);
       setSuccess('Feature flags saved successfully');
     } catch (err) {
@@ -105,6 +114,16 @@ const FeatureFlags = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleDiscard = () => {
+    if (savedFlags.current !== null) {
+      setFlags(savedFlags.current);
+    }
+  };
+
+  const handleReset = () => {
+    setFlags({ ...DEFAULT_FLAGS });
   };
 
   return (
@@ -178,13 +197,49 @@ const FeatureFlags = () => {
                 ))}
               </Grid>
               <Divider sx={{ my: 3 }} />
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <Box sx={footerSx}>
+                <Button
+                  variant="text"
+                  size="small"
+                  startIcon={<RefreshIcon sx={{ fontSize: 16 }} />}
+                  onClick={handleReset}
+                  sx={{
+                    textTransform: 'none',
+                    fontSize: '0.8125rem',
+                    color: C.hint,
+                    mr: 1,
+                    '&:hover': { color: C.label },
+                  }}
+                >
+                  Reset to Defaults
+                </Button>
+
+                <Button
+                  variant="text"
+                  size="small"
+                  startIcon={<UndoIcon sx={{ fontSize: 16 }} />}
+                  onClick={handleDiscard}
+                  disabled={saving}
+                  sx={{
+                    textTransform: 'none',
+                    fontSize: '0.8125rem',
+                    color: C.hint,
+                    mr: 1,
+                    '&:hover': { color: C.label },
+                  }}
+                >
+                  Discard Changes
+                </Button>
+
                 <Button
                   variant="contained"
+                  size="small"
                   onClick={handleSave}
                   disabled={saving}
+                  startIcon={saving ? <CircularProgress size={14} color="inherit" /> : null}
+                  sx={saveBtnSx}
                 >
-                  {saving ? <CircularProgress size={20} /> : 'Save Flags'}
+                  {saving ? 'Saving…' : 'Save Flags'}
                 </Button>
               </Box>
             </>

@@ -44,6 +44,7 @@ import { applyApiErrors, parseApiError } from '../utils/apiErrors';
 import { calculateInvoiceTotals } from '../utils/invoiceCalculations';
 import { buildInvoicePayload } from '../utils/invoicePayload';
 import { deriveDueDate, validateInvoiceForm } from '../utils/invoiceFormValidation';
+import { isAutoFillEnabled } from '../utils/autoFillAccess';
 
 const paymentTermsOptions = ['Due on Receipt', 'Net 7', 'Net 15', 'Net 30', 'Net 45'];
 const AUTO_FILL_MODES = [
@@ -138,7 +139,7 @@ const CellField = ({ value, onChange, type = 'number', width = 90, inputProps, p
 );
 
 const AddEditInvoice = ({ onSuccess, onCancel }) => {
-  const isDevAutoFillEnabled = process.env.NODE_ENV !== 'production';
+  const isDevAutoFillEnabled = isAutoFillEnabled();
   const { t, i18n } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();

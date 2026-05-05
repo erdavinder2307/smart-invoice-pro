@@ -39,6 +39,7 @@ import {
 } from './common/formStyles';
 import { useTranslation } from 'react-i18next';
 import DevAutoFillButton from './common/DevAutoFillButton';
+import { isAutoFillEnabled } from '../utils/autoFillAccess';
 
 const TAX_OPTIONS = [0, 5, 12, 18, 28];
 const EMPTY_ITEM = {
@@ -130,7 +131,7 @@ const ActionTextButton = ({ children, ...props }) => (
 );
 
 const AddEditQuote = () => {
-  const isDevAutoFillEnabled = process.env.NODE_ENV !== 'production';
+  const isDevAutoFillEnabled = isAutoFillEnabled();
   const { id } = useParams();
   const navigate = useNavigate();
   const { t } = useTranslation();

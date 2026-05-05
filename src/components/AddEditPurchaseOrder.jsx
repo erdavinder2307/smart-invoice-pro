@@ -35,8 +35,9 @@ import DevAutoFillButton from "./common/DevAutoFillButton";
 import { generatePurchaseOrderMockData } from "../utils/mockDataGenerators";
 import { parseApiError, applyApiErrors } from "../utils/apiErrors";
 import { scrollToFirstError } from "../utils/validation";
+import { isAutoFillEnabled } from "../utils/autoFillAccess";
 
-const IS_DEV_AUTOFILL = process.env.NODE_ENV === "development";
+const IS_DEV_AUTOFILL = isAutoFillEnabled();
 const INITIAL_STATUS = "Draft";
 
 const createEmptyLineItem = () => ({
@@ -247,11 +248,6 @@ const AddEditPurchaseOrder = () => {
       tax: toNumber(product.tax_rate, 0),
     }))
   ), [products]);
-
-  const recalculateTotalsFromItems = useCallback((items) => {
-    const totals = computeTotals(items);
-    setForm((prev) => ({ ...prev, ...totals }));
-  }, []);
 
   const setFormField = (name, value) => {
     setForm((prev) => ({ ...prev, [name]: value }));

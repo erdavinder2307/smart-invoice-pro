@@ -27,6 +27,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import DeleteIcon from "@mui/icons-material/Delete";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import UndoIcon from "@mui/icons-material/Undo";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 
 import { useAuth } from "../context/AuthContext";
@@ -527,6 +528,8 @@ export default function BrandingSettings() {
 
   const fileInputRef = useRef(null);
   const pendingFile  = useRef(null);
+  const savedForm = useRef(null);
+  const savedLogoPreview = useRef(null);
 
   const [cropOpen, setCropOpen] = useState(false);
   const [cropSrc, setCropSrc] = useState("");
@@ -543,7 +546,7 @@ export default function BrandingSettings() {
     (async () => {
       try {
         const data = await getBranding();
-        setForm({
+        const loadedForm = {
           primary_color:         data.primary_color         || BRANDING_DEFAULTS.primary_color,
           secondary_color:       data.secondary_color       || BRANDING_DEFAULTS.secondary_color,
           accent_color:          data.accent_color          || BRANDING_DEFAULTS.accent_color,
@@ -552,7 +555,10 @@ export default function BrandingSettings() {
             show_logo:      data.invoice_template_settings?.show_logo      ?? true,
             show_signature: data.invoice_template_settings?.show_signature ?? false,
           },
-        });
+        };
+        setForm(loadedForm);
+        savedForm.current = loadedForm;
+        savedLogoPreview.current = data.logo_url || null;
         if (data.logo_url) setLogoPreview(data.logo_url);
       } catch {
         setToast({ open: true, message: "Failed to load branding settings.", severity: "error" });
@@ -645,6 +651,12 @@ export default function BrandingSettings() {
       // Push new branding into global context so theme updates instantly
       setCtxBranding((prev) => ({ ...prev, ...saved }));
 
+      // Update saved state refs so Discard reflects the new saved state
+      const updatedForm = { ...form };
+      if (logo_url) updatedForm.logo_url = logo_url;
+      savedForm.current = updatedForm;
+      savedLogoPreview.current = logo_url || null;
+
       setToast({ open: true, message: "Branding updated successfully.", severity: "success" });
     } catch (err) {
       const msg = err.response?.data?.error || "Failed to save branding.";
@@ -652,6 +664,15 @@ export default function BrandingSettings() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleDiscard = () => {
+    if (savedForm.current) setForm(savedForm.current);
+    setLogoFile(null);
+    setLogoPreview(savedLogoPreview.current);
+    setLogoError("");
+    pendingFile.current = null;
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleReset = () => {
@@ -905,6 +926,23 @@ export default function BrandingSettings() {
                       }}
                     >
                       Preview Invoice
+                    </Button>
+
+                    <Button
+                      variant="text"
+                      size="small"
+                      startIcon={<UndoIcon sx={{ fontSize: 16 }} />}
+                      onClick={handleDiscard}
+                      disabled={saving}
+                      sx={{
+                        textTransform: "none",
+                        fontSize: "0.8125rem",
+                        color: C.hint,
+                        mr: 1,
+                        "&:hover": { color: C.label },
+                      }}
+                    >
+                      Discard Changes
                     </Button>
 
                     <Button

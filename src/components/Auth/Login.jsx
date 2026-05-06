@@ -35,6 +35,7 @@ import {
 import { motion } from 'framer-motion';
 import Header from '../Layout/Header';
 import Footer from '../Layout/Footer';
+import SeoHead from '../../seo/SeoHead';
 import { useAuth } from "../../context/AuthContext";
 
 const LoginPage = () => {
@@ -158,6 +159,12 @@ const LoginPage = () => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <SeoHead
+        title={isSignup ? "Sign Up for Invoice Management | Solidev Books" : "Sign In to Invoice Management | Solidev Books"}
+        description={isSignup ? "Create a free Solidev Books account to start managing your invoices, payments, and financial operations." : "Sign in to your Solidev Books account to access your invoicing and financial management dashboard."}
+        canonicalPath="/login"
+        robots="noindex,follow"
+      />
       <Header />
 
       <Box

@@ -20,6 +20,7 @@ import {
 import BusinessIcon from "@mui/icons-material/Business";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import DeleteIcon from "@mui/icons-material/Delete";
+import UndoIcon from "@mui/icons-material/Undo";
 
 import { useAuth } from "../context/AuthContext";
 import {
@@ -408,6 +409,8 @@ export default function OrganizationProfile() {
   });
   const fileInputRef = useRef(null);
   const pendingFile = useRef(null);
+  const savedForm = useRef(null);
+  const savedLogoPreview = useRef(null);
 
   // Admin guard
   useEffect(() => {
@@ -422,7 +425,7 @@ export default function OrganizationProfile() {
     (async () => {
       try {
         const data = await getOrgProfile();
-        setForm({
+        const loadedForm = {
           organization_name: data.organization_name || "",
           industry: data.industry || "",
           country: data.country || "",
@@ -438,7 +441,10 @@ export default function OrganizationProfile() {
             phone:   (data.address && data.address.phone)   || "",
             fax:     (data.address && data.address.fax)     || "",
           },
-        });
+        };
+        setForm(loadedForm);
+        savedForm.current = loadedForm;
+        savedLogoPreview.current = data.logo_url || null;
         if (data.logo_url) setLogoPreview(data.logo_url);
       } catch {
         setToast({
@@ -463,6 +469,17 @@ export default function OrganizationProfile() {
       ...prev,
       address: { ...prev.address, [name]: value },
     }));
+    setErrors((prev) => ({ ...prev, [name]: undefined }));
+  };
+
+  const handleDiscard = () => {
+    if (savedForm.current) setForm(savedForm.current);
+    setErrors({});
+    setLogoFile(null);
+    setLogoPreview(savedLogoPreview.current);
+    setLogoError("");
+    pendingFile.current = null;
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleLogoSelect = (e) => {
@@ -547,7 +564,10 @@ export default function OrganizationProfile() {
       }
 
       const saved = await updateOrgProfile({ ...form, logo_url });
-      setForm((prev) => ({ ...prev, logo_url: saved.logo_url || logo_url }));
+      const updatedForm = { ...form, logo_url: saved.logo_url || logo_url };
+      setForm(updatedForm);
+      savedForm.current = updatedForm;
+      savedLogoPreview.current = saved.logo_url || logo_url || null;
       if (saved.logo_url) setLogoPreview(null); // server URL — don't need object URL
       setLogoFile(null);
       pendingFile.current = null;
@@ -745,7 +765,7 @@ export default function OrganizationProfile() {
                         size="small"
                         fullWidth
                         error={!!errors.organization_name}
-                        helperText={errors.organization_name}
+                        helperText={errors.organization_name || " "}
                         placeholder="e.g. Acme Corp"
                         sx={fieldSx}
                       />
@@ -778,7 +798,7 @@ export default function OrganizationProfile() {
                             size="small"
                             placeholder="Select or search country"
                             error={!!errors.country}
-                            helperText={errors.country}
+                            helperText={errors.country || " "}
                             sx={fieldSx}
                           />
                         )}
@@ -909,6 +929,23 @@ export default function OrganizationProfile() {
 
                 {/* ══ FOOTER ════════════════════════════════════════════════ */}
                 <Box sx={footerSx}>
+                  <Button
+                    variant="text"
+                    size="small"
+                    startIcon={<UndoIcon sx={{ fontSize: 16 }} />}
+                    onClick={handleDiscard}
+                    disabled={saving}
+                    sx={{
+                      textTransform: "none",
+                      fontSize: "0.8125rem",
+                      color: C.hint,
+                      mr: 1,
+                      "&:hover": { color: C.label },
+                    }}
+                  >
+                    Discard Changes
+                  </Button>
+
                   <Button
                     variant="contained"
                     onClick={handleSave}

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import MainLayout from "../components/Layout/MainLayout";
 import {
   Alert,
@@ -6,6 +6,7 @@ import {
   Button,
   Chip,
   CircularProgress,
+  Container,
   Divider,
   FormControlLabel,
   IconButton,
@@ -25,10 +26,12 @@ import BreakfastDiningIcon from "@mui/icons-material/BreakfastDining";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EmailIcon from "@mui/icons-material/Email";
 import HubIcon from "@mui/icons-material/Hub";
+import RefreshIcon from "@mui/icons-material/Refresh";
+import UndoIcon from "@mui/icons-material/Undo";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 
-import { C, fieldSx } from "../components/common/formStyles";
+import { C, fieldSx, footerSx, saveBtnSx } from "../components/common/formStyles";
 import {
   getIntegrationSettings,
   saveIntegrationSettings,
@@ -218,6 +221,11 @@ export default function IntegrationSettings() {
   const [email, setEmail]     = useState({ provider: "azure", sender_email: "", enabled: true });
   const [webhooks, setWebhooks] = useState([]);
 
+  const savedPayments = useRef(null);
+  const savedBanking = useRef(null);
+  const savedEmail = useRef(null);
+  const savedWebhooks = useRef(null);
+
   const showToast = (message, severity = "success") =>
     setToast({ open: true, message, severity });
 
@@ -227,10 +235,10 @@ export default function IntegrationSettings() {
     setError("");
     try {
       const data = await getIntegrationSettings();
-      if (data.payments)  setPayments(data.payments);
-      if (data.banking)   setBanking(data.banking);
-      if (data.email)     setEmail(data.email);
-      if (data.webhooks)  setWebhooks(data.webhooks);
+      if (data.payments)  { setPayments(data.payments); savedPayments.current = data.payments; }
+      if (data.banking)   { setBanking(data.banking); savedBanking.current = data.banking; }
+      if (data.email)     { setEmail(data.email); savedEmail.current = data.email; }
+      if (data.webhooks)  { setWebhooks(data.webhooks); savedWebhooks.current = data.webhooks; }
     } catch {
       setError("Failed to load integration settings.");
     } finally {
@@ -263,6 +271,10 @@ export default function IntegrationSettings() {
     setSaving(true);
     try {
       await saveIntegrationSettings({ payments, banking, email, webhooks });
+      savedPayments.current = payments;
+      savedBanking.current = banking;
+      savedEmail.current = email;
+      savedWebhooks.current = webhooks;
       showToast("Integration settings saved.");
       // Reload to get fresh masked values from server
       await loadSettings();
@@ -273,19 +285,26 @@ export default function IntegrationSettings() {
     }
   };
 
+  const handleDiscard = () => {
+    if (savedPayments.current !== null) setPayments(savedPayments.current);
+    if (savedBanking.current !== null) setBanking(savedBanking.current);
+    if (savedEmail.current !== null) setEmail(savedEmail.current);
+    if (savedWebhooks.current !== null) setWebhooks(savedWebhooks.current);
+  };
+
+  const handleReset = () => {
+    setPayments({ provider: "zoho", enabled: false, api_key: "", webhook_secret: "", status: "disconnected" });
+    setBanking({ enabled: false, provider: null });
+    setEmail({ provider: "azure", sender_email: "", enabled: true });
+    setWebhooks([]);
+  };
+
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <MainLayout>
-      <Box
-        sx={{
-          maxWidth: 1100,
-          mx: "auto",
-          px: { xs: 2, md: 3 },
-          py: 3,
-        }}
-      >
-        {/* Content */}
-        <Box sx={{ minWidth: 0 }}>
+    <MainLayout title="Integrations">
+      <Box sx={{ bgcolor: C.pageBg, minHeight: "100vh", pb: 6 }}>
+        <Container maxWidth={false} sx={{ pt: 3, px: 2.5 }}>
+          <Box sx={{ minWidth: 0 }}>
           {/* Header */}
           <Box sx={{ mb: 3, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <Box>
@@ -296,16 +315,6 @@ export default function IntegrationSettings() {
                 Manage external services, webhooks, and API connections.
               </Typography>
             </Box>
-            <Button
-              variant="contained"
-              disableElevation
-              onClick={handleSave}
-              disabled={saving || loading}
-              startIcon={saving ? <CircularProgress size={16} color="inherit" /> : null}
-              sx={{ textTransform: "none", fontWeight: 600, px: 3 }}
-            >
-              {saving ? "Saving…" : "Save Changes"}
-            </Button>
           </Box>
 
           {loading ? (
@@ -480,12 +489,60 @@ export default function IntegrationSettings() {
                   </Alert>
                 )}
               </SectionCard>
+
+              {/* ── FOOTER ─────────────────────────────────────────────────── */}
+              <Box sx={footerSx}>
+                <Button
+                  variant="text"
+                  size="small"
+                  startIcon={<RefreshIcon sx={{ fontSize: 16 }} />}
+                  onClick={handleReset}
+                  sx={{
+                    textTransform: "none",
+                    fontSize: "0.8125rem",
+                    color: C.hint,
+                    mr: 1,
+                    "&:hover": { color: C.label },
+                  }}
+                >
+                  Reset to Defaults
+                </Button>
+
+                <Button
+                  variant="text"
+                  size="small"
+                  startIcon={<UndoIcon sx={{ fontSize: 16 }} />}
+                  onClick={handleDiscard}
+                  disabled={saving}
+                  sx={{
+                    textTransform: "none",
+                    fontSize: "0.8125rem",
+                    color: C.hint,
+                    mr: 1,
+                    "&:hover": { color: C.label },
+                  }}
+                >
+                  Discard Changes
+                </Button>
+
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={handleSave}
+                  disabled={saving || loading}
+                  startIcon={saving ? <CircularProgress size={14} color="inherit" /> : null}
+                  sx={saveBtnSx}
+                >
+                  {saving ? "Saving…" : "Save Changes"}
+                </Button>
+              </Box>
             </>
           )}
         </Box>
-      </Box>
+      </Container>
+    </Box>
 
-      {/* Toast */}
+    {/* Toast */}
       <Snackbar
         open={toast.open}
         autoHideDuration={4000}

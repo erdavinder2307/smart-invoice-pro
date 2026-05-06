@@ -1,10 +1,11 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import MainLayout from "../components/Layout/MainLayout";
 import {
   Alert,
   Box,
   Button,
   CircularProgress,
+  Container,
   FormControlLabel,
   InputAdornment,
   Paper,
@@ -16,10 +17,12 @@ import {
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import EmailIcon from "@mui/icons-material/Email";
 import EventIcon from "@mui/icons-material/Event";
+import RefreshIcon from "@mui/icons-material/Refresh";
+import UndoIcon from "@mui/icons-material/Undo";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 
-import { C, fieldSx } from "../components/common/formStyles";
+import { C, fieldSx, footerSx, saveBtnSx } from "../components/common/formStyles";
 import { getAutomationSettings, saveAutomationSettings } from "../services/automationService";
 
 // ── Reminder type metadata ─────────────────────────────────────────────────────
@@ -74,6 +77,8 @@ export default function AutomationSettings() {
   const [emailEnabled, setEmailEnabled] = useState(true);
   const [rules, setRules]             = useState(buildDefaults(null));
   const [toast, setToast]             = useState({ open: false, message: "", severity: "success" });
+  const savedEmailEnabled = useRef(null);
+  const savedRules = useRef(null);
 
   const showToast = (message, severity = "success") =>
     setToast({ open: true, message, severity });
@@ -83,8 +88,12 @@ export default function AutomationSettings() {
     setError("");
     try {
       const data = await getAutomationSettings();
-      setEmailEnabled(data.email_enabled !== false);
-      setRules(buildDefaults(data.payment_reminders));
+      const emailEnabledVal = data.email_enabled !== false;
+      const rulesVal = buildDefaults(data.payment_reminders);
+      setEmailEnabled(emailEnabledVal);
+      setRules(rulesVal);
+      savedEmailEnabled.current = emailEnabledVal;
+      savedRules.current = rulesVal;
     } catch {
       setError("Failed to load automation settings.");
     } finally {
@@ -106,6 +115,8 @@ export default function AutomationSettings() {
     try {
       const payment_reminders = REMINDER_ORDER.map((t) => rules[t]);
       await saveAutomationSettings({ email_enabled: emailEnabled, payment_reminders });
+      savedEmailEnabled.current = emailEnabled;
+      savedRules.current = rules;
       showToast("Automation settings saved.");
     } catch (err) {
       showToast(err.response?.data?.error || "Failed to save settings.", "error");
@@ -114,18 +125,23 @@ export default function AutomationSettings() {
     }
   };
 
+  const handleDiscard = () => {
+    if (savedEmailEnabled.current !== null) setEmailEnabled(savedEmailEnabled.current);
+    if (savedRules.current !== null) setRules(savedRules.current);
+  };
+
+  const handleReset = () => {
+    setEmailEnabled(true);
+    setRules(buildDefaults(null));
+  };
+
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <MainLayout>
-      <Box
-        sx={{
-          p: 3,
-          bgcolor: C.pageBg,
-          minHeight: "calc(100vh - 64px)",
-        }}
-      >
-        {/* Content panel */}
-        <Box sx={{ minWidth: 0, maxWidth: 640 }}>
+    <MainLayout title="Automation">
+      <Box sx={{ bgcolor: C.pageBg, minHeight: "100vh", pb: 6 }}>
+        <Container maxWidth={false} sx={{ pt: 3, px: 2.5 }}>
+          {/* Content panel */}
+          <Box sx={{ minWidth: 0 }}>
           {/* Header */}
           <Box sx={{ mb: 2 }}>
             <Typography variant="h6" fontWeight={700} sx={{ fontSize: "1rem", color: C.label }}>
@@ -310,21 +326,56 @@ export default function AutomationSettings() {
                 })}
               </Paper>
 
-              {/* ── Save button ───────────────────────────────────────────── */}
-              <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+              {/* ── Footer ────────────────────────────────────────────────── */}
+              <Box sx={footerSx}>
+                <Button
+                  variant="text"
+                  size="small"
+                  startIcon={<RefreshIcon sx={{ fontSize: 16 }} />}
+                  onClick={handleReset}
+                  sx={{
+                    textTransform: "none",
+                    fontSize: "0.8125rem",
+                    color: C.hint,
+                    mr: 1,
+                    "&:hover": { color: C.label },
+                  }}
+                >
+                  Reset to Defaults
+                </Button>
+
+                <Button
+                  variant="text"
+                  size="small"
+                  startIcon={<UndoIcon sx={{ fontSize: 16 }} />}
+                  onClick={handleDiscard}
+                  disabled={saving}
+                  sx={{
+                    textTransform: "none",
+                    fontSize: "0.8125rem",
+                    color: C.hint,
+                    mr: 1,
+                    "&:hover": { color: C.label },
+                  }}
+                >
+                  Discard Changes
+                </Button>
+
                 <Button
                   variant="contained"
                   size="small"
                   onClick={handleSave}
                   disabled={saving}
-                  sx={{ textTransform: "none", fontSize: "0.8125rem", px: 3 }}
+                  startIcon={saving ? <CircularProgress size={14} color="inherit" /> : null}
+                  sx={saveBtnSx}
                 >
                   {saving ? "Saving…" : "Save Changes"}
                 </Button>
               </Box>
             </>
           )}
-        </Box>
+          </Box>
+        </Container>
       </Box>
 
       {/* ── Toast ─────────────────────────────────────────────────────────── */}

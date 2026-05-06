@@ -15,6 +15,7 @@ import DevAutoFillButton from './common/DevAutoFillButton';
 import { generateVendorMockData } from '../utils/mockDataGenerators';
 import { runValidation, validators, scrollToFirstError } from '../utils/validation';
 import { parseApiError, applyApiErrors } from '../utils/apiErrors';
+import { isAutoFillEnabled } from '../utils/autoFillAccess';
 
 const INITIAL_FORM = {
   vendor_name: '', contact_person: '', email: '',
@@ -22,7 +23,7 @@ const INITIAL_FORM = {
   payment_terms: 'Net 30', status: 'Active', notes: '',
 };
 
-const IS_DEV_AUTOFILL = process.env.NODE_ENV === 'development';
+const IS_DEV_AUTOFILL = isAutoFillEnabled();
 const PAYMENT_TERMS_OPTIONS = ['Due on Receipt', 'Net 15', 'Net 30', 'Net 45', 'Net 60'];
 
 const sectionTitleSx = {

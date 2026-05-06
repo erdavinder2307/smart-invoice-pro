@@ -63,10 +63,17 @@ import CustomerDetailPage from './pages/CustomerDetailPage';
 import SearchResultsPage from './pages/SearchResultsPage';
 import AdminRoutes from './admin/routes/AdminRoutes';
 import AppLayout from './components/Layout/AppLayout';
+import RouteSeoManager from './seo/RouteSeoManager';
+import Privacy from './pages/Privacy';
+import Terms from './pages/Terms';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import Signup from './pages/Signup';
 
 const AppRoutes = () => {
   return (
     <Router>
+      <RouteSeoManager />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
@@ -74,6 +81,7 @@ const AppRoutes = () => {
         <Route path="/contact" element={<Contact />} />
         <Route path="/theme-example" element={<ThemeExample />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/invoices" element={<InvoiceList />} />
@@ -148,10 +156,14 @@ const AppRoutes = () => {
         {/* Coming Soon Pages */}
         <Route path="/api-docs" element={<ComingSoon />} />
         <Route path="/support" element={<ComingSoon />} />
-        <Route path="/privacy" element={<ComingSoon />} />
-        <Route path="/terms" element={<ComingSoon />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<Terms />} />
         <Route path="/cookies" element={<ComingSoon />} />
         <Route path="/pricing" element={<ComingSoon />} />
+
+        {/* Authentication Pages */}
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
 
         {/* Super Admin Module — fully isolated */}
         <Route path="/admin/*" element={<AdminRoutes />} />

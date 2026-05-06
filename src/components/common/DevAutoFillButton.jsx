@@ -1,8 +1,7 @@
 import React from "react";
 import { Button, Menu, MenuItem, Tooltip } from "@mui/material";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
-
-const isDev = process.env.NODE_ENV !== "production";
+import { isAutoFillEnabled } from "../../utils/autoFillAccess";
 
 const DevAutoFillButton = ({
   onClick,
@@ -13,8 +12,9 @@ const DevAutoFillButton = ({
 }) => {
   const [anchorEl, setAnchorEl] = React.useState(null);
   const hasModes = Array.isArray(modes) && modes.length > 0;
+  const isEnabled = isAutoFillEnabled();
 
-  if (!isDev) return null;
+  if (!isEnabled) return null;
 
   const handleButtonClick = (event) => {
     if (hasModes) {

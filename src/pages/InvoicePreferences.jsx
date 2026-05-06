@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../components/Layout/MainLayout';
 import {
@@ -17,6 +17,7 @@ import {
   MenuItem,
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import UndoIcon from '@mui/icons-material/Undo';
 
 import { useAuth } from '../context/AuthContext';
 import { useInvoicePreferences, PREFS_DEFAULTS } from '../context/InvoicePreferencesContext';
@@ -95,6 +96,7 @@ export default function InvoicePreferences() {
   const [saving, setSaving]   = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
+  const savedForm = useRef(null);
 
   // Admin guard
   useEffect(() => {
@@ -104,7 +106,7 @@ export default function InvoicePreferences() {
   // Populate form from context once loaded
   useEffect(() => {
     if (!isAdmin) return;
-    setForm({
+    const loadedForm = {
       invoice_prefix:               ctxPrefs.invoice_prefix               ?? PREFS_DEFAULTS.invoice_prefix,
       invoice_suffix:               ctxPrefs.invoice_suffix               ?? PREFS_DEFAULTS.invoice_suffix,
       next_invoice_number:          ctxPrefs.next_invoice_number          ?? PREFS_DEFAULTS.next_invoice_number,
@@ -114,7 +116,9 @@ export default function InvoicePreferences() {
       default_notes:                ctxPrefs.default_notes                ?? PREFS_DEFAULTS.default_notes,
       default_terms:                ctxPrefs.default_terms                ?? PREFS_DEFAULTS.default_terms,
       auto_generate_invoice_number: ctxPrefs.auto_generate_invoice_number ?? PREFS_DEFAULTS.auto_generate_invoice_number,
-    });
+    };
+    setForm(loadedForm);
+    savedForm.current = loadedForm;
     setLoading(false);
   }, [ctxPrefs, isAdmin]);
 
@@ -154,6 +158,7 @@ export default function InvoicePreferences() {
       };
       const saved = await updateInvoicePreferences(payload);
       setCtxPrefs((prev) => ({ ...prev, ...saved }));
+      savedForm.current = { ...form };
       setToast({ open: true, message: 'Invoice preferences saved.', severity: 'success' });
     } catch (err) {
       const fields = err.response?.data?.fields;
@@ -167,6 +172,11 @@ export default function InvoicePreferences() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleDiscard = () => {
+    if (savedForm.current) setForm(savedForm.current);
+    setFieldErrors({});
   };
 
   const handleReset = () => {
@@ -380,6 +390,23 @@ export default function InvoicePreferences() {
                     }}
                   >
                     Reset to Defaults
+                  </Button>
+
+                  <Button
+                    variant="text"
+                    size="small"
+                    startIcon={<UndoIcon sx={{ fontSize: 16 }} />}
+                    onClick={handleDiscard}
+                    disabled={saving}
+                    sx={{
+                      textTransform: 'none',
+                      fontSize: '0.8125rem',
+                      color: C.hint,
+                      mr: 1,
+                      '&:hover': { color: C.label },
+                    }}
+                  >
+                    Discard Changes
                   </Button>
 
                   <Button

@@ -1,6 +1,5 @@
 import { useCallback, useEffect } from "react";
-
-const isDev = process.env.NODE_ENV === "development";
+import { isAutoFillEnabled } from "../utils/autoFillAccess";
 
 const isEmptyValue = (value) => {
   if (value === undefined || value === null) return true;
@@ -36,14 +35,16 @@ const useAutoFill = ({
   fillEmptyOnly = true,
   enableShortcut = true,
 } = {}) => {
+  const isEnabled = isAutoFillEnabled();
+
   const applyAutoFill = useCallback(() => {
-    if (!isDev || typeof setForm !== "function" || typeof generator !== "function") return;
+    if (!isEnabled || typeof setForm !== "function" || typeof generator !== "function") return;
     const generated = generator({ scenario, context }) || {};
     setForm((prev) => mergeAutoFillData(prev, generated, fillEmptyOnly));
-  }, [context, fillEmptyOnly, generator, scenario, setForm]);
+  }, [context, fillEmptyOnly, generator, isEnabled, scenario, setForm]);
 
   useEffect(() => {
-    if (!isDev || !enableShortcut) return undefined;
+    if (!isEnabled || !enableShortcut) return undefined;
 
     const onKeyDown = (event) => {
       const isCmdOrCtrl = event.ctrlKey || event.metaKey;
@@ -54,10 +55,10 @@ const useAutoFill = ({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [applyAutoFill, enableShortcut]);
+  }, [applyAutoFill, enableShortcut, isEnabled]);
 
   return {
-    isAutoFillEnabled: isDev,
+    isAutoFillEnabled: isEnabled,
     applyAutoFill,
   };
 };

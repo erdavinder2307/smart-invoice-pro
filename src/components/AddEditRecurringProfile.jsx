@@ -40,6 +40,7 @@ import {
   updateRecurringProfile,
 } from '../services/recurringProfileService';
 import { generateRecurringProfileMockData } from '../utils/mockDataGenerators';
+import { isAutoFillEnabled } from '../utils/autoFillAccess';
 
 const repeatOptions = ['Daily', 'Weekly', 'Monthly', 'Yearly'];
 const statusOptions = ['Active', 'Paused', 'Expired', 'Stopped'];
@@ -248,7 +249,7 @@ const AddEditRecurringProfile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const isDevAutoFillEnabled = process.env.NODE_ENV !== 'production';
+  const isDevAutoFillEnabled = isAutoFillEnabled();
   const profileId = id;
 
   const [form, setForm] = useState(initialForm);

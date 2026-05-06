@@ -37,8 +37,9 @@ import DevAutoFillButton from "./common/DevAutoFillButton";
 import { generateBillMockData } from "../utils/mockDataGenerators";
 import { parseApiError, applyApiErrors } from "../utils/apiErrors";
 import { scrollToFirstError } from "../utils/validation";
+import { isAutoFillEnabled } from "../utils/autoFillAccess";
 
-const IS_DEV_AUTOFILL = process.env.NODE_ENV === "development";
+const IS_DEV_AUTOFILL = isAutoFillEnabled();
 
 const sectionTitleSx = {
   fontSize: "0.875rem",
@@ -443,7 +444,6 @@ const AddEditBill = () => {
   }, []);
 
   const syncErrors = useMemo(() => validateForm(form), [form, validateForm]);
-  const isFormValid = Object.keys(syncErrors).length === 0;
 
   useEffect(() => {
     if (!didAttemptSubmit) return;

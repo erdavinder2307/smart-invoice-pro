@@ -42,8 +42,8 @@ const Footer = () => {
       sx={{
         bgcolor: 'grey.900',
         color: 'white',
-        pt: { xs: 6, md: 8 },
-        pb: { xs: 4, md: 6 },
+        pt: { xs: 5, md: 6.5 },
+        pb: { xs: 3.5, md: 4.5 },
         mt: 'auto'
       }}
     >
@@ -56,8 +56,8 @@ const Footer = () => {
               <Logo size={30} showText={true} textColor="#ffffff" variant="light" />
             </Box>
             <Typography variant="body2" sx={{ color: 'grey.400', mb: 3, lineHeight: 1.7, maxWidth: 320, textAlign: { xs: 'center', md: 'left' } }}>
-              Simplifying invoicing and bookkeeping for modern businesses with
-              AI-powered solutions and seamless user experience.
+              Workflow-driven financial operations for modern businesses, from quote to insight,
+              with secure execution and real-time visibility.
             </Typography>
 
             {/* Social Links — larger touch targets on mobile */}
@@ -111,10 +111,18 @@ const Footer = () => {
               {[
                 { label: 'Dashboard', href: '/login' },
                 { label: 'Customer Portal', href: '/customer/login' },
-                { label: 'API Docs', href: '/api-docs' },
-                { label: 'Support', href: '/support' },
-              ].map(({ label, href }) => (
-                <Link key={label} href={href} sx={linkSx}>{label}</Link>
+                { label: 'Documentation', href: 'https://docs.solidevbooks.com', external: true },
+                { label: 'Contact Support', href: '/contact' },
+              ].map(({ label, href, external }) => (
+                <Link 
+                  key={label} 
+                  href={href}
+                  target={external ? '_blank' : undefined}
+                  rel={external ? 'noopener noreferrer' : undefined}
+                  sx={linkSx}
+                >
+                  {label}
+                </Link>
               ))}
             </Box>
           </Grid>
@@ -154,7 +162,7 @@ const Footer = () => {
           </Grid>
         </Grid>
 
-        <Divider sx={{ my: { xs: 4, md: 5 }, borderColor: 'grey.700' }} />
+        <Divider sx={{ my: { xs: 3.2, md: 4 }, borderColor: 'grey.700' }} />
 
         {/* Bottom bar — stacked and centered on mobile */}
         <Box

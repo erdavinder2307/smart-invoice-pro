@@ -16,6 +16,7 @@ import axios from 'axios';
 import authService from './services/authService';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HelmetProvider } from 'react-helmet-async';
+import './config/firebase'; // Initialize Firebase
 
 const queryClient = new QueryClient({
   defaultOptions: {

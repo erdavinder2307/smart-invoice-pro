@@ -37,6 +37,7 @@ import Header from '../Layout/Header';
 import Footer from '../Layout/Footer';
 import SeoHead from '../../seo/SeoHead';
 import { useAuth } from "../../context/AuthContext";
+import analyticsService from "../../services/analyticsService";
 
 const LoginPage = () => {
   const { login, register, sessionExpired } = useAuth();
@@ -113,6 +114,8 @@ const LoginPage = () => {
         // Only send username and password to the API
         const { username, password } = credentials;
         await register({ username, password });
+        // Track signup event
+        analyticsService.trackSignup(username);
         setSuccess("Account created successfully! You can now sign in.");
         setIsSignup(false);
         setCredentials({ username: "", password: "", confirmPassword: "" });

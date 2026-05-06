@@ -13,6 +13,7 @@ const AppBreadcrumbs = () => {
   const navigate = useNavigate();
 
   const segments = location.pathname.split("/").filter(Boolean);
+  const isDashboardPage = location.pathname === "/dashboard" || segments.length === 0;
 
   return (
     <Box sx={{ px: { xs: 1.5, md: 2.5 }, py: 1, borderBottom: "1px solid", borderColor: "divider", bgcolor: "background.paper" }}>
@@ -30,7 +31,7 @@ const AppBreadcrumbs = () => {
           Dashboard
         </Link>
 
-        {segments.map((segment, index) => {
+        {!isDashboardPage && segments.map((segment, index) => {
           const fullPath = `/${segments.slice(0, index + 1).join("/")}`;
           const isLast = index === segments.length - 1;
           const label = toLabel(segment);

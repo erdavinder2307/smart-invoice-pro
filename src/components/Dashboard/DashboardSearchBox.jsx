@@ -42,6 +42,10 @@ function removeRecent(query) {
   localStorage.setItem(RECENT_KEY, JSON.stringify(loadRecent().filter((q) => q !== query)));
 }
 
+function clearRecent() {
+  localStorage.removeItem(RECENT_KEY);
+}
+
 // ── Category metadata ───────────────────────────────────────────────────────
 
 const CATEGORY_ORDER = ['customers', 'invoices', 'products', 'features'];
@@ -156,6 +160,11 @@ const DashboardSearchBox = ({ placeholder = 'Search invoices, customers, product
     setRecentSearches(loadRecent());
   }, []);
 
+  const handleClearAllRecent = useCallback(() => {
+    clearRecent();
+    setRecentSearches([]);
+  }, []);
+
   const handleSeeAll = useCallback(() => {
     pushRecent(query.trim());
     navigate(`/search?q=${encodeURIComponent(query.trim())}`);
@@ -186,13 +195,34 @@ const DashboardSearchBox = ({ placeholder = 'Search invoices, customers, product
       if (recentSearches.length === 0) return null;
       return (
         <>
-          <Typography
-            variant="overline"
-            color="text.secondary"
-            sx={{ px: 2, pt: 1.5, pb: 0.5, display: 'block', fontSize: '0.7rem', letterSpacing: '0.08em' }}
-          >
-            Recent Searches
-          </Typography>
+          <Box sx={{ px: 2, pt: 1.5, pb: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+            <Typography
+              variant="overline"
+              color="text.secondary"
+              sx={{ fontSize: '0.7rem', letterSpacing: '0.08em' }}
+            >
+              Recent Searches
+            </Typography>
+            <Typography
+              component="button"
+              type="button"
+              onClick={handleClearAllRecent}
+              sx={{
+                border: 0,
+                p: 0,
+                m: 0,
+                bgcolor: 'transparent',
+                color: 'primary.main',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                lineHeight: 1.2,
+                cursor: 'pointer',
+                '&:hover': { textDecoration: 'underline' }
+              }}
+            >
+              Clear all
+            </Typography>
+          </Box>
           <List dense disablePadding>
             {recentSearches.map((term) => (
               <ListItemButton
@@ -255,12 +285,13 @@ const DashboardSearchBox = ({ placeholder = 'Search invoices, customers, product
                   <ListItemButton
                     key={item.id || item.entity_id || Math.random()}
                     onClick={() => navigateToItem(item)}
-                    sx={{ px: 2, py: 0.75 }}
+                    sx={{ px: 2, py: 0.75, minWidth: 0 }}
                   >
                     <ListItemIcon sx={{ minWidth: 32 }}>
                       {meta.icon}
                     </ListItemIcon>
                     <ListItemText
+                      noWrap
                       primary={
                         <Typography variant="body2" fontWeight={500} noWrap>
                           {itemLabel(item, section.key)}
@@ -280,13 +311,14 @@ const DashboardSearchBox = ({ placeholder = 'Search invoices, customers, product
         })}
 
         <Divider />
-        <ListItemButton onClick={handleSeeAll} sx={{ px: 2, py: 1 }}>
+        <ListItemButton onClick={handleSeeAll} sx={{ px: 2, py: 1, minWidth: 0 }}>
           <ListItemIcon sx={{ minWidth: 32 }}>
             <SearchIcon fontSize="small" color="primary" />
           </ListItemIcon>
           <ListItemText
+            noWrap
             primary={
-              <Typography variant="body2" color="primary.main">
+              <Typography variant="body2" color="primary.main" noWrap>
                 See all results for &ldquo;{query.trim()}&rdquo;
               </Typography>
             }

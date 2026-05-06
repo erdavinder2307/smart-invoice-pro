@@ -69,10 +69,12 @@ import Terms from './pages/Terms';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Signup from './pages/Signup';
+import PageTracker from './components/PageTracker';
 
 const AppRoutes = () => {
   return (
     <Router>
+      <PageTracker />
       <RouteSeoManager />
       <Routes>
         <Route path="/" element={<Home />} />

@@ -168,6 +168,7 @@ const ProductList = () => {
   const debouncedSearch = useDebouncedValue(searchTerm, 300);
   const effectiveSearchTerm = immediateSearchTerm || debouncedSearch;
   const lastSavedQueryRef = useRef("");
+  const listHeaderRef = useRef(null);
 
   const fetchProducts = useCallback(async (params = {}) => {
     setLoading(true);
@@ -216,6 +217,8 @@ const ProductList = () => {
       },
     }).then(() => {
       invalidateSearchHistoryCache("items");
+      // Reload history in ListHeader to show the newly saved search immediately
+      listHeaderRef.current?.reloadHistory();
     }).catch(() => {});
   }, [categoryFilter, debouncedSearch, viewFilter]);
 
@@ -326,8 +329,10 @@ const ProductList = () => {
 
     setLoading(true);
     try {
-      await axios.post(createApiUrl(`/api/products/${product.id}/restock`));
+      await axios.post(createApiUrl(`/api/products/${product.id}/restock`), {});
       setError("");
+      // Refresh products to show updated data
+      fetchProducts();
     } catch (err) {
       setError(err.response?.data?.error || "Failed to create restock purchase order.");
     } finally {
@@ -417,6 +422,7 @@ const ProductList = () => {
   return (
     <ListPageLayout>
       <ListHeader
+        ref={listHeaderRef}
         title={t("productList.title")}
         summary={`${filteredProducts.length} items`}
         rightAction={
@@ -484,11 +490,38 @@ const ProductList = () => {
       />
 
       <ListSummary
-        items={[
-          { label: "Total", value: filteredProducts.length },
-          { label: "Critical", value: criticalCount, color: "error" },
-          { label: "Low Stock", value: lowStockCount, color: "warning" },
-        ]}
+        items={
+          viewFilter === "All"
+            ? [
+                { label: "Total", value: filteredProducts.length },
+                {
+                  label: "Critical",
+                  value: criticalCount,
+                  color: "error",
+                  active: viewFilter === "Critical",
+                  onClick: () => setViewFilter("Critical"),
+                },
+                {
+                  label: "Low Stock",
+                  value: lowStockCount,
+                  color: "warning",
+                  active: viewFilter === "Low Stock",
+                  onClick: () => setViewFilter("Low Stock"),
+                },
+              ]
+            : [
+                {
+                  label: "Showing",
+                  value: `${filteredProducts.length} ${viewFilter}`,
+                  active: true,
+                },
+                {
+                  label: "View All",
+                  value: products.length,
+                  onClick: () => setViewFilter("All"),
+                },
+              ]
+        }
       />
 
       {negativeStockCount > 0 && (

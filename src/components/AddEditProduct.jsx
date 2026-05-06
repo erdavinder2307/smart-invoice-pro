@@ -171,7 +171,7 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
     });
   };
 
-  const MAX_PRICE = 99999999;
+  const MAX_PRICE = 999999999;
 
   const validateForm = () => {
     const newErrors = {};
@@ -382,7 +382,7 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
                       disabled={!form.sales_enabled}
                       error={!!errors.price}
                       helperText={errors.price || ''}
-                      inputProps={{ min: 0, max: 99999999, step: 0.01 }}
+                      inputProps={{ min: 0, max: 999999999, step: 0.01 }}
                       InputProps={{
                         startAdornment: (
                           <InputAdornment position="start">
@@ -445,7 +445,7 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
                       disabled={!form.purchase_enabled}
                       error={!!errors.purchase_rate}
                       helperText={errors.purchase_rate || ''}
-                      inputProps={{ min: 0, max: 99999999, step: 0.01 }}
+                      inputProps={{ min: 0, max: 999999999, step: 0.01 }}
                       InputProps={{
                         startAdornment: (
                           <InputAdornment position="start">

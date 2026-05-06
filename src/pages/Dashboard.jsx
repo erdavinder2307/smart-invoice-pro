@@ -16,6 +16,7 @@ import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Tooltip from "@mui/material/Tooltip";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
+import ListSubheader from "@mui/material/ListSubheader";
 import TextField from "@mui/material/TextField";
 import RevenueTrendChart from "../components/Dashboard/RevenueTrendChart";
 import InventoryOverviewCard from "../components/Dashboard/InventoryOverviewCard";
@@ -50,6 +51,7 @@ import {
   getDashboardRecentInvoices,
   getDashboardSummary,
 } from "../services/dashboardService";
+import { getOrgProfile } from "../services/organizationProfileService";
 import "./Dashboard.css";
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -77,6 +79,7 @@ const DashboardPage = () => {
   const [recentFilter, setRecentFilter] = useState("all");
   const [invoiceActionLoading, setInvoiceActionLoading] = useState({});
   const [invoiceActionError, setInvoiceActionError] = useState("");
+  const [orgName, setOrgName] = useState("");
 
   // ── UI state ─────────────────────────────────────────────────────────────
   // ── Time range from global context (persisted in localStorage) ────────────
@@ -90,11 +93,15 @@ const DashboardPage = () => {
   } = useDashboardFilter();
 
   const buildRangeParams = useMemo(() => {
+    const passthroughApiRanges = new Set(["this_month", "this_quarter", "this_year"]);
     const params = { range: revenueRange };
-    if (revenueRange === "custom") {
+
+    if (!passthroughApiRanges.has(revenueRange)) {
+      params.range = "custom";
       params.start_date = customStartDate;
       params.end_date = customEndDate;
     }
+
     return params;
   }, [revenueRange, customStartDate, customEndDate]);
 
@@ -117,9 +124,13 @@ const DashboardPage = () => {
   }), [buildRangeParams, navigate]);
 
   const selectedRangeLabel = useMemo(() => {
-    if (revenueRange === "this_week") return t("dashboard.filters.thisWeek");
+    if (revenueRange === "today") return t("dashboard.filters.today", { defaultValue: "Today" });
+    if (revenueRange === "last_7_days") return t("dashboard.filters.last7Days", { defaultValue: "Last 7 Days" });
+    if (revenueRange === "last_30_days") return t("dashboard.filters.last30Days", { defaultValue: "Last 30 Days" });
     if (revenueRange === "this_month") return t("dashboard.filters.thisMonth");
+    if (revenueRange === "last_month") return t("dashboard.filters.lastMonth", { defaultValue: "Last Month" });
     if (revenueRange === "this_quarter") return t("dashboard.filters.thisQuarter");
+    if (revenueRange === "last_year") return t("dashboard.filters.lastYear", { defaultValue: "Last Year" });
     if (revenueRange === "custom") return t("dashboard.filters.customRange");
     return t("dashboard.filters.thisYear");
   }, [revenueRange, t]);
@@ -132,6 +143,12 @@ const DashboardPage = () => {
       .catch(() => setLowStockError(t('dashboard.failedLowStock')))
       .finally(() => setLowStockLoading(false));
   }, [t]);
+
+  useEffect(() => {
+    getOrgProfile()
+      .then((data) => setOrgName(data.organization_name || ""))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     setRecentLoading(true);
@@ -440,7 +457,9 @@ const DashboardPage = () => {
   // ── Helpers ───────────────────────────────────────────────────────────────
   const fmt = (v) => (v !== undefined && v !== null ? v.toLocaleString() : "—");
   const user = JSON.parse(localStorage.getItem("user") || "{}");
-  const greetName = user.username || "there";
+  const userName = user.full_name || user.name || (user.username?.split('@')[0] || "there");
+  const companyName = orgName || user.company_name || user.organization || "";
+  const greetName = companyName ? `${userName} (${companyName})` : userName;
 
   return (
     <MainLayout
@@ -495,37 +514,44 @@ const DashboardPage = () => {
                 "& .MuiOutlinedInput-notchedOutline": { borderColor: "divider" },
               }}
             >
-              <MenuItem value="this_week">{t('dashboard.filters.thisWeek')}</MenuItem>
+              <ListSubheader sx={{ py: 1, px: 2, bgcolor: 'action.hover', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'text.secondary', borderTop: '1px solid', borderColor: 'divider' }}>{t('dashboard.filters.quickRanges', { defaultValue: 'Quick Ranges' })}</ListSubheader>
+              <MenuItem value="today">{t('dashboard.filters.today', { defaultValue: 'Today' })}</MenuItem>
+              <MenuItem value="last_7_days">{t('dashboard.filters.last7Days', { defaultValue: 'Last 7 Days' })}</MenuItem>
+              <MenuItem value="last_30_days">{t('dashboard.filters.last30Days', { defaultValue: 'Last 30 Days' })}</MenuItem>
+
+              <ListSubheader sx={{ py: 1, px: 2, bgcolor: 'action.hover', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'text.secondary', borderTop: '1px solid', borderColor: 'divider' }}>{t('dashboard.filters.calendarPeriods', { defaultValue: 'Calendar Periods' })}</ListSubheader>
               <MenuItem value="this_month">{t('dashboard.filters.thisMonth')}</MenuItem>
+              <MenuItem value="last_month">{t('dashboard.filters.lastMonth', { defaultValue: 'Last Month' })}</MenuItem>
               <MenuItem value="this_quarter">{t('dashboard.filters.thisQuarter')}</MenuItem>
               <MenuItem value="this_year">{t('dashboard.filters.thisYear')}</MenuItem>
+              <MenuItem value="last_year">{t('dashboard.filters.lastYear', { defaultValue: 'Last Year' })}</MenuItem>
+
+              <ListSubheader sx={{ py: 1, px: 2, bgcolor: 'action.hover', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'text.secondary', borderTop: '1px solid', borderColor: 'divider' }}>{t('dashboard.filters.advanced', { defaultValue: 'Advanced' })}</ListSubheader>
               <MenuItem value="custom">{t('dashboard.filters.customRange')}</MenuItem>
             </Select>
 
-            {revenueRange === "custom" && (
-              <>
-                <TextField
-                  size="small"
-                  type="date"
-                  label={t('dashboard.customStartLabel')}
-                  value={customStartDate}
-                  onChange={(e) => setCustomStartDate(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                  inputProps={{ "aria-label": t('dashboard.customStartAriaLabel') }}
-                  sx={{ minWidth: 160, bgcolor: "background.paper", borderRadius: 2 }}
-                />
-                <TextField
-                  size="small"
-                  type="date"
-                  label={t('dashboard.customEndLabel')}
-                  value={customEndDate}
-                  onChange={(e) => setCustomEndDate(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                  inputProps={{ "aria-label": t('dashboard.customEndAriaLabel') }}
-                  sx={{ minWidth: 160, bgcolor: "background.paper", borderRadius: 2 }}
-                />
-              </>
-            )}
+            <>
+              <TextField
+                size="small"
+                type="date"
+                label={t('dashboard.customStartLabel')}
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ "aria-label": t('dashboard.customStartAriaLabel') }}
+                sx={{ minWidth: 160, bgcolor: "background.paper", borderRadius: 2 }}
+              />
+              <TextField
+                size="small"
+                type="date"
+                label={t('dashboard.customEndLabel')}
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ "aria-label": t('dashboard.customEndAriaLabel') }}
+                sx={{ minWidth: 160, bgcolor: "background.paper", borderRadius: 2 }}
+              />
+            </>
           </Box>
         </Box>
 

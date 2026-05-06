@@ -32,6 +32,7 @@ import Header from '../components/Layout/Header';
 import Footer from '../components/Layout/Footer';
 import SeoHead from '../seo/SeoHead';
 import { useAuth } from '../context/AuthContext';
+import analyticsService from '../services/analyticsService';
 
 const SignupPage = () => {
   const { register } = useAuth();
@@ -123,6 +124,8 @@ const SignupPage = () => {
         username: formData.username,
         password: formData.password
       });
+      // Track signup event
+      analyticsService.trackSignup(formData.username);
       setSuccess(true);
       setTimeout(() => {
         navigate('/login');

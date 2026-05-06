@@ -15,6 +15,7 @@ import { DashboardFilterProvider } from './context/DashboardFilterContext';
 import axios from 'axios';
 import authService from './services/authService';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { HelmetProvider } from 'react-helmet-async';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -102,25 +103,27 @@ axios.interceptors.response.use(
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <BrandingProvider>
-          <SidebarProvider>
-            <InvoicePreferencesProvider>
-              <PermissionProvider>
-                <NotificationProvider>
-                  <KeyboardShortcutsProvider>
-                            <DashboardFilterProvider>
-                              <App />
-                            </DashboardFilterProvider>
-                          </KeyboardShortcutsProvider>
-                </NotificationProvider>
-              </PermissionProvider>
-            </InvoicePreferencesProvider>
-          </SidebarProvider>
-        </BrandingProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <HelmetProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <BrandingProvider>
+            <SidebarProvider>
+              <InvoicePreferencesProvider>
+                <PermissionProvider>
+                  <NotificationProvider>
+                    <KeyboardShortcutsProvider>
+                              <DashboardFilterProvider>
+                                <App />
+                              </DashboardFilterProvider>
+                            </KeyboardShortcutsProvider>
+                  </NotificationProvider>
+                </PermissionProvider>
+              </InvoicePreferencesProvider>
+            </SidebarProvider>
+          </BrandingProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </HelmetProvider>
   </React.StrictMode>
 );
 

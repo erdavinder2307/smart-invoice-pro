@@ -5,6 +5,7 @@ import { Construction, Home as HomeIcon } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import Header from '../components/Layout/Header';
 import Footer from '../components/Layout/Footer';
+import SeoHead from '../seo/SeoHead';
 
 const ComingSoon = () => {
     const location = useLocation();
@@ -53,6 +54,12 @@ const ComingSoon = () => {
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+            <SeoHead
+                title={`${pageTitle} Coming Soon`}
+                description={`${pageTitle} is currently under development. Check back soon for updates from Solidev Books.`}
+                canonicalPath={location.pathname}
+                robots="noindex,follow"
+            />
             <Header />
 
             <Box

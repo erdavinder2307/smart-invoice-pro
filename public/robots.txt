@@ -1,3 +1,29 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Disallow:
+Allow: /
+
+# Authenticated and private application paths
+Disallow: /dashboard
+Disallow: /invoices
+Disallow: /quotes
+Disallow: /recurring-profiles
+Disallow: /sales-orders
+Disallow: /vendors
+Disallow: /purchase-orders
+Disallow: /bills
+Disallow: /expenses
+Disallow: /reports
+Disallow: /customers
+Disallow: /products
+Disallow: /stock-adjustment
+Disallow: /bank-accounts
+Disallow: /bank-reconciliation
+Disallow: /settings
+Disallow: /notifications
+Disallow: /search
+Disallow: /approvals
+Disallow: /admin
+Disallow: /customer
+Disallow: /portal
+
+Sitemap: https://solidevbooks.com/sitemap.xml

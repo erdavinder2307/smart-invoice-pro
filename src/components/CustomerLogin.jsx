@@ -28,6 +28,7 @@ import { useNavigate } from 'react-router-dom';
 import { createApiUrl } from '../config/api';
 import API_CONFIG from '../config/api';
 import myImage from '../assets/laptop.jpg';
+import SeoHead from '../seo/SeoHead';
 
 const CustomerLogin = () => {
   const [email, setEmail] = useState('');
@@ -81,12 +82,18 @@ const CustomerLogin = () => {
   return (
     <Box sx={{ 
       minHeight: '100vh', 
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: 'linear-gradient(135deg, #0a0e27 0%, #1e3a8a 100%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       padding: 2
     }}>
+      <SeoHead
+        title="Customer Portal | View Your Invoices | Solidev Books"
+        description="Access your invoices, view payment status, and download financial records from Solidev Books customer portal."
+        canonicalPath="/customer/login"
+        robots="noindex,follow"
+      />
       <Container maxWidth="lg">
         <Paper 
           elevation={24} 
@@ -104,7 +111,7 @@ const CustomerLogin = () => {
               xs={12} 
               md={6} 
               sx={{ 
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: 'linear-gradient(135deg, #0a0e27 0%, #1e3a8a 100%)',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
@@ -155,19 +162,19 @@ const CustomerLogin = () => {
                 <Box sx={{ textAlign: 'left', maxWidth: 300 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                     <CheckCircle sx={{ mr: 2, fontSize: 20 }} />
-                    <Typography variant="body1">View Your Invoices</Typography>
+                    <Typography variant="body1">Track Invoice Lifecycle</Typography>
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                     <CheckCircle sx={{ mr: 2, fontSize: 20 }} />
-                    <Typography variant="body1">Download Invoice PDFs</Typography>
+                    <Typography variant="body1">Export Financial Records</Typography>
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                     <CheckCircle sx={{ mr: 2, fontSize: 20 }} />
-                    <Typography variant="body1">Track Payment Status</Typography>
+                    <Typography variant="body1">Monitor Payment Receipts</Typography>
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <CheckCircle sx={{ mr: 2, fontSize: 20 }} />
-                    <Typography variant="body1">Update Account Details</Typography>
+                    <Typography variant="body1">Manage Organizational Profile</Typography>
                   </Box>
                 </Box>
               </Box>
@@ -302,21 +309,12 @@ const CustomerLogin = () => {
                           type="submit"
                           fullWidth
                           variant="contained"
+                          color="primary"
                           size="large"
                           disabled={loading}
                           sx={{ 
                             mb: 2, 
-                            py: 1.5,
-                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                            borderRadius: 2,
-                            fontSize: '1.1rem',
-                            fontWeight: 600,
-                            textTransform: 'none',
-                            boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
-                            '&:hover': {
-                              background: 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)',
-                              boxShadow: '0 6px 16px rgba(102, 126, 234, 0.4)',
-                            }
+                            py: 1.5
                           }}
                           startIcon={loading && <CircularProgress size={20} color="inherit" />}
                         >

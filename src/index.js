@@ -12,11 +12,62 @@ import { NotificationProvider } from './context/NotificationContext';
 import { SidebarProvider } from './context/SidebarContext';
 import { KeyboardShortcutsProvider } from './context/KeyboardShortcutsContext';
 import { DashboardFilterProvider } from './context/DashboardFilterContext';
+import { MeProvider } from './context/MeContext';
 import axios from 'axios';
 import authService from './services/authService';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HelmetProvider } from 'react-helmet-async';
 import './config/firebase'; // Initialize Firebase
+import { API_BASE_URL, IS_PRODUCTION } from './config/environment';
+
+// ── Production API guard ──────────────────────────────────────────────────────
+// Detect if a production deployment is accidentally using a local API URL.
+// This fires at app startup — before any network call — and renders a
+// blocking error screen so the issue is immediately visible.
+(function guardProductionApiConfig() {
+  const hostname = window.location.hostname;
+  const isLocalHost = ['localhost', '127.0.0.1', '::1'].includes(hostname);
+  const apiIsLocal =
+    !API_BASE_URL ||
+    API_BASE_URL.includes('127.0.0.1') ||
+    API_BASE_URL.includes('localhost');
+
+  if (!isLocalHost && apiIsLocal) {
+    // eslint-disable-next-line no-console
+    console.error(
+      '[CRITICAL] Solidev Books: Production deployment is misconfigured.\n' +
+      `Host: ${hostname}\n` +
+      `API_BASE_URL: "${API_BASE_URL || '(empty)'}"\n` +
+      'Set REACT_APP_API_BASE_URL to your production API URL and redeploy.'
+    );
+
+    // Render a blocking error page — never allow the app to load with a broken config.
+    const root = document.getElementById('root');
+    if (root) {
+      root.innerHTML = `
+        <div style="font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#fafafa;padding:2rem">
+          <div style="max-width:480px;text-align:center;background:#fff;border:1px solid #fecaca;border-radius:8px;padding:2.5rem 2rem">
+            <div style="font-size:2rem;margin-bottom:1rem">⚠️</div>
+            <h1 style="font-size:1.125rem;font-weight:700;color:#991b1b;margin:0 0 0.75rem">Configuration Error</h1>
+            <p style="font-size:0.875rem;color:#6b7280;line-height:1.6;margin:0">
+              The application is not configured correctly for this environment.
+              Please contact your administrator.
+            </p>
+          </div>
+        </div>
+      `;
+    }
+    throw new Error(
+      `[Solidev Books] REACT_APP_API_BASE_URL is "${API_BASE_URL || '(empty)'}" on host "${hostname}". ` +
+      'Production deployments must set this variable to the production API URL.'
+    );
+  }
+
+  if (IS_PRODUCTION && !isLocalHost) {
+    // eslint-disable-next-line no-console
+    console.info(`[Solidev Books] Production build. API: ${API_BASE_URL}`);
+  }
+})();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -113,17 +164,19 @@ root.render(
         <AuthProvider>
           <BrandingProvider>
             <SidebarProvider>
-              <InvoicePreferencesProvider>
-                <PermissionProvider>
-                  <NotificationProvider>
-                    <KeyboardShortcutsProvider>
-                              <DashboardFilterProvider>
-                                <App />
-                              </DashboardFilterProvider>
-                            </KeyboardShortcutsProvider>
-                  </NotificationProvider>
-                </PermissionProvider>
-              </InvoicePreferencesProvider>
+              <MeProvider>
+                <InvoicePreferencesProvider>
+                  <PermissionProvider>
+                    <NotificationProvider>
+                      <KeyboardShortcutsProvider>
+                                <DashboardFilterProvider>
+                                  <App />
+                                </DashboardFilterProvider>
+                              </KeyboardShortcutsProvider>
+                    </NotificationProvider>
+                  </PermissionProvider>
+                </InvoicePreferencesProvider>
+              </MeProvider>
             </SidebarProvider>
           </BrandingProvider>
         </AuthProvider>

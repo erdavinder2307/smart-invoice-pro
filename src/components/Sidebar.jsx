@@ -147,9 +147,16 @@ const Sidebar = () => {
 
   // ── User info ─────────────────────────────────────────────────────────────
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-  const username = storedUser.username || t('sidebar.adminUser');
-  const email = storedUser.email || "admin@solidevbooks.com";
-  const initials = username.charAt(0).toUpperCase();
+  const displayName = storedUser.name || storedUser.username || t('sidebar.adminUser');
+  const getInitials = () => {
+    if (!displayName) return 'U';
+    const parts = displayName.trim().split(/\s+/).filter(p => p.length > 0);
+    if (parts.length >= 2) {
+      return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+    }
+    return parts[0].charAt(0).toUpperCase();
+  };
+  const initials = getInitials();
 
   // ── Logout handlers ───────────────────────────────────────────────────────
   const handleLogoutClick = () => setShowLogoutDialog(true);
@@ -256,6 +263,28 @@ const Sidebar = () => {
           </Tooltip>
         ) : button}
       </ListItem>
+    );
+  };
+
+  // ── Render expandable section ─────────────────────────────────────────────
+  const renderGroupLabel = (label, forceExpanded = false) => {
+    const showLabel = forceExpanded || !isDesktopCollapsed;
+    if (!showLabel) return null;
+    return (
+      <Box sx={{ px: 1.5, pt: 2, pb: 0.5 }}>
+        <Typography
+          sx={{
+            fontSize: "0.625rem",
+            fontWeight: 700,
+            letterSpacing: "0.08em",
+            color: "rgba(255,255,255,0.35)",
+            textTransform: "uppercase",
+            userSelect: "none",
+          }}
+        >
+          {label}
+        </Typography>
+      </Box>
     );
   };
 
@@ -380,10 +409,15 @@ const Sidebar = () => {
         <List sx={{ px: isDesktopCollapsed && !forceExpanded ? 1 : 1.5 }} disablePadding>
           {renderNavItem(NAV_CONFIG.dashboard, false, forceExpanded)}
           {renderNavItem(NAV_CONFIG.items, false, forceExpanded)}
+          {renderGroupLabel("Sales & Purchases", forceExpanded)}
           {renderExpandableSection("sales", NAV_CONFIG.sales, forceExpanded)}
           {renderExpandableSection("purchases", NAV_CONFIG.purchases, forceExpanded)}
+          {renderGroupLabel("Banking & Reports", forceExpanded)}
           {renderExpandableSection("banking", NAV_CONFIG.banking, forceExpanded)}
           {renderNavItem(NAV_CONFIG.reports, false, forceExpanded)}
+          {renderGroupLabel("My Account", forceExpanded)}
+          {renderExpandableSection("myAccount", NAV_CONFIG.myAccount, forceExpanded)}
+          {renderGroupLabel("Organisation", forceExpanded)}
           {renderExpandableSection("settings", NAV_CONFIG.settings, forceExpanded)}
         </List>
       </Box>
@@ -416,10 +450,7 @@ const Sidebar = () => {
             </Avatar>
             <Box sx={{ minWidth: 0 }}>
               <Typography variant="body2" fontWeight={600} color="common.white" noWrap>
-                {username}
-              </Typography>
-              <Typography variant="caption" sx={{ color: "grey.500" }} noWrap>
-                {email}
+                {displayName}
               </Typography>
             </Box>
           </Box>

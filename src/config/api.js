@@ -1,6 +1,9 @@
-// API configuration
+import { API_BASE_URL } from './environment';
+
+// API configuration — BASE_URL is sourced exclusively from environment.js.
+// No localhost fallback exists here. See environment.js for environment rules.
 const API_CONFIG = {
-  BASE_URL: process.env.REACT_APP_API_BASE_URL || 'http://127.0.0.1:5001',
+  BASE_URL: API_BASE_URL,
   ENDPOINTS: {
     CUSTOMERS: '/api/customers',
     CUSTOMER_LOGIN: '/api/customer/login',

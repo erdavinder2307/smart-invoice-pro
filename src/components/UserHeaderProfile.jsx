@@ -77,7 +77,7 @@ const UserHeaderProfile = () => {
                 <Tooltip title="Open settings">
                     <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
                         <Avatar
-                            alt={user?.username || "User"}
+                            alt={user?.name || user?.username || "User"}
                             src={user?.profile_image || user?.avatar}
                             sx={{
                                 bgcolor: 'primary.main',
@@ -91,7 +91,7 @@ const UserHeaderProfile = () => {
                             }}
                         >
                             {!user?.profile_image && !user?.avatar && (
-                                user?.username ? user.username.charAt(0).toUpperCase() : <Person />
+                                user?.name || user?.username ? ((user?.name || user?.username).split(/\s+/)[0].charAt(0) + (((user?.name || user?.username).split(/\s+/).length > 1) ? (user?.name || user?.username).split(/\s+/)[((user?.name || user?.username).split(/\s+/).length - 1)].charAt(0) : '')).toUpperCase() : <Person />
                             )}
                         </Avatar>
                     </IconButton>
@@ -135,7 +135,7 @@ const UserHeaderProfile = () => {
                 >
                     <Box sx={{ px: 2, py: 1.5 }}>
                         <Typography variant="subtitle2" noWrap sx={{ fontWeight: 600 }}>
-                            {user?.username || 'User'}
+                            {user?.name || user?.username || 'User'}
                         </Typography>
                         <Typography variant="caption" color="text.secondary" noWrap>
                             User Account

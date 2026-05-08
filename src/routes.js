@@ -70,6 +70,10 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Signup from './pages/Signup';
 import PageTracker from './components/PageTracker';
+import MyProfile from './pages/MyProfile';
+import SecurityPage from './pages/SecurityPage';
+import Preferences from './pages/Preferences';
+import NotificationPreferences from './pages/NotificationPreferences';
 
 const AppRoutes = () => {
   return (
@@ -144,6 +148,11 @@ const AppRoutes = () => {
           <Route path="/settings/integrations" element={<IntegrationSettings />} />
           <Route path="/settings/audit-log" element={<AuditLogPage />} />
           <Route path="/settings/audit-logs" element={<AuditLogPage />} />
+          {/* My Account routes (all authenticated users) */}
+          <Route path="/settings/my-profile" element={<MyProfile />} />
+          <Route path="/settings/security" element={<SecurityPage />} />
+          <Route path="/settings/preferences" element={<Preferences />} />
+          <Route path="/settings/notifications" element={<NotificationPreferences />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/search" element={<SearchResultsPage />} />
           <Route path="/approvals" element={<PendingApprovals />} />

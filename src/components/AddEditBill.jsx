@@ -150,6 +150,7 @@ const AddEditBill = () => {
   const [saving, setSaving] = useState(false);
   const [checkingDuplicate, setCheckingDuplicate] = useState(false);
   const [apiError, setApiError] = useState("");
+  const [isArchived, setIsArchived] = useState(false);
   const [errors, setErrors] = useState({});
   const [didAttemptSubmit, setDidAttemptSubmit] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
@@ -203,6 +204,8 @@ const AddEditBill = () => {
         if (id) {
           const bill = await fetchBill(id);
           if (!active || !bill) return;
+          const archived = String(bill.lifecycle_status || bill.status || '').toUpperCase() === 'ARCHIVED' || Boolean(bill.is_deleted);
+          setIsArchived(archived);
           const normalizedItems = (
             Array.isArray(bill.items) && bill.items.length
               ? bill.items
@@ -523,6 +526,10 @@ const AddEditBill = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isArchived) {
+      setApiError("Archived bills are read-only. Restore the bill to edit.");
+      return;
+    }
     setDidAttemptSubmit(true);
     setApiError("");
 
@@ -607,6 +614,12 @@ const AddEditBill = () => {
               sx={{ mb: 2, borderRadius: "4px" }}
             >
               {apiError}
+            </Alert>
+          )}
+
+          {isArchived && (
+            <Alert severity="warning" sx={{ mb: 2, borderRadius: "4px" }}>
+              Archived bills are read-only. Restore this bill before editing.
             </Alert>
           )}
 
@@ -1137,7 +1150,7 @@ const AddEditBill = () => {
               <Button
                 type="submit"
                 variant="contained"
-                disabled={saving || checkingDuplicate}
+                disabled={saving || checkingDuplicate || isArchived}
                 startIcon={
                   saving || checkingDuplicate ? (
                     <CircularProgress size={14} color="inherit" />

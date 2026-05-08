@@ -24,6 +24,7 @@ import { createApiUrl } from '../config/api';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({ email: '' });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -32,11 +33,14 @@ const ForgotPassword = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    const nextFieldErrors = { email: '' };
     setLoading(true);
 
     try {
       if (!email) {
-        setError('Please enter your email address');
+        nextFieldErrors.email = 'Please enter your email address';
+        setFieldErrors(nextFieldErrors);
+        setError(nextFieldErrors.email);
         setLoading(false);
         return;
       }
@@ -44,10 +48,14 @@ const ForgotPassword = () => {
       // Email format validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
-        setError('Please enter a valid email address');
+        nextFieldErrors.email = 'Please enter a valid email address';
+        setFieldErrors(nextFieldErrors);
+        setError(nextFieldErrors.email);
         setLoading(false);
         return;
       }
+
+      setFieldErrors(nextFieldErrors);
 
       const response = await fetch(createApiUrl('/api/auth/forgot-password'), {
         method: 'POST',
@@ -279,14 +287,19 @@ const ForgotPassword = () => {
                 </Alert>
               )}
 
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handleSubmit} noValidate>
                 <TextField
                   fullWidth
                   type="email"
                   label="Email Address"
                   name="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setFieldErrors((prev) => ({ ...prev, email: '' }));
+                  }}
+                  error={Boolean(fieldErrors.email)}
+                  helperText={fieldErrors.email || ' '}
                   variant="outlined"
                   margin="normal"
                   disabled={loading}

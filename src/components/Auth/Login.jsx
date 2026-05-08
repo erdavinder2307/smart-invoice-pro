@@ -37,10 +37,12 @@ import Header from '../Layout/Header';
 import Footer from '../Layout/Footer';
 import SeoHead from '../../seo/SeoHead';
 import { useAuth } from "../../context/AuthContext";
+import analyticsService from "../../services/analyticsService";
 
 const LoginPage = () => {
   const { login, register, sessionExpired } = useAuth();
   const [credentials, setCredentials] = useState({ username: "", password: "", confirmPassword: "" });
+  const [fieldErrors, setFieldErrors] = useState({ username: "", password: "", confirmPassword: "" });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isSignup, setIsSignup] = useState(false);
@@ -67,6 +69,7 @@ const LoginPage = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setCredentials({ ...credentials, [name]: value });
+    setFieldErrors((prev) => ({ ...prev, [name]: "" }));
 
     // Validate password in real-time during signup
     if (name === 'password' && isSignup) {
@@ -88,31 +91,63 @@ const LoginPage = () => {
     return Object.values(passwordValidation).every(valid => valid);
   };
 
+  const validateAuthForm = () => {
+    const username = credentials.username.trim();
+    const password = credentials.password;
+    const nextFieldErrors = { username: '', password: '', confirmPassword: '' };
+    let firstError = '';
+
+    if (!username) {
+      nextFieldErrors.username = 'Username is required.';
+      firstError = firstError || nextFieldErrors.username;
+    }
+    if (!password.trim()) {
+      nextFieldErrors.password = 'Password is required.';
+      firstError = firstError || nextFieldErrors.password;
+    }
+
+    if (isSignup) {
+      if (!isPasswordValid()) {
+        nextFieldErrors.password = 'Password does not meet the required criteria.';
+        firstError = firstError || nextFieldErrors.password;
+      }
+      if (!credentials.confirmPassword.trim()) {
+        nextFieldErrors.confirmPassword = 'Confirm password is required.';
+        firstError = firstError || nextFieldErrors.confirmPassword;
+      }
+      if (password !== credentials.confirmPassword) {
+        nextFieldErrors.confirmPassword = 'Passwords do not match.';
+        firstError = firstError || nextFieldErrors.confirmPassword;
+      }
+    }
+
+    return {
+      fieldErrors: nextFieldErrors,
+      message: firstError
+    };
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setSuccess("");
+    const validation = validateAuthForm();
+    setFieldErrors(validation.fieldErrors);
+    if (validation.message) {
+      setError(validation.message);
+      return;
+    }
+
     setLoading(true);
 
     try {
       if (isSignup) {
-        // Validate password strength
-        if (!isPasswordValid()) {
-          setError("Password does not meet the required criteria.");
-          setLoading(false);
-          return;
-        }
-
-        // Validate password confirmation
-        if (credentials.password !== credentials.confirmPassword) {
-          setError("Passwords do not match.");
-          setLoading(false);
-          return;
-        }
-
         // Only send username and password to the API
-        const { username, password } = credentials;
+        const username = credentials.username.trim();
+        const { password } = credentials;
         await register({ username, password });
+        // Track signup event
+        analyticsService.trackSignup(username);
         setSuccess("Account created successfully! You can now sign in.");
         setIsSignup(false);
         setCredentials({ username: "", password: "", confirmPassword: "" });
@@ -124,7 +159,10 @@ const LoginPage = () => {
           hasSpecialChar: false
         });
       } else {
-        await login(credentials);
+        await login({
+          username: credentials.username.trim(),
+          password: credentials.password
+        });
         navigate("/dashboard");
       }
     } catch (err) {
@@ -281,7 +319,7 @@ const LoginPage = () => {
                     )}
 
                     {/* Form */}
-                    <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
+                    <Box component="form" onSubmit={handleSubmit} noValidate sx={{ width: '100%' }}>
                       {/* Username Field */}
                       <TextField
                         fullWidth
@@ -289,9 +327,10 @@ const LoginPage = () => {
                         name="username"
                         value={credentials.username}
                         onChange={handleChange}
+                        error={Boolean(fieldErrors.username)}
+                        helperText={fieldErrors.username || ' '}
                         variant="outlined"
                         margin="normal"
-                        required
                         InputProps={{
                           startAdornment: (
                             <InputAdornment position="start">
@@ -310,9 +349,10 @@ const LoginPage = () => {
                         type={showPassword ? 'text' : 'password'}
                         value={credentials.password}
                         onChange={handleChange}
+                        error={Boolean(fieldErrors.password)}
+                        helperText={fieldErrors.password || ' '}
                         variant="outlined"
                         margin="normal"
-                        required
                         InputProps={{
                           startAdornment: (
                             <InputAdornment position="start">
@@ -342,9 +382,10 @@ const LoginPage = () => {
                           type={showConfirmPassword ? 'text' : 'password'}
                           value={credentials.confirmPassword}
                           onChange={handleChange}
+                          error={Boolean(fieldErrors.confirmPassword)}
+                          helperText={fieldErrors.confirmPassword || ' '}
                           variant="outlined"
                           margin="normal"
-                          required
                           InputProps={{
                             startAdornment: (
                               <InputAdornment position="start">

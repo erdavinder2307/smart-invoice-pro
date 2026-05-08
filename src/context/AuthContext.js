@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import authService from '../services/authService';
+import analyticsService from '../services/analyticsService';
 
 const AuthContext = createContext(null);
 
@@ -58,15 +59,23 @@ export const AuthProvider = ({ children }) => {
         const token = await authService.login(credentials);
         const savedUser = localStorage.getItem('user');
         if (savedUser) {
-            setUser(JSON.parse(savedUser));
+            const userData = JSON.parse(savedUser);
+            setUser(userData);
+            // Track login event
+            analyticsService.trackLogin(userData.username || credentials.username, 'email');
         }
         return token;
     };
 
     const logout = () => {
+        const username = user?.username;
         authService.logout();
         setUser(null);
         setSessionExpired(false);
+        // Track logout event
+        if (username) {
+            analyticsService.trackLogout(username);
+        }
     };
 
     const register = async (credentials) => {

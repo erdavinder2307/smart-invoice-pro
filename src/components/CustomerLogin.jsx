@@ -33,14 +33,41 @@ import SeoHead from '../seo/SeoHead';
 const CustomerLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
+  const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+    const nextFieldErrors = { email: '', password: '' };
+
+    const normalizedEmail = email.trim();
+    if (!normalizedEmail) {
+      nextFieldErrors.email = 'Email address is required.';
+      setFieldErrors(nextFieldErrors);
+      setError(nextFieldErrors.email);
+      return;
+    }
+    if (!isValidEmail(normalizedEmail)) {
+      nextFieldErrors.email = 'Please enter a valid email address.';
+      setFieldErrors(nextFieldErrors);
+      setError(nextFieldErrors.email);
+      return;
+    }
+    if (!password.trim()) {
+      nextFieldErrors.password = 'Password is required.';
+      setFieldErrors(nextFieldErrors);
+      setError(nextFieldErrors.password);
+      return;
+    }
+
+    setFieldErrors(nextFieldErrors);
+
     setLoading(true);
 
     try {
@@ -49,7 +76,7 @@ const CustomerLogin = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: normalizedEmail, password }),
       });
 
       const data = await response.json();
@@ -57,13 +84,13 @@ const CustomerLogin = () => {
       if (response.ok) {
         // Save JWT token and customer data in localStorage
         localStorage.setItem('customerToken', data.token);
-        localStorage.setItem('customerEmail', email);
+        localStorage.setItem('customerEmail', normalizedEmail);
         
         // Store customer data for dashboard use
         const customerData = {
           id: data.customer?.id || 'N/A',
-          name: data.customer?.name || email.split('@')[0],
-          email: email
+          name: data.customer?.name || normalizedEmail.split('@')[0],
+          email: normalizedEmail
         };
         localStorage.setItem('customerData', JSON.stringify(customerData));
         
@@ -250,17 +277,21 @@ const CustomerLogin = () => {
                   {/* Form */}
                   <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
                     <CardContent sx={{ p: 4 }}>
-                      <Box component="form" onSubmit={handleLogin} sx={{ width: '100%' }}>
+                      <Box component="form" onSubmit={handleLogin} noValidate sx={{ width: '100%' }}>
                         {/* Email Field */}
                         <TextField
                           fullWidth
                           label="Email Address"
                           type="email"
                           value={email}
-                          onChange={(e) => setEmail(e.target.value)}
+                          onChange={(e) => {
+                            setEmail(e.target.value);
+                            setFieldErrors((prev) => ({ ...prev, email: '' }));
+                          }}
+                          error={Boolean(fieldErrors.email)}
+                          helperText={fieldErrors.email || ' '}
                           variant="outlined"
                           margin="normal"
-                          required
                           disabled={loading}
                           InputProps={{
                             startAdornment: (
@@ -278,10 +309,14 @@ const CustomerLogin = () => {
                           label="Password"
                           type={showPassword ? 'text' : 'password'}
                           value={password}
-                          onChange={(e) => setPassword(e.target.value)}
+                          onChange={(e) => {
+                            setPassword(e.target.value);
+                            setFieldErrors((prev) => ({ ...prev, password: '' }));
+                          }}
+                          error={Boolean(fieldErrors.password)}
+                          helperText={fieldErrors.password || ' '}
                           variant="outlined"
                           margin="normal"
-                          required
                           disabled={loading}
                           InputProps={{
                             startAdornment: (

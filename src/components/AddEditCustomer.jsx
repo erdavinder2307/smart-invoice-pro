@@ -375,6 +375,7 @@ const AddEditCustomer = () => {
   const [apiError, setApiError] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [isArchived, setIsArchived] = useState(false);
   const [, setSaveMode] = useState('save');
   const [gstPrefilling, setGstPrefilling] = useState(false);
   const [gstPrefillError, setGstPrefillError] = useState('');
@@ -465,6 +466,8 @@ const AddEditCustomer = () => {
     try {
       setLoading(true);
       const { data } = await axios.get(createApiUrl(`/api/customers/${customerId}`));
+      const archived = String(data?.lifecycle_status || data?.status || '').toUpperCase() === 'ARCHIVED' || Boolean(data?.is_deleted);
+      setIsArchived(archived);
       const knownTerms = PAYMENT_TERMS_OPTIONS.map(t => t.value);
       const incomingPaymentTerms = data?.payment_terms || '';
       const isKnownPaymentTerm = knownTerms.includes(incomingPaymentTerms);
@@ -638,6 +641,10 @@ const AddEditCustomer = () => {
 
   const handleSubmit = async e => {
     e.preventDefault();
+    if (isArchived) {
+      setApiError('Archived customers are read-only. Restore the customer to edit.');
+      return;
+    }
     setApiError('');
     const action = saveModeRef.current;
     if (!validate()) return;
@@ -783,6 +790,12 @@ const AddEditCustomer = () => {
           {apiError && (
             <Alert severity="error" onClose={() => setApiError('')} sx={{ mb: 2, borderRadius: '4px' }}>
               {apiError}
+            </Alert>
+          )}
+
+          {isArchived && (
+            <Alert severity="warning" sx={{ mb: 2, borderRadius: '4px' }}>
+              Archived customers are read-only. Restore this customer before editing.
             </Alert>
           )}
 
@@ -1711,7 +1724,7 @@ const AddEditCustomer = () => {
                   type="submit"
                   variant="outlined"
                   size="medium"
-                  disabled={saving}
+                  disabled={saving || isArchived}
                   onClick={() => {
                     saveModeRef.current = 'save_new';
                     setSaveMode('save_new');
@@ -1725,7 +1738,7 @@ const AddEditCustomer = () => {
                 </Button>
               )}
               <Button
-                type="submit" variant="contained" size="medium" disabled={saving}
+                type="submit" variant="contained" size="medium" disabled={saving || isArchived}
                 onClick={() => {
                   saveModeRef.current = 'save';
                   setSaveMode('save');

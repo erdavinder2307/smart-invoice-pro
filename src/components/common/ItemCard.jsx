@@ -13,6 +13,7 @@ import {
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
+import RestoreIcon from "@mui/icons-material/Restore";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 
 const formatCurrency = (amount) =>
@@ -35,7 +36,19 @@ const formatCurrency = (amount) =>
  *   onAddStock   {fn}      — stock adjustment action
  *   onRestock    {fn|null} — restock action handler (omit if no preferred vendor)
  */
-const ItemCard = ({ product, availableQty, stockMeta, onEdit, onDelete, onAddStock, onRestock }) => {
+const ItemCard = ({
+  product,
+  availableQty,
+  stockMeta,
+  onEdit,
+  onDelete,
+  onAddStock,
+  onRestock,
+  deleteLabel = "Delete item",
+  deleteColor = "#ef4444",
+  deleteHoverBg = "#fef2f2",
+  deleteIcon = "delete",
+}) => {
   const stockChipColor = stockMeta?.chipColor || "default";
   const stockTextColor = stockMeta?.textColor || "#2b3340";
 
@@ -188,18 +201,18 @@ const ItemCard = ({ product, availableQty, stockMeta, onEdit, onDelete, onAddSto
                 </IconButton>
               </Tooltip>
             )}
-            <Tooltip title="Delete item">
+            <Tooltip title={deleteLabel}>
               <IconButton
                 size="small"
                 onClick={onDelete}
                 sx={{
-                  color: "#ef4444",
-                  "&:hover": { bgcolor: "#fef2f2" },
+                  color: deleteColor,
+                  "&:hover": { bgcolor: deleteHoverBg },
                   width: 34,
                   height: 34,
                 }}
               >
-                <DeleteIcon sx={{ fontSize: 18 }} />
+                {deleteIcon === "restore" ? <RestoreIcon sx={{ fontSize: 18 }} /> : <DeleteIcon sx={{ fontSize: 18 }} />}
               </IconButton>
             </Tooltip>
           </Box>

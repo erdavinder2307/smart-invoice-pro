@@ -43,6 +43,7 @@ const AddEditExpense = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [apiError, setApiError] = useState('');
+  const [isArchived, setIsArchived] = useState(false);
   const [receiptFile, setReceiptFile] = useState(null);
   const [receiptPreview, setReceiptPreview] = useState(null);
   const [existingReceipt, setExistingReceipt] = useState(null);
@@ -58,6 +59,8 @@ const AddEditExpense = () => {
     try {
       const res = await axios.get(createApiUrl(`/api/expenses/${id}`));
       const e = res.data;
+      const archived = String(e.lifecycle_status || e.status || '').toUpperCase() === 'ARCHIVED' || Boolean(e.is_deleted);
+      setIsArchived(archived);
       setForm({ vendor_name: e.vendor_name, date: e.date, category: e.category, amount: e.amount, currency: e.currency, notes: e.notes || '' });
       if (e.receipt_url) setExistingReceipt(e.receipt_url);
     } catch { setApiError(t('addEditExpense.failedFetch')); }
@@ -106,6 +109,10 @@ const AddEditExpense = () => {
 
   const handleSubmit = async e => {
     e.preventDefault();
+    if (isArchived) {
+      setApiError('Archived expenses are read-only. Restore the expense to edit.');
+      return;
+    }
     setApiError('');
     const fieldErrors = validate();
     if (Object.keys(fieldErrors).length) {
@@ -154,6 +161,12 @@ const AddEditExpense = () => {
           {apiError && (
             <Alert severity="error" onClose={() => setApiError('')} sx={{ mb: 2, borderRadius: '4px' }}>
               {apiError}
+            </Alert>
+          )}
+
+          {isArchived && (
+            <Alert severity="warning" sx={{ mb: 2, borderRadius: '4px' }}>
+              Archived expenses are read-only. Restore this expense before editing.
             </Alert>
           )}
 
@@ -301,7 +314,7 @@ const AddEditExpense = () => {
                 {t('common.cancel')}
               </Button>
               <Button
-                type="submit" variant="contained" disabled={saving}
+                type="submit" variant="contained" disabled={saving || isArchived}
                 startIcon={saving ? <CircularProgress size={14} color="inherit" /> : null}
                 sx={saveBtnSx}
               >

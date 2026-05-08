@@ -7,7 +7,6 @@ import {
   Button,
   Checkbox,
   Chip,
-  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -35,14 +34,18 @@ import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutline";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
+import RestoreIcon from "@mui/icons-material/Restore";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import ListPageLayout from "./list/ListPageLayout";
 import ListHeader from "./list/ListHeader";
 import FilterBar from "./list/FilterBar";
 import ListSummary from "./list/ListSummary";
 import BulkActionBar from "./list/BulkActionBar";
+import ArchiveDialog from "./common/ArchiveDialog";
+import LifecycleArchiveDialog from "./common/LifecycleArchiveDialog";
 import { createApiUrl } from "../config/api";
-import { deleteProduct, getProducts } from "../services/productService";
+import { getProducts } from "../services/productService";
+
 import { updateProductStock } from "../services/stockService";
 import { useTranslation } from "react-i18next";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
@@ -52,6 +55,7 @@ import { invalidateSearchHistoryCache } from "./list/ListHeader";
 
 const VIEW_OPTIONS = [
   { value: "All", labelKey: "productList.allItems" },
+  { value: "Archived", label: "Archived" },
   { value: "Critical", label: "Critical" },
   { value: "Low Stock", labelKey: "productList.lowStock" },
   { value: "In Stock", labelKey: "productList.inStock" },
@@ -148,6 +152,8 @@ const ProductList = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [restoreTargetId, setRestoreTargetId] = useState(null);
+  const [confirmBulkArchiveOpen, setConfirmBulkArchiveOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [immediateSearchTerm, setImmediateSearchTerm] = useState("");
   const [viewFilter, setViewFilter] = useState(() => {
@@ -168,12 +174,13 @@ const ProductList = () => {
   const debouncedSearch = useDebouncedValue(searchTerm, 300);
   const effectiveSearchTerm = immediateSearchTerm || debouncedSearch;
   const lastSavedQueryRef = useRef("");
+  const listHeaderRef = useRef(null);
 
   const fetchProducts = useCallback(async (params = {}) => {
     setLoading(true);
     setError("");
     try {
-      const data = await getProducts(params);
+      const data = await getProducts({ ...params, lifecycle: "all" });
       setProducts(Array.isArray(data) ? data : []);
     } catch {
       setProducts([]);
@@ -216,6 +223,8 @@ const ProductList = () => {
       },
     }).then(() => {
       invalidateSearchHistoryCache("items");
+      // Reload history in ListHeader to show the newly saved search immediately
+      listHeaderRef.current?.reloadHistory();
     }).catch(() => {});
   }, [categoryFilter, debouncedSearch, viewFilter]);
 
@@ -230,13 +239,19 @@ const ProductList = () => {
     const term = effectiveSearchTerm.trim().toLowerCase();
 
     const list = products.filter((product) => {
+      const isArchived = product.status === "ARCHIVED" || product.is_deleted;
       const matchesSearch =
         !term ||
         [product.name, product.category]
           .some((value) => String(value || "").toLowerCase().includes(term));
 
       const stockMeta = getStockMeta(product);
-      const matchesView = viewFilter === "All" || stockMeta.bucket === viewFilter;
+      const matchesView =
+        viewFilter === "All"
+          ? !isArchived
+          : viewFilter === "Archived"
+            ? isArchived
+            : !isArchived && stockMeta.bucket === viewFilter;
       const matchesCategory =
         categoryFilter === "All Categories" || String(product.category || "").trim() === categoryFilter;
 
@@ -276,33 +291,6 @@ const ProductList = () => {
 
   const paginatedProducts = filteredProducts.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
-  const handleDelete = async (id) => {
-    setLoading(true);
-    try {
-      await deleteProduct(id);
-      setConfirmDeleteId(null);
-      setSelectedProducts((prev) => prev.filter((productId) => productId !== id));
-      await fetchProducts();
-    } catch {
-      setError(t("productList.failedDelete"));
-      setLoading(false);
-    }
-  };
-
-  const handleBulkDelete = async () => {
-    if (!selectedProducts.length) return;
-    setLoading(true);
-    try {
-      await Promise.all(selectedProducts.map((id) => deleteProduct(id)));
-      setSelectedProducts([]);
-      await fetchProducts();
-    } catch {
-      setError("Failed to delete selected items.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleExportSelected = () => {
     if (!selectedProducts.length) return;
     const selectedItems = filteredProducts.filter((item) => selectedProducts.includes(item.id));
@@ -326,8 +314,10 @@ const ProductList = () => {
 
     setLoading(true);
     try {
-      await axios.post(createApiUrl(`/api/products/${product.id}/restock`));
+      await axios.post(createApiUrl(`/api/products/${product.id}/restock`), {});
       setError("");
+      // Refresh products to show updated data
+      fetchProducts();
     } catch (err) {
       setError(err.response?.data?.error || "Failed to create restock purchase order.");
     } finally {
@@ -399,6 +389,7 @@ const ProductList = () => {
       }
 
       handleCloseStockDialog();
+      setSelectedProducts([]);
       await fetchProducts();
     } catch (err) {
       setError(err.response?.data?.error || "Failed to adjust stock.");
@@ -417,6 +408,7 @@ const ProductList = () => {
   return (
     <ListPageLayout>
       <ListHeader
+        ref={listHeaderRef}
         title={t("productList.title")}
         summary={`${filteredProducts.length} items`}
         rightAction={
@@ -484,11 +476,38 @@ const ProductList = () => {
       />
 
       <ListSummary
-        items={[
-          { label: "Total", value: filteredProducts.length },
-          { label: "Critical", value: criticalCount, color: "error" },
-          { label: "Low Stock", value: lowStockCount, color: "warning" },
-        ]}
+        items={
+          viewFilter === "All"
+            ? [
+                { label: "Total", value: filteredProducts.length },
+                {
+                  label: "Critical",
+                  value: criticalCount,
+                  color: "error",
+                  active: viewFilter === "Critical",
+                  onClick: () => setViewFilter("Critical"),
+                },
+                {
+                  label: "Low Stock",
+                  value: lowStockCount,
+                  color: "warning",
+                  active: viewFilter === "Low Stock",
+                  onClick: () => setViewFilter("Low Stock"),
+                },
+              ]
+            : [
+                {
+                  label: "Showing",
+                  value: `${filteredProducts.length} ${viewFilter}`,
+                  active: true,
+                },
+                {
+                  label: "View All",
+                  value: products.length,
+                  onClick: () => setViewFilter("All"),
+                },
+              ]
+        }
       />
 
       {negativeStockCount > 0 && (
@@ -500,16 +519,18 @@ const ProductList = () => {
       <BulkActionBar
         selectedCount={selectedProducts.length}
         actions={[
+          ...(viewFilter === "Archived"
+            ? []
+            : [{
+                label: "Update Stock",
+                color: "primary",
+                onClick: () => handleOpenStockDialog("bulk"),
+                disabled: selectedProducts.length === 0,
+              }]),
           {
-            label: "Update Stock",
-            color: "primary",
-            onClick: () => handleOpenStockDialog("bulk"),
-            disabled: selectedProducts.length === 0,
-          },
-          {
-            label: "Delete Selected",
-            color: "error",
-            onClick: handleBulkDelete,
+            label: viewFilter === "Archived" ? "Restore Selected" : "Archive Selected",
+            color: viewFilter === "Archived" ? "success" : "warning",
+            onClick: () => setConfirmBulkArchiveOpen(true),
             disabled: selectedProducts.length === 0,
           },
           {
@@ -534,17 +555,26 @@ const ProductList = () => {
         ]}
         rows={paginatedProducts}
         renderCard={(product) => {
+          const isArchived = product.status === "ARCHIVED" || product.is_deleted;
           const availableQty = getAvailableQuantity(product);
           const stockMeta = getStockMeta(product);
           return (
             <ItemCard
               product={product}
               availableQty={availableQty}
-              stockMeta={stockMeta}
-              onEdit={() => navigate(`/products/edit/${product.id}`)}
-              onDelete={() => setConfirmDeleteId(product.id)}
-              onAddStock={() => handleOpenStockDialog("single", product)}
-              onRestock={product.preferred_vendor_id ? () => handleRestock(product) : undefined}
+              stockMeta={isArchived ? { ...stockMeta, label: "Archived", chipColor: "default" } : stockMeta}
+              onEdit={() => {
+                if (!isArchived) {
+                  navigate(`/products/edit/${product.id}`);
+                }
+              }}
+              onDelete={() => (viewFilter === "Archived" ? setRestoreTargetId(product.id) : setConfirmDeleteId(product.id))}
+              deleteLabel={viewFilter === "Archived" ? "Restore item" : "Archive item"}
+              deleteColor={viewFilter === "Archived" ? "#059669" : "#ef4444"}
+              deleteHoverBg={viewFilter === "Archived" ? "#ecfdf5" : "#fef2f2"}
+              deleteIcon={viewFilter === "Archived" ? "restore" : "delete"}
+              onAddStock={!isArchived ? () => handleOpenStockDialog("single", product) : undefined}
+              onRestock={!isArchived && product.preferred_vendor_id ? () => handleRestock(product) : undefined}
             />
           );
         }}
@@ -618,6 +648,7 @@ const ProductList = () => {
         )}
         renderRow={(product) => {
           const isSelected = selectedProducts.includes(product.id);
+          const isArchived = product.status === "ARCHIVED" || product.is_deleted;
           const availableQty = getAvailableQuantity(product);
           const stockMeta = getStockMeta(product);
           const purchaseRate = product.purchase_rate ?? 0;
@@ -628,12 +659,16 @@ const ProductList = () => {
               key={product.id}
               hover
               selected={isSelected}
-              onClick={() => navigate(`/products/edit/${product.id}`)}
+              onClick={() => {
+                if (!isArchived) {
+                  navigate(`/products/edit/${product.id}`);
+                }
+              }}
               sx={{
                 "& td": { borderBottomColor: "#edf0f3", py: 1.5 },
                 "&:hover": { bgcolor: stockMeta.highlight ? "#fef2f2" : "#fafcff" },
                 bgcolor: stockMeta.highlight ? "#fff8f8" : "transparent",
-                cursor: "pointer",
+                cursor: isArchived ? "default" : "pointer",
               }}
             >
               <TableCell sx={{ width: CHECKBOX_COLUMN_WIDTH, padding: "0 4px" }} onClick={(event) => event.stopPropagation()}>
@@ -681,29 +716,38 @@ const ProductList = () => {
               <TableCell>
                 <Chip
                   size="small"
-                  color={stockMeta.chipColor}
-                  variant={stockMeta.bucket === "In Stock" ? "outlined" : "filled"}
-                  label={stockMeta.label}
+                  color={isArchived ? "default" : stockMeta.chipColor}
+                  variant={isArchived || stockMeta.bucket === "In Stock" ? "outlined" : "filled"}
+                  label={isArchived ? "Archived" : stockMeta.label}
                 />
               </TableCell>
               <TableCell align="center" onClick={(event) => event.stopPropagation()}>
                 <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0.15 }}>
-                  <Tooltip title="Add stock">
-                    <IconButton aria-label="Add stock" size="small" onClick={() => handleOpenStockDialog("single", product)} sx={{ color: "#0369a1" }}>
-                      <AddCircleOutlineIcon sx={{ fontSize: 17 }} />
+                  {!isArchived && (
+                    <Tooltip title="Add stock">
+                      <IconButton aria-label="Add stock" size="small" onClick={() => handleOpenStockDialog("single", product)} sx={{ color: "#0369a1" }}>
+                        <AddCircleOutlineIcon sx={{ fontSize: 17 }} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                  {!isArchived && (
+                    <Tooltip title="Edit item">
+                      <IconButton aria-label="Edit item" size="small" onClick={() => navigate(`/products/edit/${product.id}`)} sx={{ color: "#5f87e7" }}>
+                        <EditIcon sx={{ fontSize: 17 }} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                  <Tooltip title={viewFilter === "Archived" ? "Restore item" : "Archive item"}>
+                    <IconButton
+                      aria-label={viewFilter === "Archived" ? "Restore item" : "Archive item"}
+                      size="small"
+                      onClick={() => (viewFilter === "Archived" ? setRestoreTargetId(product.id) : setConfirmDeleteId(product.id))}
+                      sx={{ color: viewFilter === "Archived" ? "#059669" : "#ef4444" }}
+                    >
+                      {viewFilter === "Archived" ? <RestoreIcon sx={{ fontSize: 17 }} /> : <DeleteIcon sx={{ fontSize: 17 }} />}
                     </IconButton>
                   </Tooltip>
-                  <Tooltip title="Edit item">
-                    <IconButton aria-label="Edit item" size="small" onClick={() => navigate(`/products/edit/${product.id}`)} sx={{ color: "#5f87e7" }}>
-                      <EditIcon sx={{ fontSize: 17 }} />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Delete item">
-                    <IconButton aria-label="Delete item" size="small" onClick={() => setConfirmDeleteId(product.id)} sx={{ color: "#ef4444" }}>
-                      <DeleteIcon sx={{ fontSize: 17 }} />
-                    </IconButton>
-                  </Tooltip>
-                  {product.preferred_vendor_id && (
+                  {!isArchived && product.preferred_vendor_id && (
                     <Tooltip title="Restock item">
                       <IconButton aria-label="Restock item" size="small" onClick={() => handleRestock(product)} sx={{ color: "#16a34a" }}>
                         <ShoppingCartIcon sx={{ fontSize: 17 }} />
@@ -815,58 +859,46 @@ const ProductList = () => {
         </DialogActions>
       </Dialog>
 
-      <Dialog
+      <ArchiveDialog
         open={!!confirmDeleteId}
         onClose={() => setConfirmDeleteId(null)}
-        maxWidth="xs"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            boxShadow: 6,
-          },
+        entityType="product"
+        entityId={confirmDeleteId}
+        entityLabel="Item"
+        onArchived={async () => {
+          setSelectedProducts((prev) => prev.filter((productId) => productId !== confirmDeleteId));
+          await fetchProducts();
         }}
-      >
-        <DialogTitle sx={{ pb: 1.25 }}>
-          <Typography sx={{ fontSize: "1rem", fontWeight: 700, color: "#1f2937" }}>
-            Delete item?
-          </Typography>
-        </DialogTitle>
-        <DialogContent>
-          <Typography sx={{ fontSize: "0.9rem", color: "#6b7280", lineHeight: 1.6 }}>
-            This item will be removed permanently. This action cannot be undone.
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2.5, pt: 1.5, gap: 1 }}>
-          <Button
-            onClick={() => setConfirmDeleteId(null)}
-            variant="outlined"
-            sx={{
-              textTransform: "none",
-              borderRadius: "8px",
-              px: 2.25,
-              borderColor: "#d1d5db",
-              color: "#4b5563",
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={() => handleDelete(confirmDeleteId)}
-            variant="contained"
-            color="error"
-            disabled={loading}
-            sx={{
-              textTransform: "none",
-              borderRadius: "8px",
-              px: 2.25,
-              boxShadow: "none",
-            }}
-          >
-            {loading ? <CircularProgress size={18} color="inherit" /> : "Delete"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      />
+
+      <LifecycleArchiveDialog
+        open={!!restoreTargetId}
+        onClose={() => setRestoreTargetId(null)}
+        mode="restore"
+        entityType="product"
+        entityId={restoreTargetId}
+        entityLabel="Item"
+        onConfirmed={async () => {
+          setSelectedProducts((prev) => prev.filter((productId) => productId !== restoreTargetId));
+          setRestoreTargetId(null);
+          await fetchProducts();
+        }}
+      />
+
+      <LifecycleArchiveDialog
+        open={confirmBulkArchiveOpen}
+        onClose={() => setConfirmBulkArchiveOpen(false)}
+        mode={viewFilter === "Archived" ? "bulk-restore" : "bulk-archive"}
+        entityType="product"
+        entityIds={selectedProducts}
+        entityLabel="Item"
+        entityCount={selectedProducts.length}
+        onConfirmed={async () => {
+          setSelectedProducts([]);
+          setConfirmBulkArchiveOpen(false);
+          await fetchProducts();
+        }}
+      />
     </ListPageLayout>
   );
 };

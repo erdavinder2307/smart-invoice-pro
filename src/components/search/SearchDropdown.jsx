@@ -245,6 +245,7 @@ const SearchDropdown = ({
                             sx={{
                               px: 1.5,
                               py: 1,
+                              minWidth: 0,
                               bgcolor: isActive ? 'primary.50' : 'transparent',
                               borderLeft: '3px solid',
                               borderColor: isActive ? 'primary.main' : 'transparent',
@@ -254,8 +255,9 @@ const SearchDropdown = ({
                               {ITEM_ICONS[iconKey] || ITEM_ICONS.feature}
                             </ListItemIcon>
                             <ListItemText
+                              sx={{ minWidth: 0 }}
                               primary={
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
                                   {primaryText}
                                 </Typography>
                               }

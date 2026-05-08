@@ -41,11 +41,14 @@ const AddEditVendor = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [apiError, setApiError] = useState('');
+  const [isArchived, setIsArchived] = useState(false);
 
   const fetchVendor = useCallback(async () => {
     setLoading(true);
     try {
       const res = await axios.get(createApiUrl(`/api/vendors/${id}`));
+      const archived = String(res.data?.lifecycle_status || res.data?.status || '').toUpperCase() === 'ARCHIVED' || Boolean(res.data?.is_deleted);
+      setIsArchived(archived);
       setForm({
         ...INITIAL_FORM,
         ...(res.data || {}),
@@ -89,6 +92,10 @@ const AddEditVendor = () => {
 
   const handleSubmit = async e => {
     e.preventDefault();
+    if (isArchived) {
+      setApiError('Archived vendors are read-only. Restore the vendor to edit.');
+      return;
+    }
     setApiError('');
     const fieldErrors = validate();
     if (Object.keys(fieldErrors).length) {
@@ -145,6 +152,12 @@ const AddEditVendor = () => {
           {apiError && (
             <Alert severity="error" onClose={() => setApiError('')} sx={{ mb: 2, borderRadius: '4px' }}>
               {apiError}
+            </Alert>
+          )}
+
+          {isArchived && (
+            <Alert severity="warning" sx={{ mb: 2, borderRadius: '4px' }}>
+              Archived vendors are read-only. Restore this vendor before editing.
             </Alert>
           )}
 
@@ -294,7 +307,7 @@ const AddEditVendor = () => {
                 {t('common.cancel')}
               </Button>
               <Button
-                type="submit" variant="contained" disabled={saving}
+                type="submit" variant="contained" disabled={saving || isArchived}
                 startIcon={saving ? <CircularProgress size={14} color="inherit" /> : null}
                 sx={saveBtnSx}
               >

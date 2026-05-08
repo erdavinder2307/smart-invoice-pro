@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Box, IconButton, Tooltip, Avatar, Typography, Badge, FormControl, Select, MenuItem } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import MenuIcon from "@mui/icons-material/Menu";
 import NotificationsOutlinedIcon from "@mui/icons-material/NotificationsOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
@@ -21,6 +22,7 @@ const TopUtilityBar = ({ searchPlaceholder = "", onSearchChange, onMenuClick }) 
   const { unreadCount } = useNotifications();
   const [notifAnchor, setNotifAnchor] = useState(null);
   const { openShortcutsModal } = useKeyboardShortcutsContext();
+  const navigate = useNavigate();
 
   const activeLanguage = String(i18n.language || 'en').startsWith('hi') ? 'hi' : 'en';
 
@@ -87,7 +89,7 @@ const TopUtilityBar = ({ searchPlaceholder = "", onSearchChange, onMenuClick }) 
           </IconButton>
         </Tooltip>
         <Tooltip title={t('common.settings')}>
-          <IconButton color="inherit">
+          <IconButton color="inherit" onClick={() => navigate('/settings')}>
             <SettingsOutlinedIcon fontSize="small" />
           </IconButton>
         </Tooltip>

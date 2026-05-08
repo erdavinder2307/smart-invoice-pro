@@ -32,7 +32,8 @@ export const getDateRange = (range, now = new Date()) => {
 
   if (range === "this_week") {
     const start = new Date(now);
-    start.setDate(now.getDate() - 6);
+    const mondayOffset = (start.getDay() + 6) % 7;
+    start.setDate(start.getDate() - mondayOffset);
     start.setHours(0, 0, 0, 0);
     return { start, end };
   }

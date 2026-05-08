@@ -11,10 +11,6 @@ import {
   Button,
   Checkbox,
   CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   IconButton,
   ListItemIcon,
   ListItemText,
@@ -34,12 +30,15 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import RestoreIcon from '@mui/icons-material/Restore';
 import PauseCircleOutlineIcon from '@mui/icons-material/PauseCircleOutline';
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import RepeatIcon from '@mui/icons-material/Repeat';
 
 import { CHECKBOX_COLUMN_WIDTH } from './common/StandardDataTable';
+import ArchiveDialog from './common/ArchiveDialog';
+import LifecycleArchiveDialog from './common/LifecycleArchiveDialog';
 import ResponsiveDataView from './common/ResponsiveDataView';
 import RecurringProfileCard from './common/RecurringProfileCard';
 import ListPageLayout from './list/ListPageLayout';
@@ -53,7 +52,6 @@ import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { saveSearchHistory } from '../services/searchService';
 import {
   bulkRecurringProfileAction,
-  deleteRecurringProfile,
   getRecurringProfilesList,
   patchRecurringProfileAction,
 } from '../services/recurringProfileService';
@@ -73,6 +71,7 @@ const STATUS_OPTIONS = [
   { value: 'Paused', label: 'Paused' },
   { value: 'Completed', label: 'Completed' },
   { value: 'Cancelled', label: 'Cancelled' },
+  { value: 'Archived', label: 'Archived' },
 ];
 
 const FREQUENCY_OPTIONS = [
@@ -138,6 +137,8 @@ const RecurringProfileList = () => {
   });
   const [selectedIds, setSelectedIds] = useState([]);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [restoreTargetId, setRestoreTargetId] = useState(null);
+  const [bulkRestoreOpen, setBulkRestoreOpen] = useState(false);
   const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
   const [activeProfile, setActiveProfile] = useState(null);
   const [uiError, setUiError] = useState('');
@@ -203,16 +204,6 @@ const RecurringProfileList = () => {
     queryKey: ['recurring-profiles-list', queryParams],
     queryFn: ({ signal }) => getRecurringProfilesList(queryParams, signal),
     placeholderData: keepPreviousData,
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: deleteRecurringProfile,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['recurring-profiles-list'] });
-      setConfirmDeleteId(null);
-      setUiError('');
-    },
-    onError: () => setUiError('Failed to delete recurring invoice.'),
   });
 
   const actionMutation = useMutation({
@@ -471,7 +462,12 @@ const RecurringProfileList = () => {
         actions={[
           { label: 'Pause Selected', onClick: () => runBulkAction('pause'), disabled: bulkMutation.isPending },
           { label: 'Resume Selected', onClick: () => runBulkAction('resume'), disabled: bulkMutation.isPending },
-          { label: 'Delete Selected', color: 'error', onClick: () => runBulkAction('delete'), disabled: bulkMutation.isPending },
+          {
+            label: status === 'Archived' ? 'Restore Selected' : 'Delete Selected',
+            color: status === 'Archived' ? 'success' : 'error',
+            onClick: () => (status === 'Archived' ? setBulkRestoreOpen(true) : runBulkAction('delete')),
+            disabled: bulkMutation.isPending,
+          },
         ]}
       />
 
@@ -490,7 +486,11 @@ const RecurringProfileList = () => {
               status: normalizeStatusForUi(profile.status),
             }}
             customerName={profile.customer_name || 'Unknown'}
-            onEdit={() => navigate(`/recurring-profiles/edit/${profile.id}`)}
+            onEdit={() => {
+              if (status !== 'Archived') {
+                navigate(`/recurring-profiles/edit/${profile.id}`);
+              }
+            }}
             onActionMenu={(event) => handleActionMenuOpen(event, profile)}
             getStatusColor={(value) => {
               const normalized = normalizeStatusForUi(value);
@@ -599,14 +599,19 @@ const RecurringProfileList = () => {
         renderRow={(profile) => {
           const normalizedStatus = normalizeStatusForUi(profile.status);
           const checked = selectedIds.includes(profile.id);
+          const isArchivedView = status === 'Archived';
 
           return (
             <TableRow
               key={profile.id}
               hover
-              onClick={() => navigate(`/recurring-profiles/edit/${profile.id}`)}
+              onClick={() => {
+                if (!isArchivedView) {
+                  navigate(`/recurring-profiles/edit/${profile.id}`);
+                }
+              }}
               sx={{
-                cursor: 'pointer',
+                cursor: isArchivedView ? 'default' : 'pointer',
                 '& .MuiTableCell-root': {
                   borderBottom: '1px solid #edf0f3',
                   fontSize: '0.82rem',
@@ -647,18 +652,34 @@ const RecurringProfileList = () => {
               <TableCell align="center" onClick={(event) => event.stopPropagation()}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.2 }}>
                   <Tooltip title="View Details">
-                    <IconButton size="small" onClick={() => navigate(`/recurring-profiles/edit/${profile.id}`)}>
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        if (status !== 'Archived') {
+                          navigate(`/recurring-profiles/edit/${profile.id}`);
+                        }
+                      }}
+                      disabled={status === 'Archived'}
+                    >
                       <VisibilityIcon sx={{ fontSize: 16, color: '#334155' }} />
                     </IconButton>
                   </Tooltip>
 
-                  <Tooltip title="Edit">
-                    <IconButton size="small" onClick={() => navigate(`/recurring-profiles/edit/${profile.id}`)}>
-                      <EditIcon sx={{ fontSize: 16, color: '#0f6cbd' }} />
-                    </IconButton>
-                  </Tooltip>
+                  {status !== 'Archived' && (
+                    <Tooltip title="Edit">
+                      <IconButton size="small" onClick={() => navigate(`/recurring-profiles/edit/${profile.id}`)}>
+                        <EditIcon sx={{ fontSize: 16, color: '#0f6cbd' }} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
 
-                  {normalizedStatus === 'Active' ? (
+                  {status === 'Archived' ? (
+                    <Tooltip title="Restore">
+                      <IconButton size="small" onClick={() => setRestoreTargetId(profile.id)}>
+                        <RestoreIcon sx={{ fontSize: 16, color: '#1f7a36' }} />
+                      </IconButton>
+                    </Tooltip>
+                  ) : normalizedStatus === 'Active' ? (
                     <Tooltip title="Pause">
                       <IconButton size="small" onClick={() => actionMutation.mutate({ id: profile.id, action: 'pause' })}>
                         <PauseCircleOutlineIcon sx={{ fontSize: 16, color: '#b45309' }} />
@@ -672,9 +693,9 @@ const RecurringProfileList = () => {
                     </Tooltip>
                   )}
 
-                  <Tooltip title="Delete">
-                    <IconButton size="small" onClick={() => setConfirmDeleteId(profile.id)}>
-                      <DeleteIcon sx={{ fontSize: 16, color: '#b91c1c' }} />
+                  <Tooltip title={status === 'Archived' ? 'Restore' : 'Archive'}>
+                    <IconButton size="small" onClick={() => (status === 'Archived' ? setRestoreTargetId(profile.id) : setConfirmDeleteId(profile.id))}>
+                      {status === 'Archived' ? <RestoreIcon sx={{ fontSize: 16, color: '#1f7a36' }} /> : <DeleteIcon sx={{ fontSize: 16, color: '#b91c1c' }} />}
                     </IconButton>
                   </Tooltip>
 
@@ -697,48 +718,85 @@ const RecurringProfileList = () => {
       />
 
       <Menu anchorEl={actionMenuAnchor} open={Boolean(actionMenuAnchor)} onClose={handleActionMenuClose}>
-        <MenuItem onClick={() => { navigate(`/recurring-profiles/edit/${activeProfile?.id}`); handleActionMenuClose(); }}>
+        <MenuItem
+          onClick={() => {
+            if (status !== 'Archived') {
+              navigate(`/recurring-profiles/edit/${activeProfile?.id}`);
+            }
+            handleActionMenuClose();
+          }}
+          disabled={status === 'Archived'}
+        >
           <ListItemIcon><VisibilityIcon fontSize="small" /></ListItemIcon>
           <ListItemText>View Details</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => { navigate(`/recurring-profiles/edit/${activeProfile?.id}`); handleActionMenuClose(); }}>
-          <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>Edit</ListItemText>
-        </MenuItem>
-        {normalizeStatusForUi(activeProfile?.status) === 'Active' ? (
+        {status !== 'Archived' && (
+          <MenuItem onClick={() => { navigate(`/recurring-profiles/edit/${activeProfile?.id}`); handleActionMenuClose(); }}>
+            <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>Edit</ListItemText>
+          </MenuItem>
+        )}
+        {status !== 'Archived' && normalizeStatusForUi(activeProfile?.status) === 'Active' ? (
           <MenuItem onClick={() => actionMutation.mutate({ id: activeProfile?.id, action: 'pause' })}>
             <ListItemIcon><PauseCircleOutlineIcon fontSize="small" /></ListItemIcon>
             <ListItemText>Pause</ListItemText>
           </MenuItem>
-        ) : (
+        ) : status !== 'Archived' ? (
           <MenuItem onClick={() => actionMutation.mutate({ id: activeProfile?.id, action: 'resume' })}>
             <ListItemIcon><PlayCircleOutlineIcon fontSize="small" /></ListItemIcon>
             <ListItemText>Resume</ListItemText>
           </MenuItem>
-        )}
-        <MenuItem onClick={() => { setConfirmDeleteId(activeProfile?.id); handleActionMenuClose(); }}>
-          <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
-          <ListItemText>Delete</ListItemText>
+        ) : null}
+        <MenuItem onClick={() => { (status === 'Archived' ? setRestoreTargetId(activeProfile?.id) : setConfirmDeleteId(activeProfile?.id)); handleActionMenuClose(); }}>
+          <ListItemIcon>
+            {status === 'Archived' ? <RestoreIcon fontSize="small" color="success" /> : <DeleteIcon fontSize="small" color="error" />}
+          </ListItemIcon>
+          <ListItemText>{status === 'Archived' ? 'Restore' : 'Archive'}</ListItemText>
         </MenuItem>
       </Menu>
 
-      <Dialog open={Boolean(confirmDeleteId)} onClose={() => setConfirmDeleteId(null)}>
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-          <Typography>Are you sure you want to delete this recurring invoice? This action cannot be undone.</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmDeleteId(null)}>Cancel</Button>
-          <Button
-            color="error"
-            variant="contained"
-            disabled={deleteMutation.isPending}
-            onClick={() => deleteMutation.mutate(confirmDeleteId)}
-          >
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ArchiveDialog
+        open={Boolean(confirmDeleteId)}
+        onClose={() => setConfirmDeleteId(null)}
+        entityType="recurring_profile"
+        entityId={confirmDeleteId}
+        entityLabel="Recurring Invoice"
+        onArchived={() => {
+          queryClient.invalidateQueries({ queryKey: ['recurring-profiles-list'] });
+          setConfirmDeleteId(null);
+          setUiError('');
+        }}
+      />
+
+      <LifecycleArchiveDialog
+        open={Boolean(restoreTargetId)}
+        onClose={() => setRestoreTargetId(null)}
+        mode="restore"
+        entityType="recurring_profile"
+        entityId={restoreTargetId}
+        entityLabel="Recurring Invoice"
+        onConfirmed={() => {
+          queryClient.invalidateQueries({ queryKey: ['recurring-profiles-list'] });
+          setRestoreTargetId(null);
+          setUiError('');
+        }}
+      />
+
+      <LifecycleArchiveDialog
+        open={bulkRestoreOpen}
+        onClose={() => setBulkRestoreOpen(false)}
+        mode="bulk-restore"
+        entityType="recurring_profile"
+        entityIds={selectedIds}
+        entityLabel="Recurring Invoice"
+        entityCount={selectedIds.length}
+        onConfirmed={() => {
+          queryClient.invalidateQueries({ queryKey: ['recurring-profiles-list'] });
+          setSelectedIds([]);
+          setBulkRestoreOpen(false);
+          setUiError('');
+        }}
+      />
     </ListPageLayout>
   );
 };

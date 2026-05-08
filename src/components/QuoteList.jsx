@@ -39,8 +39,10 @@ import EmailIcon from "@mui/icons-material/Email";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import ReceiptIcon from "@mui/icons-material/Receipt";
+import RestoreIcon from "@mui/icons-material/Restore";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 
 import { CHECKBOX_COLUMN_WIDTH } from "./common/StandardDataTable";
 import ResponsiveDataView from "./common/ResponsiveDataView";
@@ -50,16 +52,18 @@ import ListHeader from "./list/ListHeader";
 import FilterBar from "./list/FilterBar";
 import ListSummary from "./list/ListSummary";
 import BulkActionBar from "./list/BulkActionBar";
+import ArchiveDialog from "./common/ArchiveDialog";
+import LifecycleArchiveDialog from "./common/LifecycleArchiveDialog";
 import useTableSorting from "../hooks/useTableSorting";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import useListController from "../hooks/useListController";
 import { createApiUrl } from "../config/api";
 import {
   bulkQuoteAction,
-  deleteQuoteById,
   getQuotesList,
   sendQuoteEmail,
 } from "../services/quoteService";
+import { bulkArchiveEntities } from "../services/bulkArchiveService";
 import { saveSearchHistory } from "../services/searchService";
 import { invalidateSearchHistoryCache } from "./list/ListHeader";
 
@@ -121,6 +125,8 @@ const QuoteList = () => {
 
   const [selectedIds, setSelectedIds] = useState([]);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [restoreTargetId, setRestoreTargetId] = useState(null);
+  const [bulkRestoreOpen, setBulkRestoreOpen] = useState(false);
   const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
   const [selectedQuote, setSelectedQuote] = useState(null);
   const [emailDialog, setEmailDialog] = useState({
@@ -164,7 +170,8 @@ const QuoteList = () => {
       sort_by: sortBy,
       sort_order: sortOrder,
       q: debouncedSearch,
-      status: status === "All" ? "" : status,
+      status: status === "All" || status === "Archived" ? "" : status,
+      lifecycle: status === "Archived" ? "archived" : "active",
       date_range: dateRange,
       date_from: dateRange === "custom" ? dateFrom : "",
       date_to: dateRange === "custom" ? dateTo : "",
@@ -200,16 +207,6 @@ const QuoteList = () => {
     refetchOnWindowFocus: false,
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteQuoteById,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["quotes-list"] });
-      setUiError("");
-      setConfirmDeleteId(null);
-    },
-    onError: () => setUiError(t("quoteList.failedDelete") || "Failed to delete quote."),
-  });
-
   const bulkMutation = useMutation({
     mutationFn: bulkQuoteAction,
     onSuccess: () => {
@@ -218,6 +215,20 @@ const QuoteList = () => {
       setUiError("");
     },
     onError: () => setUiError(t("quoteList.failedBulk") || "Failed to apply bulk action."),
+  });
+
+  const bulkArchiveMutation = useMutation({
+    mutationFn: (ids) => bulkArchiveEntities("quote", ids),
+    onSuccess: (result) => {
+      setSelectedIds([]);
+      queryClient.invalidateQueries({ queryKey: ["quotes-list"] });
+      if (Number(result?.failedCount || 0) > 0) {
+        setUiError(`${result.successCount || 0} quotes archived. ${result.failedCount || 0} could not be archived.`);
+      } else {
+        setUiError("");
+      }
+    },
+    onError: () => setUiError("Failed to archive selected quotes."),
   });
 
   useEffect(() => {
@@ -316,12 +327,12 @@ const QuoteList = () => {
     });
   };
 
-  const handleDelete = (quoteId) => {
-    deleteMutation.mutate(quoteId);
-  };
-
   const runBulkAction = (action) => {
     if (!selectedIds.length) return;
+    if (action === "archive" || action === "delete") {
+      bulkArchiveMutation.mutate(selectedIds);
+      return;
+    }
     bulkMutation.mutate({ action, ids: selectedIds });
   };
 
@@ -435,6 +446,7 @@ const QuoteList = () => {
           { value: "Declined", label: "Declined" },
           { value: "Expired", label: "Expired" },
           { value: "Converted", label: "Converted" },
+          { value: "Archived", label: "Archived" },
         ]}
         rightSlot={
           <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", alignItems: "center" }}>
@@ -532,21 +544,25 @@ const QuoteList = () => {
         selectedCount={selectedIds.length}
         actions={[
           {
-            label: "Delete",
-            color: "error",
-            onClick: () => runBulkAction("delete"),
-            disabled: bulkMutation.isPending,
+            label: status === "Archived" ? "Restore Selected" : "Archive Selected",
+            color: status === "Archived" ? "success" : "warning",
+            onClick: () => (status === "Archived" ? setBulkRestoreOpen(true) : runBulkAction("archive")),
+            disabled: bulkMutation.isPending || bulkArchiveMutation.isPending,
           },
-          {
-            label: "Mark Accepted",
-            onClick: () => runBulkAction("mark_accepted"),
-            disabled: bulkMutation.isPending,
-          },
-          {
-            label: "Convert to Invoice",
-            onClick: () => runBulkAction("convert_to_invoice"),
-            disabled: bulkMutation.isPending,
-          },
+          ...(status === "Archived"
+            ? []
+            : [
+                {
+                  label: "Mark Accepted",
+                  onClick: () => runBulkAction("mark_accepted"),
+                  disabled: bulkMutation.isPending || bulkArchiveMutation.isPending,
+                },
+                {
+                  label: "Convert to Invoice",
+                  onClick: () => runBulkAction("convert_to_invoice"),
+                  disabled: bulkMutation.isPending || bulkArchiveMutation.isPending,
+                },
+              ]),
         ]}
       />
 
@@ -562,7 +578,11 @@ const QuoteList = () => {
           <QuoteCard
             quote={quote}
             customerName={getCustomerName(quote)}
-            onEdit={() => navigate(`/quotes/edit/${quote.id}`)}
+            onEdit={() => {
+              if (status !== "Archived") {
+                navigate(`/quotes/edit/${quote.id}`);
+              }
+            }}
             onActionMenu={(event) => {
               event.stopPropagation();
               handleActionMenuOpen(event, quote);
@@ -669,13 +689,18 @@ const QuoteList = () => {
         renderRow={(quote) => {
           const s = statusStyle[quote.status] || statusStyle.Draft;
           const checked = selectedIds.includes(quote.id);
+          const isArchivedView = status === "Archived";
           return (
             <TableRow
               key={quote.id}
               hover
-              onClick={() => navigate(`/quotes/edit/${quote.id}`)}
+              onClick={() => {
+                if (!isArchivedView) {
+                  navigate(`/quotes/edit/${quote.id}`);
+                }
+              }}
               sx={{
-                cursor: "pointer",
+                cursor: isArchivedView ? "default" : "pointer",
                 "& .MuiTableCell-root": {
                   borderBottom: "1px solid #edf0f3",
                   fontSize: "0.82rem",
@@ -741,48 +766,101 @@ const QuoteList = () => {
       />
 
       <Menu anchorEl={actionMenuAnchor} open={Boolean(actionMenuAnchor)} onClose={handleActionMenuClose}>
+        <MenuItem
+          onClick={() => {
+            if (status !== "Archived") {
+              navigate(`/quotes/edit/${selectedQuote?.id}`);
+            }
+            handleActionMenuClose();
+          }}
+          sx={{ py: 1.25 }}
+          disabled={status === "Archived"}
+        >
+          <ListItemIcon><VisibilityIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>View Details</ListItemText>
+        </MenuItem>
         <MenuItem onClick={() => handleDownloadPDF(selectedQuote)} sx={{ py: 1.25 }}>
           <ListItemIcon><PictureAsPdfIcon fontSize="small" color="success" /></ListItemIcon>
           <ListItemText>Download PDF</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => handleEmailOpen(selectedQuote)} sx={{ py: 1.25 }}>
-          <ListItemIcon><EmailIcon fontSize="small" color="primary" /></ListItemIcon>
-          <ListItemText>Send Email</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={() => { navigate(`/quotes/edit/${selectedQuote?.id}`); handleActionMenuClose(); }}>
-          <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>Edit</ListItemText>
-        </MenuItem>
+        {status !== "Archived" && (
+          <MenuItem onClick={() => handleEmailOpen(selectedQuote)} sx={{ py: 1.25 }}>
+            <ListItemIcon><EmailIcon fontSize="small" color="primary" /></ListItemIcon>
+            <ListItemText>Send Email</ListItemText>
+          </MenuItem>
+        )}
+        {status !== "Archived" && (
+          <MenuItem onClick={() => { navigate(`/quotes/edit/${selectedQuote?.id}`); handleActionMenuClose(); }}>
+            <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>Edit</ListItemText>
+          </MenuItem>
+        )}
         <MenuItem onClick={() => { navigate("/quotes/add", { state: { cloneFrom: selectedQuote } }); handleActionMenuClose(); }}>
           <ListItemIcon><ContentCopyIcon fontSize="small" /></ListItemIcon>
           <ListItemText>Duplicate</ListItemText>
         </MenuItem>
-        <MenuItem onClick={handleConvertToInvoice} disabled={selectedQuote?.status === "Converted"}>
-          <ListItemIcon><ReceiptIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>Convert to Invoice</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleConvertToSalesOrder} disabled={selectedQuote?.status === "Converted"}>
-          <ListItemIcon><ShoppingCartIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>Convert to Sales Order</ListItemText>
-        </MenuItem>
+        {status !== "Archived" && (
+          <MenuItem onClick={handleConvertToInvoice} disabled={selectedQuote?.status === "Converted"}>
+            <ListItemIcon><ReceiptIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>Convert to Invoice</ListItemText>
+          </MenuItem>
+        )}
+        {status !== "Archived" && (
+          <MenuItem onClick={handleConvertToSalesOrder} disabled={selectedQuote?.status === "Converted"}>
+            <ListItemIcon><ShoppingCartIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>Convert to Sales Order</ListItemText>
+          </MenuItem>
+        )}
         <MenuItem onClick={() => { setConfirmDeleteId(selectedQuote?.id); handleActionMenuClose(); }}>
           <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
-          <ListItemText>Delete</ListItemText>
+          <ListItemText>Archive</ListItemText>
         </MenuItem>
+        {status === "Archived" && (
+          <MenuItem onClick={() => { setRestoreTargetId(selectedQuote?.id); handleActionMenuClose(); }}>
+            <ListItemIcon><RestoreIcon fontSize="small" color="success" /></ListItemIcon>
+            <ListItemText>Restore</ListItemText>
+          </MenuItem>
+        )}
       </Menu>
 
-      <Dialog open={Boolean(confirmDeleteId)} onClose={() => setConfirmDeleteId(null)}>
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-          <Typography>Are you sure you want to delete this quote? This action cannot be undone.</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmDeleteId(null)}>Cancel</Button>
-          <Button onClick={() => handleDelete(confirmDeleteId)} color="error" variant="contained">
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ArchiveDialog
+        open={Boolean(confirmDeleteId)}
+        onClose={() => setConfirmDeleteId(null)}
+        entityType="quote"
+        entityId={confirmDeleteId}
+        entityLabel="Quote"
+        onArchived={() => {
+          queryClient.invalidateQueries({ queryKey: ["quotes-list"] });
+        }}
+      />
+
+      <LifecycleArchiveDialog
+        open={Boolean(restoreTargetId)}
+        onClose={() => setRestoreTargetId(null)}
+        mode="restore"
+        entityType="quote"
+        entityId={restoreTargetId}
+        entityLabel="Quote"
+        onConfirmed={() => {
+          setRestoreTargetId(null);
+          queryClient.invalidateQueries({ queryKey: ["quotes-list"] });
+        }}
+      />
+
+      <LifecycleArchiveDialog
+        open={bulkRestoreOpen}
+        onClose={() => setBulkRestoreOpen(false)}
+        mode="bulk-restore"
+        entityType="quote"
+        entityIds={selectedIds}
+        entityLabel="Quote"
+        entityCount={selectedIds.length}
+        onConfirmed={() => {
+          setSelectedIds([]);
+          setBulkRestoreOpen(false);
+          queryClient.invalidateQueries({ queryKey: ["quotes-list"] });
+        }}
+      />
 
       <Dialog open={emailDialog.open} onClose={() => setEmailDialog((prev) => ({ ...prev, open: false }))} maxWidth="sm" fullWidth>
         <DialogTitle>Email Quote {emailDialog.quote?.quote_number}</DialogTitle>

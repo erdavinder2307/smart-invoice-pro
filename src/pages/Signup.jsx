@@ -32,6 +32,7 @@ import Header from '../components/Layout/Header';
 import Footer from '../components/Layout/Footer';
 import SeoHead from '../seo/SeoHead';
 import { useAuth } from '../context/AuthContext';
+import analyticsService from '../services/analyticsService';
 
 const SignupPage = () => {
   const { register } = useAuth();
@@ -123,6 +124,8 @@ const SignupPage = () => {
         username: formData.username,
         password: formData.password
       });
+      // Track signup event
+      analyticsService.trackSignup(formData.username);
       setSuccess(true);
       setTimeout(() => {
         navigate('/login');
@@ -625,7 +628,7 @@ const SignupPage = () => {
             <motion.div variants={fadeInUp}>
               <Box sx={{ mt: 4, textAlign: 'center' }}>
                 <Typography variant="body2" sx={{ opacity: 0.7, mb: 2 }}>
-                  ✓ Enterprise-grade security  ✓ No credit card required  ✓ 14-day free trial
+                  ✓ Enterprise-oriented security foundation  ✓ No credit card required  ✓ 14-day free trial
                 </Typography>
               </Box>
             </motion.div>

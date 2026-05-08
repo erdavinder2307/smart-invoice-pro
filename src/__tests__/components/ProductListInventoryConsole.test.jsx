@@ -2,14 +2,25 @@ import React from "react";
 import { fireEvent, renderWithProviders, screen, waitFor } from "../../test-utils";
 import ProductList from "../../components/ProductList";
 import axios from "axios";
-import { deleteProduct, getProducts } from "../../services/productService";
+import { getProducts } from "../../services/productService";
+import { archiveEntity, checkDependencies } from "../../services/archiveService";
+import { bulkArchiveEntities } from "../../services/bulkArchiveService";
 
 const mockNavigate = jest.fn();
 
 jest.mock("axios");
 jest.mock("../../services/productService", () => ({
   getProducts: jest.fn(),
-  deleteProduct: jest.fn(),
+}));
+
+jest.mock("../../services/archiveService", () => ({
+  archiveEntity: jest.fn(),
+  checkDependencies: jest.fn(),
+}));
+
+jest.mock("../../services/bulkArchiveService", () => ({
+  bulkArchiveEntities: jest.fn(),
+  parseBulkArchiveResult: jest.fn(() => ({ successCount: 1, failedCount: 0, hasPartialFailure: false, message: '' })),
 }));
 
 jest.mock("../../components/Layout/MainLayout", () => ({
@@ -56,7 +67,9 @@ describe("ProductList inventory console", () => {
     }
 
     getProducts.mockResolvedValue(PRODUCTS);
-    deleteProduct.mockResolvedValue({ success: true });
+    checkDependencies.mockResolvedValue({ hasDependencies: false, dependencySummary: {} });
+    archiveEntity.mockResolvedValue({ success: true });
+    bulkArchiveEntities.mockResolvedValue({ successCount: 1, failedCount: 0, archived: ['p-1'], failed: [] });
     axios.post.mockResolvedValue({ data: { message: "Stock added" } });
   });
 
@@ -85,15 +98,19 @@ describe("ProductList inventory console", () => {
     });
   });
 
-  it("runs bulk delete for selected rows", async () => {
+  it("runs bulk archive for selected rows", async () => {
     renderWithProviders(<ProductList />);
     await screen.findByText("Critical Item");
 
     fireEvent.click(screen.getByLabelText("Select Critical Item"));
-    fireEvent.click(screen.getByRole("button", { name: "Delete Selected" }));
+    fireEvent.click(screen.getByRole("button", { name: "Archive Selected" }));
+
+    // Confirm the bulk archive dialog
+    await screen.findByText(/Archive\s+\d+\s+Item/i);
+    fireEvent.click(screen.getByRole("button", { name: "Archive All" }));
 
     await waitFor(() => {
-      expect(deleteProduct).toHaveBeenCalledWith("p-1");
+      expect(bulkArchiveEntities).toHaveBeenCalledWith("product", ["p-1"]);
     });
   });
 

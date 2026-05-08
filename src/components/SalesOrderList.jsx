@@ -36,6 +36,8 @@ import {
 } from "@mui/material";
 import ResponsiveDataView from "./common/ResponsiveDataView";
 import SalesOrderCard from "./common/SalesOrderCard";
+import ArchiveDialog from "./common/ArchiveDialog";
+import LifecycleArchiveDialog from "./common/LifecycleArchiveDialog";
 import { useNavigate } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
@@ -45,7 +47,9 @@ import EmailIcon from "@mui/icons-material/Email";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import ReceiptIcon from "@mui/icons-material/Receipt";
+import RestoreIcon from "@mui/icons-material/Restore";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -63,6 +67,7 @@ const SalesOrderList = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [restoreTargetId, setRestoreTargetId] = useState(null);
   const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
   const [selectedSalesOrder, setSelectedSalesOrder] = useState(null);
   const [emailDialog, setEmailDialog] = useState({ open: false, so: null, to: '', message: '', attachPdf: false, sending: false });
@@ -78,7 +83,11 @@ const SalesOrderList = () => {
   const fetchSalesOrders = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await axios.get(createApiUrl("/api/sales-orders"), { params: sortParams });
+      const lifecycle = statusFilter === "Archived" ? "archived" : "active";
+      const statusParam = statusFilter !== "All" && statusFilter !== "Archived" ? statusFilter : undefined;
+      const response = await axios.get(createApiUrl("/api/sales-orders"), {
+        params: { ...sortParams, lifecycle, status: statusParam },
+      });
       setSalesOrders(response.data);
       setError("");
     } catch (err) {
@@ -86,7 +95,7 @@ const SalesOrderList = () => {
       console.error(err);
     }
     setLoading(false);
-  }, [sortParams, t]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sortParams, statusFilter, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchCustomers = async () => {
     try {
@@ -111,7 +120,13 @@ const SalesOrderList = () => {
       customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (so.subject || "").toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesStatus = statusFilter === "All" || so.status === statusFilter;
+    const isArchived = String(so.status || "").toUpperCase() === "ARCHIVED";
+    const matchesStatus =
+      statusFilter === "All"
+        ? !isArchived
+        : statusFilter === "Archived"
+          ? isArchived
+          : so.status === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
@@ -131,25 +146,13 @@ const SalesOrderList = () => {
   const invoicedCount = salesOrders.filter((so) => so.status === "Invoiced").length;
 
   const handleEdit = (so) => {
+    const isArchived = String(so?.status || "").toUpperCase() === "ARCHIVED" || statusFilter === "Archived";
+    if (isArchived) return;
     navigate(`/sales-orders/edit/${so.id}`);
   };
 
   const handleAdd = () => {
     navigate("/sales-orders/add");
-  };
-
-  const handleDelete = async (id) => {
-    setLoading(true);
-    try {
-      await axios.delete(createApiUrl(`/api/sales-orders/${id}`));
-      fetchSalesOrders();
-      setConfirmDeleteId(null);
-      setError("");
-    } catch (err) {
-      setError(t('salesOrderList.failedDelete'));
-      console.error(err);
-    }
-    setLoading(false);
   };
 
   const handleActionMenuOpen = (event, so) => {
@@ -399,6 +402,7 @@ const SalesOrderList = () => {
                       <MenuItem value="Closed">Closed</MenuItem>
                       <MenuItem value="Invoiced">Invoiced</MenuItem>
                       <MenuItem value="Cancelled">Cancelled</MenuItem>
+                      <MenuItem value="Archived">Archived</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
@@ -494,55 +498,96 @@ const SalesOrderList = () => {
           <ListItemIcon><PictureAsPdfIcon fontSize="small" color="success" /></ListItemIcon>
           <ListItemText>Download PDF</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => handleEmailOpen(selectedSalesOrder)} sx={{py: 1.25}}>
-          <ListItemIcon><EmailIcon fontSize="small" color="primary" /></ListItemIcon>
-          <ListItemText>Send Email</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={() => { handleEdit(selectedSalesOrder); handleActionMenuClose(); }}>
+        <MenuItem
+          onClick={() => {
+            handleEdit(selectedSalesOrder);
+            handleActionMenuClose();
+          }}
+          disabled={statusFilter === "Archived"}
+        >
           <ListItemIcon>
-            <EditIcon fontSize="small" />
+            <VisibilityIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>Edit</ListItemText>
+          <ListItemText>View Details</ListItemText>
         </MenuItem>
+        {statusFilter !== "Archived" && (
+          <MenuItem onClick={() => handleEmailOpen(selectedSalesOrder)} sx={{py: 1.25}}>
+            <ListItemIcon><EmailIcon fontSize="small" color="primary" /></ListItemIcon>
+            <ListItemText>Send Email</ListItemText>
+          </MenuItem>
+        )}
+        {statusFilter !== "Archived" && (
+          <MenuItem onClick={() => { handleEdit(selectedSalesOrder); handleActionMenuClose(); }}>
+            <ListItemIcon>
+              <EditIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Edit</ListItemText>
+          </MenuItem>
+        )}
         <MenuItem onClick={() => { navigate('/sales-orders/add', { state: { cloneFrom: selectedSalesOrder } }); handleActionMenuClose(); }}>
           <ListItemIcon>
             <ContentCopyIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText>Duplicate</ListItemText>
         </MenuItem>
-        <MenuItem onClick={handleConvertToInvoice} disabled={selectedSalesOrder?.status === "Invoiced"}>
-          <ListItemIcon>
-            <ReceiptIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Convert to Invoice</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleConvertToPO}>
-          <ListItemIcon>
-            <ShoppingCartIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Convert to Purchase Order</ListItemText>
-        </MenuItem>
+        {statusFilter !== "Archived" && (
+          <MenuItem onClick={handleConvertToInvoice} disabled={selectedSalesOrder?.status === "Invoiced"}>
+            <ListItemIcon>
+              <ReceiptIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Convert to Invoice</ListItemText>
+          </MenuItem>
+        )}
+        {statusFilter !== "Archived" && (
+          <MenuItem onClick={handleConvertToPO}>
+            <ListItemIcon>
+              <ShoppingCartIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Convert to Purchase Order</ListItemText>
+          </MenuItem>
+        )}
         <MenuItem onClick={() => { setConfirmDeleteId(selectedSalesOrder?.id); handleActionMenuClose(); }}>
           <ListItemIcon>
             <DeleteIcon fontSize="small" color="error" />
           </ListItemIcon>
-          <ListItemText>Delete</ListItemText>
+          <ListItemText>Archive</ListItemText>
         </MenuItem>
+        {statusFilter === "Archived" && (
+          <MenuItem onClick={() => { setRestoreTargetId(selectedSalesOrder?.id); handleActionMenuClose(); }}>
+            <ListItemIcon>
+              <RestoreIcon fontSize="small" color="success" />
+            </ListItemIcon>
+            <ListItemText>Restore</ListItemText>
+          </MenuItem>
+        )}
       </Menu>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={!!confirmDeleteId} onClose={() => setConfirmDeleteId(null)}>
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-          <Typography>Are you sure you want to delete this sales order? This action cannot be undone.</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmDeleteId(null)}>Cancel</Button>
-          <Button onClick={() => handleDelete(confirmDeleteId)} color="error" variant="contained">
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ArchiveDialog
+        open={!!confirmDeleteId}
+        onClose={() => setConfirmDeleteId(null)}
+        entityType="sales_order"
+        entityId={confirmDeleteId}
+        entityLabel="Sales Order"
+        onArchived={() => {
+          fetchSalesOrders();
+          setConfirmDeleteId(null);
+          setError("");
+        }}
+      />
+
+      <LifecycleArchiveDialog
+        open={!!restoreTargetId}
+        onClose={() => setRestoreTargetId(null)}
+        mode="restore"
+        entityType="sales_order"
+        entityId={restoreTargetId}
+        entityLabel="Sales Order"
+        onConfirmed={() => {
+          fetchSalesOrders();
+          setRestoreTargetId(null);
+          setError("");
+        }}
+      />
 
       {/* Email dialog */}
       <Dialog open={emailDialog.open} onClose={() => setEmailDialog((d) => ({ ...d, open: false }))} maxWidth="sm" fullWidth>

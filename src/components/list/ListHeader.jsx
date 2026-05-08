@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle, useCallback } from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import TextField from "@mui/material/TextField";
@@ -72,7 +72,7 @@ const writeLocalHistory = (storageKey, items) => {
   }
 };
 
-const ListHeader = ({
+const ListHeader = forwardRef(({
   title,
   summary,
   rightAction,
@@ -83,7 +83,7 @@ const ListHeader = ({
   liveResults = [],
   onHistorySelect,
   historyStorageKey,
-}) => {
+}, ref) => {
   // A single ref wrapping BOTH the trigger input area AND the Popper (via
   // disablePortal) so ClickAwayListener fires only on genuine outside clicks.
   const containerRef = useRef(null);
@@ -96,7 +96,7 @@ const ListHeader = ({
 
   // ── History loading ──────────────────────────────────────────────────────
 
-  const loadHistory = async () => {
+  const loadHistory = useCallback(async () => {
     if (!searchPage && !historyStorageKey) {
       setHistoryItems([]);
       return;
@@ -125,7 +125,7 @@ const ListHeader = ({
     } finally {
       setLoadingHistory(false);
     }
-  };
+  }, [cacheKey, searchPage, historyStorageKey]);
 
   // ── Merged suggestions (live results + history) ──────────────────────────
 
@@ -259,6 +259,15 @@ const ListHeader = ({
       // Silent
     }
   };
+
+  // ── Exposed method for reloading history after external updates ────────
+  useImperativeHandle(ref, () => ({
+    reloadHistory: async () => {
+      // Force a fresh load by invalidating cache
+      historyCache.delete(cacheKey);
+      await loadHistory();
+    },
+  }), [cacheKey, loadHistory]);
 
   const handleKeyDown = (event) => {
     if (event.key === "Escape") {
@@ -456,6 +465,7 @@ const ListHeader = ({
                                 alignItems: "flex-start",
                                 py: 0.85,
                                 px: 1.25,
+                                minWidth: 0,
                                 borderLeft: "3px solid",
                                 borderColor: active ? "primary.main" : "transparent",
                                 bgcolor: active ? "primary.50" : "transparent",
@@ -474,14 +484,15 @@ const ListHeader = ({
                               </ListItemIcon>
 
                               <ListItemText
+                                noWrap
                                 primary={item.label}
                                 secondary={
                                   isHistory
                                     ? (item.subtitle || "Recent search")
                                     : (item.subtitle || "Live result")
                                 }
-                                primaryTypographyProps={{ variant: "body2", fontWeight: 600 }}
-                                secondaryTypographyProps={{ variant: "caption" }}
+                                primaryTypographyProps={{ variant: "body2", fontWeight: 600, noWrap: true }}
+                                secondaryTypographyProps={{ variant: "caption", noWrap: true }}
                               />
 
                               {/* Delete button only for history items */}
@@ -512,6 +523,8 @@ const ListHeader = ({
       </Box>
     </ClickAwayListener>
   );
-};
+});
+
+ListHeader.displayName = 'ListHeader';
 
 export default ListHeader;

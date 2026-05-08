@@ -252,7 +252,7 @@ const About = () => {
                   Example Workflow Lifecycle
                 </Typography>
                 <Chip
-                  label="Connected"
+                  label="Conceptual"
                   size="small"
                   sx={{
                     color: '#ecfff4',
@@ -262,6 +262,9 @@ const About = () => {
                   }}
                 />
               </Stack>
+              <Typography sx={{ color: 'rgba(191,219,254,0.82)', fontSize: '0.74rem', mb: 1.5 }}>
+                Illustrative workflow progression
+              </Typography>
 
               <Stack spacing={1.4} sx={{ mb: 2.2 }}>
                 {[

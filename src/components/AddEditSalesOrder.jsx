@@ -70,6 +70,7 @@ const AddEditSalesOrder = () => {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isArchived, setIsArchived] = useState(false);
   const { applyAutoFill } = useAutoFill({
     setForm,
     generator: generateSalesOrderMockData,
@@ -111,6 +112,8 @@ const AddEditSalesOrder = () => {
       } else {
         // Fetch existing sales order
         axios.get(createApiUrl(`/api/sales-orders/${soId}`)).then(res2 => {
+          const archived = String(res2.data?.lifecycle_status || res2.data?.status || '').toUpperCase() === 'ARCHIVED' || Boolean(res2.data?.is_deleted);
+          setIsArchived(archived);
           setForm(res2.data);
         }).catch(err => {
           setError("Failed to load sales order");
@@ -149,6 +152,10 @@ const AddEditSalesOrder = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isArchived) {
+      setError("Archived sales orders are read-only. Restore the sales order to edit.");
+      return;
+    }
     setLoading(true);
     setError("");
 
@@ -196,6 +203,12 @@ const AddEditSalesOrder = () => {
           {error && (
             <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2, borderRadius: '4px' }}>
               {error}
+            </Alert>
+          )}
+
+          {isArchived && (
+            <Alert severity="warning" sx={{ mb: 2, borderRadius: '4px' }}>
+              Archived sales orders are read-only. Restore this sales order before editing.
             </Alert>
           )}
 
@@ -520,7 +533,7 @@ const AddEditSalesOrder = () => {
                 Cancel
               </Button>
               <Button
-                type="submit" variant="contained" disabled={loading}
+                type="submit" variant="contained" disabled={loading || isArchived}
                 startIcon={loading ? <CircularProgress size={14} color="inherit" /> : null}
                 sx={saveBtnSx}
               >

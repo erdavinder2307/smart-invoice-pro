@@ -31,13 +31,15 @@ import {
   useTheme,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
+import ArchiveIcon from "@mui/icons-material/Archive";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import DeleteIcon from "@mui/icons-material/Delete";
+
 import EditIcon from "@mui/icons-material/Edit";
 import EmailIcon from "@mui/icons-material/Email";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import ReceiptIcon from "@mui/icons-material/Receipt";
+import RestoreIcon from "@mui/icons-material/Restore";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import BlockIcon from "@mui/icons-material/Block";
@@ -46,6 +48,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { CHECKBOX_COLUMN_WIDTH } from "./common/StandardDataTable";
+import ArchiveDialog from "./common/ArchiveDialog";
+import LifecycleArchiveDialog from "./common/LifecycleArchiveDialog";
 import ResponsiveDataView from "./common/ResponsiveDataView";
 import PurchaseOrderCard from "./common/PurchaseOrderCard";
 import ListPageLayout from "./list/ListPageLayout";
@@ -60,10 +64,10 @@ import { createApiUrl } from "../config/api";
 import {
   bulkPurchaseOrderAction,
   convertPurchaseOrderToBill,
-  deletePurchaseOrderById,
   getPurchaseOrdersList,
   sendPurchaseOrderEmail,
 } from "../services/purchaseOrderService";
+import { bulkArchiveEntities } from "../services/bulkArchiveService";
 
 const DATE_OPTIONS = [
   { value: "all", label: "All Time" },
@@ -125,7 +129,9 @@ const PurchaseOrderList = () => {
     return params.get("vendor_id") || "All";
   });
   const [selectedIds, setSelectedIds] = useState([]);
-  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [archivePO, setArchivePO] = useState(null);
+  const [restorePO, setRestorePO] = useState(null);
+  const [bulkRestoreOpen, setBulkRestoreOpen] = useState(false);
   const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
   const [selectedPO, setSelectedPO] = useState(null);
   const [emailDialog, setEmailDialog] = useState({
@@ -195,6 +201,7 @@ const PurchaseOrderList = () => {
       date_from: dateRange === "custom" ? dateFrom : "",
       date_to: dateRange === "custom" ? dateTo : "",
       include_meta: "1",
+      lifecycle: status === "Archived" ? "archived" : "active",
     }),
     [
       dateFrom,
@@ -223,17 +230,6 @@ const PurchaseOrderList = () => {
     refetchOnWindowFocus: false,
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: deletePurchaseOrderById,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["purchase-orders-list"] });
-      setUiError("");
-      setConfirmDeleteId(null);
-      setToast({ open: true, message: "Purchase order deleted.", severity: "success" });
-    },
-    onError: () => setUiError(tt("purchaseOrderList.failedDelete", "Failed to delete purchase order.")),
-  });
-
   const bulkMutation = useMutation({
     mutationFn: bulkPurchaseOrderAction,
     onSuccess: () => {
@@ -243,6 +239,23 @@ const PurchaseOrderList = () => {
       setToast({ open: true, message: "Bulk action applied.", severity: "success" });
     },
     onError: () => setUiError("Failed to apply bulk action."),
+  });
+
+  const bulkArchiveMutation = useMutation({
+    mutationFn: (ids) => bulkArchiveEntities("purchase_order", ids),
+    onSuccess: (result) => {
+      setSelectedIds([]);
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders-list"] });
+      if (Number(result?.failedCount || 0) > 0) {
+        setUiError(
+          `${result.successCount || 0} purchase orders archived. ${result.failedCount || 0} could not be archived.`
+        );
+      } else {
+        setUiError("");
+      }
+      setToast({ open: true, message: "Archive action completed.", severity: "success" });
+    },
+    onError: () => setUiError("Failed to archive selected purchase orders."),
   });
 
   const rows = useMemo(() => {
@@ -334,11 +347,15 @@ const PurchaseOrderList = () => {
 
   const runBulkAction = (action, ids = selectedIds) => {
     if (!ids.length) return;
+    if (action === "delete" || action === "archive") {
+      bulkArchiveMutation.mutate(ids);
+      return;
+    }
     bulkMutation.mutate({ action, ids });
   };
 
-  const handleDelete = (poId) => {
-    deleteMutation.mutate(poId);
+  const handleDelete = (po) => {
+    setArchivePO(po);
   };
 
   const handleDownloadPDF = async (po) => {
@@ -456,6 +473,7 @@ const PurchaseOrderList = () => {
           { value: "Issued", label: "Issued" },
           { value: "Received", label: "Received" },
           { value: "Cancelled", label: "Cancelled" },
+          { value: "Archived", label: "Archived" },
         ]}
         rightSlot={
           <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", alignItems: "center" }}>
@@ -564,21 +582,25 @@ const PurchaseOrderList = () => {
         selectedCount={selectedIds.length}
         actions={[
           {
-            label: "Delete",
-            color: "error",
-            onClick: () => runBulkAction("delete"),
-            disabled: bulkMutation.isPending,
+            label: status === "Archived" ? "Restore Selected" : "Archive Selected",
+            color: status === "Archived" ? "success" : "warning",
+            onClick: () => (status === "Archived" ? setBulkRestoreOpen(true) : runBulkAction("archive")),
+            disabled: bulkMutation.isPending || bulkArchiveMutation.isPending,
           },
-          {
-            label: "Mark Received",
-            onClick: () => runBulkAction("mark_received"),
-            disabled: bulkMutation.isPending,
-          },
-          {
-            label: "Cancel",
-            onClick: () => runBulkAction("cancel"),
-            disabled: bulkMutation.isPending,
-          },
+          ...(status === "Archived"
+            ? []
+            : [
+                {
+                  label: "Mark Received",
+                  onClick: () => runBulkAction("mark_received"),
+                  disabled: bulkMutation.isPending || bulkArchiveMutation.isPending,
+                },
+                {
+                  label: "Cancel",
+                  onClick: () => runBulkAction("cancel"),
+                  disabled: bulkMutation.isPending || bulkArchiveMutation.isPending,
+                },
+              ]),
         ]}
       />
 
@@ -594,8 +616,12 @@ const PurchaseOrderList = () => {
           <PurchaseOrderCard
             po={{ ...po, status: normalizeStatus(po.status) }}
             vendorName={getVendorName(po)}
-            onEdit={() => navigate(`/purchase-orders/edit/${po.id}`)}
-            onDelete={() => setConfirmDeleteId(po.id)}
+            onEdit={() => {
+              if (status !== "Archived") {
+                navigate(`/purchase-orders/edit/${po.id}`);
+              }
+            }}
+            onDelete={() => handleDelete(po)}
             onActionMenu={(event) => {
               event.stopPropagation();
               handleActionMenuOpen(event, po);
@@ -771,14 +797,29 @@ const PurchaseOrderList = () => {
               </TableCell>
               <TableCell align="center" onClick={(event) => event.stopPropagation()}>
                 <Box sx={{ display: "flex", justifyContent: "center", gap: 0.25 }}>
-                  <IconButton size="small" onClick={() => navigate(`/purchase-orders/edit/${po.id}`)} title="View">
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      if (status !== "Archived") {
+                        navigate(`/purchase-orders/edit/${po.id}`);
+                      }
+                    }}
+                    title="View"
+                    disabled={status === "Archived"}
+                  >
                     <VisibilityIcon sx={{ fontSize: 18, color: "#6b7280" }} />
                   </IconButton>
-                  <IconButton size="small" onClick={() => navigate(`/purchase-orders/edit/${po.id}`)} title="Edit">
-                    <EditIcon sx={{ fontSize: 18, color: "#7b8493" }} />
-                  </IconButton>
-                  <IconButton size="small" onClick={() => setConfirmDeleteId(po.id)} title="Delete">
-                    <DeleteIcon sx={{ fontSize: 18, color: "#dc2626" }} />
+                  {status !== "Archived" && (
+                    <IconButton size="small" onClick={() => navigate(`/purchase-orders/edit/${po.id}`)} title="Edit">
+                      <EditIcon sx={{ fontSize: 18, color: "#7b8493" }} />
+                    </IconButton>
+                  )}
+                  <IconButton size="small" onClick={() => (status === "Archived" ? setRestorePO(po) : handleDelete(po))} title={status === "Archived" ? "Restore" : "Archive"}>
+                    {status === "Archived" ? (
+                      <RestoreIcon sx={{ fontSize: 18, color: "#16a34a" }} />
+                    ) : (
+                      <ArchiveIcon sx={{ fontSize: 18, color: "#dc2626" }} />
+                    )}
                   </IconButton>
                   <IconButton size="small" onClick={(event) => handleActionMenuOpen(event, po)} title="More Actions">
                     <MoreVertIcon sx={{ fontSize: 18, color: "#7b8493" }} />
@@ -799,60 +840,120 @@ const PurchaseOrderList = () => {
       />
 
       <Menu anchorEl={actionMenuAnchor} open={Boolean(actionMenuAnchor)} onClose={handleActionMenuClose}>
+        <MenuItem
+          onClick={() => {
+            if (status !== "Archived") {
+              navigate(`/purchase-orders/edit/${selectedPO?.id}`);
+            }
+            handleActionMenuClose();
+          }}
+          disabled={status === "Archived"}
+        >
+          <ListItemIcon><VisibilityIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>View Details</ListItemText>
+        </MenuItem>
         <MenuItem onClick={() => handleDownloadPDF(selectedPO)} sx={{ py: 1.25 }}>
           <ListItemIcon><PictureAsPdfIcon fontSize="small" color="success" /></ListItemIcon>
           <ListItemText>Download PDF</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => handleEmailOpen(selectedPO)} sx={{ py: 1.25 }}>
-          <ListItemIcon><EmailIcon fontSize="small" color="primary" /></ListItemIcon>
-          <ListItemText>Send Email</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={() => { navigate(`/purchase-orders/edit/${selectedPO?.id}`); handleActionMenuClose(); }}>
-          <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>Edit</ListItemText>
-        </MenuItem>
+        {status !== "Archived" && (
+          <MenuItem onClick={() => handleEmailOpen(selectedPO)} sx={{ py: 1.25 }}>
+            <ListItemIcon><EmailIcon fontSize="small" color="primary" /></ListItemIcon>
+            <ListItemText>Send Email</ListItemText>
+          </MenuItem>
+        )}
+        {status !== "Archived" && (
+          <MenuItem onClick={() => { navigate(`/purchase-orders/edit/${selectedPO?.id}`); handleActionMenuClose(); }}>
+            <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>Edit</ListItemText>
+          </MenuItem>
+        )}
         <MenuItem onClick={() => { navigate("/purchase-orders/add", { state: { cloneFrom: selectedPO } }); handleActionMenuClose(); }}>
           <ListItemIcon><ContentCopyIcon fontSize="small" /></ListItemIcon>
           <ListItemText>Duplicate</ListItemText>
         </MenuItem>
-        <MenuItem onClick={handleConvertToBill}>
-          <ListItemIcon><ReceiptIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>Convert to Bill</ListItemText>
-        </MenuItem>
-        <MenuItem
-          onClick={() => {
-            runBulkAction("mark_received", selectedPO?.id ? [selectedPO.id] : []);
-            handleActionMenuClose();
-          }}
-          disabled={normalizeStatus(selectedPO?.status) === "Received"}
-        >
-          <ListItemIcon><LocalShippingIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>Mark as Received</ListItemText>
-        </MenuItem>
-        <MenuItem
-          onClick={() => {
-            runBulkAction("cancel", selectedPO?.id ? [selectedPO.id] : []);
-            handleActionMenuClose();
-          }}
-          disabled={normalizeStatus(selectedPO?.status) === "Cancelled"}
-        >
-          <ListItemIcon><BlockIcon fontSize="small" color="error" /></ListItemIcon>
-          <ListItemText>Cancel Purchase Order</ListItemText>
-        </MenuItem>
+        {status !== "Archived" && (
+          <MenuItem onClick={handleConvertToBill}>
+            <ListItemIcon><ReceiptIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>Convert to Bill</ListItemText>
+          </MenuItem>
+        )}
+        {status !== "Archived" && (
+          <MenuItem
+            onClick={() => {
+              runBulkAction("mark_received", selectedPO?.id ? [selectedPO.id] : []);
+              handleActionMenuClose();
+            }}
+            disabled={normalizeStatus(selectedPO?.status) === "Received"}
+          >
+            <ListItemIcon><LocalShippingIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>Mark as Received</ListItemText>
+          </MenuItem>
+        )}
+        {status !== "Archived" && (
+          <MenuItem
+            onClick={() => {
+              runBulkAction("cancel", selectedPO?.id ? [selectedPO.id] : []);
+              handleActionMenuClose();
+            }}
+            disabled={normalizeStatus(selectedPO?.status) === "Cancelled"}
+          >
+            <ListItemIcon><BlockIcon fontSize="small" color="error" /></ListItemIcon>
+            <ListItemText>Cancel Purchase Order</ListItemText>
+          </MenuItem>
+        )}
+        {status === "Archived" && (
+          <MenuItem onClick={() => { setRestorePO(selectedPO); handleActionMenuClose(); }}>
+            <ListItemIcon><RestoreIcon fontSize="small" color="success" /></ListItemIcon>
+            <ListItemText>Restore</ListItemText>
+          </MenuItem>
+        )}
       </Menu>
 
-      <Dialog open={Boolean(confirmDeleteId)} onClose={() => setConfirmDeleteId(null)}>
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-          <Typography>Are you sure you want to delete this purchase order? This action cannot be undone.</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmDeleteId(null)}>Cancel</Button>
-          <Button onClick={() => handleDelete(confirmDeleteId)} color="error" variant="contained" disabled={deleteMutation.isPending}>
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ArchiveDialog
+        open={!!archivePO}
+        entityType="purchase_order"
+        entityId={archivePO?.id}
+        entityLabel={archivePO?.po_number || "Purchase Order"}
+        onClose={() => setArchivePO(null)}
+        onArchived={() => {
+          setArchivePO(null);
+          setSelectedIds((prev) => prev.filter((id) => id !== archivePO?.id));
+          queryClient.invalidateQueries({ queryKey: ["purchase-orders-list"] });
+          setToast({ open: true, message: "Purchase order archived.", severity: "success" });
+        }}
+      />
+
+      <LifecycleArchiveDialog
+        open={!!restorePO}
+        entityType="purchase_order"
+        entityId={restorePO?.id}
+        entityLabel={restorePO?.po_number || "Purchase Order"}
+        mode="restore"
+        onClose={() => setRestorePO(null)}
+        onConfirmed={() => {
+          setSelectedIds((prev) => prev.filter((id) => id !== restorePO?.id));
+          setRestorePO(null);
+          queryClient.invalidateQueries({ queryKey: ["purchase-orders-list"] });
+          setToast({ open: true, message: "Purchase order restored.", severity: "success" });
+        }}
+      />
+
+      <LifecycleArchiveDialog
+        open={bulkRestoreOpen}
+        onClose={() => setBulkRestoreOpen(false)}
+        mode="bulk-restore"
+        entityType="purchase_order"
+        entityIds={selectedIds}
+        entityLabel="Purchase Order"
+        entityCount={selectedIds.length}
+        onConfirmed={() => {
+          setSelectedIds([]);
+          setBulkRestoreOpen(false);
+          queryClient.invalidateQueries({ queryKey: ["purchase-orders-list"] });
+          setToast({ open: true, message: "Purchase orders restored.", severity: "success" });
+        }}
+      />
 
       <Dialog open={emailDialog.open} onClose={() => setEmailDialog((prev) => ({ ...prev, open: false }))} maxWidth="sm" fullWidth>
         <DialogTitle>Email Purchase Order {emailDialog.po?.po_number}</DialogTitle>

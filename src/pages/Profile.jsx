@@ -158,6 +158,14 @@ const Profile = () => {
 
         try {
             await updateProfile(form);
+            // Update stored user name so header/sidebar reflect the change
+            try {
+                const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+                if (form.name) {
+                    storedUser.name = form.name;
+                    localStorage.setItem('user', JSON.stringify(storedUser));
+                }
+            } catch (_) { /* ignore */ }
             setSuccess("Profile updated successfully!");
             setTimeout(() => setSuccess(""), 3000);
         } catch (err) {

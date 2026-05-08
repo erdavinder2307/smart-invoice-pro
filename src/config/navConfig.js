@@ -19,6 +19,10 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import BusinessIcon from "@mui/icons-material/Business";
 import HistoryIcon from "@mui/icons-material/History";
 import ExtensionIcon from "@mui/icons-material/Extension";
+import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
+import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
+import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
+import TuneIcon from "@mui/icons-material/Tune";
 
 export const NAV_CONFIG = {
   dashboard: {
@@ -77,6 +81,21 @@ export const NAV_CONFIG = {
     icon: <AssessmentIcon />,
     path: "/reports",
   },
+  // ── My Account (visible to all users) ────────────────────────────────────
+  myAccount: {
+    id: "myAccount",
+    label: "My Account",
+    labelKey: "sidebarNav.myAccount",
+    icon: <PersonOutlineIcon />,
+    expandable: true,
+    children: [
+      { id: "my-profile",       label: "My Profile",       labelKey: "accountNav.myProfile",       icon: <PersonOutlineIcon sx={{ fontSize: 20 }} />,    path: "/settings/my-profile" },
+      { id: "notifications-pref", label: "Notifications", labelKey: "accountNav.notifications",   icon: <NotificationsNoneIcon sx={{ fontSize: 20 }} />, path: "/settings/notifications" },
+      { id: "preferences",      label: "Preferences",      labelKey: "accountNav.preferences",      icon: <TuneIcon sx={{ fontSize: 20 }} />,              path: "/settings/preferences" },
+      { id: "security",         label: "Security",         labelKey: "accountNav.security",         icon: <LockOutlinedIcon sx={{ fontSize: 20 }} />,      path: "/settings/security" },
+    ],
+  },
+  // ── Organisation Settings (admin only) ───────────────────────────────────
   settings: {
     id: "settings",
     label: "Settings",
@@ -85,15 +104,15 @@ export const NAV_CONFIG = {
     adminOnly: true,
     expandable: true,
     children: [
-      { id: "org-profile", label: "Organization Profile", labelKey: "settingsNav.organization", icon: <BusinessIcon sx={{ fontSize: 20 }} />, path: "/settings/organization-profile" },
-      { id: "branding", label: "Branding", labelKey: "settingsNav.branding", icon: <BrushIcon sx={{ fontSize: 20 }} />, path: "/settings/branding" },
-      { id: "invoice-preferences", label: "Invoice Preferences", labelKey: "settingsNav.invoicePreferences", icon: <DescriptionIcon sx={{ fontSize: 20 }} />, path: "/settings/invoice-preferences" },
-      { id: "taxes", label: "Taxes", labelKey: "settingsNav.taxes", icon: <ReceiptLongIcon sx={{ fontSize: 20 }} />, path: "/settings/taxes" },
-      { id: "users", label: "User Management", labelKey: "settingsNav.userManagement", icon: <PeopleIcon sx={{ fontSize: 20 }} />, path: "/settings/users" },
-      { id: "roles", label: "Roles", labelKey: "settingsNav.roles", icon: <AdminPanelSettingsIcon sx={{ fontSize: 20 }} />, path: "/settings/roles" },
-      { id: "automation", label: "Automation", labelKey: "settingsNav.automation", icon: <NotificationsActiveIcon sx={{ fontSize: 20 }} />, path: "/settings/automation" },
-      { id: "integrations", label: "Integrations", labelKey: "settingsNav.integrations", icon: <ExtensionIcon sx={{ fontSize: 20 }} />, path: "/settings/integrations" },
-      { id: "audit-log", label: "Audit Log", labelKey: "settingsNav.auditLog", icon: <HistoryIcon sx={{ fontSize: 20 }} />, path: "/settings/audit-log" },
+      { id: "org-profile",          label: "Organization Profile", labelKey: "settingsNav.organization",      icon: <BusinessIcon sx={{ fontSize: 20 }} />,           path: "/settings/organization-profile" },
+      { id: "branding",             label: "Branding",             labelKey: "settingsNav.branding",           icon: <BrushIcon sx={{ fontSize: 20 }} />,              path: "/settings/branding" },
+      { id: "invoice-preferences",  label: "Invoice Preferences",  labelKey: "settingsNav.invoicePreferences", icon: <DescriptionIcon sx={{ fontSize: 20 }} />,        path: "/settings/invoice-preferences" },
+      { id: "taxes",                label: "Taxes",                labelKey: "settingsNav.taxes",              icon: <ReceiptLongIcon sx={{ fontSize: 20 }} />,        path: "/settings/taxes" },
+      { id: "users",                label: "User Management",      labelKey: "settingsNav.userManagement",     icon: <PeopleIcon sx={{ fontSize: 20 }} />,             path: "/settings/users" },
+      { id: "roles",                label: "Roles",                labelKey: "settingsNav.roles",              icon: <AdminPanelSettingsIcon sx={{ fontSize: 20 }} />, path: "/settings/roles" },
+      { id: "automation",           label: "Automation",           labelKey: "settingsNav.automation",         icon: <NotificationsActiveIcon sx={{ fontSize: 20 }} />, path: "/settings/automation" },
+      { id: "integrations",         label: "Integrations",         labelKey: "settingsNav.integrations",       icon: <ExtensionIcon sx={{ fontSize: 20 }} />,          path: "/settings/integrations" },
+      { id: "audit-log",            label: "Audit Log",            labelKey: "settingsNav.auditLog",           icon: <HistoryIcon sx={{ fontSize: 20 }} />,            path: "/settings/audit-log" },
     ],
   },
 };

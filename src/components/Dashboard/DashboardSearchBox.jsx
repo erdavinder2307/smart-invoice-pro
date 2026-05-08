@@ -228,13 +228,14 @@ const DashboardSearchBox = ({ placeholder = 'Search invoices, customers, product
               <ListItemButton
                 key={term}
                 onClick={() => handleRecentClick(term)}
-                sx={{ px: 2, py: 0.75 }}
+                sx={{ px: 2, py: 0.75, minWidth: 0 }}
               >
                 <ListItemIcon sx={{ minWidth: 32 }}>
                   <HistoryIcon fontSize="small" color="action" />
                 </ListItemIcon>
                 <ListItemText
-                  primary={<Typography variant="body2">{term}</Typography>}
+                  noWrap
+                  primary={<Typography variant="body2" noWrap>{term}</Typography>}
                 />
                 <IconButton
                   size="small"

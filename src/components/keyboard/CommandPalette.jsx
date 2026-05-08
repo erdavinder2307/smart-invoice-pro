@@ -307,6 +307,7 @@ const CommandPalette = () => {
                       sx={{
                         py: 0.875,
                         px: 2,
+                        minWidth: 0,
                         borderLeft: '3px solid',
                         borderColor: isActive ? 'primary.main' : 'transparent',
                         '&.Mui-selected': { bgcolor: 'primary.50' },
@@ -317,14 +318,15 @@ const CommandPalette = () => {
                         {item.icon || <SearchIcon fontSize="small" />}
                       </ListItemIcon>
                       <ListItemText
+                        sx={{ minWidth: 0 }}
                         primary={
-                          <Typography variant="body2" sx={{ fontWeight: isActive ? 600 : 400 }}>
+                          <Typography variant="body2" noWrap sx={{ fontWeight: isActive ? 600 : 400 }}>
                             {item._isRecentCustomer ? item.label : item.label}
                           </Typography>
                         }
                         secondary={
                           item._isRecentCustomer ? (
-                            <Typography variant="caption" color="text.disabled">
+                            <Typography variant="caption" color="text.disabled" noWrap>
                               {item.email || t('commandPalette.recentCustomerFallback')}
                             </Typography>
                           ) : null

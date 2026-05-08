@@ -130,6 +130,7 @@ const AddEditPurchaseOrder = () => {
   const [saving, setSaving] = useState(false);
   const [checkingDuplicate, setCheckingDuplicate] = useState(false);
   const [apiError, setApiError] = useState("");
+  const [isArchived, setIsArchived] = useState(false);
   const [errors, setErrors] = useState({});
   const [originalPoNumber, setOriginalPoNumber] = useState("");
   const [didAttemptSubmit, setDidAttemptSubmit] = useState(false);
@@ -180,6 +181,8 @@ const AddEditPurchaseOrder = () => {
         if (id) {
           const po = await fetchPO(id);
           if (!active || !po) return;
+          const archived = String(po.lifecycle_status || po.status || '').toUpperCase() === 'ARCHIVED' || Boolean(po.is_deleted);
+          setIsArchived(archived);
           const normalizedItems = (Array.isArray(po.items) && po.items.length ? po.items : [createEmptyLineItem()])
             .map(normalizeItem);
           const totals = computeTotals(normalizedItems);
@@ -519,6 +522,10 @@ const AddEditPurchaseOrder = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (isArchived) {
+      setApiError('Archived purchase orders are read-only. Restore the purchase order to edit.');
+      return;
+    }
     setDidAttemptSubmit(true);
     setApiError("");
 
@@ -591,6 +598,12 @@ const AddEditPurchaseOrder = () => {
           {apiError && (
             <Alert severity="error" onClose={() => setApiError("")} sx={{ mb: 2, borderRadius: "4px" }}>
               {apiError}
+            </Alert>
+          )}
+
+          {isArchived && (
+            <Alert severity="warning" sx={{ mb: 2, borderRadius: "4px" }}>
+              Archived purchase orders are read-only. Restore this purchase order before editing.
             </Alert>
           )}
 
@@ -917,7 +930,7 @@ const AddEditPurchaseOrder = () => {
               <Button
                 type="submit"
                 variant="contained"
-                disabled={saving || checkingDuplicate || !isFormValid}
+                disabled={saving || checkingDuplicate || !isFormValid || isArchived}
                 startIcon={(saving || checkingDuplicate) ? <CircularProgress size={14} color="inherit" /> : null}
                 sx={saveBtnSx}
               >

@@ -20,6 +20,8 @@ const STATUS_MAP = {
     issued: { label: "Issued", color: "info" },
     active: { label: "Active", color: "success" },
     inactive: { label: "Inactive", color: "default" },
+    archived: { label: "Archived", color: "default" },
+    discontinued: { label: "Discontinued", color: "default" },
 };
 
 const StatusBadge = ({ status = "", size = "small" }) => {

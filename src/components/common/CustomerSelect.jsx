@@ -88,6 +88,7 @@ const CustomerSelect = ({
         const filtered = term
           ? opts.filter((opt) => {
               if (opt._isAddNew) return true; // always show sentinel
+              if (String(opt.lifecycle_status || opt.status || '').toUpperCase() === 'ARCHIVED') return false;
               return (
                 (opt.display_name || '').toLowerCase().includes(term) ||
                 (opt.name || '').toLowerCase().includes(term) ||
@@ -95,7 +96,7 @@ const CustomerSelect = ({
                 (opt.email || '').toLowerCase().includes(term)
               );
             })
-          : opts;
+          : opts.filter((opt) => opt._isAddNew || String(opt.lifecycle_status || opt.status || '').toUpperCase() !== 'ARCHIVED');
         return filtered;
       }}
       ListboxProps={{ style: { maxHeight: 300, overflow: 'auto' } }}

@@ -57,7 +57,7 @@ const Footer = () => {
             </Box>
             <Typography variant="body2" sx={{ color: 'grey.400', mb: 3, lineHeight: 1.7, maxWidth: 320, textAlign: { xs: 'center', md: 'left' } }}>
               Workflow-driven financial operations for modern businesses, from quote to insight,
-              with secure execution and real-time visibility.
+              with secure execution and operational visibility.
             </Typography>
 
             {/* Social Links — larger touch targets on mobile */}

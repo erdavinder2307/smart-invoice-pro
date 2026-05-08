@@ -11,11 +11,6 @@ import {
   Box,
   Button,
   Checkbox,
-  CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   IconButton,
   ListItemIcon,
   ListItemText,
@@ -30,17 +25,20 @@ import {
   useTheme,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
-import DeleteIcon from "@mui/icons-material/Delete";
+import ArchiveIcon from "@mui/icons-material/Archive";
 import DoneAllIcon from "@mui/icons-material/DoneAll";
 import EditIcon from "@mui/icons-material/Edit";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import ReceiptIcon from "@mui/icons-material/Receipt";
+import RestoreIcon from "@mui/icons-material/Restore";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { createApiUrl } from "../config/api";
 import { CHECKBOX_COLUMN_WIDTH } from "./common/StandardDataTable";
+import ArchiveDialog from "./common/ArchiveDialog";
+import LifecycleArchiveDialog from "./common/LifecycleArchiveDialog";
 import BillCard from "./common/BillCard";
 import StatusBadge from "./common/StatusBadge";
 import ResponsiveDataView from "./common/ResponsiveDataView";
@@ -55,10 +53,10 @@ import useTableSorting from "../hooks/useTableSorting";
 import { saveSearchHistory } from "../services/searchService";
 import { invalidateSearchHistoryCache } from "./list/ListHeader";
 import {
-  deleteBillById,
   getBillsList,
   markBillAsPaid,
 } from "../services/billService";
+import { bulkArchiveEntities } from "../services/bulkArchiveService";
 
 const DATE_OPTIONS = [
   { value: "all", label: "All Time" },
@@ -101,7 +99,9 @@ const BillList = () => {
     const params = new URLSearchParams(location.search);
     return params.get("vendor_id") || "All";
   });
-  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [archiveBill, setArchiveBill] = useState(null);
+  const [restoreBill, setRestoreBill] = useState(null);
+  const [bulkRestoreOpen, setBulkRestoreOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [selectedBillForAction, setSelectedBillForAction] = useState(null);
   const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
@@ -198,6 +198,7 @@ const BillList = () => {
       min_amount: minAmount,
       max_amount: maxAmount,
       include_meta: "1",
+      lifecycle: status === "Archived" ? "archived" : "active",
     }),
     [
       dateFrom,
@@ -226,17 +227,6 @@ const BillList = () => {
     queryFn: ({ signal }) => axios.get(createApiUrl("/api/vendors"), { signal }).then((res) => res.data),
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: deleteBillById,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["bills-list"] });
-      setUiError("");
-      setConfirmDeleteId(null);
-      setSelectedIds((prev) => prev.filter((id) => id !== confirmDeleteId));
-    },
-    onError: (error) => setUiError(error?.response?.data?.error || t("billList.failedDelete")),
   });
 
   const markPaidMutation = useMutation({
@@ -363,12 +353,18 @@ const BillList = () => {
   const runBulkDelete = async () => {
     if (!selectedIds.length) return;
     try {
-      await Promise.all(selectedIds.map((id) => deleteBillById(id)));
+      const result = await bulkArchiveEntities("bill", selectedIds);
       queryClient.invalidateQueries({ queryKey: ["bills-list"] });
       setSelectedIds([]);
-      setUiError("");
+      if (Number(result?.failedCount || 0) > 0) {
+        setUiError(
+          `${result.successCount || 0} bills archived. ${result.failedCount || 0} could not be archived.`
+        );
+      } else {
+        setUiError("");
+      }
     } catch (error) {
-      setUiError(error?.response?.data?.error || "Failed to delete selected bills.");
+      setUiError(error?.response?.data?.error || "Failed to archive selected bills.");
     }
   };
 
@@ -378,14 +374,16 @@ const BillList = () => {
       const selectedRows = rows.filter((row) => selectedIds.includes(row.id));
       await Promise.all(selectedRows.map((row) => markBillAsPaid(row)));
       queryClient.invalidateQueries({ queryKey: ["bills-list"] });
+      setSelectedIds([]);
       setUiError("");
     } catch (error) {
       setUiError(error?.response?.data?.error || "Failed to mark selected bills as paid.");
     }
   };
 
-  const handleDelete = (billId) => {
-    deleteMutation.mutate(billId);
+  const handleDelete = (bill) => {
+    setArchiveBill(bill);
+    handleActionMenuClose();
   };
 
   const handleMarkAsPaid = (bill) => {
@@ -397,7 +395,6 @@ const BillList = () => {
   const handleChangeRowsPerPage = (event) => setRowsPerPage(Number.parseInt(event.target.value, 10));
 
   const isLoading = billsQuery.isLoading && !billsQuery.data;
-  const actionLoading = deleteMutation.isPending || markPaidMutation.isPending;
 
   return (
     <ListPageLayout maxWidth="xl">
@@ -431,6 +428,7 @@ const BillList = () => {
           { value: "Open", label: "Open" },
           { value: "Paid", label: "Paid" },
           { value: "Overdue", label: "Overdue" },
+          { value: "Archived", label: "Archived" },
         ]}
         rightSlot={
           <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", alignItems: "center" }}>
@@ -553,16 +551,18 @@ const BillList = () => {
       <BulkActionBar
         selectedCount={selectedIds.length}
         actions={[
+          ...(status === "Archived"
+            ? []
+            : [{
+                label: "Mark Paid",
+                color: "success",
+                onClick: runBulkMarkPaid,
+                disabled: selectedIds.length === 0,
+              }]),
           {
-            label: "Mark Paid",
-            color: "success",
-            onClick: runBulkMarkPaid,
-            disabled: selectedIds.length === 0,
-          },
-          {
-            label: "Delete Selected",
-            color: "error",
-            onClick: runBulkDelete,
+            label: status === "Archived" ? "Restore Selected" : "Archive Selected",
+            color: status === "Archived" ? "success" : "warning",
+            onClick: () => (status === "Archived" ? setBulkRestoreOpen(true) : runBulkDelete()),
             disabled: selectedIds.length === 0,
           },
         ]}
@@ -600,9 +600,17 @@ const BillList = () => {
             bill={bill}
             vendorName={bill.vendor_name || vendorMap.get(String(bill.vendor_id)) || "Unknown Vendor"}
             onView={() => navigate(`/bills/${bill.id}`)}
-            onEdit={() => navigate(`/bills/edit/${bill.id}`)}
-            onDelete={() => setConfirmDeleteId(bill.id)}
-            onMarkPaid={() => handleMarkAsPaid(bill)}
+            onEdit={() => {
+              if (status !== "Archived") {
+                navigate(`/bills/edit/${bill.id}`);
+              }
+            }}
+            onDelete={() => handleDelete(bill)}
+            onMarkPaid={() => {
+              if (status !== "Archived") {
+                handleMarkAsPaid(bill);
+              }
+            }}
           />
         )}
         renderRow={(bill) => {
@@ -654,6 +662,7 @@ const BillList = () => {
                     startIcon={<EditIcon fontSize="small" />}
                     onClick={() => navigate(`/bills/edit/${bill.id}`)}
                     sx={{ textTransform: "none", fontWeight: 600 }}
+                    disabled={status === "Archived"}
                   >
                     Edit
                   </Button>
@@ -717,71 +726,83 @@ const BillList = () => {
         open={Boolean(actionMenuAnchor)}
         onClose={handleActionMenuClose}
       >
-        <MenuItem
-          onClick={() => selectedBillForAction && handleMarkAsPaid(selectedBillForAction)}
-          disabled={!selectedBillForAction || Number(selectedBillForAction.balance_due || 0) <= 0}
-        >
-          <ListItemIcon><DoneAllIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>Mark as Paid</ListItemText>
-        </MenuItem>
+        {status !== "Archived" && (
+          <MenuItem
+            onClick={() => selectedBillForAction && handleMarkAsPaid(selectedBillForAction)}
+            disabled={!selectedBillForAction || Number(selectedBillForAction.balance_due || 0) <= 0}
+          >
+            <ListItemIcon><DoneAllIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>Mark as Paid</ListItemText>
+          </MenuItem>
+        )}
         <MenuItem
           onClick={() => {
             if (selectedBillForAction) {
-              setConfirmDeleteId(selectedBillForAction.id);
+              handleDelete(selectedBillForAction);
             }
             handleActionMenuClose();
           }}
           disabled={resolveStatusBucket(selectedBillForAction || {}) === "Paid"}
         >
-          <ListItemIcon><DeleteIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>Delete</ListItemText>
+          <ListItemIcon><ArchiveIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>Archive</ListItemText>
         </MenuItem>
+        {status === "Archived" && (
+          <MenuItem
+            onClick={() => {
+              if (selectedBillForAction) {
+                setRestoreBill(selectedBillForAction);
+              }
+              handleActionMenuClose();
+            }}
+          >
+            <ListItemIcon><RestoreIcon fontSize="small" color="success" /></ListItemIcon>
+            <ListItemText>Restore</ListItemText>
+          </MenuItem>
+        )}
       </Menu>
 
-      <Dialog
-        open={!!confirmDeleteId}
-        onClose={() => setConfirmDeleteId(null)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            boxShadow: 4,
-          },
+      <ArchiveDialog
+        open={!!archiveBill}
+        entityType="bill"
+        entityId={archiveBill?.id}
+        entityLabel={archiveBill?.bill_number || "Bill"}
+        onClose={() => setArchiveBill(null)}
+        onArchived={() => {
+          setArchiveBill(null);
+          setSelectedIds((prev) => prev.filter((id) => id !== archiveBill?.id));
+          queryClient.invalidateQueries({ queryKey: ["bills-list"] });
         }}
-      >
-        <DialogTitle sx={{ pb: 2 }}>
-          <Typography variant="h6" fontWeight={700} color="error.main">
-            Delete Bill
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            This action cannot be undone
-          </Typography>
-        </DialogTitle>
-        <DialogContent>
-          <Typography variant="body1" color="text.secondary">
-            Are you sure you want to delete this bill?
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3, gap: 1.5 }}>
-          <Button
-            onClick={() => setConfirmDeleteId(null)}
-            variant="outlined"
-            sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600 }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={() => handleDelete(confirmDeleteId)}
-            variant="contained"
-            color="error"
-            disabled={actionLoading}
-            sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600 }}
-          >
-            {actionLoading ? <CircularProgress size={20} color="inherit" /> : "Delete"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      />
+
+      <LifecycleArchiveDialog
+        open={!!restoreBill}
+        entityType="bill"
+        entityId={restoreBill?.id}
+        entityLabel={restoreBill?.bill_number || "Bill"}
+        mode="restore"
+        onClose={() => setRestoreBill(null)}
+        onConfirmed={() => {
+          setRestoreBill(null);
+          setSelectedIds((prev) => prev.filter((id) => id !== restoreBill?.id));
+          queryClient.invalidateQueries({ queryKey: ["bills-list"] });
+        }}
+      />
+
+      <LifecycleArchiveDialog
+        open={bulkRestoreOpen}
+        onClose={() => setBulkRestoreOpen(false)}
+        mode="bulk-restore"
+        entityType="bill"
+        entityIds={selectedIds}
+        entityLabel="Bill"
+        entityCount={selectedIds.length}
+        onConfirmed={() => {
+          setSelectedIds([]);
+          setBulkRestoreOpen(false);
+          queryClient.invalidateQueries({ queryKey: ["bills-list"] });
+        }}
+      />
     </ListPageLayout>
   );
 };

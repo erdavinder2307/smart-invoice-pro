@@ -15,6 +15,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import NoteAddIcon from "@mui/icons-material/NoteAdd";
 import PaymentsIcon from "@mui/icons-material/Payments";
+import RestoreIcon from "@mui/icons-material/Restore";
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat("en-IN", {
@@ -35,7 +36,18 @@ const formatCurrency = (amount) =>
  *   onCreateInvoice  {fn}  — create invoice action handler
  *   onRecordPayment  {fn}  — record payment action handler
  */
-const CustomerCard = ({ customer, onClick, onEdit, onDelete, onCreateInvoice, onRecordPayment }) => (
+const CustomerCard = ({
+  customer,
+  onClick,
+  onEdit,
+  onDelete,
+  onCreateInvoice,
+  onRecordPayment,
+  deleteLabel = "Delete customer",
+  deleteColor = "#ef4444",
+  deleteHoverBg = "#fef2f2",
+  deleteIcon = "delete",
+}) => (
   <Card
     elevation={0}
     sx={{
@@ -230,13 +242,13 @@ const CustomerCard = ({ customer, onClick, onEdit, onDelete, onCreateInvoice, on
               <EditIcon sx={{ fontSize: 18 }} />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Delete customer">
+          <Tooltip title={deleteLabel}>
             <IconButton
               size="small"
               onClick={onDelete}
-              sx={{ color: "#ef4444", "&:hover": { bgcolor: "#fef2f2" }, width: 34, height: 34 }}
+              sx={{ color: deleteColor, "&:hover": { bgcolor: deleteHoverBg }, width: 34, height: 34 }}
             >
-              <DeleteIcon sx={{ fontSize: 18 }} />
+              {deleteIcon === "restore" ? <RestoreIcon sx={{ fontSize: 18 }} /> : <DeleteIcon sx={{ fontSize: 18 }} />}
             </IconButton>
           </Tooltip>
         </Box>

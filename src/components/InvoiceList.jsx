@@ -45,6 +45,7 @@ import EmailIcon from "@mui/icons-material/Email";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import SendIcon from "@mui/icons-material/Send";
+import RestoreIcon from "@mui/icons-material/Restore";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 
 import { CHECKBOX_COLUMN_WIDTH } from "./common/StandardDataTable";
@@ -55,17 +56,19 @@ import ListHeader from "./list/ListHeader";
 import FilterBar from "./list/FilterBar";
 import ListSummary from "./list/ListSummary";
 import BulkActionBar from "./list/BulkActionBar";
+import ArchiveDialog from "./common/ArchiveDialog";
+import LifecycleArchiveDialog from "./common/LifecycleArchiveDialog";
 import useTableSorting from "../hooks/useTableSorting";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { useListController } from "../hooks/useListController";
 import { createApiUrl } from "../config/api";
 import {
   bulkInvoiceAction,
-  deleteInvoice,
   getInvoicesList,
   recordPayment,
   sendInvoiceEmail,
 } from "../services/invoiceService";
+import { bulkArchiveEntities } from "../services/bulkArchiveService";
 import { saveSearchHistory } from "../services/searchService";
 import { invalidateSearchHistoryCache } from "./list/ListHeader";
 
@@ -77,6 +80,7 @@ const statusStyle = {
   "Partially Paid":   { color: "#7c5a1e", bg: "#fff6d6" },
   Overdue:            { color: "#c0392b", bg: "#feefe8" },
   Cancelled:          { color: "#6b7280", bg: "#f3f4f6" },
+  ARCHIVED:           { color: "#7c3aed", bg: "#f5f3ff" },
 };
 
 // ── Date preset options ─────────────────────────────────────────────────────
@@ -151,6 +155,8 @@ const InvoiceList = () => {
 
   const [selectedIds, setSelectedIds]       = useState([]);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [restoreTargetId, setRestoreTargetId] = useState(null);
+  const [bulkRestoreOpen, setBulkRestoreOpen] = useState(false);
   const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
   const [activeInvoice, setActiveInvoice]   = useState(null);
   const [paymentDialog, setPaymentDialog]   = useState(EMPTY_PAYMENT_DIALOG);
@@ -189,7 +195,8 @@ const InvoiceList = () => {
       sort_by: sortBy,
       sort_order: sortOrder,
       q: debouncedSearch,
-      status: status === "All" ? "" : status,
+      status: status === "All" || status === "Archived" ? "" : status,
+      lifecycle: status === "Archived" ? "archived" : "active",
       date_range: dateRange,
       date_from: dateRange === "custom" ? dateFrom : "",
       date_to:   dateRange === "custom" ? dateTo   : "",
@@ -207,16 +214,6 @@ const InvoiceList = () => {
     placeholderData: keepPreviousData,
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteInvoice,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invoices-list"] });
-      setConfirmDeleteId(null);
-      setUiError("");
-    },
-    onError: () => setUiError("Failed to delete invoice."),
-  });
-
   const bulkMutation = useMutation({
     mutationFn: bulkInvoiceAction,
     onSuccess: () => {
@@ -225,6 +222,22 @@ const InvoiceList = () => {
       setUiError("");
     },
     onError: () => setUiError("Failed to apply bulk action."),
+  });
+
+  const bulkArchiveMutation = useMutation({
+    mutationFn: (ids) => bulkArchiveEntities("invoice", ids),
+    onSuccess: (result) => {
+      setSelectedIds([]);
+      queryClient.invalidateQueries({ queryKey: ["invoices-list"] });
+      if (Number(result?.failedCount || 0) > 0) {
+        setUiError(
+          `${result.successCount || 0} invoices archived. ${result.failedCount || 0} could not be archived.`
+        );
+      } else {
+        setUiError("");
+      }
+    },
+    onError: () => setUiError("Failed to archive selected invoices."),
   });
 
   const paymentMutation = useMutation({
@@ -341,6 +354,10 @@ const InvoiceList = () => {
 
   const runBulkAction = (action) => {
     if (!selectedIds.length) return;
+    if (action === "archive" || action === "delete") {
+      bulkArchiveMutation.mutate(selectedIds);
+      return;
+    }
     bulkMutation.mutate({ action, ids: selectedIds });
   };
 
@@ -444,6 +461,7 @@ const InvoiceList = () => {
           { value: "Partially Paid", label: "Partially Paid" },
           { value: "Overdue",        label: "Overdue" },
           { value: "Cancelled",      label: "Cancelled" },
+          { value: "Archived",       label: "Archived" },
         ]}
         rightSlot={
           <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", alignItems: "center" }}>
@@ -513,9 +531,18 @@ const InvoiceList = () => {
       <BulkActionBar
         selectedCount={selectedIds.length}
         actions={[
-          { label: "Mark Paid", color: "success", onClick: () => runBulkAction("mark_paid"),   disabled: bulkMutation.isPending },
-          { label: "Send",                        onClick: () => runBulkAction("send_email"),  disabled: bulkMutation.isPending },
-          { label: "Delete",    color: "error",   onClick: () => runBulkAction("delete"),      disabled: bulkMutation.isPending },
+          ...(status === "Archived"
+            ? []
+            : [
+                { label: "Mark Paid", color: "success", onClick: () => runBulkAction("mark_paid"), disabled: bulkMutation.isPending || bulkArchiveMutation.isPending },
+                { label: "Send", onClick: () => runBulkAction("send_email"), disabled: bulkMutation.isPending || bulkArchiveMutation.isPending },
+              ]),
+          {
+            label: status === "Archived" ? "Restore Selected" : "Archive Selected",
+            color: status === "Archived" ? "success" : "warning",
+            onClick: () => (status === "Archived" ? setBulkRestoreOpen(true) : runBulkAction("archive")),
+            disabled: bulkMutation.isPending || bulkArchiveMutation.isPending,
+          },
         ]}
       />
 
@@ -531,7 +558,11 @@ const InvoiceList = () => {
           <InvoiceCard
             invoice={invoice}
             customerName={invoice.customer_name || ""}
-            onEdit={() => navigate(`/invoices/edit/${invoice.id}`)}
+            onEdit={() => {
+              if (status !== "Archived") {
+                navigate(`/invoices/edit/${invoice.id}`);
+              }
+            }}
             onActionMenu={(event) => handleActionMenuOpen(event, invoice)}
           />
         )}
@@ -642,6 +673,7 @@ const InvoiceList = () => {
         renderRow={(invoice) => {
           const s = statusStyle[invoice.status] || statusStyle.Draft;
           const checked = selectedIds.includes(invoice.id);
+          const isArchivedView = status === "Archived";
           const isOverdue =
             invoice.status !== "Paid" &&
             invoice.due_date &&
@@ -651,9 +683,13 @@ const InvoiceList = () => {
             <TableRow
               key={invoice.id}
               hover
-              onClick={() => navigate(`/invoices/edit/${invoice.id}`)}
+              onClick={() => {
+                if (!isArchivedView) {
+                  navigate(`/invoices/edit/${invoice.id}`);
+                }
+              }}
               sx={{
-                cursor: "pointer",
+                cursor: isArchivedView ? "default" : "pointer",
                 "& .MuiTableCell-root": {
                   borderBottom: "1px solid #edf0f3",
                   fontSize: "0.82rem",
@@ -733,18 +769,20 @@ const InvoiceList = () => {
 
               <TableCell align="center" onClick={(e) => e.stopPropagation()}>
                 <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0.2 }}>
-                  {invoice.status !== "Paid" && (
+                  {status !== "Archived" && invoice.status !== "Paid" && (
                     <Tooltip title="Record Payment">
                       <IconButton size="small" onClick={() => handleOpenPayment(invoice)} sx={{ color: "#1f7a36" }}>
                         <AttachMoneyIcon sx={{ fontSize: 16 }} />
                       </IconButton>
                     </Tooltip>
                   )}
-                  <Tooltip title="Send Invoice">
-                    <IconButton size="small" onClick={() => handleOpenEmail(invoice)} sx={{ color: "#0f6cbd" }}>
-                      <SendIcon sx={{ fontSize: 16 }} />
-                    </IconButton>
-                  </Tooltip>
+                  {status !== "Archived" && (
+                    <Tooltip title="Send Invoice">
+                      <IconButton size="small" onClick={() => handleOpenEmail(invoice)} sx={{ color: "#0f6cbd" }}>
+                        <SendIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
                   <IconButton size="small" onClick={(e) => handleActionMenuOpen(e, invoice)}>
                     <MoreVertIcon sx={{ fontSize: 18, color: "#7b8493" }} />
                   </IconButton>
@@ -765,28 +803,42 @@ const InvoiceList = () => {
 
       {/* ── More actions menu ──────────────────────────────────────────────── */}
       <Menu anchorEl={actionMenuAnchor} open={Boolean(actionMenuAnchor)} onClose={handleActionMenuClose}>
-        <MenuItem onClick={() => { navigate(`/invoices/edit/${activeInvoice?.id}`); handleActionMenuClose(); }}>
-          <ListItemIcon><VisibilityIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>View / Edit</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={() => handleOpenPayment(activeInvoice)} disabled={activeInvoice?.status === "Paid"}>
-          <ListItemIcon><AttachMoneyIcon fontSize="small" color="success" /></ListItemIcon>
-          <ListItemText>Record Payment</ListItemText>
-        </MenuItem>
         <MenuItem
           onClick={() => {
-            bulkMutation.mutate({ action: "mark_paid", ids: [activeInvoice?.id] });
+            if (status !== "Archived") {
+              navigate(`/invoices/edit/${activeInvoice?.id}`);
+            }
             handleActionMenuClose();
           }}
-          disabled={activeInvoice?.status === "Paid"}
+          disabled={status === "Archived"}
         >
-          <ListItemIcon><CheckCircleIcon fontSize="small" color="success" /></ListItemIcon>
-          <ListItemText>Mark as Paid</ListItemText>
+          <ListItemIcon><VisibilityIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>View Details</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => handleOpenEmail(activeInvoice)}>
-          <ListItemIcon><EmailIcon fontSize="small" color="primary" /></ListItemIcon>
-          <ListItemText>Send Invoice</ListItemText>
-        </MenuItem>
+        {status !== "Archived" && (
+          <MenuItem onClick={() => handleOpenPayment(activeInvoice)} disabled={activeInvoice?.status === "Paid"}>
+            <ListItemIcon><AttachMoneyIcon fontSize="small" color="success" /></ListItemIcon>
+            <ListItemText>Record Payment</ListItemText>
+          </MenuItem>
+        )}
+        {status !== "Archived" && (
+          <MenuItem
+            onClick={() => {
+              bulkMutation.mutate({ action: "mark_paid", ids: [activeInvoice?.id] });
+              handleActionMenuClose();
+            }}
+            disabled={activeInvoice?.status === "Paid"}
+          >
+            <ListItemIcon><CheckCircleIcon fontSize="small" color="success" /></ListItemIcon>
+            <ListItemText>Mark as Paid</ListItemText>
+          </MenuItem>
+        )}
+        {status !== "Archived" && (
+          <MenuItem onClick={() => handleOpenEmail(activeInvoice)}>
+            <ListItemIcon><EmailIcon fontSize="small" color="primary" /></ListItemIcon>
+            <ListItemText>Send Invoice</ListItemText>
+          </MenuItem>
+        )}
         <MenuItem onClick={() => handleDownloadPDF(activeInvoice)}>
           <ListItemIcon><PictureAsPdfIcon fontSize="small" color="error" /></ListItemIcon>
           <ListItemText>Download PDF</ListItemText>
@@ -797,28 +849,57 @@ const InvoiceList = () => {
         </MenuItem>
         <MenuItem onClick={() => { setConfirmDeleteId(activeInvoice?.id); handleActionMenuClose(); }}>
           <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
-          <ListItemText>Delete</ListItemText>
+          <ListItemText>Archive</ListItemText>
         </MenuItem>
+        {status === "Archived" && (
+          <MenuItem onClick={() => { setRestoreTargetId(activeInvoice?.id); handleActionMenuClose(); }}>
+            <ListItemIcon><RestoreIcon fontSize="small" color="success" /></ListItemIcon>
+            <ListItemText>Restore</ListItemText>
+          </MenuItem>
+        )}
       </Menu>
 
-      {/* ── Confirm delete dialog ──────────────────────────────────────────── */}
-      <Dialog open={Boolean(confirmDeleteId)} onClose={() => setConfirmDeleteId(null)}>
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-          <Typography>Are you sure you want to delete this invoice? This action cannot be undone.</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmDeleteId(null)}>Cancel</Button>
-          <Button
-            onClick={() => deleteMutation.mutate(confirmDeleteId)}
-            color="error"
-            variant="contained"
-            disabled={deleteMutation.isPending}
-          >
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ArchiveDialog
+        open={Boolean(confirmDeleteId)}
+        onClose={() => setConfirmDeleteId(null)}
+        entityType="invoice"
+        entityId={confirmDeleteId}
+        entityLabel="Invoice"
+        onArchived={() => {
+          queryClient.invalidateQueries({ queryKey: ["invoices-list"] });
+          setConfirmDeleteId(null);
+          setUiError("");
+        }}
+      />
+
+      <LifecycleArchiveDialog
+        open={Boolean(restoreTargetId)}
+        onClose={() => setRestoreTargetId(null)}
+        mode="restore"
+        entityType="invoice"
+        entityId={restoreTargetId}
+        entityLabel="Invoice"
+        onConfirmed={() => {
+          queryClient.invalidateQueries({ queryKey: ["invoices-list"] });
+          setRestoreTargetId(null);
+        }}
+      />
+
+      <LifecycleArchiveDialog
+        open={bulkRestoreOpen}
+        onClose={() => setBulkRestoreOpen(false)}
+        mode="bulk-restore"
+        entityType="invoice"
+        entityIds={selectedIds}
+        entityLabel="Invoice"
+        entityCount={selectedIds.length}
+        onConfirmed={() => {
+          queryClient.invalidateQueries({ queryKey: ["invoices-list"] });
+          setSelectedIds([]);
+          setBulkRestoreOpen(false);
+          setUiError("");
+        }}
+      />
 
       {/* ── Record payment dialog ──────────────────────────────────────────── */}
       <Dialog open={paymentDialog.open} onClose={() => setPaymentDialog(EMPTY_PAYMENT_DIALOG)} maxWidth="xs" fullWidth>

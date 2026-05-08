@@ -41,7 +41,7 @@ describe('AdminLogin', () => {
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
 
     await waitFor(() => {
-      expect(screen.getByText('Username is required')).toBeInTheDocument();
+      expect(screen.getAllByText('Username is required').length).toBeGreaterThan(0);
     });
   });
 
@@ -55,7 +55,7 @@ describe('AdminLogin', () => {
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
 
     await waitFor(() => {
-      expect(screen.getByText('Password is required')).toBeInTheDocument();
+      expect(screen.getAllByText('Password is required').length).toBeGreaterThan(0);
     });
   });
 

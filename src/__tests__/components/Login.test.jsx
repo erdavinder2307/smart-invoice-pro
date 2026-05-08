@@ -70,7 +70,7 @@ describe('LoginPage', () => {
     renderWithProviders(<LoginPage />);
     const signupBtn = screen.getByRole('button', { name: /sign up/i });
     fireEvent.click(signupBtn);
-    expect(screen.getByText('Create Account')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Create Account' })).toBeInTheDocument();
   });
 
   it('shows validation error on signup with weak password', async () => {
@@ -88,7 +88,7 @@ describe('LoginPage', () => {
     await act(async () => { fireEvent.submit(form); });
 
     await waitFor(() => {
-      expect(screen.getByText(/password does not meet/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/password does not meet/i).length).toBeGreaterThan(0);
     });
   });
 

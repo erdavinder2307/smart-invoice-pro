@@ -143,6 +143,7 @@ const AddEditQuote = () => {
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isArchived, setIsArchived] = useState(false);
   const [showItemErrors, setShowItemErrors] = useState(false);
   const [pendingFiles, setPendingFiles] = useState([]);
   const cellRefs = useRef({});
@@ -362,6 +363,8 @@ const AddEditQuote = () => {
         if (quoteId) {
           const quoteResponse = await axios.get(createApiUrl(`/api/quotes/${quoteId}`));
           if (!active) return;
+          const archived = String(quoteResponse.data?.lifecycle_status || quoteResponse.data?.status || '').toUpperCase() === 'ARCHIVED' || Boolean(quoteResponse.data?.is_deleted);
+          setIsArchived(archived);
           setForm((prev) => ({
             ...prev,
             ...quoteResponse.data,
@@ -556,6 +559,10 @@ const AddEditQuote = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (isArchived) {
+      setError('Archived quotes are read-only. Restore the quote to edit.');
+      return;
+    }
     const submitStatus = event.nativeEvent?.submitter?.value || form.status || 'Draft';
 
     setLoading(true);
@@ -642,6 +649,12 @@ const AddEditQuote = () => {
             {error && (
               <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2, borderRadius: '4px' }}>
                 {error}
+              </Alert>
+            )}
+
+            {isArchived && (
+              <Alert severity="warning" sx={{ mb: 2, borderRadius: '4px' }}>
+                Archived quotes are read-only. Restore this quote before editing.
               </Alert>
             )}
 
@@ -1062,14 +1075,14 @@ const AddEditQuote = () => {
 
               <Box sx={{ ...footerSx, justifyContent: 'space-between' }}>
                 <Box sx={{ display: 'flex', gap: 1.1, flexWrap: 'wrap' }}>
-                  <Button type="submit" value="Draft" variant="outlined" disabled={loading} sx={cancelBtnSx}>
+                  <Button type="submit" value="Draft" variant="outlined" disabled={loading || isArchived} sx={cancelBtnSx}>
                     {loading ? 'Saving…' : 'Save as Draft'}
                   </Button>
                   <Button
                     type="submit"
                     value="Sent"
                     variant="contained"
-                    disabled={loading}
+                    disabled={loading || isArchived}
                     startIcon={loading ? <CircularProgress size={14} color="inherit" /> : null}
                     sx={saveBtnSx}
                   >

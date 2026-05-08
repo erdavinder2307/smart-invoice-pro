@@ -57,11 +57,15 @@ axios.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Only handle 401s once per request, and don't retry refresh calls
+    // Only handle 401s once per request, and don't retry refresh calls.
+    // Also only attempt refresh if the user has an active session (refresh token present);
+    // otherwise a 401 on an unauthenticated request would incorrectly trigger the
+    // "Session expired" banner.
     if (
       error.response?.status === 401 &&
       !originalRequest._retried &&
-      !originalRequest._skipAuthRetry
+      !originalRequest._skipAuthRetry &&
+      localStorage.getItem('refresh_token')
     ) {
       if (_isRefreshing) {
         // Another refresh is in flight — queue this request

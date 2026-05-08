@@ -23,7 +23,15 @@ const formatCurrency = (value) => `₹${Number(value || 0).toLocaleString()}`;
  *   onEdit   {fn}      — edit handler
  *   onDelete {fn}      — delete handler
  */
-const ExpenseCard = ({ expense, onEdit, onDelete }) => (
+const ExpenseCard = ({
+  expense,
+  onEdit,
+  onDelete,
+  deleteLabel = "Delete expense",
+  deleteColor = "#ef4444",
+  deleteHoverBg = "#fef2f2",
+  deleteIcon = "delete",
+}) => (
   <Card
     elevation={0}
     sx={{

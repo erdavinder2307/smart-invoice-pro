@@ -37,6 +37,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import NoteAddIcon from "@mui/icons-material/NoteAdd";
 import PaymentsIcon from "@mui/icons-material/Payments";
+import RestoreIcon from "@mui/icons-material/Restore";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import StarBorderIcon from "@mui/icons-material/StarBorder";
 import { useTranslation } from "react-i18next";
@@ -50,6 +51,8 @@ import ListHeader from "./list/ListHeader";
 import FilterBar from "./list/FilterBar";
 import ListSummary from "./list/ListSummary";
 import BulkActionBar from "./list/BulkActionBar";
+import ArchiveDialog from "./common/ArchiveDialog";
+import LifecycleArchiveDialog from "./common/LifecycleArchiveDialog";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import {
   buildApiDateFilterParams,
@@ -61,7 +64,7 @@ import useTableSorting from "../hooks/useTableSorting";
 import { saveSearchHistory } from "../services/searchService";
 import { invalidateSearchHistoryCache } from "./list/ListHeader";
 
-const VIEW_OPTIONS = ["All", "Active", "Inactive", "With Dues", "Overdue"];
+const VIEW_OPTIONS = ["All", "Active", "Inactive", "Archived", "With Dues", "Overdue"];
 const PAYMENT_MODES = ["Cash", "Bank Transfer", "UPI", "Card", "Cheque"];
 
 const toNumber = (value) => {
@@ -151,6 +154,8 @@ const CustomerList = () => {
   const [customers, setCustomers] = useState([]);
   const [error, setError] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [restoreTargetId, setRestoreTargetId] = useState(null);
+  const [confirmBulkArchiveOpen, setConfirmBulkArchiveOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [immediateSearchTerm, setImmediateSearchTerm] = useState("");
@@ -191,7 +196,7 @@ const CustomerList = () => {
     setLoading(true);
     setError("");
     try {
-      const data = await getCustomers(filters);
+      const data = await getCustomers({ ...filters, lifecycle: "all" });
       setCustomers(Array.isArray(data) ? data.map(normalizeCustomer) : []);
     } catch {
       setCustomers([]);
@@ -293,6 +298,7 @@ const CustomerList = () => {
     const term = effectiveSearchTerm.trim().toLowerCase();
 
     const filtered = enrichedCustomers.filter((customer) => {
+      const isArchived = customer.status === "ARCHIVED";
       const matchesSearch = !term || [
         customer.name,
         customer.company_name,
@@ -303,10 +309,11 @@ const CustomerList = () => {
 
       const matchesStatus = (
         statusFilter === "All"
-        || (statusFilter === "Active" && customer.activityStatus === "Active")
+        || (statusFilter === "Active" && customer.activityStatus === "Active" && !isArchived)
         || (statusFilter === "Inactive" && customer.activityStatus === "Inactive")
-        || (statusFilter === "With Dues" && customer.receivables > 0)
-        || (statusFilter === "Overdue" && customer.overdueAmount > 0)
+        || (statusFilter === "Archived" && isArchived)
+        || (statusFilter === "With Dues" && customer.receivables > 0 && !isArchived)
+        || (statusFilter === "Overdue" && customer.overdueAmount > 0 && !isArchived)
       );
 
       return matchesSearch && matchesStatus;
@@ -353,19 +360,6 @@ const CustomerList = () => {
   const topCustomers = useMemo(() => (
     [...enrichedCustomers].sort((a, b) => b.totalRevenue - a.totalRevenue).slice(0, 5)
   ), [enrichedCustomers]);
-
-  const handleDelete = async (id) => {
-    setLoading(true);
-    try {
-      await axios.delete(createApiUrl(`/api/customers/${id}`));
-      setConfirmDeleteId(null);
-      setSelectedCustomers((prev) => prev.filter((customerId) => customerId !== id));
-      await fetchCustomers(apiDateFilters);
-    } catch {
-      setError(tl("customerList.deleteFailed", "Failed to delete customer."));
-      setLoading(false);
-    }
-  };
 
   const handleCreateInvoice = (customer) => {
     navigate("/invoices/add", { state: { quickCreateCustomerId: customer.id } });
@@ -586,9 +580,9 @@ const CustomerList = () => {
         selectedCount={selectedCustomers.length}
         actions={[
           {
-            label: tl("customerList.bulk.delete", "Delete Selected"),
-            color: "error",
-            onClick: () => setConfirmDeleteId(selectedCustomers[0] || null),
+            label: statusFilter === "Archived" ? tl("common.restore", "Restore Selected") : tl("customerList.bulk.delete", "Archive Selected"),
+            color: statusFilter === "Archived" ? "success" : "warning",
+            onClick: () => setConfirmBulkArchiveOpen(true),
             disabled: selectedCustomers.length === 0,
           },
         ]}
@@ -596,16 +590,31 @@ const CustomerList = () => {
 
       <ResponsiveDataView
         isMobile={isMobile}
-        renderCard={(customer) => (
-          <CustomerCard
-            customer={customer}
-            onClick={() => navigate(`/customers/${customer.id}`)}
-            onEdit={() => navigate(`/customers/edit/${customer.id}`)}
-            onDelete={() => setConfirmDeleteId(customer.id)}
-            onCreateInvoice={() => handleCreateInvoice(customer)}
-            onRecordPayment={() => handleOpenPaymentDialog(customer)}
-          />
-        )}
+        renderCard={(customer) => {
+          const isArchived = customer.status === "ARCHIVED";
+          return (
+            <CustomerCard
+              customer={customer}
+              onClick={() => {
+                if (!isArchived) {
+                  navigate(`/customers/${customer.id}`);
+                }
+              }}
+              onEdit={() => {
+                if (!isArchived) {
+                  navigate(`/customers/edit/${customer.id}`);
+                }
+              }}
+              onDelete={() => (statusFilter === "Archived" ? setRestoreTargetId(customer.id) : setConfirmDeleteId(customer.id))}
+              deleteLabel={statusFilter === "Archived" ? "Restore customer" : "Archive customer"}
+              deleteColor={statusFilter === "Archived" ? "#059669" : "#ef4444"}
+              deleteHoverBg={statusFilter === "Archived" ? "#ecfdf5" : "#fef2f2"}
+              deleteIcon={statusFilter === "Archived" ? "restore" : "delete"}
+              onCreateInvoice={() => handleCreateInvoice(customer)}
+              onRecordPayment={() => handleOpenPaymentDialog(customer)}
+            />
+          );
+        }}
         columns={[
           { key: "checkbox", label: "", width: CHECKBOX_COLUMN_WIDTH },
           { key: "name", label: tl("customerList.columns.customer", "CUSTOMER"), width: "28%" },
@@ -688,6 +697,7 @@ const CustomerList = () => {
         )}
         renderRow={(customer) => {
           const isSelected = selectedCustomers.includes(customer.id);
+          const isArchived = customer.status === "ARCHIVED";
           const rowBg = customer.overdueAmount > 0 ? "#fff7f7" : customer.receivables > 0 ? "#fffaf0" : "transparent";
 
           return (
@@ -695,12 +705,16 @@ const CustomerList = () => {
               key={customer.id}
               hover
               selected={isSelected}
-              onClick={() => navigate(`/customers/${customer.id}`)}
+              onClick={() => {
+                if (!isArchived) {
+                  navigate(`/customers/${customer.id}`);
+                }
+              }}
               sx={{
                 "& td": { borderBottomColor: "#edf0f3", py: 1.7 },
                 "&:hover": { bgcolor: customer.overdueAmount > 0 ? "#fff1f1" : "#fafcff" },
                 bgcolor: rowBg,
-                cursor: "pointer",
+                cursor: isArchived ? "default" : "pointer",
               }}
             >
               <TableCell sx={{ width: CHECKBOX_COLUMN_WIDTH, padding: "0 4px" }} onClick={(event) => event.stopPropagation()}>
@@ -717,14 +731,14 @@ const CustomerList = () => {
                   sx={{
                     fontSize: "0.825rem",
                     fontWeight: 600,
-                    color: "#2563eb",
-                    cursor: "pointer",
+                    color: isArchived ? "#374151" : "#2563eb",
+                    cursor: isArchived ? "default" : "pointer",
                     display: "block",
                     width: "100%",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
-                    "&:hover": { textDecoration: "underline" },
+                    "&:hover": isArchived ? undefined : { textDecoration: "underline" },
                   }}
                 >
                   {customer.name}
@@ -735,7 +749,12 @@ const CustomerList = () => {
               </TableCell>
               <TableCell>
                 <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-                  <Chip size="small" label={customer.activityStatus} color={customer.activityStatus === "Inactive" ? "default" : "success"} variant="outlined" />
+                  <Chip
+                    size="small"
+                    label={isArchived ? "Archived" : customer.activityStatus}
+                    color={isArchived || customer.activityStatus === "Inactive" ? "default" : "success"}
+                    variant="outlined"
+                  />
                   {(customer.health.type === "atRisk" || customer.health.type === "highValue") && (
                     <Chip size="small" label={customer.health.label} color={customer.health.color} variant="filled" />
                   )}
@@ -766,24 +785,35 @@ const CustomerList = () => {
               </TableCell>
               <TableCell align="center" onClick={(event) => event.stopPropagation()} sx={{ pl: 0.5, pr: 3, py: 0 }}>
                 <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0.25 }}>
-                  <Tooltip title={tl("customerList.actions.createInvoice", "Create Invoice")}>
-                    <IconButton aria-label={`Create invoice for ${customer.name}`} size="small" onClick={() => handleCreateInvoice(customer)} sx={{ color: "#2563eb" }}>
-                      <NoteAddIcon sx={{ fontSize: 17 }} />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title={tl("customerList.actions.recordPayment", "Record Payment")}>
-                    <IconButton aria-label={`Record payment for ${customer.name}`} size="small" onClick={() => handleOpenPaymentDialog(customer)} sx={{ color: "#059669" }}>
-                      <PaymentsIcon sx={{ fontSize: 17 }} />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title={tl("customerList.actions.edit", "Edit")}>
-                    <IconButton aria-label={`Edit ${customer.name}`} size="small" onClick={() => navigate(`/customers/edit/${customer.id}`)} sx={{ color: "#5f87e7" }}>
-                      <EditIcon sx={{ fontSize: 17 }} />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title={tl("customerList.actions.delete", "Delete")}>
-                    <IconButton aria-label={`Delete ${customer.name}`} size="small" onClick={() => setConfirmDeleteId(customer.id)} sx={{ color: "#ef4444" }}>
-                      <DeleteIcon sx={{ fontSize: 17 }} />
+                  {!isArchived && (
+                    <Tooltip title={tl("customerList.actions.createInvoice", "Create Invoice")}>
+                      <IconButton aria-label={`Create invoice for ${customer.name}`} size="small" onClick={() => handleCreateInvoice(customer)} sx={{ color: "#2563eb" }}>
+                        <NoteAddIcon sx={{ fontSize: 17 }} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                  {!isArchived && (
+                    <Tooltip title={tl("customerList.actions.recordPayment", "Record Payment")}>
+                      <IconButton aria-label={`Record payment for ${customer.name}`} size="small" onClick={() => handleOpenPaymentDialog(customer)} sx={{ color: "#059669" }}>
+                        <PaymentsIcon sx={{ fontSize: 17 }} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                  {!isArchived && (
+                    <Tooltip title={tl("customerList.actions.edit", "Edit")}>
+                      <IconButton aria-label={`Edit ${customer.name}`} size="small" onClick={() => navigate(`/customers/edit/${customer.id}`)} sx={{ color: "#5f87e7" }}>
+                        <EditIcon sx={{ fontSize: 17 }} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                  <Tooltip title={statusFilter === "Archived" ? tl("common.restore", "Restore") : tl("customerList.actions.delete", "Archive")}>
+                    <IconButton
+                      aria-label={statusFilter === "Archived" ? `Restore ${customer.name}` : `Archive ${customer.name}`}
+                      size="small"
+                      onClick={() => (statusFilter === "Archived" ? setRestoreTargetId(customer.id) : setConfirmDeleteId(customer.id))}
+                      sx={{ color: statusFilter === "Archived" ? "#059669" : "#ef4444" }}
+                    >
+                      {statusFilter === "Archived" ? <RestoreIcon sx={{ fontSize: 17 }} /> : <DeleteIcon sx={{ fontSize: 17 }} />}
                     </IconButton>
                   </Tooltip>
                 </Box>
@@ -876,58 +906,46 @@ const CustomerList = () => {
         </DialogActions>
       </Dialog>
 
-      <Dialog
+      <ArchiveDialog
         open={!!confirmDeleteId}
         onClose={() => setConfirmDeleteId(null)}
-        maxWidth="xs"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            boxShadow: 6,
-          },
+        entityType="customer"
+        entityId={confirmDeleteId}
+        entityLabel="Customer"
+        onArchived={async () => {
+          setSelectedCustomers((prev) => prev.filter((customerId) => customerId !== confirmDeleteId));
+          await fetchCustomers(apiDateFilters);
         }}
-      >
-        <DialogTitle sx={{ pb: 1.25 }}>
-          <Typography sx={{ fontSize: "1rem", fontWeight: 700, color: "#1f2937" }}>
-            {tl("customerList.deleteTitle", "Delete customer?")}
-          </Typography>
-        </DialogTitle>
-        <DialogContent>
-          <Typography sx={{ fontSize: "0.9rem", color: "#6b7280", lineHeight: 1.6 }}>
-            {tl("customerList.deleteMessage", "This customer will be removed permanently. This action cannot be undone.")}
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2.5, pt: 1.5, gap: 1 }}>
-          <Button
-            onClick={() => setConfirmDeleteId(null)}
-            variant="outlined"
-            sx={{
-              textTransform: "none",
-              borderRadius: "8px",
-              px: 2.25,
-              borderColor: "#d1d5db",
-              color: "#4b5563",
-            }}
-          >
-            {tl("common.cancel", "Cancel")}
-          </Button>
-          <Button
-            onClick={() => handleDelete(confirmDeleteId)}
-            variant="contained"
-            color="error"
-            disabled={loading}
-            sx={{
-              textTransform: "none",
-              borderRadius: "8px",
-              px: 2.25,
-              boxShadow: "none",
-            }}
-          >
-            {loading ? <CircularProgress size={18} color="inherit" /> : tl("customerList.actions.delete", "Delete")}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      />
+
+      <LifecycleArchiveDialog
+        open={!!restoreTargetId}
+        onClose={() => setRestoreTargetId(null)}
+        mode="restore"
+        entityType="customer"
+        entityId={restoreTargetId}
+        entityLabel="Customer"
+        onConfirmed={async () => {
+          setSelectedCustomers((prev) => prev.filter((customerId) => customerId !== restoreTargetId));
+          setRestoreTargetId(null);
+          await fetchCustomers(apiDateFilters);
+        }}
+      />
+
+      <LifecycleArchiveDialog
+        open={confirmBulkArchiveOpen}
+        onClose={() => setConfirmBulkArchiveOpen(false)}
+        mode={statusFilter === "Archived" ? "bulk-restore" : "bulk-archive"}
+        entityType="customer"
+        entityIds={selectedCustomers}
+        entityLabel="Customer"
+        entityCount={selectedCustomers.length}
+        onConfirmed={async () => {
+          setSelectedCustomers([]);
+          setConfirmBulkArchiveOpen(false);
+          await fetchCustomers(apiDateFilters);
+        }}
+      />
 
       <Snackbar
         open={toast.open}

@@ -3,24 +3,22 @@ import axios from "axios";
 import { createApiUrl } from "../config/api";
 import MainLayout from "./Layout/MainLayout";
 import SummaryCard from "./common/SummaryCard";
+import ArchiveDialog from "./common/ArchiveDialog";
+import LifecycleArchiveDialog from "./common/LifecycleArchiveDialog";
 import {
   Box,
   Button,
+  Checkbox,
   Typography,
   Paper,
   TableRow,
   TableCell,
-  CircularProgress,
   Alert,
   InputAdornment,
   TextField,
   Fade,
   Grid,
   IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Container,
   FormControl,
   Select,
@@ -33,12 +31,14 @@ import {
 } from "@mui/material";
 import ResponsiveDataView from "./common/ResponsiveDataView";
 import ExpenseCard from "./common/ExpenseCard";
+import BulkActionBar from "./list/BulkActionBar";
 import { useNavigate, useLocation } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
 import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
+import ArchiveIcon from "@mui/icons-material/Archive";
 import ReceiptIcon from "@mui/icons-material/Receipt";
+import RestoreIcon from "@mui/icons-material/Restore";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import CategoryIcon from "@mui/icons-material/Category";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
@@ -46,6 +46,8 @@ import ImageIcon from "@mui/icons-material/Image";
 import { useTranslation } from "react-i18next";
 import { getDateRange, formatDateOnly } from "../utils/dateRangeFilters";
 import useTableSorting from "../hooks/useTableSorting";
+
+const STATUS_OPTIONS = ["All", "Pending", "Paid", "Archived"];
 
 const CATEGORIES = [
   "All",
@@ -70,8 +72,12 @@ const ExpenseList = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState(() => new URLSearchParams(location.search).get("status") || "All");
   const [categoryFilter, setCategoryFilter] = useState("All");
-  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [archiveExpense, setArchiveExpense] = useState(null);
+  const [restoreExpense, setRestoreExpense] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [confirmBulkArchiveOpen, setConfirmBulkArchiveOpen] = useState(false);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [startDate, setStartDate] = useState(() => {
@@ -107,6 +113,11 @@ const ExpenseList = () => {
       let url = createApiUrl("/api/expenses");
       const params = new URLSearchParams();
       
+      if (statusFilter === "Archived") {
+        params.append("lifecycle", "archived");
+      } else {
+        params.append("lifecycle", "active");
+      }
       if (categoryFilter && categoryFilter !== "All") {
         params.append("category", categoryFilter);
       }
@@ -132,22 +143,14 @@ const ExpenseList = () => {
       console.error(error);
     }
     setLoading(false);
-  }, [categoryFilter, startDate, endDate, sortParams, t]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [categoryFilter, endDate, sortParams, startDate, statusFilter, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetchExpenses();
   }, [fetchExpenses, sortBy, sortOrder]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleDelete = async (id) => {
-    setLoading(true);
-    try {
-      await axios.delete(createApiUrl(`/api/expenses/${id}`));
-      await fetchExpenses();
-      setConfirmDeleteId(null);
-    } catch (error) {
-      setError(error.response?.data?.error || t('expenseList.failedDelete'));
-    }
-    setLoading(false);
+  const handleDelete = (expense) => {
+    setArchiveExpense(expense);
   };
 
   // Filter expenses by search term
@@ -157,7 +160,17 @@ const ExpenseList = () => {
       expense.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       expense.notes?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    return matchesSearch;
+    const normalizedStatus = String(expense.status || expense.payment_status || "").trim().toLowerCase();
+    const matchesStatus =
+      statusFilter === "All"
+        ? true
+        : statusFilter === "Archived"
+          ? true
+          : statusFilter === "Paid"
+            ? normalizedStatus === "paid"
+            : normalizedStatus !== "paid";
+
+    return matchesSearch && matchesStatus;
   });
 
   // Paginated expenses
@@ -187,6 +200,18 @@ const ExpenseList = () => {
   const handleChangeRowsPerPage = (event) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
+  };
+
+  const handleToggleExpense = (expenseId, checked) => {
+    setSelectedIds((prev) => (
+      checked ? Array.from(new Set([...prev, expenseId])) : prev.filter((id) => id !== expenseId)
+    ));
+  };
+
+  const handleBulkArchiveConfirmed = async () => {
+    setSelectedIds([]);
+    setConfirmBulkArchiveOpen(false);
+    await fetchExpenses();
   };
 
   return (
@@ -277,6 +302,18 @@ const ExpenseList = () => {
               borderColor: "grey.200"
             }}
           >
+            <FormControl size="small" sx={{ minWidth: 140 }}>
+              <Select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                displayEmpty
+                sx={{ borderRadius: 2 }}
+              >
+                {STATUS_OPTIONS.map((option) => (
+                  <MenuItem key={option} value={option}>{option}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
             <FormControl size="small" sx={{ minWidth: 150 }}>
               <Select
                 value={categoryFilter}
@@ -352,17 +389,41 @@ const ExpenseList = () => {
           </Fade>
         )}
 
+        {selectedIds.length > 0 && (
+          <BulkActionBar
+            selectedCount={selectedIds.length}
+            actions={[
+              {
+                label: statusFilter === "Archived" ? "Restore Selected" : "Archive Selected",
+                color: statusFilter === "Archived" ? "success" : "warning",
+                onClick: () => setConfirmBulkArchiveOpen(true),
+              },
+            ]}
+            onClear={() => setSelectedIds([])}
+            sx={{ mb: 2 }}
+          />
+        )}
+
         {/* Main Table */}
         <ResponsiveDataView
           isMobile={isMobile}
           renderCard={(expense) => (
             <ExpenseCard
               expense={expense}
-              onEdit={() => navigate(`/expenses/edit/${expense.id}`)}
-              onDelete={() => setConfirmDeleteId(expense.id)}
+              onEdit={() => {
+                if (statusFilter !== "Archived") {
+                  navigate(`/expenses/edit/${expense.id}`);
+                }
+              }}
+              onDelete={() => (statusFilter === "Archived" ? setRestoreExpense(expense) : handleDelete(expense))}
+              deleteLabel={statusFilter === "Archived" ? "Restore expense" : "Archive expense"}
+              deleteColor={statusFilter === "Archived" ? "#059669" : "#ef4444"}
+              deleteHoverBg={statusFilter === "Archived" ? "#ecfdf5" : "#fef2f2"}
+              deleteIcon={statusFilter === "Archived" ? "restore" : "delete"}
             />
           )}
           columns={[
+            { key: 'checkbox', label: '' },
             { key: 'date', label: 'Date', sortable: true },
             { key: 'vendor', label: 'Vendor/Payee' },
             { key: 'category', label: 'Category' },
@@ -382,6 +443,13 @@ const ExpenseList = () => {
           emptySubtitle={searchTerm || categoryFilter !== "All" || startDate || endDate ? "Try adjusting your filters" : "Click 'New Expense' to record your first expense"}
           renderRow={(expense) => (
             <TableRow key={expense.id} hover>
+              <TableCell padding="checkbox" onClick={(event) => event.stopPropagation()}>
+                <Checkbox
+                  size="small"
+                  checked={selectedIds.includes(expense.id)}
+                  onChange={(event) => handleToggleExpense(expense.id, event.target.checked)}
+                />
+              </TableCell>
               <TableCell>
                 <Typography variant="body2">{new Date(expense.date).toLocaleDateString()}</Typography>
               </TableCell>
@@ -415,14 +483,20 @@ const ExpenseList = () => {
               </TableCell>
               <TableCell align="center">
                 <Box display="flex" gap={0.5} justifyContent="center">
-                  <Tooltip title="Edit">
-                    <IconButton size="small" onClick={() => navigate(`/expenses/edit/${expense.id}`)} sx={{ color: "primary.main" }}>
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Delete">
-                    <IconButton size="small" onClick={() => setConfirmDeleteId(expense.id)} sx={{ color: "error.main" }}>
-                      <DeleteIcon fontSize="small" />
+                  {statusFilter !== "Archived" && (
+                    <Tooltip title="Edit">
+                      <IconButton size="small" onClick={() => navigate(`/expenses/edit/${expense.id}`)} sx={{ color: "primary.main" }}>
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                  <Tooltip title={statusFilter === "Archived" ? "Restore" : "Archive"}>
+                    <IconButton
+                      size="small"
+                      onClick={() => (statusFilter === "Archived" ? setRestoreExpense(expense) : handleDelete(expense))}
+                      sx={{ color: statusFilter === "Archived" ? "success.main" : "error.main" }}
+                    >
+                      {statusFilter === "Archived" ? <RestoreIcon fontSize="small" /> : <ArchiveIcon fontSize="small" />}
                     </IconButton>
                   </Tooltip>
                 </Box>
@@ -470,51 +544,41 @@ const ExpenseList = () => {
         )}
       </Container>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={!!confirmDeleteId}
-        onClose={() => setConfirmDeleteId(null)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            boxShadow: 4
-          }
+      <ArchiveDialog
+        open={!!archiveExpense}
+        entityType="expense"
+        entityId={archiveExpense?.id}
+        entityLabel={archiveExpense?.vendor_name || "Expense"}
+        onClose={() => setArchiveExpense(null)}
+        onArchived={() => {
+          setArchiveExpense(null);
+          fetchExpenses();
         }}
-      >
-        <DialogTitle sx={{ pb: 2 }}>
-          <Typography variant="h6" fontWeight={700} color="error.main">
-            Delete Expense
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            This action cannot be undone
-          </Typography>
-        </DialogTitle>
-        <DialogContent>
-          <Typography variant="body1" color="text.secondary">
-            Are you sure you want to delete this expense?
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3, gap: 1.5 }}>
-          <Button
-            onClick={() => setConfirmDeleteId(null)}
-            variant="outlined"
-            sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600 }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={() => handleDelete(confirmDeleteId)}
-            variant="contained"
-            color="error"
-            disabled={loading}
-            sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600 }}
-          >
-            {loading ? <CircularProgress size={20} color="inherit" /> : "Delete"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      />
+
+      <LifecycleArchiveDialog
+        open={!!restoreExpense}
+        entityType="expense"
+        entityId={restoreExpense?.id}
+        entityLabel={restoreExpense?.vendor_name || "Expense"}
+        mode="restore"
+        onClose={() => setRestoreExpense(null)}
+        onConfirmed={() => {
+          setRestoreExpense(null);
+          fetchExpenses();
+        }}
+      />
+
+      <LifecycleArchiveDialog
+        open={confirmBulkArchiveOpen}
+        entityType="expense"
+        entityIds={selectedIds}
+        entityCount={selectedIds.length}
+        entityLabel="Expense"
+        mode={statusFilter === "Archived" ? "bulk-restore" : "bulk-archive"}
+        onClose={() => setConfirmBulkArchiveOpen(false)}
+        onConfirmed={handleBulkArchiveConfirmed}
+      />
     </MainLayout>
   );
 };

@@ -106,6 +106,7 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
   const [form, setForm] = useState(initialForm);
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState('');
+  const [isArchived, setIsArchived] = useState(false);
   const [errors, setErrors] = useState({});
   const [vendors, setVendors] = useState([]);
   const [showInventoryFields, setShowInventoryFields] = useState(false);
@@ -128,6 +129,8 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
       setLoading(true);
       axios.get(createApiUrl(`/api/products/${productId}`))
         .then((res) => {
+          const archived = String(res.data?.lifecycle_status || res.data?.status || '').toUpperCase() === 'ARCHIVED' || Boolean(res.data?.is_deleted);
+          setIsArchived(archived);
           setForm((prev) => ({
             ...prev,
             ...res.data,
@@ -209,6 +212,10 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isArchived) {
+      setServerError('Archived products are read-only. Restore the item to edit.');
+      return;
+    }
     setServerError('');
     const newErrors = validateForm();
     if (Object.keys(newErrors).length > 0) {
@@ -261,6 +268,12 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
           {serverError && (
             <Alert severity="error" onClose={() => setServerError('')} sx={{ mb: 2, borderRadius: '4px' }}>
               {serverError}
+            </Alert>
+          )}
+
+          {isArchived && (
+            <Alert severity="warning" sx={{ mb: 2, borderRadius: '4px' }}>
+              Archived products are read-only. Restore this item before editing.
             </Alert>
           )}
 
@@ -642,7 +655,7 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
               <Button
                 type="submit"
                 variant="contained"
-                disabled={loading}
+                disabled={loading || isArchived}
                 startIcon={loading ? <CircularProgress size={14} color="inherit" /> : null}
                 sx={saveBtnSx}
               >

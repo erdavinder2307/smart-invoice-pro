@@ -10,7 +10,6 @@ import {
   Box,
   Button,
   Checkbox,
-  CircularProgress,
   IconButton,
   ListItemIcon,
   ListItemText,
@@ -29,6 +28,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PaymentsIcon from '@mui/icons-material/Payments';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import RestoreIcon from '@mui/icons-material/Restore';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -41,9 +41,12 @@ import ListHeader, { invalidateSearchHistoryCache } from './list/ListHeader';
 import FilterBar from './list/FilterBar';
 import ListSummary from './list/ListSummary';
 import BulkActionBar from './list/BulkActionBar';
+import ArchiveDialog from './common/ArchiveDialog';
+import LifecycleArchiveDialog from './common/LifecycleArchiveDialog';
 import useTableSorting from '../hooks/useTableSorting';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
-import { bulkVendorAction, deleteVendorById, getVendorsList } from '../services/vendorService';
+import { bulkVendorAction, getVendorsList } from '../services/vendorService';
+import { bulkArchiveEntities, parseBulkArchiveResult } from '../services/bulkArchiveService';
 import { formatCurrency as formatCurrencyByLocale } from '../utils/intlFormatters';
 
 const OUTSTANDING_CLEAR = 'Cleared';
@@ -221,7 +224,9 @@ const VendorList = () => {
 
   const [selectedIds, setSelectedIds] = useState([]);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [restoreTargetId, setRestoreTargetId] = useState(null);
   const [confirmBulkDeleteOpen, setConfirmBulkDeleteOpen] = useState(false);
+  const [archiveBulkPending, setArchiveBulkPending] = useState(false);
   const [uiError, setUiError] = useState('');
   const [actionAnchor, setActionAnchor] = useState(null);
   const [activeVendor, setActiveVendor] = useState(null);
@@ -324,24 +329,9 @@ const VendorList = () => {
     placeholderData: keepPreviousData,
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteVendorById,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['vendors-list'] });
-      setConfirmDeleteId(null);
-      setSelectedIds((prev) => prev.filter((id) => id !== confirmDeleteId));
-      setUiError('');
-    },
-    onError: () => {
-      setUiError(tl('vendorList.failedDelete', 'Failed to delete vendor.'));
-    },
-  });
-
   const bulkMutation = useMutation({
     mutationFn: bulkVendorAction,
     onSuccess: () => {
-      setSelectedIds([]);
-      setConfirmBulkDeleteOpen(false);
       queryClient.invalidateQueries({ queryKey: ['vendors-list'] });
       setUiError('');
     },
@@ -422,9 +412,25 @@ const VendorList = () => {
     setActiveVendor(null);
   };
 
-  const runBulkDelete = () => {
+  const runBulkDelete = async () => {
     if (!selectedIds.length) return;
-    bulkMutation.mutate({ action: 'delete', ids: selectedIds });
+    setArchiveBulkPending(true);
+    try {
+      const result = await bulkArchiveEntities('vendor', selectedIds);
+      const parsed = parseBulkArchiveResult(result);
+      setSelectedIds([]);
+      setConfirmBulkDeleteOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['vendors-list'] });
+      if (parsed.hasPartialFailure) {
+        setUiError(parsed.message);
+      } else {
+        setUiError('');
+      }
+    } catch {
+      setUiError(tl('vendorList.failedBulk', 'Failed to archive vendors.'));
+    } finally {
+      setArchiveBulkPending(false);
+    }
   };
 
   const runBulkMarkInactive = () => {
@@ -664,6 +670,7 @@ const VendorList = () => {
           { value: 'All', label: tl('vendorList.filters.allStatus', 'All Status') },
           { value: 'Active', label: tl('vendorList.filters.active', 'Active') },
           { value: 'Inactive', label: tl('vendorList.filters.inactive', 'Inactive') },
+          { value: 'Archived', label: tl('vendorList.filters.archived', 'Archived') },
         ]}
         rightSlot={(
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -726,22 +733,26 @@ const VendorList = () => {
       <BulkActionBar
         selectedCount={selectedIds.length}
         actions={[
-          {
-            label: tl('vendorList.bulk.markInactive', 'Mark Inactive'),
-            color: 'warning',
-            onClick: runBulkMarkInactive,
-            disabled: selectedIds.length === 0 || bulkMutation.isPending,
-          },
+          ...(statusFilter === 'Archived'
+            ? []
+            : [{
+                label: tl('vendorList.bulk.markInactive', 'Mark Inactive'),
+                color: 'warning',
+                onClick: runBulkMarkInactive,
+                disabled: selectedIds.length === 0 || bulkMutation.isPending,
+              }]),
           {
             label: tl('vendorList.bulk.export', 'Export'),
             onClick: runExport,
             disabled: selectedIds.length === 0,
           },
           {
-            label: tl('vendorList.bulk.delete', 'Delete'),
-            color: 'error',
+            label: statusFilter === 'Archived'
+              ? tl('common.restore', 'Restore Selected')
+              : tl('vendorList.bulk.delete', 'Archive Selected'),
+            color: statusFilter === 'Archived' ? 'success' : 'warning',
             onClick: () => setConfirmBulkDeleteOpen(true),
-            disabled: selectedIds.length === 0 || bulkMutation.isPending,
+            disabled: selectedIds.length === 0 || archiveBulkPending,
           },
         ]}
       />
@@ -778,107 +789,106 @@ const VendorList = () => {
 
       <Menu anchorEl={actionAnchor} open={Boolean(actionAnchor)} onClose={closeMenu}>
         <MenuItem onClick={() => {
-          if (activeVendor) navigate(`/vendors/edit/${activeVendor.id}`);
+          if (activeVendor && statusFilter !== 'Archived') navigate(`/vendors/edit/${activeVendor.id}`);
           closeMenu();
-        }}>
+        }} disabled={statusFilter === 'Archived'}>
           <ListItemIcon><VisibilityIcon fontSize="small" /></ListItemIcon>
           <ListItemText>{tl('vendorList.actions.view', 'View')}</ListItemText>
         </MenuItem>
 
-        <MenuItem onClick={() => {
-          if (activeVendor) navigate(`/vendors/edit/${activeVendor.id}`);
-          closeMenu();
-        }}>
-          <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>{tl('common.edit', 'Edit')}</ListItemText>
-        </MenuItem>
+        {statusFilter !== 'Archived' && (
+          <MenuItem onClick={() => {
+            if (activeVendor) navigate(`/vendors/edit/${activeVendor.id}`);
+            closeMenu();
+          }}>
+            <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>{tl('common.edit', 'Edit')}</ListItemText>
+          </MenuItem>
+        )}
 
-        <MenuItem onClick={() => {
-          if (activeVendor) navigate('/bills/add', { state: { vendorId: activeVendor.id, vendorName: activeVendor.vendor_name } });
-          closeMenu();
-        }}>
-          <ListItemIcon><ReceiptLongIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>{tl('vendorList.actions.createBill', 'Create Bill')}</ListItemText>
-        </MenuItem>
+        {statusFilter !== 'Archived' && (
+          <MenuItem onClick={() => {
+            if (activeVendor) navigate('/bills/add', { state: { vendorId: activeVendor.id, vendorName: activeVendor.vendor_name } });
+            closeMenu();
+          }}>
+            <ListItemIcon><ReceiptLongIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>{tl('vendorList.actions.createBill', 'Create Bill')}</ListItemText>
+          </MenuItem>
+        )}
 
-        <MenuItem onClick={() => {
-          if (activeVendor) navigate(`/reports/payments-made?vendor_id=${activeVendor.id}`);
-          closeMenu();
-        }}>
-          <ListItemIcon><PaymentsIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>{tl('vendorList.actions.recordPayment', 'Record Payment')}</ListItemText>
-        </MenuItem>
+        {statusFilter !== 'Archived' && (
+          <MenuItem onClick={() => {
+            if (activeVendor) navigate(`/reports/payments-made?vendor_id=${activeVendor.id}`);
+            closeMenu();
+          }}>
+            <ListItemIcon><PaymentsIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>{tl('vendorList.actions.recordPayment', 'Record Payment')}</ListItemText>
+          </MenuItem>
+        )}
 
         <MenuItem onClick={() => {
           if (activeVendor) setConfirmDeleteId(activeVendor.id);
           closeMenu();
         }} sx={{ color: 'error.main' }}>
           <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
-          <ListItemText>{tl('common.delete', 'Delete')}</ListItemText>
+          <ListItemText>{tl('common.delete', 'Archive')}</ListItemText>
         </MenuItem>
+        {statusFilter === 'Archived' && (
+          <MenuItem onClick={() => {
+            if (activeVendor) setRestoreTargetId(activeVendor.id);
+            closeMenu();
+          }} sx={{ color: 'success.main' }}>
+            <ListItemIcon><RestoreIcon fontSize="small" color="success" /></ListItemIcon>
+            <ListItemText>{tl('common.restore', 'Restore')}</ListItemText>
+          </MenuItem>
+        )}
       </Menu>
 
-      <Box
-        component="div"
-        sx={{
-          display: confirmDeleteId ? 'flex' : 'none',
-          position: 'fixed',
-          inset: 0,
-          bgcolor: 'rgba(0,0,0,0.32)',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1300,
+      <ArchiveDialog
+        open={Boolean(confirmDeleteId)}
+        onClose={() => setConfirmDeleteId(null)}
+        entityType="vendor"
+        entityId={confirmDeleteId}
+        entityLabel="Vendor"
+        onArchived={() => {
+          setSelectedIds((prev) => prev.filter((id) => id !== confirmDeleteId));
+          queryClient.invalidateQueries({ queryKey: ['vendors-list'] });
         }}
-      >
-        <Box sx={{ width: 360, bgcolor: '#fff', borderRadius: 2, p: 2 }}>
-          <Typography variant="h6" sx={{ mb: 1 }}>{tl('vendorList.deleteModal.title', 'Delete Vendor')}</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {tl('vendorList.deleteModal.message', 'This action cannot be undone.')}
-          </Typography>
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-            <Button onClick={() => setConfirmDeleteId(null)}>{tl('common.cancel', 'Cancel')}</Button>
-            <Button
-              variant="contained"
-              color="error"
-              onClick={() => deleteMutation.mutate(confirmDeleteId)}
-              disabled={deleteMutation.isPending}
-            >
-              {deleteMutation.isPending ? <CircularProgress size={16} color="inherit" /> : tl('common.delete', 'Delete')}
-            </Button>
-          </Box>
-        </Box>
-      </Box>
+      />
 
-      <Box
-        component="div"
-        sx={{
-          display: confirmBulkDeleteOpen ? 'flex' : 'none',
-          position: 'fixed',
-          inset: 0,
-          bgcolor: 'rgba(0,0,0,0.32)',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1300,
+      <LifecycleArchiveDialog
+        open={Boolean(restoreTargetId)}
+        onClose={() => setRestoreTargetId(null)}
+        mode="restore"
+        entityType="vendor"
+        entityId={restoreTargetId}
+        entityLabel="Vendor"
+        onConfirmed={() => {
+          setSelectedIds((prev) => prev.filter((id) => id !== restoreTargetId));
+          setRestoreTargetId(null);
+          queryClient.invalidateQueries({ queryKey: ['vendors-list'] });
         }}
-      >
-        <Box sx={{ width: 380, bgcolor: '#fff', borderRadius: 2, p: 2 }}>
-          <Typography variant="h6" sx={{ mb: 1 }}>{tl('vendorList.bulk.deleteConfirmTitle', 'Delete Selected Vendors')}</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {tl('vendorList.bulk.deleteConfirmMessage', 'Delete {{count}} selected vendors?', { count: selectedIds.length })}
-          </Typography>
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-            <Button onClick={() => setConfirmBulkDeleteOpen(false)}>{tl('common.cancel', 'Cancel')}</Button>
-            <Button
-              variant="contained"
-              color="error"
-              onClick={runBulkDelete}
-              disabled={bulkMutation.isPending}
-            >
-              {bulkMutation.isPending ? <CircularProgress size={16} color="inherit" /> : tl('vendorList.bulk.delete', 'Delete')}
-            </Button>
-          </Box>
-        </Box>
-      </Box>
+      />
+
+      <LifecycleArchiveDialog
+        open={confirmBulkDeleteOpen}
+        onClose={() => setConfirmBulkDeleteOpen(false)}
+        mode={statusFilter === 'Archived' ? 'bulk-restore' : 'bulk-archive'}
+        entityType="vendor"
+        entityIds={selectedIds}
+        entityLabel="Vendor"
+        entityCount={selectedIds.length}
+        onConfirmed={async () => {
+          if (statusFilter === 'Archived') {
+            setSelectedIds([]);
+            setConfirmBulkDeleteOpen(false);
+            queryClient.invalidateQueries({ queryKey: ['vendors-list'] });
+            setUiError('');
+            return;
+          }
+          await runBulkDelete();
+        }}
+      />
     </ListPageLayout>
   );
 };

@@ -21,6 +21,7 @@ const AdminLogin = () => {
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({ username: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -28,15 +29,22 @@ const AdminLogin = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    const nextFieldErrors = { username: '', password: '' };
 
     if (!username.trim()) {
-      setError('Username is required');
+      nextFieldErrors.username = 'Username is required';
+      setFieldErrors(nextFieldErrors);
+      setError(nextFieldErrors.username);
       return;
     }
     if (!password.trim()) {
-      setError('Password is required');
+      nextFieldErrors.password = 'Password is required';
+      setFieldErrors(nextFieldErrors);
+      setError(nextFieldErrors.password);
       return;
     }
+
+    setFieldErrors(nextFieldErrors);
 
     setLoading(true);
     try {
@@ -81,13 +89,18 @@ const AdminLogin = () => {
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} noValidate>
             <TextField
               fullWidth
               label="Username"
               name="username"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => {
+                setUsername(e.target.value);
+                setFieldErrors((prev) => ({ ...prev, username: '' }));
+              }}
+              error={Boolean(fieldErrors.username)}
+              helperText={fieldErrors.username || ' '}
               margin="normal"
               autoFocus
               disabled={loading}
@@ -98,7 +111,12 @@ const AdminLogin = () => {
               name="password"
               type={showPassword ? 'text' : 'password'}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setFieldErrors((prev) => ({ ...prev, password: '' }));
+              }}
+              error={Boolean(fieldErrors.password)}
+              helperText={fieldErrors.password || ' '}
               margin="normal"
               disabled={loading}
               InputProps={{

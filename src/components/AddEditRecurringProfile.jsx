@@ -257,6 +257,7 @@ const AddEditRecurringProfile = () => {
   const [pageLoading, setPageLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [isArchived, setIsArchived] = useState(false);
   const [errors, setErrors] = useState({});
   const [itemErrors, setItemErrors] = useState([]);
 
@@ -290,6 +291,8 @@ const AddEditRecurringProfile = () => {
 
         const existing = await getRecurringProfileById(profileId);
         if (!active) return;
+        const archived = String(existing?.lifecycle_status || existing?.status || '').toUpperCase() === 'ARCHIVED' || Boolean(existing?.is_deleted);
+        setIsArchived(archived);
 
         const existingStartDate = existing.start_date || toIsoDate(new Date());
         const recurrenceRule = existing.recurrence_rule || {};
@@ -437,6 +440,10 @@ const AddEditRecurringProfile = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (isArchived) {
+      setError('Archived recurring profiles are read-only. Restore the profile to edit.');
+      return;
+    }
     setError('');
 
     const validation = validateForm(form);
@@ -519,6 +526,12 @@ const AddEditRecurringProfile = () => {
           {error && (
             <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
               {error}
+            </Alert>
+          )}
+
+          {isArchived && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              Archived recurring profiles are read-only. Restore this profile before editing.
             </Alert>
           )}
 
@@ -982,7 +995,7 @@ const AddEditRecurringProfile = () => {
 
             <Box sx={{ ...footerSx, justifyContent: 'space-between', px: 0, mt: 2.5 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Button type="submit" variant="contained" disabled={saving} sx={saveBtnSx}>
+                <Button type="submit" variant="contained" disabled={saving || isArchived} sx={saveBtnSx}>
                   {saving ? <CircularProgress size={18} color="inherit" /> : (profileId ? 'Update Profile' : 'Create Profile')}
                 </Button>
                 <Button type="button" variant="outlined" sx={cancelBtnSx} onClick={() => navigate('/recurring-profiles')}>

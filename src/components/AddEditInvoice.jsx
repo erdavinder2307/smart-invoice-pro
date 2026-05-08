@@ -154,6 +154,7 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isArchived, setIsArchived] = useState(false);
   const [errors, setErrors] = useState({});
   const [itemErrors, setItemErrors] = useState([]);
   const [toast, setToast] = useState({ open: false, severity: 'success', message: '' });
@@ -230,6 +231,8 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
         if (invoiceId) {
           const invoiceResponse = await axios.get(createApiUrl(`/api/invoices/${invoiceId}`));
           if (!active) return;
+          const archived = String(invoiceResponse.data?.lifecycle_status || invoiceResponse.data?.status || '').toUpperCase() === 'ARCHIVED' || Boolean(invoiceResponse.data?.is_deleted);
+          setIsArchived(archived);
 
           setForm((prev) => ({
             ...prev,
@@ -467,6 +470,10 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isArchived) {
+      setError('Archived invoices are read-only. Restore the invoice to edit.');
+      return;
+    }
     const validation = validateInvoiceForm(form, t);
     setErrors(validation.errors);
     setItemErrors(validation.itemErrors);
@@ -514,6 +521,12 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
           {error && (
             <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2, borderRadius: '4px' }}>
               {error}
+            </Alert>
+          )}
+
+          {isArchived && (
+            <Alert severity="warning" sx={{ mb: 2, borderRadius: '4px' }}>
+              Archived invoices are read-only. Restore this invoice before editing.
             </Alert>
           )}
 
@@ -992,7 +1005,7 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                     <Button
                       type="button"
                       variant="outlined"
-                      disabled={loading || !isValid}
+                      disabled={loading || !isValid || isArchived}
                       sx={cancelBtnSx}
                       onClick={() => {
                         setSubmitMode('draft');
@@ -1005,7 +1018,7 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                     <Button
                       type="button"
                       variant="contained"
-                      disabled={loading || !isValid}
+                      disabled={loading || !isValid || isArchived}
                       sx={saveBtnSx}
                       onClick={() => {
                         setSubmitMode('send');

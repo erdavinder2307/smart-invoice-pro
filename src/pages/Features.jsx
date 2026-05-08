@@ -187,7 +187,7 @@ const Features = () => {
     },
     {
       icon: <TrackChanges sx={{ color: '#0891b2' }} />,
-      title: 'Operational trigger engine',
+      title: 'Operational workflow hooks',
       text: 'Attach downstream actions to lifecycle states such as approved, paid, or reconciled.'
     }
   ];
@@ -294,11 +294,11 @@ const Features = () => {
   const faqs = [
     {
       question: 'How does Solidev Books differ from traditional invoicing tools?',
-      answer: 'Solidev Books is designed as a connected financial operating system, not a standalone invoice utility. Quote, billing, collections, reconciliation, approvals, and reporting all run as one coordinated workflow layer.'
+      answer: 'Solidev Books is designed as a connected financial workflow platform, not a standalone invoice utility. Quote, billing, collections, reconciliation, approvals, and reporting are built to work together through linked lifecycle modules.'
     },
     {
       question: 'Can we automate reminders, approvals, and recurring billing logic?',
-      answer: 'Yes. You can define recurring cycles, event-driven reminders, and role-based approvals that trigger automatically from workflow states such as approved, overdue, paid, or reconciled.'
+      answer: 'Yes. You can define recurring cycles, event-driven reminders, and role-based approvals with lifecycle checkpoints across states such as approved, overdue, paid, or reconciled.'
     },
     {
       question: 'Is the platform suitable for multi-entity or multi-team operations?',
@@ -310,7 +310,7 @@ const Features = () => {
     },
     {
       question: 'How secure is the financial infrastructure?',
-      answer: 'The platform uses encrypted transport and storage, enterprise-grade security controls, role-based permissions, and audit logging to protect data and maintain accountability.'
+      answer: 'The platform uses encrypted transport and storage, tenant-aware boundaries, role-based permissions, and audit logging to protect data and maintain accountability.'
     }
   ];
 
@@ -567,10 +567,10 @@ const Features = () => {
               <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={motionIn}>
                 <Chip icon={<Hub sx={{ color: '#2563eb !important' }} />} label="Automation Layer" variant="outlined" sx={eyebrowChipSx} />
                 <Typography sx={{ fontWeight: 800, fontSize: { xs: '1.7rem', md: '2.1rem' }, lineHeight: 1.18, mt: 2, mb: 1.8, color: '#0f172a', letterSpacing: '-0.02em' }}>
-                  Event Driven Automation That Scales With Operations
+                  Automation-Capable Workflows for Scaled Operations
                 </Typography>
                 <Typography sx={{ color: '#475569', lineHeight: 1.65, fontSize: '1rem', mb: 3 }}>
-                  Replace manual follow-up work with policy-aware triggers, recurrence controls, and approval automation that keep financial workflows moving.
+                  Replace manual follow-up work with recurring schedules, reminder triggers, and role-aware approval checkpoints that keep financial workflows moving.
                 </Typography>
                 <Paper elevation={0} sx={{ borderRadius: 3, p: 2.8, border: '1px solid rgba(15,23,42,0.08)', backgroundColor: '#ffffff' }}>
                   <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
@@ -652,7 +652,7 @@ const Features = () => {
                       <Typography sx={{ fontSize: '0.78rem', color: idx === 0 ? '#bfdbfe' : '#64748b', mt: 0.5 }}>
                         {layer.valueLabel}
                       </Typography>
-                      <CapabilityStatusBadge status={layer.status} sx={{ mt: 1.1, alignSelf: 'flex-start' }} />
+                      <CapabilityStatusBadge status={layer.status} tone={idx === 0 ? 'dark' : 'light'} sx={{ mt: 1.1, alignSelf: 'flex-start' }} />
                     </Paper>
                   ))}
                 </Box>
@@ -670,7 +670,7 @@ const Features = () => {
               <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={motionIn}>
                 <Chip icon={<GppGood sx={{ color: '#2563eb !important' }} />} label="Infrastructure and Security" variant="outlined" sx={eyebrowChipSx} />
                 <Typography sx={{ fontWeight: 800, fontSize: { xs: '1.7rem', md: '2.1rem' }, lineHeight: 1.18, mt: 2, mb: 1.8, color: '#0f172a', letterSpacing: '-0.02em' }}>
-                  Built as Enterprise Grade Financial Infrastructure
+                  Built on an Enterprise-Oriented Financial Infrastructure Foundation
                 </Typography>
                 <Typography sx={{ color: '#475569', lineHeight: 1.65, fontSize: '1rem', mb: 3 }}>
                   Solidev Books provides the secure technical foundation required to run connected financial workflows with confidence.
@@ -748,7 +748,7 @@ const Features = () => {
                     <Typography sx={{ fontSize: '1.65rem', fontWeight: 800, color: '#f8fafc', lineHeight: 1 }}>{item.metric}</Typography>
                     <Typography sx={{ fontWeight: 700, color: '#bfdbfe', fontSize: '0.82rem', mt: 0.6, mb: 1 }}>{item.title}</Typography>
                     <Typography sx={{ color: 'rgba(191,219,254,0.78)', fontSize: '0.82rem', lineHeight: 1.58, flexGrow: 1 }}>{item.description}</Typography>
-                    <CapabilityStatusBadge status={item.status} sx={{ mt: 1.1, alignSelf: 'flex-start' }} />
+                    <CapabilityStatusBadge status={item.status} tone="dark" sx={{ mt: 1.1, alignSelf: 'flex-start' }} />
                   </Paper>
                 ))}
               </Box>
@@ -822,7 +822,7 @@ const Features = () => {
               Replace Fragmented Finance Tools With One Connected Operational Platform
             </Typography>
             <Typography sx={{ color: '#334155', lineHeight: 1.65, fontSize: '1rem', maxWidth: 680, mx: 'auto', mb: 4 }}>
-              Start running quote, billing, collections, reconciliation, and insight workflows in a single financial operating system designed for modern business execution.
+              Start running quote, billing, collections, reconciliation, and insight workflows in one connected workflow platform designed for modern business execution.
             </Typography>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
               <Button

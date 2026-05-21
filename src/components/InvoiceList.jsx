@@ -45,6 +45,7 @@ import EmailIcon from "@mui/icons-material/Email";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import SendIcon from "@mui/icons-material/Send";
+import CancelIcon from "@mui/icons-material/Cancel";
 import RestoreIcon from "@mui/icons-material/Restore";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 
@@ -55,6 +56,7 @@ import ListPageLayout from "./list/ListPageLayout";
 import ListHeader from "./list/ListHeader";
 import FilterBar from "./list/FilterBar";
 import ListSummary from "./list/ListSummary";
+import buildSummaryFilterItems from "../utils/summaryFilterChips";
 import BulkActionBar from "./list/BulkActionBar";
 import ArchiveDialog from "./common/ArchiveDialog";
 import LifecycleArchiveDialog from "./common/LifecycleArchiveDialog";
@@ -67,6 +69,7 @@ import {
   getInvoicesList,
   recordPayment,
   sendInvoiceEmail,
+  voidInvoice,
 } from "../services/invoiceService";
 import { bulkArchiveEntities } from "../services/bulkArchiveService";
 import { saveSearchHistory } from "../services/searchService";
@@ -113,6 +116,8 @@ const EMPTY_EMAIL_DIALOG = {
   attachPdf: false,
   sending: false,
 };
+
+const EMPTY_VOID_DIALOG = { open: false, invoice: null, reason: "", submitting: false };
 
 // ───────────────────────────────────────────────────────────────────────────
 
@@ -161,6 +166,7 @@ const InvoiceList = () => {
   const [activeInvoice, setActiveInvoice]   = useState(null);
   const [paymentDialog, setPaymentDialog]   = useState(EMPTY_PAYMENT_DIALOG);
   const [emailDialog, setEmailDialog]       = useState(EMPTY_EMAIL_DIALOG);
+  const [voidDialog, setVoidDialog]         = useState(EMPTY_VOID_DIALOG);
   const [uiError, setUiError]               = useState("");
 
   const debouncedSearch = useDebouncedValue(search, 300);
@@ -250,6 +256,19 @@ const InvoiceList = () => {
     onError: () => {
       setPaymentDialog((prev) => ({ ...prev, submitting: false }));
       setUiError("Failed to record payment.");
+    },
+  });
+
+  const voidMutation = useMutation({
+    mutationFn: ({ id, reason }) => voidInvoice(id, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoices-list"] });
+      setVoidDialog(EMPTY_VOID_DIALOG);
+      setUiError("");
+    },
+    onError: (err) => {
+      setVoidDialog((prev) => ({ ...prev, submitting: false }));
+      setUiError(err?.response?.data?.error || "Failed to void invoice.");
     },
   });
 
@@ -519,13 +538,20 @@ const InvoiceList = () => {
 
       {/* Clickable summary chips */}
       <ListSummary
-        items={[
-          { label: "Total",   value: summary.total   || 0, active: status === "All",     onClick: () => setStatus("All") },
-          { label: "Issued",  value: summary.Issued  || 0, color: "primary", active: status === "Issued",  onClick: () => setStatus("Issued") },
-          { label: "Overdue", value: summary.Overdue || 0, color: "error",   active: status === "Overdue", onClick: () => setStatus("Overdue") },
-          { label: "Paid",    value: summary.Paid    || 0, color: "success", active: status === "Paid",    onClick: () => setStatus("Paid") },
-          { label: "Draft",   value: summary.Draft   || 0,                   active: status === "Draft",   onClick: () => setStatus("Draft") },
-        ]}
+        items={buildSummaryFilterItems({
+          activeFilter: status,
+          allFilterValue: "All",
+          onFilterChange: setStatus,
+          filteredCount: totalCount,
+          viewAllValue: summary.total || 0,
+          chips: [
+            { label: "Total",   value: summary.total   || 0, filterValue: "All" },
+            { label: "Issued",  value: summary.Issued  || 0, color: "primary", filterValue: "Issued" },
+            { label: "Overdue", value: summary.overdue_count || 0, color: "error",   filterValue: "Overdue" },
+            { label: "Paid",    value: summary.Paid    || 0, color: "success", filterValue: "Paid" },
+            { label: "Draft",   value: summary.Draft   || 0, filterValue: "Draft" },
+          ],
+        })}
       />
 
       <BulkActionBar
@@ -851,6 +877,12 @@ const InvoiceList = () => {
           <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
           <ListItemText>Archive</ListItemText>
         </MenuItem>
+        {["Issued", "Partially Paid", "Overdue"].includes(activeInvoice?.status) && (
+          <MenuItem onClick={() => { setVoidDialog({ open: true, invoice: activeInvoice, reason: "", submitting: false }); handleActionMenuClose(); }}>
+            <ListItemIcon><CancelIcon fontSize="small" color="warning" /></ListItemIcon>
+            <ListItemText>Void Invoice</ListItemText>
+          </MenuItem>
+        )}
         {status === "Archived" && (
           <MenuItem onClick={() => { setRestoreTargetId(activeInvoice?.id); handleActionMenuClose(); }}>
             <ListItemIcon><RestoreIcon fontSize="small" color="success" /></ListItemIcon>
@@ -997,6 +1029,45 @@ const InvoiceList = () => {
             sx={{ textTransform: "none" }}
           >
             {emailDialog.sending ? "Sending…" : "Send"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ── Void invoice dialog ─────────────────────────────────────────────── */}
+      <Dialog open={voidDialog.open} onClose={() => !voidDialog.submitting && setVoidDialog(EMPTY_VOID_DIALOG)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ pb: 1 }}>
+          <Typography variant="h6" fontWeight={700}>Void Invoice</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {voidDialog.invoice?.invoice_number} · This action cannot be undone
+          </Typography>
+        </DialogTitle>
+        <DialogContent dividers sx={{ pt: 2.5 }}>
+          <TextField
+            label="Reason for voiding"
+            value={voidDialog.reason}
+            onChange={(e) => setVoidDialog((d) => ({ ...d, reason: e.target.value }))}
+            fullWidth size="small" required multiline rows={3} autoFocus
+            placeholder="e.g. Wrong customer, duplicate, issued in error"
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+          <Button
+            onClick={() => setVoidDialog(EMPTY_VOID_DIALOG)}
+            disabled={voidDialog.submitting}
+            sx={{ textTransform: "none" }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained" color="warning"
+            disabled={!voidDialog.reason.trim() || voidDialog.submitting}
+            onClick={() => {
+              setVoidDialog((d) => ({ ...d, submitting: true }));
+              voidMutation.mutate({ id: voidDialog.invoice.id, reason: voidDialog.reason });
+            }}
+            sx={{ textTransform: "none" }}
+          >
+            {voidDialog.submitting ? "Voiding…" : "Void Invoice"}
           </Button>
         </DialogActions>
       </Dialog>

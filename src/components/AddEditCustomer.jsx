@@ -89,7 +89,7 @@ const TAB_CONFIG = [
     labelKey: 'customerForm.tabs.otherDetails',
     fields: [
       'gst_treatment', 'place_of_supply', 'gst_number', 'pan', 'tax_preference',
-      'currency', 'opening_balance', 'payment_terms', 'custom_payment_terms',
+      'currency', 'opening_balance', 'credit_limit', 'payment_terms', 'custom_payment_terms',
       'website_url', 'department', 'designation', 'x_handle', 'skype', 'facebook',
       'portal_enabled', 'portal_password', 'documents',
     ],
@@ -140,7 +140,7 @@ const INIT = {
   gst_treatment: '', place_of_supply: '',
   gst_number: '', pan: '',
   tax_preference: 'taxable',
-  currency: 'INR', opening_balance: '',
+  currency: 'INR', opening_balance: '', credit_limit: '',
   payment_terms: 'due_on_receipt',
   custom_payment_terms: '',
   website_url: '', department: '', designation: '',
@@ -1111,6 +1111,23 @@ const AddEditCustomer = () => {
                       name="opening_balance" value={form.opening_balance} onChange={handleChange}
                       size="small" fullWidth type="number"
                       inputProps={{ min: 0, step: '0.01' }}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <Typography sx={{ fontSize: '0.8125rem', color: C.hint, lineHeight: 1 }}>{form.currency}</Typography>
+                          </InputAdornment>
+                        ),
+                      }}
+                      sx={fieldSx}
+                    />
+                    </AppFormField>
+
+                    <AppFormField label={t('customerForm.creditLimit', 'Credit Limit')} layout="half" testId="customer-detail-field-credit-limit">
+                    <TextField
+                      name="credit_limit" value={form.credit_limit} onChange={handleChange}
+                      size="small" fullWidth type="number"
+                      inputProps={{ min: 0, step: '0.01' }}
+                      helperText="Set 0 for unlimited"
                       InputProps={{
                         startAdornment: (
                           <InputAdornment position="start">

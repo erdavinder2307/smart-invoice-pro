@@ -45,6 +45,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useTheme } from "@mui/material/styles";
 import EmptyState from '../components/common/EmptyState';
+import ListSummary from '../components/list/ListSummary';
+import buildSummaryFilterItems from '../utils/summaryFilterChips';
 import { useTranslation } from 'react-i18next';
 
 const BankAccounts = () => {
@@ -52,6 +54,7 @@ const BankAccounts = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
+    const [statusFilter, setStatusFilter] = useState('All');
     const [editAccount, setEditAccount] = useState(null);
     const [editForm, setEditForm] = useState({ bank_name: '', account_name: '', account_type: '' });
     const [editLoading, setEditLoading] = useState(false);
@@ -60,11 +63,20 @@ const BankAccounts = () => {
     const { user } = useAuth();
     const { t } = useTranslation();
 
-    const filteredAccounts = bankAccounts.filter(account =>
-        account.bank_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        account.account_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        account.account_type?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const activeCount = bankAccounts.filter(acc => acc.status === 'active').length;
+    const inactiveCount = bankAccounts.length - activeCount;
+
+    const filteredAccounts = bankAccounts.filter(account => {
+        const matchesSearch =
+            account.bank_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            account.account_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            account.account_type?.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesStatus =
+            statusFilter === 'All' ? true :
+            statusFilter === 'Active' ? account.status === 'active' :
+            account.status !== 'active';
+        return matchesSearch && matchesStatus;
+    });
 
     const getStatusColor = (status) => {
         switch (status?.toLowerCase()) {
@@ -144,61 +156,21 @@ const BankAccounts = () => {
     return (
         <MainLayout title={t('bankAccounts.title')} subtitle={t('bankAccounts.subtitle')}>
             <Box sx={{ flex: 1, width: '100%' }}>
-                <Grid container spacing={2}>
-                    {/* Stats Cards */}
-                    <Grid item xs={12} sm={6} md={3}>
-                        <Card
-                            elevation={0}
-                            sx={{
-                                border: '1px solid',
-                                borderColor: 'grey.200',
-                                borderRadius: 4,
-                                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-                                color: 'white',
-                                transition: 'transform 0.2s ease',
-                                '&:hover': {
-                                    transform: 'translateY(-4px)',
-                                }
-                            }}
-                        >
-                            <CardContent sx={{ textAlign: 'center', py: 3 }}>
-                                <AccountBalanceIcon sx={{ fontSize: 40, mb: 2, opacity: 0.9 }} />
-                                <Typography variant="h4" fontWeight={700} gutterBottom>
-                                    {bankAccounts.length}
-                                </Typography>
-                                <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                                    {t('bankAccounts.totalAccounts')}
-                                </Typography>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <Card
-                            elevation={0}
-                            sx={{
-                                border: '1px solid',
-                                borderColor: 'grey.200',
-                                borderRadius: 4,
-                                background: `linear-gradient(135deg, ${theme.palette.success.main} 0%, ${theme.palette.success.dark} 100%)`,
-                                color: 'white',
-                                transition: 'transform 0.2s ease',
-                                '&:hover': {
-                                    transform: 'translateY(-4px)',
-                                }
-                            }}
-                        >
-                            <CardContent sx={{ textAlign: 'center', py: 3 }}>
-                                <AccountBalanceIcon sx={{ fontSize: 40, mb: 2, opacity: 0.9 }} />
-                                <Typography variant="h4" fontWeight={700} gutterBottom>
-                                    {bankAccounts.filter(acc => acc.status === 'active').length}
-                                </Typography>
-                                <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                                    {t('bankAccounts.activeAccounts')}
-                                </Typography>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                </Grid>
+                {/* Clickable summary chips */}
+                <ListSummary
+                    items={buildSummaryFilterItems({
+                        activeFilter: statusFilter,
+                        allFilterValue: 'All',
+                        onFilterChange: setStatusFilter,
+                        filteredCount: filteredAccounts.length,
+                        viewAllValue: bankAccounts.length,
+                        chips: [
+                            { label: t('bankAccounts.totalAccounts'), value: bankAccounts.length, filterValue: 'All' },
+                            { label: t('bankAccounts.activeAccounts'), value: activeCount,         color: 'success', filterValue: 'Active' },
+                            { label: 'Inactive',                       value: inactiveCount,        color: 'default', filterValue: 'Inactive' },
+                        ],
+                    })}
+                />
 
                 {/* Main Card */}
                 <Card elevation={0} sx={{

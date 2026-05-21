@@ -3,7 +3,7 @@ import { createApiUrl } from "../config/api";
 
 const isDev = process.env.NODE_ENV === "development";
 
-export const updateProductStock = async ({ productId, quantity, operation = "increment", source = "Manual adjustment" }) => {
+export const updateProductStock = async ({ productId, quantity, operation = "increment", source = "Manual adjustment", reason, referenceNumber, adjustmentDate }) => {
   const normalizedQuantity = Number(quantity);
   if (!productId) {
     throw new Error("productId is required");
@@ -18,6 +18,9 @@ export const updateProductStock = async ({ productId, quantity, operation = "inc
     quantity: normalizedQuantity,
     source,
     operation,
+    ...(reason ? { reason } : {}),
+    ...(referenceNumber ? { reference_number: referenceNumber } : {}),
+    ...(adjustmentDate ? { adjustment_date: adjustmentDate } : {}),
   };
 
   if (isDev) {
@@ -32,5 +35,15 @@ export const updateProductStock = async ({ productId, quantity, operation = "inc
     console.debug("[stockService] response", response.data);
   }
 
+  return response.data;
+};
+
+export const getStockLedger = async (productId) => {
+  const response = await axios.get(createApiUrl(`/api/stock/ledger/${productId}`));
+  return response.data;
+};
+
+export const adjustStock = async (data) => {
+  const response = await axios.post(createApiUrl('/api/stock/adjust'), data);
   return response.data;
 };

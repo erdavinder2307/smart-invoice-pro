@@ -51,6 +51,7 @@ import ListPageLayout from "./list/ListPageLayout";
 import ListHeader from "./list/ListHeader";
 import FilterBar from "./list/FilterBar";
 import ListSummary from "./list/ListSummary";
+import buildSummaryFilterItems from "../utils/summaryFilterChips";
 import BulkActionBar from "./list/BulkActionBar";
 import ArchiveDialog from "./common/ArchiveDialog";
 import LifecycleArchiveDialog from "./common/LifecycleArchiveDialog";
@@ -509,35 +510,19 @@ const QuoteList = () => {
       />
 
       <ListSummary
-        items={[
-          {
-            label: "Total",
-            value: summary.total || 0,
-            active: status === "All",
-            onClick: () => setStatus("All"),
-          },
-          {
-            label: "Draft",
-            value: summary.Draft || 0,
-            color: "default",
-            active: status === "Draft",
-            onClick: () => setStatus("Draft"),
-          },
-          {
-            label: "Accepted",
-            value: summary.Accepted || 0,
-            color: "success",
-            active: status === "Accepted",
-            onClick: () => setStatus("Accepted"),
-          },
-          {
-            label: "Converted",
-            value: summary.Converted || 0,
-            color: "info",
-            active: status === "Converted",
-            onClick: () => setStatus("Converted"),
-          },
-        ]}
+        items={buildSummaryFilterItems({
+          activeFilter: status,
+          allFilterValue: "All",
+          onFilterChange: setStatus,
+          filteredCount: totalCount,
+          viewAllValue: summary.total || 0,
+          chips: [
+            { label: "Total",     value: summary.total     || 0, filterValue: "All" },
+            { label: "Draft",     value: summary.Draft     || 0, color: "default", filterValue: "Draft" },
+            { label: "Accepted",  value: summary.Accepted  || 0, color: "success", filterValue: "Accepted" },
+            { label: "Converted", value: summary.Converted || 0, color: "info",    filterValue: "Converted" },
+          ],
+        })}
       />
 
       <BulkActionBar

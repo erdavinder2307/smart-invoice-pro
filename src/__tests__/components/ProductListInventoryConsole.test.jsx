@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, renderWithProviders, screen, waitFor } from "../../test-utils";
+import { fireEvent, renderWithProviders, screen, waitFor, within } from "../../test-utils";
 import ProductList from "../../components/ProductList";
 import axios from "axios";
 import { getProducts } from "../../services/productService";
@@ -35,6 +35,12 @@ jest.mock("react-router-dom", () => {
     useNavigate: () => mockNavigate,
   };
 });
+
+jest.mock("../../context/AuthContext", () => ({
+  ...jest.requireActual("../../context/AuthContext"),
+  useAuth: jest.fn(() => ({ user: { id: 'test-user-id', username: 'testuser' } })),
+  AuthProvider: ({ children }) => children,
+}));
 
 const PRODUCTS = [
   { id: "p-1", name: "Critical Item", category: "Office", stock: -2, reorder_level: 10, price: 99, purchase_rate: 45 },
@@ -106,8 +112,8 @@ describe("ProductList inventory console", () => {
     fireEvent.click(screen.getByRole("button", { name: "Archive Selected" }));
 
     // Confirm the bulk archive dialog
-    await screen.findByText(/Archive\s+\d+\s+Item/i);
-    fireEvent.click(screen.getByRole("button", { name: "Archive All" }));
+    await screen.findByText(/Process\s+\d+\s+Item/i);
+    fireEvent.click(screen.getByRole("button", { name: "Process All" }));
 
     await waitFor(() => {
       expect(bulkArchiveEntities).toHaveBeenCalledWith("product", ["p-1"]);
@@ -139,7 +145,8 @@ describe("ProductList inventory console", () => {
     renderWithProviders(<ProductList />);
     await screen.findByText("Critical Item");
 
-    fireEvent.click(screen.getAllByLabelText("Add stock")[0]);
+    const healthyRow = screen.getByText("Healthy Item").closest("tr");
+    fireEvent.click(within(healthyRow).getByLabelText("Add stock"));
 
     const modeSelect = screen.getByLabelText("Stock mode");
     fireEvent.mouseDown(modeSelect);
@@ -152,7 +159,7 @@ describe("ProductList inventory console", () => {
     await waitFor(() => {
       expect(axios.post).toHaveBeenCalledWith(
         expect.stringContaining("/api/stock/reduce"),
-        expect.objectContaining({ product_id: "p-1", quantity: 3, operation: "decrement" })
+        expect.objectContaining({ product_id: "p-3", quantity: 3, operation: "decrement" })
       );
     });
   });
@@ -176,5 +183,36 @@ describe("ProductList inventory console", () => {
     createObjectURLSpy.mockRestore();
     revokeObjectURLSpy.mockRestore();
     anchorClickSpy.mockRestore();
+  });
+
+  it("sorts by cost price from the sort dropdown", async () => {
+    renderWithProviders(<ProductList />);
+    await screen.findByText("Critical Item");
+
+    const sortSelect = screen.getByRole("combobox", { name: "Sort inventory" });
+    fireEvent.mouseDown(sortSelect);
+    fireEvent.click(screen.getByText("Cost Price: High to Low"));
+
+    await waitFor(() => {
+      const rows = screen.getAllByRole("row");
+      expect(within(rows[1]).getByText("Healthy Item")).toBeInTheDocument();
+    });
+  });
+
+  it("sorts by status from the table header", async () => {
+    renderWithProviders(<ProductList />);
+    await screen.findByText("Critical Item");
+
+    fireEvent.click(screen.getByText("STATUS"));
+    await waitFor(() => {
+      const rows = screen.getAllByRole("row");
+      expect(within(rows[1]).getByText("Critical Item")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("STATUS"));
+    await waitFor(() => {
+      const rows = screen.getAllByRole("row");
+      expect(within(rows[1]).getByText("Healthy Item")).toBeInTheDocument();
+    });
   });
 });

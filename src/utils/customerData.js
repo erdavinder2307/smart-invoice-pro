@@ -62,11 +62,17 @@ export const getDuplicateFieldLabel = (customers = [], candidate = {}, currentCu
 };
 
 export const dedupeCustomers = (customers = []) => {
-  const seen = new Set();
+  // Exclude archived customers — they have been intentionally merged/removed
+  const activeCustomers = customers.filter(
+    (c) => !c.status || c.status.toUpperCase() !== 'ARCHIVED'
+  );
+
+  const keyOwner = new Map(); // key → canonical customer
   const uniqueCustomers = [];
   let duplicateCount = 0;
+  const duplicateRecords = [];
 
-  customers.forEach((customer) => {
+  activeCustomers.forEach((customer) => {
     const { email, phones, gstin } = buildCandidateIdentity(customer);
     const keys = [
       email ? `email:${email}` : null,
@@ -74,14 +80,16 @@ export const dedupeCustomers = (customers = []) => {
       gstin ? `gstin:${gstin}` : null,
     ].filter(Boolean);
 
-    if (keys.length > 0 && keys.some((key) => seen.has(key))) {
+    const matchKey = keys.find((key) => keyOwner.has(key));
+    if (keys.length > 0 && matchKey) {
       duplicateCount += 1;
+      duplicateRecords.push({ ...customer, matchedWith: keyOwner.get(matchKey) });
       return;
     }
 
-    keys.forEach((key) => seen.add(key));
+    keys.forEach((key) => keyOwner.set(key, customer));
     uniqueCustomers.push(customer);
   });
 
-  return { uniqueCustomers, duplicateCount };
+  return { uniqueCustomers, duplicateCount, duplicateRecords };
 };

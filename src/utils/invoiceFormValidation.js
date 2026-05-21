@@ -35,6 +35,11 @@ export const validateInvoiceForm = (form = {}, t) => {
     errors.customer_id = t?.("invoiceForm.customerRequired", "Please select a customer.") || "Please select a customer.";
   }
 
+  const invoiceNumber = String(form.invoice_number || "").trim();
+  if (invoiceNumber && /^([A-Z]+-\d+){2,}/.test(invoiceNumber)) {
+    errors.invoice_number = "Invoice number appears malformed. Use the auto-generate option to reset.";
+  }
+
   const issueDate = parseDate(form.issue_date);
   const dueDate = parseDate(form.due_date);
 

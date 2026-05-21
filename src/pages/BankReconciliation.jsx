@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box, Button, Typography, Paper, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, CircularProgress, Alert,
-  Chip, Grid, Tooltip, IconButton, Dialog, DialogTitle,
+  Chip, Tooltip, IconButton, Dialog, DialogTitle,
   DialogContent, DialogActions, TextField, MenuItem, Select,
   FormControl, InputLabel, Tabs, Tab, Snackbar, Divider,
   LinearProgress, InputAdornment, Badge,
@@ -22,6 +22,8 @@ import axios from 'axios';
 import { createApiUrl } from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import MainLayout from '../components/Layout/MainLayout';
+import ListSummary from '../components/list/ListSummary';
+import buildSummaryFilterItems from '../utils/summaryFilterChips';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const fmt = (n) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(n ?? 0);
@@ -51,6 +53,7 @@ const BankReconciliation = () => {
 
   // Filters
   const [statusFilter, setStatusFilter] = useState('');
+  const [allTransactionsTotal, setAllTransactionsTotal] = useState(0);
   const [search, setSearch]             = useState('');
 
   // Upload
@@ -85,6 +88,7 @@ const BankReconciliation = () => {
       if (bankAccountId) params.bank_account_id = bankAccountId;
       const res = await axios.get(createApiUrl('/api/reconciliation/transactions'), { headers, params });
       setTransactions(res.data);
+      if (!statusFilter) setAllTransactionsTotal(res.data.length);
     } catch {
       showToast('Failed to load transactions', 'error');
     } finally {
@@ -255,23 +259,21 @@ const BankReconciliation = () => {
     <MainLayout title="Bank Reconciliation" subtitle="Import bank statements and match transactions to invoices & expenses">
       <Box sx={{ flex: 1, width: '100%' }}>
 
-        {/* ── Summary Cards ────────────────────────────────────────────── */}
-        <Grid container spacing={2} sx={{ mb: 3 }}>
-          {[
-            { label: 'Total Transactions', value: stats.total, color: 'primary.main', bg: 'primary.50' },
-            { label: 'Matched', value: stats.matched, color: 'success.main', bg: '#e8f5e9' },
-            { label: 'Unmatched', value: stats.unmatched, color: 'warning.main', bg: '#fff8e1' },
-            { label: 'Money In', value: fmt(stats.totalIn), color: 'success.dark', bg: '#f1f8e9', isAmt: true },
-            { label: 'Money Out', value: fmt(stats.totalOut), color: 'error.main', bg: '#fce4ec', isAmt: true },
-          ].map(({ label, value, color, bg }) => (
-            <Grid item xs={6} sm={4} md key={label}>
-              <Paper sx={{ p: 2, bgcolor: bg, border: '1px solid', borderColor: color, borderRadius: 2 }}>
-                <Typography variant="body2" color="text.secondary" gutterBottom>{label}</Typography>
-                <Typography variant="h5" sx={{ color, fontWeight: 700 }}>{value}</Typography>
-              </Paper>
-            </Grid>
-          ))}
-        </Grid>
+        {/* ── Summary Chips ─────────────────────────────────────────── */}
+        <ListSummary
+          items={buildSummaryFilterItems({
+            activeFilter: statusFilter,
+            allFilterValue: '',
+            onFilterChange: setStatusFilter,
+            filteredCount: transactions.length,
+            viewAllValue: allTransactionsTotal,
+            chips: [
+              { label: 'All Transactions', value: stats.total,     filterValue: '' },
+              { label: 'Matched',          value: stats.matched,   color: 'success', filterValue: 'matched' },
+              { label: 'Unmatched',        value: stats.unmatched, color: 'warning', filterValue: 'unmatched' },
+            ],
+          })}
+        />
 
         {/* ── Tabs ─────────────────────────────────────────────────────── */}
         <Paper sx={{ borderRadius: 2 }}>

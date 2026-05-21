@@ -2,7 +2,8 @@ import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { createApiUrl } from "../config/api";
 import MainLayout from "./Layout/MainLayout";
-import SummaryCard from "./common/SummaryCard";
+import ListSummary from "./list/ListSummary";
+import buildSummaryFilterItems from "../utils/summaryFilterChips";
 import ArchiveDialog from "./common/ArchiveDialog";
 import LifecycleArchiveDialog from "./common/LifecycleArchiveDialog";
 import {
@@ -39,9 +40,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import ArchiveIcon from "@mui/icons-material/Archive";
 import ReceiptIcon from "@mui/icons-material/Receipt";
 import RestoreIcon from "@mui/icons-material/Restore";
-import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import CategoryIcon from "@mui/icons-material/Category";
-import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import ImageIcon from "@mui/icons-material/Image";
 import { useTranslation } from "react-i18next";
 import { getDateRange, formatDateOnly } from "../utils/dateRangeFilters";
@@ -69,6 +68,7 @@ const ExpenseList = () => {
   const location = useLocation();
   const { t } = useTranslation();
   const [expenses, setExpenses] = useState([]);
+  const [expenseSummary, setExpenseSummary] = useState({ total: 0, paid: 0, pending: 0 });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -132,12 +132,21 @@ const ExpenseList = () => {
         params.append("sort_order", sortParams.sort_order);
       }
       
+      params.append("include_meta", "1");
+
       if (params.toString()) {
         url += `?${params.toString()}`;
       }
 
       const response = await axios.get(url);
-      setExpenses(response.data);
+      const payload = response.data;
+      if (payload && payload.data) {
+        setExpenses(payload.data);
+        setExpenseSummary(payload.summary || { total: 0, paid: 0, pending: 0 });
+      } else {
+        setExpenses(Array.isArray(payload) ? payload : []);
+        setExpenseSummary({ total: 0, paid: 0, pending: 0 });
+      }
     } catch (error) {
       setError(t('expenseList.failedFetch'));
       console.error(error);
@@ -179,13 +188,10 @@ const ExpenseList = () => {
     page * rowsPerPage + rowsPerPage
   );
 
-  // Calculate summary stats
-  const totalExpenses = filteredExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
-  const expenseCount = filteredExpenses.length;
-  const avgExpense = expenseCount > 0 ? totalExpenses / expenseCount : 0;
-  const withReceipts = filteredExpenses.filter(e => e.receipt_url).length;
+  // Status counts from server summary
+  const allPaidCount = expenseSummary.paid || 0;
+  const allPendingCount = expenseSummary.pending || 0;
 
-  // Group by category for display
   const categoryTotals = filteredExpenses.reduce((acc, exp) => {
     const cat = exp.category || "Other";
     acc[cat] = (acc[cat] || 0) + exp.amount;
@@ -252,41 +258,21 @@ const ExpenseList = () => {
             </Button>
           </Box>
 
-          {/* Summary Cards */}
-          <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={12} sm={6} md={3}>
-              <SummaryCard
-                label={t('expenseList.totalExpenses')}
-                value={`₹${totalExpenses.toLocaleString()}`}
-                icon={<AttachMoneyIcon />}
-                accentColor="error.main"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <SummaryCard
-                label={t('expenseList.totalCount')}
-                value={expenseCount}
-                icon={<ReceiptIcon />}
-                accentColor="primary.main"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <SummaryCard
-                label={t('expenseList.avgExpense')}
-                value={`₹${avgExpense.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
-                icon={<AccountBalanceWalletIcon />}
-                accentColor="info.main"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <SummaryCard
-                label={t('expenseList.withReceipts')}
-                value={`${withReceipts} / ${expenseCount}`}
-                icon={<ImageIcon />}
-                accentColor="success.main"
-              />
-            </Grid>
-          </Grid>
+          {/* Clickable summary chips */}
+          <ListSummary
+            items={buildSummaryFilterItems({
+              activeFilter: statusFilter,
+              allFilterValue: "All",
+              onFilterChange: setStatusFilter,
+              filteredCount: filteredExpenses.length,
+              viewAllValue: expenseSummary.total || expenses.length,
+              chips: [
+                { label: "All Expenses", value: expenseSummary.total || expenses.length,  filterValue: "All" },
+                { label: "Pending",      value: allPendingCount,  color: "warning", filterValue: "Pending" },
+                { label: "Paid",         value: allPaidCount,     color: "success", filterValue: "Paid" },
+              ],
+            })}
+          />
 
           {/* Filters */}
           <Box

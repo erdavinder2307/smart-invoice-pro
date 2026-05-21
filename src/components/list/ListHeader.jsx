@@ -19,6 +19,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
 import { clearSearchHistory, deleteSearchHistoryItem, getSearchHistory } from "../../services/searchService";
+import { useAuth } from "../../context/AuthContext";
 
 const HISTORY_LIMIT = 7;
 
@@ -92,12 +93,18 @@ const ListHeader = forwardRef(({
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [historyItems, setHistoryItems] = useState([]);
   const [activeIndex, setActiveIndex] = useState(-1);
-  const cacheKey = historyStorageKey ? `local:${historyStorageKey}` : `api:${searchPage || "global"}`;
+  const { user } = useAuth() || {};
+  // Scope localStorage key per-user to prevent history leaking across accounts
+  const effectiveStorageKey = useMemo(() => {
+    if (!historyStorageKey) return null;
+    return user?.id ? `${historyStorageKey}_${user.id}` : historyStorageKey;
+  }, [historyStorageKey, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const cacheKey = effectiveStorageKey ? `local:${effectiveStorageKey}` : `api:${searchPage || "global"}`;
 
   // ── History loading ──────────────────────────────────────────────────────
 
   const loadHistory = useCallback(async () => {
-    if (!searchPage && !historyStorageKey) {
+    if (!searchPage && !effectiveStorageKey) {
       setHistoryItems([]);
       return;
     }
@@ -107,8 +114,8 @@ const ListHeader = forwardRef(({
       return;
     }
 
-    if (historyStorageKey) {
-      const localItems = readLocalHistory(historyStorageKey);
+    if (effectiveStorageKey) {
+      const localItems = readLocalHistory(effectiveStorageKey);
       historyCache.set(cacheKey, localItems);
       setHistoryItems(localItems);
       return;
@@ -125,7 +132,7 @@ const ListHeader = forwardRef(({
     } finally {
       setLoadingHistory(false);
     }
-  }, [cacheKey, searchPage, historyStorageKey]);
+  }, [cacheKey, searchPage, effectiveStorageKey]);
 
   // ── Merged suggestions (live results + history) ──────────────────────────
 
@@ -211,8 +218,8 @@ const ListHeader = forwardRef(({
           next.unshift(picked);
         }
         historyCache.set(cacheKey, next);
-        if (historyStorageKey) {
-          writeLocalHistory(historyStorageKey, next);
+        if (effectiveStorageKey) {
+          writeLocalHistory(effectiveStorageKey, next);
         }
         return next;
       });
@@ -220,11 +227,11 @@ const ListHeader = forwardRef(({
   };
 
   const handleDeleteHistory = async (historyId) => {
-    if (historyStorageKey) {
+    if (effectiveStorageKey) {
       setHistoryItems((prev) => {
         const next = prev.filter((item) => item.id !== historyId);
         historyCache.set(cacheKey, next);
-        writeLocalHistory(historyStorageKey, next);
+        writeLocalHistory(effectiveStorageKey, next);
         return next;
       });
       return;
@@ -243,10 +250,10 @@ const ListHeader = forwardRef(({
   };
 
   const handleClearAll = async () => {
-    if (historyStorageKey) {
+    if (effectiveStorageKey) {
       setHistoryItems([]);
       historyCache.set(cacheKey, []);
-      writeLocalHistory(historyStorageKey, []);
+      writeLocalHistory(effectiveStorageKey, []);
       return;
     }
 

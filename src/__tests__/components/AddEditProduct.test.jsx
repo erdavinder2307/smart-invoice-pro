@@ -104,4 +104,62 @@ describe('AddEditProduct', () => {
     resolveCreate({ id: 'p-2' });
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/products'));
   });
+
+  it('supports searching and selecting preferred vendor', async () => {
+    axios.get.mockResolvedValueOnce({
+      data: [
+        { id: 'v-1', name: 'Acme Supplies' },
+        { id: 'v-2', name: 'Beta Traders' },
+      ],
+    });
+
+    const { container } = renderWithProviders(<AddEditProduct />);
+
+    await waitFor(() => expect(container.querySelector('input[name="name"]')).toBeInTheDocument());
+
+    setInput(container, 'name', 'USB Cable');
+    await selectUnit(container, 'pcs');
+    setInput(container, 'price', '120');
+    setInput(container, 'purchase_rate', '75');
+
+    const vendorInput = screen.getByPlaceholderText('Search vendor');
+    fireEvent.change(vendorInput, { target: { value: 'Acme' } });
+    fireEvent.click(await screen.findByRole('option', { name: 'Acme Supplies' }));
+
+    createProduct.mockResolvedValue({ id: 'p-3' });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(createProduct).toHaveBeenCalledTimes(1));
+    expect(createProduct).toHaveBeenCalledWith(expect.objectContaining({ preferred_vendor_id: 'v-1' }));
+  });
+
+  it('clears preferred vendor with clear button', async () => {
+    axios.get.mockResolvedValueOnce({
+      data: [
+        { id: 'v-1', name: 'Acme Supplies' },
+        { id: 'v-2', name: 'Beta Traders' },
+      ],
+    });
+
+    const { container } = renderWithProviders(<AddEditProduct />);
+
+    await waitFor(() => expect(container.querySelector('input[name="name"]')).toBeInTheDocument());
+
+    setInput(container, 'name', 'USB Cable');
+    await selectUnit(container, 'pcs');
+    setInput(container, 'price', '120');
+    setInput(container, 'purchase_rate', '75');
+
+    const vendorInput = screen.getByPlaceholderText('Search vendor');
+    fireEvent.change(vendorInput, { target: { value: 'Acme' } });
+    fireEvent.click(await screen.findByRole('option', { name: 'Acme Supplies' }));
+
+    fireEvent.click(screen.getByLabelText('Clear'));
+
+    createProduct.mockResolvedValue({ id: 'p-4' });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(createProduct).toHaveBeenCalledTimes(1));
+    expect(createProduct).toHaveBeenCalledWith(expect.objectContaining({ preferred_vendor_id: '' }));
+  });
 });

@@ -3,7 +3,7 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 
-const BulkActionBar = ({ selectedCount, actions = [] }) => {
+const BulkActionBar = ({ selectedCount, infoText = "", actions = [] }) => {
   if (!selectedCount) return null;
 
   return (
@@ -21,7 +21,12 @@ const BulkActionBar = ({ selectedCount, actions = [] }) => {
         mb: 2,
       }}
     >
-      <Typography variant="body2" fontWeight={600}>{selectedCount} selected</Typography>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25, mr: 0.5 }}>
+        <Typography variant="body2" fontWeight={600}>{selectedCount} selected</Typography>
+        {infoText ? (
+          <Typography variant="caption" color="text.secondary">{infoText}</Typography>
+        ) : null}
+      </Box>
       {actions.map((action) => (
         <Button
           key={action.label}

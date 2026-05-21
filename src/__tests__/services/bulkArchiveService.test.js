@@ -18,10 +18,10 @@ describe("bulkArchiveService", () => {
 
     expect(result).toEqual({ successCount: 2, failedCount: 1 });
     expect(axios.post).toHaveBeenCalledWith(
-      expect.stringContaining("/api/bills/bulk-archive"),
+      expect.stringContaining("/api/lifecycle/bills/bulk-execute"),
       {
         ids: ["b-1", "b-2", "b-3"],
-        action: "archive",
+        action: "delete",
       }
     );
   });

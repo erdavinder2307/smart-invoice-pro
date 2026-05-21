@@ -27,26 +27,40 @@ const resolveEntityPath = (entityType) => {
 
 export const bulkArchiveEntities = async (entityType, ids) => {
   const path = resolveEntityPath(entityType);
-  const response = await axios.post(createApiUrl(`/api/${path}/bulk-archive`), {
+  const response = await axios.post(createApiUrl(`/api/lifecycle/${path}/bulk-execute`), {
     ids,
-    action: "archive",
+    action: "delete",
   });
   return response.data;
 };
 
 export const parseBulkArchiveResult = (data) => {
-  const successCount = data?.successCount ?? data?.archived?.length ?? 0;
-  const failedCount = data?.failedCount ?? data?.failed?.length ?? 0;
+  const deletedCount = Number(data?.deletedCount ?? 0);
+  const archivedCount = Number(data?.archivedCount ?? 0);
+  const restoredCount = Number(data?.restoredCount ?? 0);
+  const successCount = Number(data?.processedCount ?? 0);
+  const failedCount = Number(data?.failedCount ?? 0);
   const hasPartialFailure = failedCount > 0;
-  const message = hasPartialFailure
-    ? `Archived ${successCount} record(s). ${failedCount} could not be archived (dependencies or locked status).`
-    : `Successfully archived ${successCount} record(s).`;
+
+  let message = `Processed ${successCount} record(s): ${deletedCount} deleted, ${archivedCount} archived`;
+  if (restoredCount > 0) {
+    message += `, ${restoredCount} restored`;
+  }
+  if (failedCount > 0) {
+    message += `. ${failedCount} failed.`;
+  } else {
+    message += ".";
+  }
+
   return {
     successCount,
     failedCount,
-    archived: data?.archived ?? [],
-    failed: data?.failed ?? [],
+    deletedCount,
+    archivedCount,
+    restoredCount,
     hasPartialFailure,
+    dependencySummary: data?.dependencySummary ?? {},
+    results: data?.results ?? [],
     message,
   };
 };

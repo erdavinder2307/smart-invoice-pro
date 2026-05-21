@@ -8,6 +8,7 @@ import CustomerList from './components/CustomerList';
 import AddEditCustomer from './components/AddEditCustomer';
 import ProductList from './components/ProductList';
 import AddEditProduct from './components/AddEditProduct';
+import ProductDetail from './pages/ProductDetail';
 import StockAdjustment from './components/StockAdjustment';
 import CustomerLogin from './components/CustomerLogin';
 import CustomerDashboard from './pages/CustomerDashboard';
@@ -57,6 +58,7 @@ import InvoicePreferences from './pages/InvoicePreferences';
 import TaxSettings from './pages/TaxSettings';
 import AutomationSettings from './pages/AutomationSettings';
 import IntegrationSettings from './pages/IntegrationSettings';
+import InventorySettings from './pages/InventorySettings';
 import NotificationsPage from './pages/NotificationsPage';
 import AuditLogPage from './pages/AuditLogPage';
 import CustomerDetailPage from './pages/CustomerDetailPage';
@@ -133,6 +135,7 @@ const AppRoutes = () => {
           <Route path="/products" element={<ProductList />} />
           <Route path="/products/add" element={<AddEditProduct />} />
           <Route path="/products/edit/:id" element={<AddEditProduct />} />
+          <Route path="/products/:id" element={<ProductDetail />} />
           <Route path="/stock-adjustment" element={<StockAdjustment />} />
           <Route path="/bank-accounts" element={<BankAccounts />} />
           <Route path="/bank-reconciliation" element={<BankReconciliation />} />
@@ -146,6 +149,7 @@ const AppRoutes = () => {
           <Route path="/settings/roles" element={<RoleManagement />} />
           <Route path="/settings/automation" element={<AutomationSettings />} />
           <Route path="/settings/integrations" element={<IntegrationSettings />} />
+          <Route path="/settings/inventory" element={<InventorySettings />} />
           <Route path="/settings/audit-log" element={<AuditLogPage />} />
           <Route path="/settings/audit-logs" element={<AuditLogPage />} />
           {/* My Account routes (all authenticated users) */}

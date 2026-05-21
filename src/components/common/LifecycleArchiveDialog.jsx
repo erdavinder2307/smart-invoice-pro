@@ -62,7 +62,13 @@ const LifecycleArchiveDialog = ({
 
   const [loadingDeps, setLoadingDeps] = useState(false);
   const [processing, setProcessing] = useState(false);
-  const [dependencyData, setDependencyData] = useState({ hasDependencies: false, dependencySummary: {} });
+  const [dependencyData, setDependencyData] = useState({
+    hasDependencies: false,
+    dependencySummary: {},
+    hardDeleteAllowed: false,
+    recommendedAction: "archive",
+    isAccountingProtected: false,
+  });
   const [error, setError] = useState("");
   const [partialResult, setPartialResult] = useState(null);
 
@@ -81,6 +87,9 @@ const LifecycleArchiveDialog = ({
         setDependencyData({
           hasDependencies: Boolean(data?.hasDependencies),
           dependencySummary: data?.dependencySummary || {},
+          hardDeleteAllowed: Boolean(data?.hardDeleteAllowed),
+          recommendedAction: data?.recommendedAction || "archive",
+          isAccountingProtected: Boolean(data?.isAccountingProtected),
         });
       } catch (err) {
         if (!active) return;
@@ -99,7 +108,13 @@ const LifecycleArchiveDialog = ({
     if (!open) {
       setError("");
       setPartialResult(null);
-      setDependencyData({ hasDependencies: false, dependencySummary: {} });
+      setDependencyData({
+        hasDependencies: false,
+        dependencySummary: {},
+        hardDeleteAllowed: false,
+        recommendedAction: "archive",
+        isAccountingProtected: false,
+      });
     }
   }, [open]);
 
@@ -165,7 +180,7 @@ const LifecycleArchiveDialog = ({
       ? `Restore ${displayCount} ${entityLabel}${displayCount !== 1 ? "s" : ""}?`
       : `Restore ${entityLabel}?`
     : isBulk
-    ? `Archive ${displayCount} ${entityLabel}${displayCount !== 1 ? "s" : ""}?`
+    ? `Process ${displayCount} ${entityLabel}${displayCount !== 1 ? "s" : ""}?`
     : `Archive ${entityLabel}?`;
 
   const confirmLabel = isRestore
@@ -174,7 +189,12 @@ const LifecycleArchiveDialog = ({
       : <><RestoreIcon sx={{ mr: 0.5, fontSize: 18 }} /> Restore</>
     : processing
     ? <CircularProgress size={18} color="inherit" />
-    : <><ArchiveIcon sx={{ mr: 0.5, fontSize: 18 }} /> {isBulk ? "Archive All" : `Archive ${entityLabel}`}</>;
+    : <>
+        <ArchiveIcon sx={{ mr: 0.5, fontSize: 18 }} />
+        {isBulk
+          ? "Process All"
+          : `Archive ${entityLabel}`}
+      </>;
 
   return (
     <Dialog open={Boolean(open)} onClose={processing ? undefined : onClose} maxWidth="sm" fullWidth>
@@ -214,50 +234,50 @@ const LifecycleArchiveDialog = ({
             {/* ── ARCHIVE mode: single, with dep analysis ── */}
             {!isRestore && !isBulk && !partialResult && (
               <>
-                {dependencyEntries.length > 0 ? (
+                {dependencyData.hardDeleteAllowed ? (
+                  <Alert severity="info" sx={{ mb: 1.5 }}>
+                    This record has no linked transactions and will be archived. Archived records are hidden from active workflows but remain historically visible.
+                  </Alert>
+                ) : (
                   <>
-                    <Typography sx={{ color: "text.secondary", mb: 1.5 }}>
-                      Operational references were detected for this {entityLabel.toLowerCase()}. Archiving preserves immutable history,
-                      reporting integrity, and audit traceability.
-                    </Typography>
-                    <Typography sx={{ fontWeight: 600, mb: 0.75 }}>
-                      Operational impact ({dependencyTotal} references)
-                    </Typography>
-                    <List dense disablePadding>
-                      {dependencyEntries.map(([name, count]) => (
-                        <ListItem key={name} disableGutters>
-                          <ListItemText primary={`${count} ${toLabel(name)}`} />
-                        </ListItem>
-                      ))}
-                    </List>
-                    <Divider sx={{ my: 1.5 }} />
+                    <Alert severity="warning" sx={{ mb: 1.5 }}>
+                      {dependencyEntries.length > 0
+                        ? `This record is used in ${dependencyTotal} linked transaction(s) and will be archived instead.`
+                        : "This record is protected by accounting policy and will be archived instead."}
+                    </Alert>
+                    {dependencyEntries.length > 0 ? (
+                      <>
+                        <Typography sx={{ fontWeight: 600, mb: 0.75 }}>
+                          Dependency summary
+                        </Typography>
+                        <List dense disablePadding>
+                          {dependencyEntries.map(([name, count]) => (
+                            <ListItem key={name} disableGutters>
+                              <ListItemText primary={`${count} ${toLabel(name)}`} />
+                            </ListItem>
+                          ))}
+                        </List>
+                        <Divider sx={{ my: 1.5 }} />
+                      </>
+                    ) : null}
                     <Typography sx={{ color: "text.secondary", fontSize: "0.9rem" }}>
-                      Archiving will remove this record from active operations while keeping it visible in historical and audit contexts.
+                      Archived records remain historically visible in related documents but are hidden from active workflows.
                     </Typography>
                   </>
-                ) : (
-                  <Alert severity="info" sx={{ mb: 1.5 }}>
-                    No operational dependencies were detected.
-                  </Alert>
                 )}
-
-                <Typography sx={{ color: "text.secondary", lineHeight: 1.6, mt: 1 }}>
-                  Archiving removes this {entityLabel.toLowerCase()} from active workflows and selectors while preserving financial
-                  history, reports, and audit logs.
-                </Typography>
               </>
             )}
 
             {/* ── BULK ARCHIVE mode ── */}
             {!isRestore && isBulk && !partialResult && (
               <>
-                <Alert severity="warning" sx={{ mb: 1.5 }}>
-                  {displayCount} {entityLabel.toLowerCase()}
-                  {displayCount !== 1 ? "s" : ""} will be archived.
+                <Alert severity="info" sx={{ mb: 1.5 }}>
+                  Smart lifecycle mode is enabled for {displayCount} {entityLabel.toLowerCase()}
+                  {displayCount !== 1 ? "s" : ""}.
                 </Alert>
                 <Typography sx={{ color: "text.secondary", lineHeight: 1.6 }}>
-                  Records with active dependencies will be noted in the result summary. All others will be moved to Archived status
-                  and removed from active workflows.
+                  Unlinked records will be permanently deleted. Records with dependencies or accounting protection will be archived.
+                  The result summary will show deleted vs archived counts.
                 </Typography>
               </>
             )}

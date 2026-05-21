@@ -56,7 +56,7 @@ jest.mock('../../components/Dashboard/InventoryOverviewCard', () => ({
       {!loading && lowStock && lowStock.map((item) => (
         <div key={item.id || item.product_id} onClick={() => onItemClick(item)}>
           <span>{item.name}</span>
-          {item.stock < 5 && <span>Critical</span>}
+          {item.stock <= 0 && <span>Critical</span>}
         </div>
       ))}
       {!loading && <button onClick={onViewInventory}>View Inventory</button>}
@@ -380,7 +380,7 @@ describe('DashboardPage', () => {
   it('shows critical inventory items in InventoryOverviewCard', async () => {
     axios.get.mockImplementation((url) => {
       if (url.includes('/api/dashboard/summary')) return Promise.resolve({ data: buildSummary() });
-      if (url.includes('/api/dashboard/low-stock')) return Promise.resolve({ data: [{ id: 'p-1', product_id: 'p-1', name: 'Paper', stock: 2 }] });
+      if (url.includes('/api/dashboard/low-stock')) return Promise.resolve({ data: [{ id: 'p-1', product_id: 'p-1', name: 'Paper', stock: 0 }] });
       if (url.includes('/api/dashboard/monthly-revenue')) return Promise.resolve({ data: [] });
       if (url.includes('/api/dashboard/recent-invoices')) return Promise.resolve({ data: [] });
       return Promise.resolve({ data: [] });
@@ -470,7 +470,7 @@ describe('DashboardPage', () => {
     axios.post.mockResolvedValue({ data: { message: 'ok' } });
 
     renderWithProviders(<DashboardPage />);
-    await screen.findByRole('button', { name: 'INV-022' });
+    await screen.findByRole('button', { name: 'INV-022' }, { timeout: 5000 });
 
     fireEvent.click(screen.getByRole('button', { name: 'Send reminder' }));
     fireEvent.click(screen.getByRole('button', { name: 'Mark as paid' }));

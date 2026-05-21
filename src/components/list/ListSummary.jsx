@@ -18,7 +18,17 @@ const ListSummary = ({ items = [] }) => {
           clickable={Boolean(item.onClick)}
           sx={{
             fontWeight: 600,
+            transition: "all 0.2s ease",
             ...(item.active ? { boxShadow: 2 } : {}),
+            ...(item.onClick
+              ? {
+                  cursor: "pointer",
+                  "&:hover": {
+                    transform: "translateY(-1px)",
+                    boxShadow: item.active ? 3 : 1,
+                  },
+                }
+              : {}),
           }}
         />
       ))}

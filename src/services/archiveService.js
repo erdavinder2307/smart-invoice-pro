@@ -27,18 +27,22 @@ const resolveEntityPath = (entityType) => {
 
 export const checkDependencies = async (entityType, entityId) => {
   const path = resolveEntityPath(entityType);
-  const response = await axios.get(createApiUrl(`/api/${path}/${entityId}/dependencies`));
+  const response = await axios.get(createApiUrl(`/api/lifecycle/${path}/${entityId}/analysis`));
   return response.data;
 };
 
 export const archiveEntity = async (entityType, entityId) => {
   const path = resolveEntityPath(entityType);
-  const response = await axios.delete(createApiUrl(`/api/${path}/${entityId}`));
+  const response = await axios.post(createApiUrl(`/api/lifecycle/${path}/${entityId}/execute`), {
+    action: "delete",
+  });
   return response.data;
 };
 
 export const restoreEntity = async (entityType, entityId) => {
   const path = resolveEntityPath(entityType);
-  const response = await axios.post(createApiUrl(`/api/${path}/${entityId}/restore`));
+  const response = await axios.post(createApiUrl(`/api/lifecycle/${path}/${entityId}/execute`), {
+    action: "restore",
+  });
   return response.data;
 };

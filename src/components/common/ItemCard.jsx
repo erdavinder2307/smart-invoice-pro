@@ -186,7 +186,7 @@ const ItemCard = ({
               </IconButton>
             </Tooltip>
             {onRestock && (
-              <Tooltip title="Restock item">
+              <Tooltip title="Order from vendor">
                 <IconButton
                   size="small"
                   onClick={onRestock}

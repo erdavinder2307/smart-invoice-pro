@@ -36,8 +36,9 @@ const InventoryOverviewCard = ({
   onItemClick,
   sx = {},
 }) => {
-  const criticalItems = lowStock.filter((i) => i.stock < 5);
-  const lowItems = lowStock.filter((i) => i.stock >= 5);
+  // Align with canonical stock buckets: Critical is <= 0, Low Stock is > 0 within lowStock feed
+  const criticalItems = lowStock.filter((i) => i.stock <= 0);
+  const lowItems = lowStock.filter((i) => i.stock > 0);
   const top3Critical = criticalItems.slice(0, 3);
 
   const formatStock = (stock) => {
@@ -214,7 +215,7 @@ const InventoryOverviewCard = ({
                               {item.name}
                             </Typography>
                             <Typography variant="caption" color="error.main">
-                              {formatStock(item.stock)}
+                              {formatStock(item.stock)} · reorder at {item.reorder_level ?? '—'}
                             </Typography>
                           </Box>
                           <Chip

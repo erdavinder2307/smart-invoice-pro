@@ -27,19 +27,20 @@ import { safeClick } from "../utils/safeClick";
 import { getProductStockSummary } from "../services/productService";
 
 // ── Status helpers ──────────────────────────────────────────────────────────
-
-const STATUS_ORDER = { out: 0, critical: 1, low: 2, moderate: 3, healthy: 4 };
+// ProductStockSummary receives condensed stock-summary records (id, name, sku,
+// stock) without reorder_level. We therefore use fixed operational thresholds
+// that mirror the canonical getStockMeta bucket boundaries as closely as
+// possible, and map to the same canonical bucket keys so sort order is shared.
 
 const getStockStatus = (stock) => {
-  if (stock <= 0) return { key: "out",      color: "error",   label: "Out of Stock" };
-  if (stock < 5)  return { key: "critical", color: "error",   label: "Critical" };
-  if (stock < 10) return { key: "low",      color: "warning", label: "Low Stock" };
-  if (stock < 50) return { key: "moderate", color: "info",    label: "Moderate" };
-  return               { key: "healthy", color: "success", label: "Healthy" };
+  if (stock <= 0) return { key: "Critical",  color: "error",   label: "Out of Stock" };
+  if (stock < 5)  return { key: "Critical",  color: "error",   label: "Critical" };
+  if (stock < 10) return { key: "Low Stock", color: "warning", label: "Low Stock" };
+  return               { key: "In Stock",  color: "success", label: "In Stock" };
 };
 
-const ROW_BG    = { out: "error.50",  critical: "error.50",  low: "warning.50", moderate: "inherit", healthy: "inherit" };
-const ROW_HOVER = { out: "error.100", critical: "error.100", low: "warning.100", moderate: "action.hover", healthy: "action.hover" };
+const ROW_BG    = { Critical: "error.50",   "Low Stock": "warning.50", "In Stock": "inherit" };
+const ROW_HOVER = { Critical: "error.100",  "Low Stock": "warning.100", "In Stock": "action.hover" };
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -66,16 +67,23 @@ const ProductStockSummary = () => {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const enriched = useMemo(
-    () => products.map((p) => ({ ...p, stockStatus: getStockStatus(p.stock) })),
+    () => products.map((p) => {
+      const stockStatus = getStockStatus(p.stock);
+      return {
+        ...p,
+        stockStatus,
+        replenishmentNeeded: stockStatus.key !== "In Stock",
+      };
+    }),
     [products]
   );
 
   const criticalCount = useMemo(
-    () => enriched.filter((p) => p.stockStatus.key === "out" || p.stockStatus.key === "critical").length,
+    () => enriched.filter((p) => p.stockStatus.key === "Critical").length,
     [enriched]
   );
   const lowCount = useMemo(
-    () => enriched.filter((p) => p.stockStatus.key === "low").length,
+    () => enriched.filter((p) => p.stockStatus.key === "Low Stock").length,
     [enriched]
   );
 
@@ -84,8 +92,14 @@ const ProductStockSummary = () => {
     if (filterStatus !== "all") {
       list = list.filter((p) =>
         filterStatus === "critical"
-          ? p.stockStatus.key === "critical" || p.stockStatus.key === "out"
-          : p.stockStatus.key === filterStatus
+          ? p.stockStatus.key === "Critical"
+          : filterStatus === "low"
+            ? p.stockStatus.key === "Low Stock"
+            : filterStatus === "replenishment"
+              ? p.replenishmentNeeded
+            : filterStatus === "in-stock"
+              ? p.stockStatus.key === "In Stock"
+              : true
       );
     }
     if (searchQuery.trim()) {
@@ -98,7 +112,11 @@ const ProductStockSummary = () => {
       let cmp = 0;
       if      (sortField === "name")   cmp = (a.name || "").localeCompare(b.name || "");
       else if (sortField === "stock")  cmp = (a.stock ?? 0) - (b.stock ?? 0);
-      else if (sortField === "status") cmp = (STATUS_ORDER[a.stockStatus.key] ?? 9) - (STATUS_ORDER[b.stockStatus.key] ?? 9);
+      else if (sortField === "status") {
+        // Use pre-computed stockStatus.key (canonical bucket) for sort rank
+        const rankMap = { Critical: 0, "Low Stock": 1, "In Stock": 2, Archived: 3 };
+        cmp = (rankMap[a.stockStatus.key] ?? 9) - (rankMap[b.stockStatus.key] ?? 9);
+      }
       return sortDir === "asc" ? cmp : -cmp;
     });
   }, [enriched, filterStatus, searchQuery, sortField, sortDir]);
@@ -159,7 +177,8 @@ const ProductStockSummary = () => {
             <ToggleButton value="all"      sx={{ textTransform: "none", px: 1.5 }}>All ({enriched.length})</ToggleButton>
             <ToggleButton value="critical" sx={{ textTransform: "none", px: 1.5 }}>Critical</ToggleButton>
             <ToggleButton value="low"      sx={{ textTransform: "none", px: 1.5 }}>Low</ToggleButton>
-            <ToggleButton value="healthy"  sx={{ textTransform: "none", px: 1.5 }}>Healthy</ToggleButton>
+            <ToggleButton value="replenishment" sx={{ textTransform: "none", px: 1.5 }}>Replenishment Needed</ToggleButton>
+            <ToggleButton value="in-stock" sx={{ textTransform: "none", px: 1.5 }}>In Stock</ToggleButton>
           </ToggleButtonGroup>
           <Tooltip title="Sort by stock level">
             <IconButton size="small" onClick={() => handleSort("stock")} aria-label="Sort by stock"
@@ -198,6 +217,9 @@ const ProductStockSummary = () => {
                   Status
                 </TableSortLabel>
               </TableCell>
+              <TableCell align="center" sx={{ fontWeight: 700, bgcolor: "grey.50", borderBottom: "2px solid", borderColor: "divider" }}>
+                Replenishment
+              </TableCell>
               <TableCell align="right" sx={{ fontWeight: 700, bgcolor: "grey.50", borderBottom: "2px solid", borderColor: "divider", pr: 3 }}>
                 Actions
               </TableCell>
@@ -206,7 +228,7 @@ const ProductStockSummary = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={4} sx={{ textAlign: "center", py: 5 }}>
+                <TableCell colSpan={5} sx={{ textAlign: "center", py: 5 }}>
                   <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1.5 }}>
                     <CircularProgress size={28} />
                     <Typography color="text.secondary" variant="body2">Loading inventory data...</Typography>
@@ -215,7 +237,7 @@ const ProductStockSummary = () => {
               </TableRow>
             ) : error ? (
               <TableRow>
-                <TableCell colSpan={4} sx={{ py: 3 }}>
+                <TableCell colSpan={5} sx={{ py: 3 }}>
                   <Alert severity="error" sx={{ maxWidth: 400, mx: "auto" }}
                     action={<Button size="small" onClick={safeClick(fetchData)}>Retry</Button>}>
                     {error}
@@ -224,12 +246,13 @@ const ProductStockSummary = () => {
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} sx={{ py: 4 }}>
+                <TableCell colSpan={5} sx={{ py: 4 }}>
                   <EmptyState
                     icon={<Inventory />}
                     title={
                       searchQuery          ? "No products match your search"
-                      : filterStatus !== "all" ? `No ${filterStatus} stock items`
+                      : filterStatus !== "all"
+                        ? `No ${filterStatus === "in-stock" ? "in stock" : filterStatus === "replenishment" ? "replenishment-needed" : filterStatus} items`
                       : "No products found"
                     }
                     subtitle={
@@ -270,8 +293,8 @@ const ProductStockSummary = () => {
                       ) : (
                         <Typography variant="body2" fontWeight={700}
                           color={
-                            stockStatus.key === "out" || stockStatus.key === "critical" ? "error.main"
-                            : stockStatus.key === "low" ? "warning.main"
+                            stockStatus.key === "Critical" ? "error.main"
+                            : stockStatus.key === "Low Stock" ? "warning.main"
                             : "text.primary"
                           }>
                           {product.stock.toLocaleString()}
@@ -283,8 +306,17 @@ const ProductStockSummary = () => {
                         label={stockStatus.label}
                         color={stockStatus.color}
                         size="small"
-                        variant={stockStatus.key === "healthy" || stockStatus.key === "moderate" ? "outlined" : "filled"}
+                        variant={stockStatus.key === "In Stock" ? "outlined" : "filled"}
                         sx={{ fontWeight: 600, minWidth: 90 }}
+                      />
+                    </TableCell>
+                    <TableCell align="center" sx={{ py: 1.5 }}>
+                      <Chip
+                        label={product.replenishmentNeeded ? "Needed" : "OK"}
+                        color={product.replenishmentNeeded ? "warning" : "success"}
+                        size="small"
+                        variant={product.replenishmentNeeded ? "filled" : "outlined"}
+                        sx={{ fontWeight: 600, minWidth: 80 }}
                       />
                     </TableCell>
                     <TableCell align="right" sx={{ py: 1.5, pr: 2 }} onClick={(e) => e.stopPropagation()}>

@@ -48,9 +48,11 @@ import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { bulkVendorAction, getVendorsList } from '../services/vendorService';
 import { bulkArchiveEntities, parseBulkArchiveResult } from '../services/bulkArchiveService';
 import { formatCurrency as formatCurrencyByLocale } from '../utils/intlFormatters';
+import { buildSummaryFilterItems } from '../utils/summaryFilterChips';
 
 const OUTSTANDING_CLEAR = 'Cleared';
 const OUTSTANDING_WITH_PAYABLES = 'With Payables';
+const OUTSTANDING_HIGH = 'High Outstanding';
 const SEARCH_HISTORY_KEY = 'sip_search_history_vendors';
 const SEARCH_HISTORY_LIMIT = 7;
 
@@ -86,6 +88,13 @@ const getVendorName = (vendor) => (
   || vendor?.display_name
   || '—'
 );
+
+const getOutstandingQueryValue = (outstandingFilter) => {
+  if (outstandingFilter === OUTSTANDING_WITH_PAYABLES) return 'with_payables';
+  if (outstandingFilter === OUTSTANDING_CLEAR) return 'cleared';
+  if (outstandingFilter === OUTSTANDING_HIGH) return 'high_outstanding';
+  return '';
+};
 
 const formatDate = (value) => {
   const parsed = toDate(value);
@@ -259,8 +268,9 @@ const VendorList = () => {
     if (statusFilter !== 'All') next.set('status', statusFilter);
     else next.delete('status');
 
-    if (outstandingFilter !== 'All') {
-      next.set('outstanding', outstandingFilter === OUTSTANDING_WITH_PAYABLES ? 'with_payables' : 'cleared');
+    const outstandingQueryValue = getOutstandingQueryValue(outstandingFilter);
+    if (outstandingQueryValue) {
+      next.set('outstanding', outstandingQueryValue);
     } else {
       next.delete('outstanding');
     }
@@ -314,9 +324,7 @@ const VendorList = () => {
     page_size: rowsPerPage,
     q: effectiveSearch,
     status: statusFilter === 'All' ? '' : statusFilter,
-    outstanding: outstandingFilter === 'All'
-      ? ''
-      : (outstandingFilter === OUTSTANDING_WITH_PAYABLES ? 'with_payables' : 'cleared'),
+    outstanding: getOutstandingQueryValue(outstandingFilter),
     payment_terms: paymentTermsFilter === 'All Terms' ? '' : paymentTermsFilter,
     sort_by: sortBy,
     sort_order: sortOrder,
@@ -691,6 +699,14 @@ const VendorList = () => {
               {tl('vendorList.filters.cleared', 'Cleared')}
             </Button>
             <Button
+              variant={outstandingFilter === OUTSTANDING_HIGH ? 'contained' : 'outlined'}
+              size="small"
+              onClick={() => setOutstandingFilter(OUTSTANDING_HIGH)}
+              sx={{ textTransform: 'none' }}
+            >
+              {tl('vendorList.filters.highOutstanding', 'High Outstanding')}
+            </Button>
+            <Button
               variant={outstandingFilter === 'All' ? 'contained' : 'outlined'}
               size="small"
               onClick={() => setOutstandingFilter('All')}
@@ -722,12 +738,53 @@ const VendorList = () => {
       />
 
       <ListSummary
-        items={[
-          { label: tl('vendorList.summary.totalVendors', 'Total Vendors'), value: summary.total_vendors || 0, color: 'default' },
-          { label: tl('vendorList.summary.activeVendors', 'Active Vendors'), value: summary.active_vendors || 0, color: 'success' },
-          { label: tl('vendorList.summary.withPayables', 'Vendors with Payables'), value: summary.vendors_with_payables || 0, color: 'warning' },
-          { label: tl('vendorList.summary.highOutstanding', 'High Outstanding Vendors'), value: summary.high_outstanding_vendors || 0, color: 'error' },
-        ]}
+        items={buildSummaryFilterItems({
+          activeFilter: statusFilter !== 'All' ? statusFilter : outstandingFilter,
+          allFilterValue: 'All',
+          onFilterChange: (value) => {
+            if (value === 'All') {
+              setStatusFilter('All');
+              setOutstandingFilter('All');
+              return;
+            }
+
+            if ([OUTSTANDING_WITH_PAYABLES, OUTSTANDING_HIGH, OUTSTANDING_CLEAR].includes(value)) {
+              setOutstandingFilter(value);
+              return;
+            }
+
+            setStatusFilter(value);
+          },
+          filteredCount: totalCount,
+          filteredLabel: statusFilter !== 'All' ? statusFilter : outstandingFilter,
+          viewAllValue: summary.total_vendors || 0,
+          chips: [
+            {
+              label: tl('vendorList.summary.totalVendors', 'Total Vendors'),
+              value: summary.total_vendors || 0,
+              color: 'default',
+              filterValue: 'All',
+            },
+            {
+              label: tl('vendorList.summary.activeVendors', 'Active Vendors'),
+              value: summary.active_vendors || 0,
+              color: 'success',
+              filterValue: 'Active',
+            },
+            {
+              label: tl('vendorList.summary.withPayables', 'Vendors with Payables'),
+              value: summary.vendors_with_payables || 0,
+              color: 'warning',
+              filterValue: OUTSTANDING_WITH_PAYABLES,
+            },
+            {
+              label: tl('vendorList.summary.highOutstanding', 'High Outstanding Vendors'),
+              value: summary.high_outstanding_vendors || 0,
+              color: 'error',
+              filterValue: OUTSTANDING_HIGH,
+            },
+          ],
+        })}
       />
 
       <BulkActionBar

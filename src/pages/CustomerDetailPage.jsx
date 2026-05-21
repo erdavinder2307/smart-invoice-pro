@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { createApiUrl } from "../config/api";
 import MainLayout from "../components/Layout/MainLayout";
 import {
@@ -21,6 +23,8 @@ import {
   CircularProgress,
   Alert,
   Avatar,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -29,6 +33,7 @@ import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import PaymentsIcon from "@mui/icons-material/Payments";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import FormatListNumberedIcon from "@mui/icons-material/FormatListNumbered";
+import DownloadIcon from "@mui/icons-material/Download";
 import EmptyState from "../components/common/EmptyState";
 import { useTranslation } from "react-i18next";
 
@@ -94,6 +99,54 @@ const CustomerDetailPage = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [historyTab, setHistoryTab] = useState(0);
+
+  const handleDownloadStatement = async () => {
+    const doc = new jsPDF();
+    const today = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+    const name = data?.customer?.display_name ||
+      [data?.customer?.first_name, data?.customer?.last_name].filter(Boolean).join(" ") ||
+      data?.customer?.company_name || "Customer";
+
+    // Header
+    doc.setFontSize(16);
+    doc.setFont(undefined, "bold");
+    doc.text("Customer Statement", 14, 18);
+    doc.setFontSize(10);
+    doc.setFont(undefined, "normal");
+    doc.text(`Customer: ${name}`, 14, 27);
+    if (billingAddress) doc.text(`Address: ${billingAddress}`, 14, 33);
+    doc.text(`Generated: ${today}`, 14, billingAddress ? 39 : 33);
+
+    const startY = billingAddress ? 46 : 40;
+    const rows = (data?.invoices || []).map((inv) => [
+      inv.invoice_number || "—",
+      inv.issue_date ? new Date(inv.issue_date).toLocaleDateString("en-IN") : "—",
+      inv.due_date ? new Date(inv.due_date).toLocaleDateString("en-IN") : "—",
+      formatCurrency(inv.total_amount),
+      formatCurrency(inv.amount_paid),
+      formatCurrency(inv.balance_due),
+    ]);
+    rows.push([
+      { content: "Total", styles: { fontStyle: "bold" } },
+      "", "",
+      { content: formatCurrency(data?.total_invoiced), styles: { fontStyle: "bold" } },
+      { content: formatCurrency(data?.total_paid), styles: { fontStyle: "bold" } },
+      { content: formatCurrency(data?.outstanding), styles: { fontStyle: "bold" } },
+    ]);
+
+    autoTable(doc, {
+      startY,
+      head: [["Invoice #", "Date", "Due Date", "Total", "Paid", "Balance"]],
+      body: rows,
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [37, 99, 235] },
+    });
+
+    const slug = name.replace(/\s+/g, "_");
+    const dateSlug = new Date().toISOString().slice(0, 10);
+    doc.save(`statement_${slug}_${dateSlug}.pdf`);
+  };
 
   useEffect(() => {
     const fetchOverview = async () => {
@@ -129,7 +182,7 @@ const CustomerDetailPage = () => {
     );
   }
 
-  const { customer, invoices, total_invoiced, total_paid, outstanding, invoice_count } = data;
+  const { customer, invoices, payments_received, quotes, total_invoiced, total_paid, outstanding, invoice_count } = data;
 
   const displayName =
     customer.display_name ||
@@ -185,6 +238,22 @@ const CustomerDetailPage = () => {
         </Box>
 
         <Box sx={{ display: "flex", gap: 1 }}>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<DownloadIcon />}
+            onClick={handleDownloadStatement}
+            sx={{
+              textTransform: "none",
+              fontWeight: 600,
+              borderRadius: "7px",
+              borderColor: "#d1d5db",
+              color: "#374151",
+              "&:hover": { borderColor: "#9ca3af", bgcolor: "#f9fafb" },
+            }}
+          >
+            Statement
+          </Button>
           <Button
             variant="outlined"
             size="small"
@@ -334,116 +403,162 @@ const CustomerDetailPage = () => {
           </Card>
         </Grid>
 
-        {/* Right: Invoice History */}
+        {/* Right: Invoice / Payments / Quotes */}
         <Grid item xs={12} md={8}>
           <Card elevation={0} sx={{ border: "1px solid #e5e7eb", borderRadius: "10px" }}>
             <CardContent sx={{ p: 0 }}>
-              <Box sx={{ px: 2.5, pt: 2, pb: 1.5 }}>
-                <Typography
-                  sx={{
-                    fontSize: "0.7rem",
-                    fontWeight: 700,
-                    color: "#8b95a7",
-                    letterSpacing: "0.05em",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Invoice History
-                </Typography>
-              </Box>
-              <Divider />
-              {invoices.length === 0 ? (
-                <EmptyState
-                  icon={<ReceiptLongIcon />}
-                  title="No invoices yet"
-                />
-              ) : (
-                <TableContainer sx={{ overflowX: "hidden" }}>
-                  <Table size="small" sx={{ tableLayout: "fixed" }}>
-                    <TableHead>
-                      <TableRow sx={{ bgcolor: "#fafbfc" }}>
-                        {["INVOICE #", "DATE", "DUE DATE", "AMOUNT", "STATUS", "BALANCE DUE"].map(
-                          (col, i) => (
+              <Tabs
+                value={historyTab}
+                onChange={(_e, v) => setHistoryTab(v)}
+                sx={{ px: 2, pt: 1, borderBottom: "1px solid #e5e7eb" }}
+                textColor="primary"
+                indicatorColor="primary"
+              >
+                <Tab label={`Invoices (${(invoices || []).length})`} />
+                <Tab label={`Payments (${(payments_received || []).length})`} />
+                <Tab label={`Quotes (${(quotes || []).length})`} />
+              </Tabs>
+
+              {/* Invoices tab */}
+              {historyTab === 0 && (
+                (invoices || []).length === 0 ? (
+                  <EmptyState icon={<ReceiptLongIcon />} title="No invoices yet" />
+                ) : (
+                  <TableContainer sx={{ overflowX: "auto" }}>
+                    <Table size="small" sx={{ tableLayout: "fixed" }}>
+                      <TableHead>
+                        <TableRow sx={{ bgcolor: "#fafbfc" }}>
+                          {["INVOICE #", "DATE", "DUE DATE", "AMOUNT", "STATUS", "BALANCE DUE"].map(
+                            (col, i) => (
+                              <TableCell
+                                key={col}
+                                align={i >= 3 ? "right" : "left"}
+                                sx={{ fontSize: "0.68rem", fontWeight: 700, color: "#8b95a7", letterSpacing: "0.05em", borderBottomColor: "#edf0f3", py: 1.2, whiteSpace: "nowrap" }}
+                              >
+                                {col}
+                              </TableCell>
+                            )
+                          )}
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {invoices.map((inv) => (
+                          <TableRow
+                            key={inv.id}
+                            hover
+                            sx={{ cursor: "pointer", "& td": { borderBottomColor: "#edf0f3", py: 1.4 } }}
+                            onClick={() => navigate(`/invoices/edit/${inv.id}`)}
+                          >
+                            <TableCell>
+                              <Typography sx={{ fontSize: "0.8125rem", fontWeight: 600, color: "#2563eb" }}>
+                                {inv.invoice_number || "—"}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography sx={{ fontSize: "0.8125rem", color: "#374151" }}>{formatDate(inv.issue_date)}</Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography sx={{ fontSize: "0.8125rem", color: "#374151" }}>{formatDate(inv.due_date)}</Typography>
+                            </TableCell>
+                            <TableCell align="right">
+                              <Typography sx={{ fontSize: "0.8125rem", fontWeight: 600, color: "#111827" }}>{formatCurrency(inv.total_amount)}</Typography>
+                            </TableCell>
+                            <TableCell align="right">
+                              <Chip label={inv.status || "Draft"} size="small" color={statusColor(inv.status)} sx={{ fontWeight: 600, fontSize: "0.7rem" }} />
+                            </TableCell>
+                            <TableCell align="right">
+                              <Typography sx={{ fontSize: "0.8125rem", fontWeight: 600, color: Number(inv.balance_due) > 0 ? "#dc2626" : "#16a34a" }}>
+                                {formatCurrency(inv.balance_due)}
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                )
+              )}
+
+              {/* Payments tab */}
+              {historyTab === 1 && (
+                (payments_received || []).length === 0 ? (
+                  <EmptyState icon={<PaymentsIcon />} title="No payments recorded" />
+                ) : (
+                  <TableContainer sx={{ overflowX: "auto" }}>
+                    <Table size="small" sx={{ tableLayout: "fixed" }}>
+                      <TableHead>
+                        <TableRow sx={{ bgcolor: "#fafbfc" }}>
+                          {["DATE", "INVOICE #", "AMOUNT", "MODE"].map((col, i) => (
                             <TableCell
                               key={col}
-                              align={i >= 3 ? "right" : "left"}
-                              sx={{
-                                fontSize: "0.68rem",
-                                fontWeight: 700,
-                                color: "#8b95a7",
-                                letterSpacing: "0.05em",
-                                borderBottomColor: "#edf0f3",
-                                py: 1.2,
-                                whiteSpace: "nowrap",
-                              }}
+                              align={i === 2 ? "right" : "left"}
+                              sx={{ fontSize: "0.68rem", fontWeight: 700, color: "#8b95a7", letterSpacing: "0.05em", borderBottomColor: "#edf0f3", py: 1.2 }}
                             >
                               {col}
                             </TableCell>
-                          )
-                        )}
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {invoices.map((inv) => (
-                        <TableRow
-                          key={inv.id}
-                          hover
-                          sx={{
-                            cursor: "pointer",
-                            "& td": { borderBottomColor: "#edf0f3", py: 1.4 },
-                          }}
-                          onClick={() => navigate(`/invoices/edit/${inv.id}`)}
-                        >
-                          <TableCell>
-                            <Typography
-                              sx={{
-                                fontSize: "0.8125rem",
-                                fontWeight: 600,
-                                color: "#2563eb",
-                              }}
-                            >
-                              {inv.invoice_number || "—"}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography sx={{ fontSize: "0.8125rem", color: "#374151" }}>
-                              {formatDate(inv.issue_date)}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography sx={{ fontSize: "0.8125rem", color: "#374151" }}>
-                              {formatDate(inv.due_date)}
-                            </Typography>
-                          </TableCell>
-                          <TableCell align="right">
-                            <Typography sx={{ fontSize: "0.8125rem", fontWeight: 600, color: "#111827" }}>
-                              {formatCurrency(inv.total_amount)}
-                            </Typography>
-                          </TableCell>
-                          <TableCell align="right">
-                            <Chip
-                              label={inv.status || "Draft"}
-                              size="small"
-                              color={statusColor(inv.status)}
-                              sx={{ fontWeight: 600, fontSize: "0.7rem" }}
-                            />
-                          </TableCell>
-                          <TableCell align="right">
-                            <Typography
-                              sx={{
-                                fontSize: "0.8125rem",
-                                fontWeight: 600,
-                                color: Number(inv.balance_due) > 0 ? "#dc2626" : "#16a34a",
-                              }}
-                            >
-                              {formatCurrency(inv.balance_due)}
-                            </Typography>
-                          </TableCell>
+                          ))}
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                      </TableHead>
+                      <TableBody>
+                        {(payments_received || []).map((pmt, idx) => (
+                          <TableRow
+                            key={pmt.invoice_id || idx}
+                            hover
+                            sx={{ cursor: pmt.invoice_id ? "pointer" : "default", "& td": { borderBottomColor: "#edf0f3", py: 1.4 } }}
+                            onClick={() => pmt.invoice_id && navigate(`/invoices/edit/${pmt.invoice_id}`)}
+                          >
+                            <TableCell><Typography sx={{ fontSize: "0.8125rem", color: "#374151" }}>{formatDate(pmt.issue_date)}</Typography></TableCell>
+                            <TableCell><Typography sx={{ fontSize: "0.8125rem", fontWeight: 600, color: "#2563eb" }}>{pmt.invoice_number || "—"}</Typography></TableCell>
+                            <TableCell align="right"><Typography sx={{ fontSize: "0.8125rem", fontWeight: 600, color: "#111827" }}>{formatCurrency(pmt.amount)}</Typography></TableCell>
+                            <TableCell><Typography sx={{ fontSize: "0.8125rem", color: "#374151" }}>{pmt.payment_mode || "—"}</Typography></TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                )
+              )}
+
+              {/* Quotes tab */}
+              {historyTab === 2 && (
+                (quotes || []).length === 0 ? (
+                  <EmptyState icon={<FormatListNumberedIcon />} title="No quotes yet" />
+                ) : (
+                  <TableContainer sx={{ overflowX: "auto" }}>
+                    <Table size="small" sx={{ tableLayout: "fixed" }}>
+                      <TableHead>
+                        <TableRow sx={{ bgcolor: "#fafbfc" }}>
+                          {["QUOTE #", "DATE", "AMOUNT", "STATUS"].map((col, i) => (
+                            <TableCell
+                              key={col}
+                              align={i === 2 ? "right" : "left"}
+                              sx={{ fontSize: "0.68rem", fontWeight: 700, color: "#8b95a7", letterSpacing: "0.05em", borderBottomColor: "#edf0f3", py: 1.2 }}
+                            >
+                              {col}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {(quotes || []).map((q) => (
+                          <TableRow
+                            key={q.id}
+                            hover
+                            sx={{ cursor: "pointer", "& td": { borderBottomColor: "#edf0f3", py: 1.4 } }}
+                            onClick={() => navigate(`/quotes/edit/${q.id}`)}
+                          >
+                            <TableCell><Typography sx={{ fontSize: "0.8125rem", fontWeight: 600, color: "#2563eb" }}>{q.quote_number || "—"}</Typography></TableCell>
+                            <TableCell><Typography sx={{ fontSize: "0.8125rem", color: "#374151" }}>{formatDate(q.issue_date)}</Typography></TableCell>
+                            <TableCell align="right"><Typography sx={{ fontSize: "0.8125rem", fontWeight: 600, color: "#111827" }}>{formatCurrency(q.total_amount)}</Typography></TableCell>
+                            <TableCell>
+                              <Chip label={q.status || "Draft"} size="small" color={statusColor(q.status)} sx={{ fontWeight: 600, fontSize: "0.7rem" }} />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                )
               )}
             </CardContent>
           </Card>

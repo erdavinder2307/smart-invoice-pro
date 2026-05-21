@@ -44,7 +44,7 @@ import { useTranslation } from "react-i18next";
 import { formatCurrency as formatCurrencyByLocale } from "../utils/intlFormatters";
 import axios from "axios";
 import { createApiUrl } from "../config/api";
-import { getCustomers } from "../services/customerService";
+import { getCustomers, mergeCustomerInto } from "../services/customerService";
 import { recordPayment } from "../services/invoiceService";
 import ListPageLayout from "./list/ListPageLayout";
 import ListHeader from "./list/ListHeader";
@@ -63,6 +63,7 @@ import { dedupeCustomers } from "../utils/customerData";
 import useTableSorting from "../hooks/useTableSorting";
 import { saveSearchHistory } from "../services/searchService";
 import { invalidateSearchHistoryCache } from "./list/ListHeader";
+import { buildSummaryFilterItems } from "../utils/summaryFilterChips";
 
 const VIEW_OPTIONS = ["All", "Active", "Inactive", "Archived", "With Dues", "Overdue"];
 const PAYMENT_MODES = ["Cash", "Bank Transfer", "UPI", "Card", "Cheque"];
@@ -111,31 +112,45 @@ const normalizeCustomer = (customer) => {
 const getHealthMeta = (customer, highValueThreshold, translate) => {
   const lastTxnTime = customer.lastTransactionDate ? new Date(customer.lastTransactionDate).getTime() : 0;
   const daysSinceTransaction = lastTxnTime > 0 ? Math.floor((Date.now() - lastTxnTime) / (1000 * 60 * 60 * 24)) : null;
+  const isInactive = customer.activityStatus === "Inactive";
+  const hasOverdue = customer.overdueAmount > 0;
+  const hasReceivables = customer.receivables > 0;
+  const isHighValue = customer.totalRevenue >= highValueThreshold && customer.totalRevenue > 0;
 
-  if (customer.activityStatus === "Inactive") {
+  let score = 85;
+  if (isHighValue) score += 8;
+  if (hasReceivables) score -= 12;
+  if (hasOverdue) score -= 18;
+  if (daysSinceTransaction !== null && daysSinceTransaction > 45) score -= 8;
+  if (daysSinceTransaction !== null && daysSinceTransaction > 180) score -= 12;
+  if (daysSinceTransaction === null) score -= 10;
+  if (isInactive) score -= 25;
+  score = Math.max(0, Math.min(100, score));
+
+  if (isInactive) {
     return {
       type: "inactive",
       label: getTranslationFallback(translate, "customerList.status.inactive", "Inactive"),
       color: "default",
-      score: 35,
+      score,
     };
   }
 
-  if (customer.overdueAmount > 0 || (customer.receivables > 0 && daysSinceTransaction !== null && daysSinceTransaction > 45)) {
+  if (hasOverdue || (hasReceivables && daysSinceTransaction !== null && daysSinceTransaction > 45) || score < 55) {
     return {
       type: "atRisk",
       label: getTranslationFallback(translate, "customerList.status.atRisk", "At Risk"),
       color: "error",
-      score: 42,
+      score,
     };
   }
 
-  if (customer.totalRevenue >= highValueThreshold && customer.totalRevenue > 0) {
+  if (isHighValue) {
     return {
       type: "highValue",
       label: getTranslationFallback(translate, "customerList.status.highValue", "High Value"),
       color: "secondary",
-      score: 92,
+      score,
     };
   }
 
@@ -143,7 +158,7 @@ const getHealthMeta = (customer, highValueThreshold, translate) => {
     type: "active",
     label: getTranslationFallback(translate, "customerList.status.active", "Active"),
     color: "success",
-    score: 78,
+    score,
   };
 };
 
@@ -189,6 +204,9 @@ const CustomerList = () => {
   const createdFilterLabel = useMemo(() => formatDateFilterLabel(createdFilter, t), [createdFilter, t]);
 
   const { sortBy, sortOrder, handleSort, sortParams } = useTableSorting("name", "asc", "customers");
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+  const [mergingIds, setMergingIds] = useState(new Set());
+  const [mergedIds, setMergedIds] = useState(new Set());
 
   const tl = useCallback((key, fallback, values) => getTranslationFallback(t, key, fallback, values), [t]);
 
@@ -277,7 +295,7 @@ const CustomerList = () => {
     navigate(`${location.pathname}${params.toString() ? `?${params.toString()}` : ""}`, { replace: true });
   }, [location.pathname, location.search, navigate, statusFilter]);
 
-  const { uniqueCustomers, duplicateCount } = useMemo(() => dedupeCustomers(customers), [customers]);
+  const { uniqueCustomers, duplicateCount, duplicateRecords } = useMemo(() => dedupeCustomers(customers), [customers]);
 
   const highValueThreshold = useMemo(() => {
     const ranked = uniqueCustomers
@@ -356,6 +374,18 @@ const CustomerList = () => {
   }, [enrichedCustomers, searchTerm]);
 
   const paginatedCustomers = filteredCustomers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
+  const summaryBaseCustomers = useMemo(() => {
+    const term = effectiveSearchTerm.trim().toLowerCase();
+    if (!term) return enrichedCustomers;
+    return enrichedCustomers.filter((customer) => [
+      customer.name,
+      customer.company_name,
+      customer.email,
+      customer.phone,
+      customer.gst_number,
+    ].some((value) => String(value || "").toLowerCase().includes(term)));
+  }, [effectiveSearchTerm, enrichedCustomers]);
 
   const topCustomers = useMemo(() => (
     [...enrichedCustomers].sort((a, b) => b.totalRevenue - a.totalRevenue).slice(0, 5)
@@ -487,10 +517,67 @@ const CustomerList = () => {
     && paginatedCustomers.every((customer) => selectedCustomers.includes(customer.id));
   const someVisibleSelected = paginatedCustomers.some((customer) => selectedCustomers.includes(customer.id));
 
-  const activeCount = filteredCustomers.filter((customer) => customer.activityStatus === "Active").length;
-  const inactiveCount = filteredCustomers.length - activeCount;
-  const totalReceivables = filteredCustomers.reduce((sum, customer) => sum + customer.receivables, 0);
-  const totalOverdue = filteredCustomers.reduce((sum, customer) => sum + customer.overdueAmount, 0);
+  const activeCount = summaryBaseCustomers.filter((customer) => customer.activityStatus === "Active" && customer.status !== "ARCHIVED").length;
+  const inactiveCount = summaryBaseCustomers.filter((customer) => customer.activityStatus === "Inactive").length;
+  const totalReceivables = summaryBaseCustomers
+    .filter((customer) => customer.status !== "ARCHIVED" && customer.receivables > 0)
+    .reduce((sum, customer) => sum + customer.receivables, 0);
+  const totalOverdue = summaryBaseCustomers
+    .filter((customer) => customer.status !== "ARCHIVED" && customer.overdueAmount > 0)
+    .reduce((sum, customer) => sum + customer.overdueAmount, 0);
+
+  const summaryItems = useMemo(() => (
+    buildSummaryFilterItems({
+      activeFilter: statusFilter,
+      allFilterValue: "All",
+      onFilterChange: setStatusFilter,
+      filteredCount: filteredCustomers.length,
+      filteredLabel: statusFilter,
+      viewAllValue: summaryBaseCustomers.length,
+      chips: [
+        {
+          label: tl("customerList.metrics.total", "Total customers"),
+          value: summaryBaseCustomers.length,
+          filterValue: "All",
+        },
+        {
+          label: tl("customerList.metrics.active", "Active"),
+          value: activeCount,
+          color: "success",
+          filterValue: "Active",
+        },
+        {
+          label: tl("customerList.metrics.inactive", "Inactive"),
+          value: inactiveCount,
+          color: "default",
+          filterValue: "Inactive",
+        },
+        {
+          label: tl("customerList.metrics.receivables", "Receivables"),
+          value: formatCurrencyByLocale(totalReceivables, i18n.language),
+          color: "info",
+          filterValue: "With Dues",
+        },
+        {
+          label: tl("customerList.metrics.overdue", "Overdue"),
+          value: formatCurrencyByLocale(totalOverdue, i18n.language),
+          color: "error",
+          filterValue: "Overdue",
+        },
+      ],
+    })
+  ), [
+    activeCount,
+    filteredCustomers.length,
+    i18n.language,
+    inactiveCount,
+    setStatusFilter,
+    statusFilter,
+    summaryBaseCustomers.length,
+    tl,
+    totalOverdue,
+    totalReceivables,
+  ]);
 
   const filterOptions = VIEW_OPTIONS.map((value) => ({
     value,
@@ -501,7 +588,7 @@ const CustomerList = () => {
     <ListPageLayout>
       <ListHeader
         title={tl("customerList.title", "Customer Management Dashboard")}
-        summary={tl("customerList.summary", `${filteredCustomers.length} customers`, { count: filteredCustomers.length })}
+        summary={loading ? tl("customerList.summaryLoading", "Loading...") : tl("customerList.summary", `${filteredCustomers.length} customers`, { count: filteredCustomers.length })}
         rightAction={
           <Button
             variant="contained"
@@ -536,19 +623,25 @@ const CustomerList = () => {
       />
 
       {duplicateCount > 0 && (
-        <Alert severity="warning" sx={{ mb: 2 }}>
+        <Alert
+          severity="warning"
+          sx={{ mb: 2 }}
+          action={
+            <Button
+              color="warning"
+              size="small"
+              onClick={() => setDuplicateDialogOpen(true)}
+            >
+              {tl("customerList.reviewDuplicates", "Review Duplicates")}
+            </Button>
+          }
+        >
           {tl("customerList.duplicateCollapseNotice", `${duplicateCount} duplicate customer records were collapsed from the dashboard view.`, { count: duplicateCount })}
         </Alert>
       )}
 
       <ListSummary
-        items={[
-          { label: tl("customerList.metrics.total", "Total customers"), value: filteredCustomers.length },
-          { label: tl("customerList.metrics.active", "Active"), value: activeCount, color: "success" },
-          { label: tl("customerList.metrics.inactive", "Inactive"), value: inactiveCount, color: "default" },
-          { label: tl("customerList.metrics.receivables", "Receivables"), value: formatCurrencyByLocale(totalReceivables, i18n.language), color: "info" },
-          { label: tl("customerList.metrics.overdue", "Overdue"), value: formatCurrencyByLocale(totalOverdue, i18n.language), color: "error" },
-        ]}
+        items={summaryItems}
       />
 
       <Paper elevation={0} sx={{ p: 2.25, borderRadius: 2, border: "1px solid", borderColor: "divider", mb: 2 }}>
@@ -961,6 +1054,92 @@ const CustomerList = () => {
           {toast.message}
         </Alert>
       </Snackbar>
+
+      {/* Duplicate Review Dialog */}
+      <Dialog
+        open={duplicateDialogOpen}
+        onClose={() => setDuplicateDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          {tl("customerList.duplicateDialogTitle", `Duplicate Customer Records (${duplicateRecords.length})`, { count: duplicateRecords.length })}
+        </DialogTitle>
+        <DialogContent dividers>
+          {duplicateRecords.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              {tl("customerList.noDuplicates", "No duplicate records found.")}
+            </Typography>
+          ) : (
+            <Stack spacing={1.5}>
+              {duplicateRecords.map((dup) => (
+                <Paper
+                  key={dup.id}
+                  variant="outlined"
+                  sx={{ p: 1.5, borderRadius: 1.5 }}
+                >
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 1 }}>
+                    <Box>
+                      <Typography variant="subtitle2" fontWeight={700}>
+                        {dup.display_name || dup.name}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {[dup.email, dup.phone].filter(Boolean).join(" · ")}
+                        {dup.gst_number ? ` · GST: ${dup.gst_number}` : ""}
+                      </Typography>
+                      {dup.matchedWith && (
+                        <Typography variant="caption" color="warning.main">
+                          {tl("customerList.duplicateMatchedWith", `Duplicate of: ${dup.matchedWith.display_name || dup.matchedWith.name}`, { name: dup.matchedWith.display_name || dup.matchedWith.name })}
+                        </Typography>
+                      )}
+                    </Box>
+                    <Stack direction="row" spacing={1}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => { setDuplicateDialogOpen(false); navigate(`/customers/${dup.id}`); }}
+                      >
+                        {tl("customerList.view", "View")}
+                      </Button>
+                      {dup.matchedWith && !mergedIds.has(dup.id) && (
+                        <Button
+                          size="small"
+                          variant="contained"
+                          color="warning"
+                          disabled={mergingIds.has(dup.id)}
+                          onClick={async () => {
+                            setMergingIds((prev) => new Set(prev).add(dup.id));
+                            try {
+                              await mergeCustomerInto(dup.id, dup.matchedWith.id);
+                              setMergedIds((prev) => new Set(prev).add(dup.id));
+                              setToast({ open: true, message: `Merged into ${dup.matchedWith.display_name || dup.matchedWith.name}`, severity: "success" });
+                              await fetchCustomers();
+                            } catch {
+                              setToast({ open: true, message: "Merge failed. Please try again.", severity: "error" });
+                            } finally {
+                              setMergingIds((prev) => { const s = new Set(prev); s.delete(dup.id); return s; });
+                            }
+                          }}
+                        >
+                          {mergingIds.has(dup.id) ? "Merging…" : "Merge into Primary"}
+                        </Button>
+                      )}
+                      {mergedIds.has(dup.id) && (
+                        <Chip size="small" label="Merged" color="success" />
+                      )}
+                    </Stack>
+                  </Box>
+                </Paper>
+              ))}
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDuplicateDialogOpen(false)}>
+            {tl("common.close", "Close")}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </ListPageLayout>
   );
 };

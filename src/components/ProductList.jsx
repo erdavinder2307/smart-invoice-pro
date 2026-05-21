@@ -14,6 +14,7 @@ import {
   Fade,
   FormControl,
   IconButton,
+  InputLabel,
   MenuItem,
   Select,
   Stack,
@@ -45,6 +46,14 @@ import ArchiveDialog from "./common/ArchiveDialog";
 import LifecycleArchiveDialog from "./common/LifecycleArchiveDialog";
 import { createApiUrl } from "../config/api";
 import { getProducts } from "../services/productService";
+import {
+  getAvailableQuantity,
+  getStockMeta,
+  getStatusSortRank,
+  needsReplenishment,
+  canRestock,
+  isArchivedProduct,
+} from "../utils/stockHelpers";
 
 import { updateProductStock } from "../services/stockService";
 import { useTranslation } from "react-i18next";
@@ -68,6 +77,10 @@ const SORT_OPTIONS = [
   { value: "name_desc", label: "Name: Z to A" },
   { value: "price_asc", label: "Rate: Low to High" },
   { value: "price_desc", label: "Rate: High to Low" },
+  { value: "purchase_rate_asc", label: "Cost Price: Low to High" },
+  { value: "purchase_rate_desc", label: "Cost Price: High to Low" },
+  { value: "status_asc", label: "Status: Critical to In Stock" },
+  { value: "status_desc", label: "Status: In Stock to Critical" },
 ];
 
 const formatCurrency = (amount) =>
@@ -78,48 +91,7 @@ const formatCurrency = (amount) =>
     maximumFractionDigits: 2,
   }).format(Number(amount || 0));
 
-const toFiniteNumber = (value, fallback = 0) => {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
-};
 
-const getAvailableQuantity = (product) =>
-  product.stock !== undefined && product.stock !== null && product.stock !== ""
-    ? toFiniteNumber(product.stock)
-    : toFiniteNumber(product.opening_stock) - toFiniteNumber(product.sold);
-
-const getStockMeta = (product) => {
-  const availableQty = getAvailableQuantity(product);
-  const reorderLevel = toFiniteNumber(product.reorder_level, 10);
-
-  if (availableQty <= 0) {
-    return {
-      bucket: "Critical",
-      label: "Out of Stock",
-      chipColor: "error",
-      textColor: "#dc2626",
-      highlight: true,
-    };
-  }
-
-  if (availableQty <= reorderLevel) {
-    return {
-      bucket: "Low Stock",
-      label: "Low Stock",
-      chipColor: "warning",
-      textColor: "#b45309",
-      highlight: false,
-    };
-  }
-
-  return {
-    bucket: "In Stock",
-    label: "In Stock",
-    chipColor: "success",
-    textColor: "#166534",
-    highlight: false,
-  };
-};
 
 const buildCsv = (items) => {
   const headers = ["Name", "Category", "Selling Price", "Cost Price", "Stock", "Status"];
@@ -169,6 +141,11 @@ const ProductList = () => {
   const { sortBy: colSortBy, sortOrder: colSortOrder, handleSort, setSort } = useTableSorting("name", "asc", "products");
   const [stockDialog, setStockDialog] = useState({ open: false, mode: "single", product: null });
   const [stockDelta, setStockDelta] = useState(1);
+  const [stockDialogError, setStockDialogError] = useState("");
+  const [stockReason, setStockReason] = useState("");
+  const [stockReasonCustom, setStockReasonCustom] = useState("");
+  const [stockReferenceNumber, setStockReferenceNumber] = useState("");
+  const [stockAdjustDate, setStockAdjustDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [bulkStockMode, setBulkStockMode] = useState("increment");
   const [singleStockMode, setSingleStockMode] = useState("increment");
   const debouncedSearch = useDebouncedValue(searchTerm, 300);
@@ -239,7 +216,7 @@ const ProductList = () => {
     const term = effectiveSearchTerm.trim().toLowerCase();
 
     const list = products.filter((product) => {
-      const isArchived = product.status === "ARCHIVED" || product.is_deleted;
+      const isArchived = isArchivedProduct(product);
       const matchesSearch =
         !term ||
         [product.name, product.category]
@@ -265,10 +242,19 @@ const ProductList = () => {
       const nameB = String(b.name || "").toLowerCase();
       const rateA = Number(a.price || 0);
       const rateB = Number(b.price || 0);
+      const costA = Number(a.purchase_rate || 0);
+      const costB = Number(b.purchase_rate || 0);
+      const statusA = getStatusSortRank(a);
+      const statusB = getStatusSortRank(b);
 
       const dir = colSortOrder === "asc" ? 1 : -1;
       if (colSortBy === "name") return dir * nameA.localeCompare(nameB);
       if (colSortBy === "price") return dir * (rateA - rateB);
+      if (colSortBy === "purchase_rate") return dir * (costA - costB);
+      if (colSortBy === "status") {
+        if (statusA !== statusB) return dir * (statusA - statusB);
+        return nameA.localeCompare(nameB);
+      }
       return dir * (stockA - stockB);
     });
   }, [categoryFilter, colSortBy, colSortOrder, effectiveSearchTerm, products, viewFilter]);
@@ -352,17 +338,35 @@ const ProductList = () => {
     setStockDelta(1);
     setBulkStockMode("increment");
     setSingleStockMode("increment");
+    setStockReason("");
+    setStockReasonCustom("");
+    setStockReferenceNumber("");
+    setStockAdjustDate(new Date().toISOString().split("T")[0]);
     setStockDialog({ open: true, mode, product });
   };
 
   const handleCloseStockDialog = () => {
     setStockDialog({ open: false, mode: "single", product: null });
+    setStockDialogError("");
+    setStockReason("");
+    setStockReasonCustom("");
+    setStockReferenceNumber("");
+    setStockAdjustDate(new Date().toISOString().split("T")[0]);
   };
 
   const handleConfirmStockAdjustment = async () => {
     const quantity = Math.max(0, Number(stockDelta || 0));
     if (!quantity) return;
+    setStockDialogError("");
 
+    // Guard against negative stock on single-item decrement
+    if (stockDialog.mode === "single" && singleStockMode === "decrement" && stockDialog.product) {
+      const available = getAvailableQuantity(stockDialog.product);
+      if (quantity > available) {
+        setStockDialogError(`Insufficient stock. Available: ${available}`);
+        return;
+      }
+    }
     setLoading(true);
     try {
       if (stockDialog.mode === "single" && stockDialog.product) {
@@ -370,19 +374,30 @@ const ProductList = () => {
           productId: stockDialog.product.id,
           quantity,
           operation: singleStockMode,
-          source: "Manual adjustment",
+          source: stockReason === "Other" ? (stockReasonCustom || "Manual adjustment") : (stockReason || "Manual adjustment"),
+          reason: stockReason === "Other" ? (stockReasonCustom || undefined) : (stockReason || undefined),
+          referenceNumber: stockReferenceNumber || undefined,
+          adjustmentDate: stockAdjustDate || undefined,
         });
       }
 
       if (stockDialog.mode === "bulk") {
-        const selectedItems = products.filter((item) => selectedProducts.includes(item.id));
+        const selectedItems = products.filter((item) => selectedProducts.includes(item.id) && !isArchivedProduct(item));
+        if (!selectedItems.length) {
+          setError("Bulk stock update applies only to active items. Select at least one active item.");
+          setLoading(false);
+          return;
+        }
         await Promise.all(
           selectedItems.map((item) =>
             updateProductStock({
               productId: item.id,
               quantity,
               operation: bulkStockMode,
-              source: "Bulk manual adjustment",
+              source: stockReason === "Other" ? (stockReasonCustom || "Bulk manual adjustment") : (stockReason || "Bulk manual adjustment"),
+              reason: stockReason === "Other" ? (stockReasonCustom || undefined) : (stockReason || undefined),
+              referenceNumber: stockReferenceNumber || undefined,
+              adjustmentDate: stockAdjustDate || undefined,
             })
           )
         );
@@ -392,7 +407,7 @@ const ProductList = () => {
       setSelectedProducts([]);
       await fetchProducts();
     } catch (err) {
-      setError(err.response?.data?.error || "Failed to adjust stock.");
+      setStockDialogError(err.response?.data?.error || "Failed to adjust stock.");
       setLoading(false);
     }
   };
@@ -400,6 +415,21 @@ const ProductList = () => {
   const allVisibleSelected =
     paginatedProducts.length > 0 && paginatedProducts.every((product) => selectedProducts.includes(product.id));
   const someVisibleSelected = paginatedProducts.some((product) => selectedProducts.includes(product.id));
+
+  const selectedItems = useMemo(
+    () => products.filter((item) => selectedProducts.includes(item.id)),
+    [products, selectedProducts]
+  );
+  const selectedActiveItems = useMemo(
+    () => selectedItems.filter((item) => !isArchivedProduct(item)),
+    [selectedItems]
+  );
+  const selectedArchivedCount = selectedItems.length - selectedActiveItems.length;
+  const selectedNeedsReplenishmentCount = useMemo(
+    () => selectedActiveItems.filter((item) => needsReplenishment(item)).length,
+    [selectedActiveItems]
+  );
+  const selectedHealthyCount = Math.max(0, selectedActiveItems.length - selectedNeedsReplenishmentCount);
 
   const lowStockCount = filteredProducts.filter((product) => getStockMeta(product).bucket === "Low Stock").length;
   const criticalCount = filteredProducts.filter((product) => getStockMeta(product).bucket === "Critical").length;
@@ -459,7 +489,9 @@ const ProductList = () => {
               <Select
                 value={`${colSortBy || "stock"}_${colSortOrder || "asc"}`}
                 onChange={(event) => {
-                  const [nextSortBy, nextSortOrder] = String(event.target.value).split("_");
+                  const sortParts = String(event.target.value).split("_");
+                  const nextSortOrder = sortParts.pop();
+                  const nextSortBy = sortParts.join("_");
                   setSort(nextSortBy || "stock", nextSortOrder || "asc");
                 }}
                 inputProps={{ "aria-label": "Sort inventory" }}
@@ -518,6 +550,11 @@ const ProductList = () => {
 
       <BulkActionBar
         selectedCount={selectedProducts.length}
+        infoText={[
+          `${selectedNeedsReplenishmentCount} need replenishment`,
+          `${selectedHealthyCount} healthy`,
+          selectedArchivedCount > 0 ? `${selectedArchivedCount} archived (skipped)` : null,
+        ].filter(Boolean).join(" • ")}
         actions={[
           ...(viewFilter === "Archived"
             ? []
@@ -525,7 +562,7 @@ const ProductList = () => {
                 label: "Update Stock",
                 color: "primary",
                 onClick: () => handleOpenStockDialog("bulk"),
-                disabled: selectedProducts.length === 0,
+                disabled: selectedActiveItems.length === 0,
               }]),
           {
             label: viewFilter === "Archived" ? "Restore Selected" : "Archive Selected",
@@ -555,7 +592,7 @@ const ProductList = () => {
         ]}
         rows={paginatedProducts}
         renderCard={(product) => {
-          const isArchived = product.status === "ARCHIVED" || product.is_deleted;
+          const isArchived = isArchivedProduct(product);
           const availableQty = getAvailableQuantity(product);
           const stockMeta = getStockMeta(product);
           return (
@@ -574,7 +611,7 @@ const ProductList = () => {
               deleteHoverBg={viewFilter === "Archived" ? "#ecfdf5" : "#fef2f2"}
               deleteIcon={viewFilter === "Archived" ? "restore" : "delete"}
               onAddStock={!isArchived ? () => handleOpenStockDialog("single", product) : undefined}
-              onRestock={!isArchived && product.preferred_vendor_id ? () => handleRestock(product) : undefined}
+              onRestock={canRestock(product) ? () => handleRestock(product) : undefined}
             />
           );
         }}
@@ -605,9 +642,9 @@ const ProductList = () => {
             {[
               { label: "NAME", width: "28%", sortKey: "name" },
               { label: "SELLING PRICE", width: "14%", align: "right", sortKey: "price" },
-              { label: "COST PRICE", width: "14%", align: "right" },
+              { label: "COST PRICE", width: "14%", align: "right", sortKey: "purchase_rate" },
               { label: "STOCK", width: "20%", sortKey: "stock" },
-              { label: "STATUS", width: "14%" },
+              { label: "STATUS", width: "14%", sortKey: "status" },
               { label: "", width: "10%", align: "center" },
             ].map((column, index) => (
               <TableCell
@@ -648,7 +685,7 @@ const ProductList = () => {
         )}
         renderRow={(product) => {
           const isSelected = selectedProducts.includes(product.id);
-          const isArchived = product.status === "ARCHIVED" || product.is_deleted;
+          const isArchived = isArchivedProduct(product);
           const availableQty = getAvailableQuantity(product);
           const stockMeta = getStockMeta(product);
           const purchaseRate = product.purchase_rate ?? 0;
@@ -681,6 +718,9 @@ const ProductList = () => {
               </TableCell>
               <TableCell>
                 <Typography
+                  component="a"
+                  href={`/products/${product.id}`}
+                  onClick={(e) => { e.preventDefault(); navigate(`/products/${product.id}`); }}
                   title={product.name || "Untitled Item"}
                   sx={{
                     display: "block",
@@ -691,6 +731,9 @@ const ProductList = () => {
                     fontSize: "0.825rem",
                     fontWeight: 600,
                     color: "#2563eb",
+                    textDecoration: "none",
+                    cursor: "pointer",
+                    "&:hover": { textDecoration: "underline" },
                   }}
                 >
                   {product.name || "Untitled Item"}
@@ -747,8 +790,8 @@ const ProductList = () => {
                       {viewFilter === "Archived" ? <RestoreIcon sx={{ fontSize: 17 }} /> : <DeleteIcon sx={{ fontSize: 17 }} />}
                     </IconButton>
                   </Tooltip>
-                  {!isArchived && product.preferred_vendor_id && (
-                    <Tooltip title="Restock item">
+                  {canRestock(product) && (
+                    <Tooltip title="Order from vendor">
                       <IconButton aria-label="Restock item" size="small" onClick={() => handleRestock(product)} sx={{ color: "#16a34a" }}>
                         <ShoppingCartIcon sx={{ fontSize: 17 }} />
                       </IconButton>
@@ -776,9 +819,14 @@ const ProductList = () => {
           </Typography>
         </DialogTitle>
         <DialogContent>
+          {stockDialogError && (
+            <Alert severity="error" sx={{ mb: 1.5 }} onClose={() => setStockDialogError("")}>
+              {stockDialogError}
+            </Alert>
+          )}
           {stockDialog.mode === "bulk" ? (
             <Typography sx={{ mb: 1.5, fontSize: "0.875rem", color: "#6b7280" }}>
-              Apply stock change to {selectedProducts.length} selected items.
+              Apply stock change to {selectedActiveItems.length} active selected items.
             </Typography>
           ) : (
             <Typography sx={{ mb: 1.5, fontSize: "0.875rem", color: "#6b7280" }}>
@@ -813,6 +861,53 @@ const ProductList = () => {
             size="small"
             inputProps={{ min: 0, step: 1 }}
             label="Quantity"
+          />
+
+          <FormControl size="small" fullWidth sx={{ mt: 1.5 }}>
+            <InputLabel>Reason (optional)</InputLabel>
+            <Select
+              label="Reason (optional)"
+              value={stockReason}
+              onChange={(e) => setStockReason(e.target.value)}
+            >
+              <MenuItem value=""><em>None</em></MenuItem>
+              <MenuItem value="Purchase Receipt">Purchase Receipt</MenuItem>
+              <MenuItem value="Stock Count Correction">Stock Count Correction</MenuItem>
+              <MenuItem value="Damaged Goods">Damaged Goods</MenuItem>
+              <MenuItem value="Customer Return">Customer Return</MenuItem>
+              <MenuItem value="Opening Balance">Opening Balance</MenuItem>
+              <MenuItem value="Other">Other</MenuItem>
+            </Select>
+          </FormControl>
+          {stockReason === "Other" && (
+            <TextField
+              label="Specify reason"
+              value={stockReasonCustom}
+              onChange={(e) => setStockReasonCustom(e.target.value)}
+              fullWidth
+              size="small"
+              inputProps={{ maxLength: 200 }}
+              sx={{ mt: 1.5 }}
+            />
+          )}
+          <TextField
+            label="Reference Number (optional)"
+            value={stockReferenceNumber}
+            onChange={(e) => setStockReferenceNumber(e.target.value)}
+            fullWidth
+            size="small"
+            inputProps={{ maxLength: 100 }}
+            sx={{ mt: 1.5 }}
+          />
+          <TextField
+            label="Adjustment Date"
+            type="date"
+            value={stockAdjustDate}
+            onChange={(e) => setStockAdjustDate(e.target.value)}
+            fullWidth
+            size="small"
+            InputLabelProps={{ shrink: true }}
+            sx={{ mt: 1.5 }}
           />
 
           {stockDialog.mode === "single" && (

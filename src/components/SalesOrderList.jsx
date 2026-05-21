@@ -3,7 +3,8 @@ import axios from "axios";
 import { createApiUrl } from "../config/api";
 import MainLayout from "./Layout/MainLayout";
 import StatusBadge from "./common/StatusBadge";
-import SummaryCard from "./common/SummaryCard";
+import ListSummary from "./list/ListSummary";
+import buildSummaryFilterItems from "../utils/summaryFilterChips";
 import {
   Box,
   Button,
@@ -51,15 +52,12 @@ import RestoreIcon from "@mui/icons-material/Restore";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import PendingIcon from "@mui/icons-material/Pending";
-import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import { useTranslation } from "react-i18next";
 import useTableSorting from "../hooks/useTableSorting";
 
 const SalesOrderList = () => {
   const [salesOrders, setSalesOrders] = useState([]);
+  const [salesOrderSummary, setSalesOrderSummary] = useState({ total: 0, confirmed: 0, draft: 0, invoiced: 0, closed: 0, cancelled: 0 });
   const [customers, setCustomers] = useState([]);
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
@@ -86,9 +84,16 @@ const SalesOrderList = () => {
       const lifecycle = statusFilter === "Archived" ? "archived" : "active";
       const statusParam = statusFilter !== "All" && statusFilter !== "Archived" ? statusFilter : undefined;
       const response = await axios.get(createApiUrl("/api/sales-orders"), {
-        params: { ...sortParams, lifecycle, status: statusParam },
+        params: { ...sortParams, lifecycle, status: statusParam, include_meta: "1" },
       });
-      setSalesOrders(response.data);
+      const payload = response.data;
+      if (payload && payload.data) {
+        setSalesOrders(payload.data);
+        setSalesOrderSummary(payload.summary || { total: 0, confirmed: 0, draft: 0, invoiced: 0, closed: 0, cancelled: 0 });
+      } else {
+        setSalesOrders(Array.isArray(payload) ? payload : []);
+        setSalesOrderSummary({ total: 0, confirmed: 0, draft: 0, invoiced: 0, closed: 0, cancelled: 0 });
+      }
       setError("");
     } catch (err) {
       setError(t('salesOrderList.failedFetch'));
@@ -136,14 +141,12 @@ const SalesOrderList = () => {
     page * rowsPerPage + rowsPerPage
   );
 
-  // Calculate summary metrics
-  const totalOrderValue = salesOrders.reduce((sum, so) => sum + (so.total_amount || 0), 0);
-  
-  const confirmedCount = salesOrders.filter((so) => so.status === "Confirmed").length;
-  
-  const pendingCount = salesOrders.filter((so) => so.status === "Draft").length;
-  
-  const invoicedCount = salesOrders.filter((so) => so.status === "Invoiced").length;
+  // Calculate summary metrics from server-provided summary
+  const confirmedCount = salesOrderSummary.confirmed || 0;
+  const pendingCount = salesOrderSummary.draft || 0;
+  const invoicedCount = salesOrderSummary.invoiced || 0;
+  const closedCount = salesOrderSummary.closed || 0;
+  const cancelledCount = salesOrderSummary.cancelled || 0;
 
   const handleEdit = (so) => {
     const isArchived = String(so?.status || "").toUpperCase() === "ARCHIVED" || statusFilter === "Archived";
@@ -321,41 +324,24 @@ const SalesOrderList = () => {
               </Button>
             </Box>
 
-            {/* Summary Cards */}
-            <Grid container spacing={3} sx={{ mb: 4 }}>
-              <Grid item xs={12} sm={6} md={3}>
-                <SummaryCard
-                  title="Total Order Value"
-                  value={`₹${totalOrderValue.toLocaleString()}`}
-                  icon={<AttachMoneyIcon />}
-                  color="#667eea"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <SummaryCard
-                  title="Confirmed"
-                  value={confirmedCount}
-                  icon={<CheckCircleIcon />}
-                  color="#48bb78"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <SummaryCard
-                  title="Pending"
-                  value={pendingCount}
-                  icon={<PendingIcon />}
-                  color="#ed8936"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <SummaryCard
-                  title="Invoiced"
-                  value={invoicedCount}
-                  icon={<LocalShippingIcon />}
-                  color="#38b2ac"
-                />
-              </Grid>
-            </Grid>
+            {/* Clickable summary chips */}
+            <ListSummary
+              items={buildSummaryFilterItems({
+                activeFilter: statusFilter,
+                allFilterValue: "All",
+                onFilterChange: setStatusFilter,
+                filteredCount: filteredSalesOrders.length,
+                viewAllValue: salesOrderSummary.total || 0,
+                chips: [
+                  { label: "Total",     value: salesOrderSummary.total || 0, filterValue: "All" },
+                  { label: "Confirmed", value: confirmedCount,      color: "success", filterValue: "Confirmed" },
+                  { label: "Draft",     value: pendingCount,        color: "default", filterValue: "Draft" },
+                  { label: "Invoiced",  value: invoicedCount,       color: "info",    filterValue: "Invoiced" },
+                  { label: "Closed",    value: closedCount,         color: "primary", filterValue: "Closed" },
+                  { label: "Cancelled", value: cancelledCount,      color: "error",   filterValue: "Cancelled" },
+                ],
+              })}
+            />
 
             {error && (
               <Fade in={!!error}>

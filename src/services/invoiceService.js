@@ -53,3 +53,8 @@ export const recordPayment = async (id, payload) => {
   const response = await axios.post(`${API_INVOICES}/${id}/record-payment`, payload);
   return response.data;
 };
+
+export const voidInvoice = async (id, reason) => {
+  const response = await axios.post(`${API_INVOICES}/${id}/void`, { reason });
+  return response.data;
+};

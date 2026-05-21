@@ -6,6 +6,7 @@ import {
   deleteInvoice,
   sendInvoiceEmail,
   recordPayment,
+  voidInvoice,
 } from '../../services/invoiceService';
 
 jest.mock('axios');
@@ -80,6 +81,23 @@ describe('invoiceService', () => {
         expect.stringContaining('/invoices/inv-1/record-payment'),
         payload
       );
+    });
+  });
+
+  describe('voidInvoice', () => {
+    it('voids an invoice with a reason', async () => {
+      axios.post.mockResolvedValue({ data: { status: 'Cancelled', invoice_id: 'inv-1' } });
+      const result = await voidInvoice('inv-1', 'Issued in error');
+      expect(result).toEqual({ status: 'Cancelled', invoice_id: 'inv-1' });
+      expect(axios.post).toHaveBeenCalledWith(
+        expect.stringContaining('/invoices/inv-1/void'),
+        { reason: 'Issued in error' }
+      );
+    });
+
+    it('propagates errors from the API', async () => {
+      axios.post.mockRejectedValue(new Error('Server error'));
+      await expect(voidInvoice('inv-1', 'Mistake')).rejects.toThrow('Server error');
     });
   });
 });

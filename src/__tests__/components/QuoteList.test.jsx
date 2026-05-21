@@ -25,6 +25,12 @@ jest.mock("../../components/Layout/MainLayout", () => ({
   default: ({ children }) => <div>{children}</div>,
 }));
 
+jest.mock("../../context/AuthContext", () => ({
+  ...jest.requireActual("../../context/AuthContext"),
+  useAuth: jest.fn(() => ({ user: { id: 'test-user-id', username: 'testuser' } })),
+  AuthProvider: ({ children }) => children,
+}));
+
 const testTheme = createTheme();
 
 const renderQuoteList = (route = "/quotes") => {

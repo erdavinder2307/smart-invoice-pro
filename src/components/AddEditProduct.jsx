@@ -6,8 +6,10 @@ import {
   Alert,
   Box,
   Button,
+  Chip,
   Checkbox,
   CircularProgress,
+  Collapse,
   FormControlLabel,
   Grid,
   InputAdornment,
@@ -15,6 +17,12 @@ import {
   Paper,
   Radio,
   RadioGroup,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   TextField,
   Typography,
 } from '@mui/material';
@@ -40,6 +48,7 @@ import useAutoFill from '../hooks/useAutoFill';
 import DevAutoFillButton from './common/DevAutoFillButton';
 import { generateProductMockData } from '../utils/mockDataGenerators';
 import { parseApiError, applyApiErrors } from '../utils/apiErrors';
+import { getStockLedger, adjustStock } from '../services/stockService';
 
 const unitOptions = ['pcs', 'kg', 'litre', 'box', 'pack', 'hrs', 'set'];
 const taxPreferenceOptions = [
@@ -76,6 +85,10 @@ const initialForm = {
   reorder_qty: '',
   preferred_vendor_id: '',
   stock: '',
+  opening_stock: '',
+  opening_stock_rate: '',
+  sku: '',
+  low_stock_threshold: '',
 };
 
 const sectionTitleSx = {
@@ -111,6 +124,9 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
   const [vendors, setVendors] = useState([]);
   const [showInventoryFields, setShowInventoryFields] = useState(false);
   const [showTaxRateEditor, setShowTaxRateEditor] = useState(false);
+  const [stockLedger, setStockLedger] = useState([]);
+  const [loadingLedger, setLoadingLedger] = useState(false);
+  const [showStockHistory, setShowStockHistory] = useState(false);
   const { applyAutoFill } = useAutoFill({
     setForm,
     generator: generateProductMockData,
@@ -150,6 +166,15 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
     }
   }, [productId, t]);
 
+  useEffect(() => {
+    if (!productId) return;
+    setLoadingLedger(true);
+    getStockLedger(productId)
+      .then((entries) => setStockLedger(Array.isArray(entries) ? [...entries].reverse() : []))
+      .catch(() => {})
+      .finally(() => setLoadingLedger(false));
+  }, [productId]);
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     // Clear field error when user starts typing
@@ -160,6 +185,12 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
 
       if (name === 'tax_preference' && value === 'tax_exempt') {
         updates.tax_rate = '0';
+      }
+
+      if (name === 'item_type' && value === 'service') {
+        updates.reorder_level = '';
+        updates.reorder_qty = '';
+        setShowInventoryFields(false);
       }
 
       if (name === 'sales_enabled' && !checked) {
@@ -235,15 +266,35 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
 
     setLoading(true);
     try {
-      if (productId) await updateProduct(productId, payload);
-      else await createProduct(payload);
+      if (productId) {
+        await updateProduct(productId, payload);
+      } else {
+        const created = await createProduct(payload);
+        // Record opening stock if provided
+        const openingQty = Number(form.opening_stock || 0);
+        if (openingQty > 0 && created?.id) {
+          try {
+            await adjustStock({
+              product_id: created.id,
+              type: 'IN',
+              quantity: openingQty,
+              reason: 'Opening Stock',
+              rate: Number(form.opening_stock_rate || 0),
+            });
+          } catch {
+            // Non-fatal — product is saved; stock will default to 0
+          }
+        }
+      }
       if (onSuccess) onSuccess();
       navigate('/products');
     } catch (err) {
       const parsed = parseApiError(err, 'Failed to save product');
       const msg = applyApiErrors(parsed, setErrors);
-      // If no field-level errors, show in banner
-      if (!Object.keys(parsed.fields).length) {
+      // Surface "already exists" error inline under the Name field
+      if (!Object.keys(parsed.fields).length && /already exists/i.test(parsed.message)) {
+        setErrors((prev) => ({ ...prev, name: parsed.message }));
+      } else if (!Object.keys(parsed.fields).length) {
         setServerError(msg);
       }
     } finally {
@@ -349,6 +400,16 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
                     </InputAdornment>
                   ),
                 }}
+              />
+
+              <FormInput
+                label="SKU / Item Code"
+                labelWidth={ITEM_FORM_LABEL_WIDTH}
+                hint="Unique code or SKU for this item (optional)"
+                name="sku"
+                value={form.sku}
+                onChange={handleChange}
+                sx={{ width: TOP_FIELD_WIDTH, maxWidth: '100%' }}
               />
 
               <FormSelect
@@ -492,18 +553,18 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
                   </ZohoRow>
 
                   <ZohoRow label="Preferred Vendor" labelWidth={ITEM_FORM_LABEL_WIDTH} noDivider>
-                    <AppSelect
+                    <FormSelect
+                      searchable
                       name="preferred_vendor_id"
                       value={form.preferred_vendor_id}
                       onChange={handleChange}
-                      displayEmpty
                       disabled={!form.purchase_enabled}
-                    >
-                      <MenuItem value="" sx={{ ...menuItemSx, color: C.hint }}>None</MenuItem>
-                      {vendors.map((vendor) => (
-                        <MenuItem key={vendor.id} value={vendor.id} sx={menuItemSx}>{vendor.name || vendor.vendor_name}</MenuItem>
-                      ))}
-                    </AppSelect>
+                      placeholder="Search vendor"
+                      options={vendors.map((vendor) => ({
+                        value: vendor.id,
+                        label: vendor.name || vendor.vendor_name || 'Unnamed Vendor',
+                      }))}
+                    />
                   </ZohoRow>
                 </Grid>
               </Grid>
@@ -578,6 +639,8 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
               </Box>
             </Box>
 
+            {/* ── INVENTORY SECTION (goods only) ── */}
+            {form.item_type !== 'service' && (
             <Box sx={{ px: 3, py: 2, borderTop: `1px solid ${C.divider}` }}>
               <Typography sx={{ ...helperLineSx, mb: 2 }}>
                 Do you want to keep track of this item? Enable inventory to view its stock based on the sales and purchase transactions you record.
@@ -600,6 +663,52 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
 
               {showInventoryFields && (
                 <Grid container spacing={3} sx={{ mt: 0.5 }}>
+                  {!productId && (
+                    <>
+                      <Grid item xs={12} md={4}>
+                        <FieldLabel hint="Initial quantity on hand when you start tracking this item">Opening Stock</FieldLabel>
+                        <TextField
+                          name="opening_stock"
+                          value={form.opening_stock}
+                          onChange={handleChange}
+                          type="number"
+                          size="small"
+                          fullWidth
+                          placeholder="0"
+                          inputProps={{ min: 0, step: 1 }}
+                          sx={fieldSx}
+                        />
+                      </Grid>
+                      <Grid item xs={12} md={4}>
+                        <FieldLabel hint="Unit cost used to value the opening stock">Opening Stock Rate (₹)</FieldLabel>
+                        <TextField
+                          name="opening_stock_rate"
+                          value={form.opening_stock_rate}
+                          onChange={handleChange}
+                          type="number"
+                          size="small"
+                          fullWidth
+                          placeholder="0.00"
+                          inputProps={{ min: 0, step: 0.01 }}
+                          sx={fieldSx}
+                        />
+                      </Grid>
+                    </>
+                  )}
+                  <Grid item xs={12} md={4}>
+                    <FieldLabel hint="Minimum stock level before a low-stock alert triggers">Low Stock Alert Threshold</FieldLabel>
+                    <TextField
+                      name="low_stock_threshold"
+                      value={form.low_stock_threshold}
+                      onChange={handleChange}
+                      type="number"
+                      size="small"
+                      fullWidth
+                      placeholder="e.g. 5"
+                      inputProps={{ min: 0, step: 1 }}
+                      sx={fieldSx}
+                    />
+                  </Grid>
                   <Grid item xs={12} md={4}>
                     <FieldLabel hint="Alert when stock falls to this level">Reorder Level</FieldLabel>
                     <TextField
@@ -642,6 +751,82 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
                 </Grid>
               )}
             </Box>
+            )}
+
+            {/* ── STOCK HISTORY ── */}
+            {productId && (
+              <Box sx={{ px: 3, py: 2, borderTop: `1px solid ${C.divider}` }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: '#333' }}>
+                    Stock History
+                  </Typography>
+                  <Button
+                    type="button"
+                    size="small"
+                    onClick={() => setShowStockHistory((prev) => !prev)}
+                    sx={{ p: 0, minWidth: 0, textTransform: 'none', fontSize: '0.78rem', color: C.primary, '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' } }}
+                  >
+                    {showStockHistory ? 'Hide' : 'Show'}
+                  </Button>
+                </Box>
+                <Collapse in={showStockHistory}>
+                  {loadingLedger ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                      <CircularProgress size={20} />
+                    </Box>
+                  ) : stockLedger.length === 0 ? (
+                    <Typography sx={{ fontSize: '0.8125rem', color: C.hint, mt: 1.5 }}>
+                      No stock transactions recorded yet.
+                    </Typography>
+                  ) : (
+                    <TableContainer sx={{ mt: 1.5 }}>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6b7280', py: 0.75 }}>Date</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6b7280', py: 0.75 }}>Type</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6b7280', py: 0.75 }} align="right">Qty</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6b7280', py: 0.75 }} align="right">Balance</TableCell>
+                            <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6b7280', py: 0.75 }}>Source / Reason</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {stockLedger.slice(0, 20).map((entry) => (
+                            <TableRow key={entry.id} sx={{ '&:last-child td': { border: 0 } }}>
+                              <TableCell sx={{ fontSize: '0.8rem', py: 0.75, color: '#374151' }}>
+                                {entry.date ? new Date(entry.date).toLocaleDateString() : '—'}
+                              </TableCell>
+                              <TableCell sx={{ py: 0.75 }}>
+                                <Chip
+                                  label={entry.type}
+                                  size="small"
+                                  color={entry.type === 'IN' ? 'success' : 'error'}
+                                  sx={{ fontSize: '0.7rem', height: 20, borderRadius: 1 }}
+                                />
+                              </TableCell>
+                              <TableCell sx={{ fontSize: '0.8rem', py: 0.75, color: entry.type === 'IN' ? '#16a34a' : '#dc2626', textAlign: 'right', fontWeight: 500 }}>
+                                {entry.type === 'IN' ? '+' : '−'}{Math.abs(entry.quantity)}
+                              </TableCell>
+                              <TableCell sx={{ fontSize: '0.8rem', py: 0.75, color: '#374151', textAlign: 'right' }}>
+                                {entry.balance ?? '—'}
+                              </TableCell>
+                              <TableCell sx={{ fontSize: '0.8rem', py: 0.75, color: '#6b7280', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {entry.reason || entry.source || entry.adjustment_type || '—'}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                      {stockLedger.length > 20 && (
+                        <Typography sx={{ fontSize: '0.75rem', color: C.hint, mt: 1, textAlign: 'center' }}>
+                          Showing 20 most recent transactions ({stockLedger.length} total)
+                        </Typography>
+                      )}
+                    </TableContainer>
+                  )}
+                </Collapse>
+              </Box>
+            )}
 
             <Box sx={{ ...footerSx, justifyContent: 'flex-start' }}>
               <Button

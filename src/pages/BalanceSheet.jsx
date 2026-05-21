@@ -99,9 +99,9 @@ const BalanceSheet = () => {
 
   // Prepare data for asset composition pie chart
   const assetChartData = reportData ? [
-    { name: 'Cash', value: reportData.assets.cash, color: '#4CAF50' },
-    { name: 'Accounts Receivable', value: reportData.assets.accounts_receivable, color: '#2196F3' },
-    { name: 'Inventory', value: reportData.assets.inventory, color: '#FF9800' }
+    { name: 'Cash', value: reportData.assets.current_assets?.cash, color: '#4CAF50' },
+    { name: 'Accounts Receivable', value: reportData.assets.current_assets?.accounts_receivable, color: '#2196F3' },
+    { name: 'Inventory', value: reportData.assets.current_assets?.inventory, color: '#FF9800' }
   ].filter(item => item.value > 0) : [];
 
   const isBalanced = reportData ? 
@@ -221,7 +221,7 @@ const BalanceSheet = () => {
                       Total Assets
                     </Typography>
                     <Typography variant="h3" fontWeight="bold" color="primary.main">
-                      ${reportData.assets.total.toLocaleString()}
+                      ${(reportData.assets.total ?? 0).toLocaleString()}
                     </Typography>
                   </CardContent>
                 </Card>
@@ -233,7 +233,7 @@ const BalanceSheet = () => {
                       Total Liabilities
                     </Typography>
                     <Typography variant="h3" fontWeight="bold" color="warning.main">
-                      ${reportData.liabilities.total.toLocaleString()}
+                      ${(reportData.liabilities.total ?? 0).toLocaleString()}
                     </Typography>
                   </CardContent>
                 </Card>
@@ -245,7 +245,7 @@ const BalanceSheet = () => {
                       Total Equity
                     </Typography>
                     <Typography variant="h3" fontWeight="bold" color="success.main">
-                      ${reportData.equity.total.toLocaleString()}
+                      ${(reportData.equity.total ?? 0).toLocaleString()}
                     </Typography>
                   </CardContent>
                 </Card>
@@ -303,25 +303,25 @@ const BalanceSheet = () => {
                         <TableRow>
                           <TableCell sx={{ pl: 4 }}>Cash</TableCell>
                           <TableCell align="right">
-                            ${reportData.assets.cash.toLocaleString()}
+                            ${(reportData.assets.current_assets?.cash ?? 0).toLocaleString()}
                           </TableCell>
                         </TableRow>
                         <TableRow>
                           <TableCell sx={{ pl: 4 }}>Accounts Receivable</TableCell>
                           <TableCell align="right">
-                            ${reportData.assets.accounts_receivable.toLocaleString()}
+                            ${(reportData.assets.current_assets?.accounts_receivable ?? 0).toLocaleString()}
                           </TableCell>
                         </TableRow>
                         <TableRow>
                           <TableCell sx={{ pl: 4 }}>Inventory</TableCell>
                           <TableCell align="right">
-                            ${reportData.assets.inventory.toLocaleString()}
+                            ${(reportData.assets.current_assets?.inventory ?? 0).toLocaleString()}
                           </TableCell>
                         </TableRow>
                         <TableRow sx={{ bgcolor: 'primary.50' }}>
                           <TableCell sx={{ fontWeight: 'bold' }}>Total Assets</TableCell>
                           <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                            ${reportData.assets.total.toLocaleString()}
+                            ${(reportData.assets.total ?? 0).toLocaleString()}
                           </TableCell>
                         </TableRow>
                       </TableBody>
@@ -349,13 +349,13 @@ const BalanceSheet = () => {
                         <TableRow>
                           <TableCell sx={{ pl: 4 }}>Accounts Payable</TableCell>
                           <TableCell align="right">
-                            ${reportData.liabilities.accounts_payable.toLocaleString()}
+                            ${(reportData.liabilities.current_liabilities?.accounts_payable ?? 0).toLocaleString()}
                           </TableCell>
                         </TableRow>
                         <TableRow sx={{ bgcolor: 'warning.50' }}>
                           <TableCell sx={{ fontWeight: 'bold' }}>Total Liabilities</TableCell>
                           <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                            ${reportData.liabilities.total.toLocaleString()}
+                            ${(reportData.liabilities.total ?? 0).toLocaleString()}
                           </TableCell>
                         </TableRow>
                       </TableBody>
@@ -383,13 +383,13 @@ const BalanceSheet = () => {
                         <TableRow>
                           <TableCell sx={{ pl: 4 }}>Retained Earnings</TableCell>
                           <TableCell align="right">
-                            ${reportData.equity.retained_earnings.toLocaleString()}
+                            ${(reportData.equity.retained_earnings ?? 0).toLocaleString()}
                           </TableCell>
                         </TableRow>
                         <TableRow sx={{ bgcolor: 'success.50' }}>
                           <TableCell sx={{ fontWeight: 'bold' }}>Total Equity</TableCell>
                           <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                            ${reportData.equity.total.toLocaleString()}
+                            ${(reportData.equity.total ?? 0).toLocaleString()}
                           </TableCell>
                         </TableRow>
                       </TableBody>
@@ -406,19 +406,19 @@ const BalanceSheet = () => {
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
                     <Chip
-                      label={`Assets: $${reportData.assets.total.toLocaleString()}`}
+                      label={`Assets: $${(reportData.assets.total ?? 0).toLocaleString()}`}
                       color="primary"
                       sx={{ fontSize: '1rem', p: 2 }}
                     />
                     <Typography variant="h6">=</Typography>
                     <Chip
-                      label={`Liabilities: $${reportData.liabilities.total.toLocaleString()}`}
+                      label={`Liabilities: $${(reportData.liabilities.total ?? 0).toLocaleString()}`}
                       color="warning"
                       sx={{ fontSize: '1rem', p: 2 }}
                     />
                     <Typography variant="h6">+</Typography>
                     <Chip
-                      label={`Equity: $${reportData.equity.total.toLocaleString()}`}
+                      label={`Equity: $${(reportData.equity.total ?? 0).toLocaleString()}`}
                       color="success"
                       sx={{ fontSize: '1rem', p: 2 }}
                     />

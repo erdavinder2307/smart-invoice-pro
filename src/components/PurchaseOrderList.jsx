@@ -56,6 +56,7 @@ import ListPageLayout from "./list/ListPageLayout";
 import ListHeader from "./list/ListHeader";
 import FilterBar from "./list/FilterBar";
 import ListSummary from "./list/ListSummary";
+import buildSummaryFilterItems from "../utils/summaryFilterChips";
 import BulkActionBar from "./list/BulkActionBar";
 import useTableSorting from "../hooks/useTableSorting";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
@@ -540,42 +541,20 @@ const PurchaseOrderList = () => {
       />
 
       <ListSummary
-        items={[
-          {
-            label: "Total",
-            value: summary.total || 0,
-            active: status === "All",
-            onClick: () => setStatus("All"),
-          },
-          {
-            label: "Draft",
-            value: summary.draft || 0,
-            color: "default",
-            active: status === "Draft",
-            onClick: () => setStatus("Draft"),
-          },
-          {
-            label: "Issued",
-            value: summary.issued || 0,
-            color: "info",
-            active: status === "Issued",
-            onClick: () => setStatus("Issued"),
-          },
-          {
-            label: "Received",
-            value: summary.received || 0,
-            color: "success",
-            active: status === "Received",
-            onClick: () => setStatus("Received"),
-          },
-          {
-            label: "Cancelled",
-            value: summary.cancelled || 0,
-            color: "error",
-            active: status === "Cancelled",
-            onClick: () => setStatus("Cancelled"),
-          },
-        ]}
+        items={buildSummaryFilterItems({
+          activeFilter: status,
+          allFilterValue: "All",
+          onFilterChange: setStatus,
+          filteredCount: totalCount,
+          viewAllValue: summary.total || 0,
+          chips: [
+            { label: "Total",     value: summary.total     || 0, filterValue: "All" },
+            { label: "Draft",     value: summary.draft     || 0, color: "default", filterValue: "Draft" },
+            { label: "Issued",    value: summary.issued    || 0, color: "info",    filterValue: "Issued" },
+            { label: "Received",  value: summary.received  || 0, color: "success", filterValue: "Received" },
+            { label: "Cancelled", value: summary.cancelled || 0, color: "error",   filterValue: "Cancelled" },
+          ],
+        })}
       />
 
       <BulkActionBar

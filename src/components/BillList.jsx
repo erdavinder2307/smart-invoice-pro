@@ -46,6 +46,7 @@ import ListPageLayout from "./list/ListPageLayout";
 import ListHeader from "./list/ListHeader";
 import FilterBar from "./list/FilterBar";
 import ListSummary from "./list/ListSummary";
+import buildSummaryFilterItems from "../utils/summaryFilterChips";
 import BulkActionBar from "./list/BulkActionBar";
 import useListController from "../hooks/useListController";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
@@ -510,42 +511,20 @@ const BillList = () => {
       />
 
       <ListSummary
-        items={[
-          {
-            label: "Total Bills",
-            value: summary.total || 0,
-            active: status === "All",
-            onClick: () => setStatus("All"),
-          },
-          {
-            label: "Draft",
-            value: summary.draft || 0,
-            color: "default",
-            active: status === "Draft",
-            onClick: () => setStatus("Draft"),
-          },
-          {
-            label: "Open",
-            value: summary.open || 0,
-            color: "info",
-            active: status === "Open",
-            onClick: () => setStatus("Open"),
-          },
-          {
-            label: "Paid",
-            value: summary.paid || 0,
-            color: "success",
-            active: status === "Paid",
-            onClick: () => setStatus("Paid"),
-          },
-          {
-            label: "Overdue",
-            value: summary.overdue || 0,
-            color: "error",
-            active: status === "Overdue",
-            onClick: () => setStatus("Overdue"),
-          },
-        ]}
+        items={buildSummaryFilterItems({
+          activeFilter: status,
+          allFilterValue: "All",
+          onFilterChange: setStatus,
+          filteredCount: totalCount,
+          viewAllValue: summary.total || 0,
+          chips: [
+            { label: "Total Bills", value: summary.total   || 0, filterValue: "All" },
+            { label: "Draft",       value: summary.draft   || 0, color: "default", filterValue: "Draft" },
+            { label: "Open",        value: summary.open    || 0, color: "info",    filterValue: "Open" },
+            { label: "Paid",        value: summary.paid    || 0, color: "success", filterValue: "Paid" },
+            { label: "Overdue",     value: summary.overdue || 0, color: "error",   filterValue: "Overdue" },
+          ],
+        })}
       />
 
       <BulkActionBar

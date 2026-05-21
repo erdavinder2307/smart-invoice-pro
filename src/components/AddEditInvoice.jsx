@@ -9,6 +9,7 @@ import {
   Autocomplete,
   Box,
   Button,
+  Chip,
   CircularProgress,
   Divider,
   IconButton,
@@ -32,6 +33,7 @@ import { useTranslation } from 'react-i18next';
 import MainLayout from './Layout/MainLayout';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import CustomerSelect from './common/CustomerSelect';
 import AppFormField from './common/form/AppFormField';
 import FormLayout from './common/form/FormLayout';
@@ -95,7 +97,7 @@ const tcsTaxOptions = [
 ];
 
 const initialForm = {
-  invoice_number: '', customer_id: '', issue_date: '', due_date: '',
+  invoice_number: '', customer_id: '', customer_name: '', issue_date: '', due_date: '',
   payment_terms: '', subtotal: 0, cgst_amount: 0, sgst_amount: 0,
   igst_amount: 0, total_tax: 0, total_amount: 0, amount_paid: 0,
   invoice_discount: 0, round_off: 0,
@@ -407,6 +409,24 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
     if (name === 'due_date') setDueDateManuallyEdited(true);
     if (name === 'payment_terms') setDueDateManuallyEdited(false);
+    if (name === 'customer_id') {
+      const selectedCustomer = (Array.isArray(customers) ? customers : []).find((c) => c.id === value);
+      const customerName = selectedCustomer
+        ? (selectedCustomer.display_name
+            || [selectedCustomer.first_name, selectedCustomer.last_name].filter(Boolean).join(' ').trim()
+            || selectedCustomer.company_name
+            || '')
+        : '';
+      const customerPaymentTerms = selectedCustomer?.payment_terms || '';
+      setForm((prev) => {
+        const updates = { customer_id: value, customer_name: customerName };
+        if (customerPaymentTerms && !dueDateManuallyEdited) {
+          updates.payment_terms = customerPaymentTerms;
+        }
+        return { ...prev, ...updates };
+      });
+      return;
+    }
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -467,6 +487,22 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
   };
 
   const { isValid } = useMemo(() => validateInvoiceForm(form, t), [form, t]);
+
+  const handleDownloadPDF = async () => {
+    try {
+      const res = await axios.get(createApiUrl(`/api/invoices/${invoiceId}/pdf`), { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement('a');
+      a.href = url;
+      a.setAttribute('download', `${form.invoice_number || 'invoice'}.pdf`);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      setError('Failed to download PDF.');
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -544,19 +580,43 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
             ) : (
               <>
                 <Box sx={{ px: 0.5, pt: 0.25, pb: 1.5, borderBottom: `1px solid ${C.divider}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-                  <Typography sx={{ fontSize: '2rem', fontWeight: 500, color: '#151a25', textAlign: 'left' }}>
-                    {invoiceId ? t('invoiceForm.editTitle') : t('invoiceForm.newTitle')}
-                  </Typography>
-                  {isDevAutoFillEnabled && (
-                    <DevAutoFillButton
-                      modes={AUTO_FILL_MODES}
-                      onSelectMode={autoFillInvoice}
-                    />
-                  )}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <Typography sx={{ fontSize: '2rem', fontWeight: 500, color: '#151a25', textAlign: 'left' }}>
+                      {invoiceId ? t('invoiceForm.editTitle') : t('invoiceForm.newTitle')}
+                    </Typography>
+                    {invoiceId && ['Issued', 'Partially Paid'].includes(form.status) && form.due_date && new Date(form.due_date) < new Date() && (
+                      <Chip label="OVERDUE" color="error" size="small" sx={{ fontWeight: 700, letterSpacing: 0.5 }} />
+                    )}
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    {invoiceId && form.status !== 'Draft' && (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="error"
+                        startIcon={<PictureAsPdfIcon />}
+                        onClick={handleDownloadPDF}
+                        sx={{ textTransform: 'none', fontSize: '0.8rem' }}
+                      >
+                        Download PDF
+                      </Button>
+                    )}
+                    {isDevAutoFillEnabled && (
+                      <DevAutoFillButton
+                        modes={AUTO_FILL_MODES}
+                        onSelectMode={autoFillInvoice}
+                      />
+                    )}
+                  </Box>
                 </Box>
 
                 <Box sx={{ px: 0.5, py: 3, borderBottom: `1px solid ${C.divider}` }}>
                   <FormLayout>
+                    {invoiceId && !form.customer_id && !isArchived && (
+                      <Alert severity="warning" sx={{ mb: 1 }}>
+                        No customer linked. Assign a customer to enable receivables tracking.
+                      </Alert>
+                    )}
                     <AppFormField label={t('invoiceForm.customerName')} required testId="invoice-field-customer">
                       <CustomerSelect
                         customers={customers}

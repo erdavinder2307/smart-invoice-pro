@@ -3,10 +3,14 @@ import { Breadcrumbs, Link, Typography, Box } from "@mui/material";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import { useLocation, useNavigate } from "react-router-dom";
 
-const toLabel = (segment) =>
-  segment
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const toLabel = (segment) => {
+  if (UUID_RE.test(segment)) return "Details";
+  return segment
     .replace(/-/g, " ")
     .replace(/\b\w/g, (char) => char.toUpperCase());
+};
 
 const AppBreadcrumbs = () => {
   const location = useLocation();

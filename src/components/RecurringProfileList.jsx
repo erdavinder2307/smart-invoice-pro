@@ -45,6 +45,7 @@ import ListPageLayout from './list/ListPageLayout';
 import ListHeader, { invalidateSearchHistoryCache } from './list/ListHeader';
 import FilterBar from './list/FilterBar';
 import ListSummary from './list/ListSummary';
+import buildSummaryFilterItems from '../utils/summaryFilterChips';
 import BulkActionBar from './list/BulkActionBar';
 import useTableSorting from '../hooks/useTableSorting';
 import useListController from '../hooks/useListController';
@@ -448,13 +449,20 @@ const RecurringProfileList = () => {
       />
 
       <ListSummary
-        items={[
-          { label: 'Total', value: summary.total || 0, active: status === 'All', onClick: () => setStatus('All') },
-          { label: 'Active', value: summary.Active || 0, color: 'success', active: status === 'Active', onClick: () => setStatus('Active') },
-          { label: 'Paused', value: summary.Paused || 0, color: 'warning', active: status === 'Paused', onClick: () => setStatus('Paused') },
-          { label: 'Completed', value: summary.Completed || 0, color: 'primary', active: status === 'Completed', onClick: () => setStatus('Completed') },
-          { label: 'Cancelled', value: summary.Cancelled || 0, color: 'error', active: status === 'Cancelled', onClick: () => setStatus('Cancelled') },
-        ]}
+        items={buildSummaryFilterItems({
+          activeFilter: status,
+          allFilterValue: 'All',
+          onFilterChange: setStatus,
+          filteredCount: totalCount,
+          viewAllValue: summary.total || 0,
+          chips: [
+            { label: 'Total',     value: summary.total     || 0, filterValue: 'All' },
+            { label: 'Active',    value: summary.Active    || 0, color: 'success', filterValue: 'Active' },
+            { label: 'Paused',    value: summary.Paused    || 0, color: 'warning', filterValue: 'Paused' },
+            { label: 'Completed', value: summary.Completed || 0, color: 'primary', filterValue: 'Completed' },
+            { label: 'Cancelled', value: summary.Cancelled || 0, color: 'error',   filterValue: 'Cancelled' },
+          ],
+        })}
       />
 
       <BulkActionBar

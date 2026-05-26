@@ -69,6 +69,21 @@ jest.mock('react-chartjs-2', () => ({
   Bar: () => <div data-testid="revenue-bar-chart" />,
 }));
 
+jest.mock('../../components/ProductStockSummary', () => ({
+  __esModule: true,
+  default: () => {
+    const { useNavigate } = jest.requireActual('react-router-dom');
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const nav = useNavigate();
+    return (
+      <div data-testid="product-stock-summary">
+        <button aria-label="Refresh" onClick={() => {}}>Refresh</button>
+        <button onClick={() => nav('/products')}>View All Products</button>
+      </div>
+    );
+  },
+}));
+
 jest.mock('react-router-dom', () => {
   const actual = jest.requireActual('react-router-dom');
   return {

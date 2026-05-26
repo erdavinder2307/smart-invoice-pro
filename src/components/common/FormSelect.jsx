@@ -1,5 +1,5 @@
 import React from 'react';
-import { Autocomplete, TextField, MenuItem } from '@mui/material';
+import { Autocomplete, TextField, MenuItem, FormHelperText } from '@mui/material';
 import { ZohoRow, AppSelect, fieldSx, menuItemSx, C } from './formStyles';
 
 /**
@@ -89,6 +89,7 @@ const FormSelect = ({
         displayEmpty={displayEmpty}
         fullWidth={fullWidth}
         width={width}
+        error={error}
       >
         {placeholder && (
           <MenuItem value="" disabled sx={menuItemSx}>
@@ -102,9 +103,9 @@ const FormSelect = ({
         ))}
       </AppSelect>
       {helperText && (
-        <span style={{ fontSize: '0.75rem', color: error ? C.red : C.hint, marginTop: 3 }}>
+        <FormHelperText error={error} sx={{ mx: 0, mt: '3px' }}>
           {helperText}
-        </span>
+        </FormHelperText>
       )}
     </ZohoRow>
   );

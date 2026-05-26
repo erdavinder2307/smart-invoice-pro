@@ -25,6 +25,14 @@ jest.mock("../../components/Layout/MainLayout", () => ({
   default: ({ children }) => <div>{children}</div>,
 }));
 
+// Prevent MUI Popper (search-history dropdown in ListHeader) from creating a
+// popperjs instance that fires async position updates outside act().
+jest.mock("@mui/material/Popper", () => ({
+  __esModule: true,
+  default: ({ open, children }) =>
+    open ? <div data-testid="mock-popper">{children}</div> : null,
+}));
+
 jest.mock("../../context/AuthContext", () => ({
   ...jest.requireActual("../../context/AuthContext"),
   useAuth: jest.fn(() => ({ user: { id: 'test-user-id', username: 'testuser' } })),
@@ -75,6 +83,12 @@ describe("QuoteList", () => {
     quoteService.getQuotesList.mockResolvedValue(sampleResponse);
     axios.get.mockResolvedValue({ data: [{ id: "cust-1", name: "Acme Corp" }] });
     saveSearchHistory.mockResolvedValue({ ok: true });
+  });
+
+  afterEach(async () => {
+    // Flush any pending MUI Popper (ListHeader search dropdown) state updates
+    // to avoid "not wrapped in act(...)" console warnings.
+    await act(async () => {});
   });
 
   it("fetches once on mount and refetches once after debounced search", async () => {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useQueryClient } from '@tanstack/react-query';
 import { createApiUrl } from '../config/api';
 import MainLayout from './Layout/MainLayout';
 import {
@@ -36,6 +37,7 @@ const AddEditVendor = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const [form, setForm] = useState(INITIAL_FORM);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -119,6 +121,8 @@ const AddEditVendor = () => {
     try {
       if (id) await axios.put(createApiUrl(`/api/vendors/${id}`), payload);
       else await axios.post(createApiUrl('/api/vendors'), payload);
+      queryClient.invalidateQueries({ queryKey: ['vendors-list'] });
+      queryClient.invalidateQueries({ queryKey: ['bills-vendors'] });
       navigate('/vendors');
     } catch (err) {
       const parsed = parseApiError(err, t('addEditVendor.failedSave'));

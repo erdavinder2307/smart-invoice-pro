@@ -9,6 +9,7 @@ import React from 'react';
 import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // ── Default mock values (prefixed with "mock" so jest.mock factories can reference them) ──
 
@@ -198,11 +199,17 @@ export function renderWithProviders(
     useSidebar.mockReturnValue({ ...mockSidebarValue, ...(sidebarValue || {}) });
   }
 
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+
   function Wrapper({ children }) {
     return (
       <MemoryRouter initialEntries={[route]}>
         <ThemeProvider theme={testTheme}>
-          {children}
+          <QueryClientProvider client={queryClient}>
+            {children}
+          </QueryClientProvider>
         </ThemeProvider>
       </MemoryRouter>
     );

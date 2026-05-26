@@ -58,3 +58,18 @@ export const voidInvoice = async (id, reason) => {
   const response = await axios.post(`${API_INVOICES}/${id}/void`, { reason });
   return response.data;
 };
+
+export const exportInvoices = async (params = {}) => {
+  const response = await axios.get(createApiUrl('/api/invoices/export'), {
+    params: compactParams(params),
+    responseType: 'blob',
+  });
+  const url = URL.createObjectURL(new Blob([response.data], { type: 'text/csv' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', 'invoices-export.csv');
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+};

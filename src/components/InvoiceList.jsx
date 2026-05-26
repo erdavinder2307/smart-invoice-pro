@@ -46,6 +46,7 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import SendIcon from "@mui/icons-material/Send";
 import CancelIcon from "@mui/icons-material/Cancel";
+import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import RestoreIcon from "@mui/icons-material/Restore";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 
@@ -66,6 +67,7 @@ import { useListController } from "../hooks/useListController";
 import { createApiUrl } from "../config/api";
 import {
   bulkInvoiceAction,
+  exportInvoices,
   getInvoicesList,
   recordPayment,
   sendInvoiceEmail,
@@ -248,7 +250,19 @@ const InvoiceList = () => {
 
   const paymentMutation = useMutation({
     mutationFn: ({ id, payload }) => recordPayment(id, payload),
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Optimistically patch the invoice in all cached pages before the refetch
+      if (data?.invoice) {
+        queryClient.setQueriesData({ queryKey: ["invoices-list"] }, (cached) => {
+          if (!cached?.items) return cached;
+          return {
+            ...cached,
+            items: cached.items.map((inv) =>
+              inv.id === data.invoice.id ? { ...inv, ...data.invoice } : inv
+            ),
+          };
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ["invoices-list"] });
       setPaymentDialog(EMPTY_PAYMENT_DIALOG);
       setUiError("");
@@ -452,14 +466,34 @@ const InvoiceList = () => {
         title="Invoices"
         summary={`${totalCount} invoice${totalCount === 1 ? "" : "s"}`}
         rightAction={
-          <Button
-            variant="contained"
-            onClick={() => navigate("/invoices/add")}
-            startIcon={<AddIcon fontSize="small" />}
-            sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
-          >
-            New Invoice
-          </Button>
+          <Box sx={{ display: "flex", gap: 1 }}>
+            <Button
+              variant="outlined"
+              startIcon={<FileDownloadIcon fontSize="small" />}
+              sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
+              onClick={() => {
+                const params = {
+                  status: status === "All" ? undefined : status,
+                  lifecycle: status === "Archived" ? "archived" : "active",
+                  date_range: dateRange !== "all" ? dateRange : undefined,
+                  date_from: dateFrom || undefined,
+                  date_to: dateTo || undefined,
+                  q: debouncedSearch || undefined,
+                };
+                exportInvoices(params);
+              }}
+            >
+              Export
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => navigate("/invoices/add")}
+              startIcon={<AddIcon fontSize="small" />}
+              sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
+            >
+              New Invoice
+            </Button>
+          </Box>
         }
         searchValue={search}
         onSearchChange={setSearch}
@@ -545,11 +579,12 @@ const InvoiceList = () => {
           filteredCount: totalCount,
           viewAllValue: summary.total || 0,
           chips: [
-            { label: "Total",   value: summary.total   || 0, filterValue: "All" },
-            { label: "Issued",  value: summary.Issued  || 0, color: "primary", filterValue: "Issued" },
-            { label: "Overdue", value: summary.overdue_count || 0, color: "error",   filterValue: "Overdue" },
-            { label: "Paid",    value: summary.Paid    || 0, color: "success", filterValue: "Paid" },
-            { label: "Draft",   value: summary.Draft   || 0, filterValue: "Draft" },
+            { label: "Total",    value: summary.total   || 0, filterValue: "All" },
+            { label: "Issued",   value: summary.Issued  || 0, color: "primary", filterValue: "Issued" },
+            { label: "Overdue",  value: summary.overdue_count || 0, color: "error",   filterValue: "Overdue" },
+            { label: "Paid",     value: summary.Paid    || 0, color: "success", filterValue: "Paid" },
+            { label: "Draft",    value: summary.Draft   || 0, filterValue: "Draft" },
+            { label: "Archived", value: summary.Archived || 0, filterValue: "Archived" },
           ],
         })}
       />
@@ -586,7 +621,7 @@ const InvoiceList = () => {
             customerName={invoice.customer_name || ""}
             onEdit={() => {
               if (status !== "Archived") {
-                navigate(`/invoices/edit/${invoice.id}`);
+                navigate(`/invoices/${invoice.id}`);
               }
             }}
             onActionMenu={(event) => handleActionMenuOpen(event, invoice)}
@@ -711,7 +746,7 @@ const InvoiceList = () => {
               hover
               onClick={() => {
                 if (!isArchivedView) {
-                  navigate(`/invoices/edit/${invoice.id}`);
+                  navigate(`/invoices/${invoice.id}`);
                 }
               }}
               sx={{
@@ -831,16 +866,24 @@ const InvoiceList = () => {
       <Menu anchorEl={actionMenuAnchor} open={Boolean(actionMenuAnchor)} onClose={handleActionMenuClose}>
         <MenuItem
           onClick={() => {
-            if (status !== "Archived") {
-              navigate(`/invoices/edit/${activeInvoice?.id}`);
-            }
+            navigate(`/invoices/${activeInvoice?.id}`);
             handleActionMenuClose();
           }}
-          disabled={status === "Archived"}
         >
           <ListItemIcon><VisibilityIcon fontSize="small" /></ListItemIcon>
           <ListItemText>View Details</ListItemText>
         </MenuItem>
+        {status !== "Archived" && (
+          <MenuItem
+            onClick={() => {
+              navigate(`/invoices/edit/${activeInvoice?.id}`);
+              handleActionMenuClose();
+            }}
+          >
+            <ListItemIcon><VisibilityIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>Edit Invoice</ListItemText>
+          </MenuItem>
+        )}
         {status !== "Archived" && (
           <MenuItem onClick={() => handleOpenPayment(activeInvoice)} disabled={activeInvoice?.status === "Paid"}>
             <ListItemIcon><AttachMoneyIcon fontSize="small" color="success" /></ListItemIcon>

@@ -90,8 +90,27 @@ describe('AddEditExpense', () => {
     const saveBtn = screen.getByRole('button', { name: /save/i });
     fireEvent.click(saveBtn);
 
+    // Toast appears once API call resolves
+    await waitFor(() => {
+      expect(screen.getByText(/expense saved successfully/i)).toBeInTheDocument();
+    });
+
+    // Navigate is deferred by 1500ms
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/expenses');
+    }, { timeout: 3000 });
+  });
+
+  it('shows success snackbar after saving a new expense', async () => {
+    axios.post.mockResolvedValue({ data: { id: 'e2' } });
+    renderWithProviders(<AddEditExpense />);
+    fillRequiredFields();
+
+    const saveBtn = screen.getByRole('button', { name: /save/i });
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/expense saved successfully/i)).toBeInTheDocument();
     });
   });
 

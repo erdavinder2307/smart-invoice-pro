@@ -230,4 +230,45 @@ describe('AddEditInvoice', () => {
     resolveCreate({ id: 'inv-2' });
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/invoices'));
   });
+
+  it('shows error alert when customers API fails with retry button', async () => {
+    axios.get.mockImplementation((url) => {
+      if (url.includes('/api/customers')) {
+        return Promise.reject(new Error('Network error'));
+      }
+      if (url.includes('/api/products')) {
+        return Promise.resolve({ data: [] });
+      }
+      if (url.includes('/api/invoices/next-number')) {
+        return Promise.resolve({ data: { next_invoice_number: 'INV-00999' } });
+      }
+      return Promise.resolve({ data: {} });
+    });
+
+    renderWithProviders(<AddEditInvoice />);
+
+    expect(await screen.findByText(/Failed to load customers/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Retry/i })).toBeInTheDocument();
+  });
+
+  it('clamps negative rate input to zero via min attribute', async () => {
+    renderWithProviders(<AddEditInvoice />);
+    await screen.findByText('New Invoice');
+
+    // Rate inputs must have min="0" to prevent negative values at the browser/HTML level
+    const rateInputs = Array.from(document.querySelectorAll('input[type="number"]'));
+    // At least one numeric input should have min="0" (rate field)
+    const hasMinZero = rateInputs.some((el) => el.min === '0');
+    expect(hasMinZero).toBe(true);
+  });
+
+  it('disables Save and Send when form is invalid (no customer selected)', async () => {
+    renderWithProviders(<AddEditInvoice />);
+    await screen.findByText('New Invoice');
+
+    // With no customer selected, form is invalid — Save and Send must be disabled
+    const saveButton = screen.getByRole('button', { name: /Save and Send/i });
+    expect(saveButton).toBeDisabled();
+    expect(createInvoice).not.toHaveBeenCalled();
+  });
 });

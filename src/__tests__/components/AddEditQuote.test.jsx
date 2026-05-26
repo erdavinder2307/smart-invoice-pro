@@ -128,4 +128,27 @@ describe('AddEditQuote layout', () => {
       expect(screen.getByText('Item quantity must be greater than 0.')).toBeInTheDocument();
     });
   });
+
+  it('shows a retry alert when the customers API fails', async () => {
+    axios.get.mockImplementation((url) => {
+      if (url.includes('/api/customers')) {
+        return Promise.reject(new Error('Network error'));
+      }
+      if (url.includes('/api/products')) {
+        return Promise.resolve({ data: [] });
+      }
+      if (url.includes('/api/quotes/next-number')) {
+        return Promise.resolve({ data: { next_number: 'QT-000124' } });
+      }
+      return Promise.resolve({ data: [] });
+    });
+
+    renderWithProviders(<AddEditQuote />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Failed to load customers/i)).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
+  });
 });

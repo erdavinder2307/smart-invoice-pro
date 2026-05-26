@@ -42,11 +42,13 @@ import ReceiptIcon from "@mui/icons-material/Receipt";
 import RestoreIcon from "@mui/icons-material/Restore";
 import CategoryIcon from "@mui/icons-material/Category";
 import ImageIcon from "@mui/icons-material/Image";
+import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import { useTranslation } from "react-i18next";
 import { getDateRange, formatDateOnly } from "../utils/dateRangeFilters";
 import useTableSorting from "../hooks/useTableSorting";
+import { exportExpenses } from "../services/expenseService";
 
-const STATUS_OPTIONS = ["All", "Pending", "Paid", "Archived"];
+const STATUS_OPTIONS = ["All", "Pending", "Paid", "Billable", "Archived"];
 
 const CATEGORIES = [
   "All",
@@ -68,8 +70,9 @@ const ExpenseList = () => {
   const location = useLocation();
   const { t } = useTranslation();
   const [expenses, setExpenses] = useState([]);
-  const [expenseSummary, setExpenseSummary] = useState({ total: 0, paid: 0, pending: 0 });
+  const [expenseSummary, setExpenseSummary] = useState({ total: 0, paid: 0, pending: 0, archived: 0, billable: 0 });
   const [loading, setLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState(() => new URLSearchParams(location.search).get("status") || "All");
@@ -115,6 +118,9 @@ const ExpenseList = () => {
       
       if (statusFilter === "Archived") {
         params.append("lifecycle", "archived");
+      } else if (statusFilter === "Billable") {
+        params.append("lifecycle", "active");
+        params.append("billable", "true");
       } else {
         params.append("lifecycle", "active");
       }
@@ -142,10 +148,10 @@ const ExpenseList = () => {
       const payload = response.data;
       if (payload && payload.data) {
         setExpenses(payload.data);
-        setExpenseSummary(payload.summary || { total: 0, paid: 0, pending: 0 });
+        setExpenseSummary(payload.summary || { total: 0, paid: 0, pending: 0, archived: 0, billable: 0 });
       } else {
         setExpenses(Array.isArray(payload) ? payload : []);
-        setExpenseSummary({ total: 0, paid: 0, pending: 0 });
+        setExpenseSummary({ total: 0, paid: 0, pending: 0, archived: 0, billable: 0 });
       }
     } catch (error) {
       setError(t('expenseList.failedFetch'));
@@ -175,9 +181,11 @@ const ExpenseList = () => {
         ? true
         : statusFilter === "Archived"
           ? true
-          : statusFilter === "Paid"
-            ? normalizedStatus === "paid"
-            : normalizedStatus !== "paid";
+          : statusFilter === "Billable"
+            ? Boolean(expense.billable === true || expense.billable === "true" || expense.billable === 1)
+            : statusFilter === "Paid"
+              ? normalizedStatus === "paid"
+              : normalizedStatus !== "paid";
 
     return matchesSearch && matchesStatus;
   });
@@ -191,6 +199,8 @@ const ExpenseList = () => {
   // Status counts from server summary
   const allPaidCount = expenseSummary.paid || 0;
   const allPendingCount = expenseSummary.pending || 0;
+  const allArchivedCount = expenseSummary.archived || 0;
+  const allBillableCount = expenseSummary.billable || 0;
 
   const categoryTotals = filteredExpenses.reduce((acc, exp) => {
     const cat = exp.category || "Other";
@@ -256,6 +266,35 @@ const ExpenseList = () => {
             >
               {t('expenseList.newExpense')}
             </Button>
+            <Button
+              variant="outlined"
+              startIcon={exportLoading ? null : <FileDownloadIcon />}
+              disabled={exportLoading}
+              onClick={async () => {
+                setExportLoading(true);
+                try {
+                  await exportExpenses({
+                    category: categoryFilter !== "All" ? categoryFilter : undefined,
+                    start_date: startDate || undefined,
+                    end_date: endDate || undefined,
+                    lifecycle: statusFilter === "Archived" ? "archived" : "active",
+                  });
+                } catch (e) {
+                  console.error("Export failed", e);
+                } finally {
+                  setExportLoading(false);
+                }
+              }}
+              sx={{
+                borderRadius: 2,
+                px: 3,
+                py: 1.25,
+                fontWeight: 600,
+                textTransform: "none",
+              }}
+            >
+              {exportLoading ? "Exporting..." : "Export CSV"}
+            </Button>
           </Box>
 
           {/* Clickable summary chips */}
@@ -270,6 +309,8 @@ const ExpenseList = () => {
                 { label: "All Expenses", value: expenseSummary.total || expenses.length,  filterValue: "All" },
                 { label: "Pending",      value: allPendingCount,  color: "warning", filterValue: "Pending" },
                 { label: "Paid",         value: allPaidCount,     color: "success", filterValue: "Paid" },
+                { label: "Billable",     value: allBillableCount, color: "info",    filterValue: "Billable" },
+                { label: "Archived",     value: allArchivedCount, color: "default", filterValue: "Archived" },
               ],
             })}
           />
@@ -428,7 +469,12 @@ const ExpenseList = () => {
           emptyTitle={searchTerm || categoryFilter !== "All" || startDate || endDate ? "No expenses found" : "No expenses yet"}
           emptySubtitle={searchTerm || categoryFilter !== "All" || startDate || endDate ? "Try adjusting your filters" : "Click 'New Expense' to record your first expense"}
           renderRow={(expense) => (
-            <TableRow key={expense.id} hover>
+            <TableRow
+              key={expense.id}
+              hover
+              onClick={() => navigate(`/expenses/${expense.id}`)}
+              sx={{ cursor: 'pointer' }}
+            >
               <TableCell padding="checkbox" onClick={(event) => event.stopPropagation()}>
                 <Checkbox
                   size="small"

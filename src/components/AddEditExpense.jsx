@@ -6,7 +6,7 @@ import MainLayout from './Layout/MainLayout';
 import {
   Alert, Box, Button, Card, CardContent, CardMedia,
   CircularProgress, Container, FormHelperText, IconButton, MenuItem,
-  Paper, TextField, Typography,
+  Paper, Snackbar, TextField, Typography,
 } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -43,6 +43,7 @@ const AddEditExpense = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [apiError, setApiError] = useState('');
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const [isArchived, setIsArchived] = useState(false);
   const [receiptFile, setReceiptFile] = useState(null);
   const [receiptPreview, setReceiptPreview] = useState(null);
@@ -135,7 +136,8 @@ const AddEditExpense = () => {
       }
       if (id) await axios.put(createApiUrl(`/api/expenses/${id}`), payload);
       else await axios.post(createApiUrl('/api/expenses'), payload);
-      navigate('/expenses');
+    setSaveSuccess(true);
+    setTimeout(() => navigate('/expenses'), 1500);
     } catch (err) {
       const parsed = parseApiError(err, t('addEditExpense.failedSave'));
       const msg = applyApiErrors(parsed, setErrors);
@@ -154,6 +156,7 @@ const AddEditExpense = () => {
   );
 
   return (
+    <>
     <MainLayout title={id ? t('addEditExpense.editTitle') : t('addEditExpense.newTitle')}>
       <Box sx={{ bgcolor: C.pageBg, minHeight: '100vh', pb: 6 }}>
         <Container maxWidth="lg" sx={{ pt: 3 }}>
@@ -325,6 +328,17 @@ const AddEditExpense = () => {
         </Container>
       </Box>
     </MainLayout>
+    <Snackbar
+      open={saveSuccess}
+      autoHideDuration={1500}
+      onClose={() => setSaveSuccess(false)}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+    >
+      <Alert onClose={() => setSaveSuccess(false)} severity="success" variant="filled" sx={{ width: '100%' }}>
+        {id ? 'Expense updated successfully.' : 'Expense saved successfully.'}
+      </Alert>
+    </Snackbar>
+    </>
   );
 };
 

@@ -36,6 +36,7 @@ import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import EmailIcon from "@mui/icons-material/Email";
+import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import ReceiptIcon from "@mui/icons-material/Receipt";
@@ -61,6 +62,7 @@ import useListController from "../hooks/useListController";
 import { createApiUrl } from "../config/api";
 import {
   bulkQuoteAction,
+  exportQuotes,
   getQuotesList,
   sendQuoteEmail,
 } from "../services/quoteService";
@@ -419,14 +421,34 @@ const QuoteList = () => {
         title={t("quoteList.title")}
         summary={`${totalCount} quotes`}
         rightAction={
-          <Button
-            variant="contained"
-            onClick={() => navigate("/quotes/add")}
-            startIcon={<AddIcon fontSize="small" />}
-            sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
-          >
-            {t("quoteList.newQuote")}
-          </Button>
+          <Box sx={{ display: "flex", gap: 1 }}>
+            <Button
+              variant="outlined"
+              startIcon={<FileDownloadIcon fontSize="small" />}
+              sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
+              onClick={() => {
+                const params = {
+                  status: status === "All" ? undefined : status,
+                  lifecycle: status === "Archived" ? "archived" : "active",
+                  date_range: dateRange !== "all" ? dateRange : undefined,
+                  date_from: dateFrom || undefined,
+                  date_to: dateTo || undefined,
+                  q: debouncedSearch || undefined,
+                };
+                exportQuotes(params);
+              }}
+            >
+              Export
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => navigate("/quotes/add")}
+              startIcon={<AddIcon fontSize="small" />}
+              sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
+            >
+              {t("quoteList.newQuote")}
+            </Button>
+          </Box>
         }
         searchValue={search}
         onSearchChange={setSearch}
@@ -519,8 +541,12 @@ const QuoteList = () => {
           chips: [
             { label: "Total",     value: summary.total     || 0, filterValue: "All" },
             { label: "Draft",     value: summary.Draft     || 0, color: "default", filterValue: "Draft" },
+            { label: "Sent",      value: summary.Sent      || 0, color: "info",    filterValue: "Sent" },
             { label: "Accepted",  value: summary.Accepted  || 0, color: "success", filterValue: "Accepted" },
+            { label: "Declined",  value: summary.Declined  || 0, color: "error",   filterValue: "Declined" },
+            { label: "Expired",   value: summary.Expired   || 0, color: "warning", filterValue: "Expired" },
             { label: "Converted", value: summary.Converted || 0, color: "info",    filterValue: "Converted" },
+            { label: "Archived",  value: summary.Archived  || 0, filterValue: "Archived" },
           ],
         })}
       />
@@ -681,7 +707,7 @@ const QuoteList = () => {
               hover
               onClick={() => {
                 if (!isArchivedView) {
-                  navigate(`/quotes/edit/${quote.id}`);
+                  navigate(`/quotes/${quote.id}`);
                 }
               }}
               sx={{
@@ -753,9 +779,7 @@ const QuoteList = () => {
       <Menu anchorEl={actionMenuAnchor} open={Boolean(actionMenuAnchor)} onClose={handleActionMenuClose}>
         <MenuItem
           onClick={() => {
-            if (status !== "Archived") {
-              navigate(`/quotes/edit/${selectedQuote?.id}`);
-            }
+            navigate(`/quotes/${selectedQuote?.id}`);
             handleActionMenuClose();
           }}
           sx={{ py: 1.25 }}
@@ -764,6 +788,12 @@ const QuoteList = () => {
           <ListItemIcon><VisibilityIcon fontSize="small" /></ListItemIcon>
           <ListItemText>View Details</ListItemText>
         </MenuItem>
+        {status !== "Archived" && (
+          <MenuItem onClick={() => { navigate(`/quotes/edit/${selectedQuote?.id}`); handleActionMenuClose(); }} sx={{ py: 1.25 }}>
+            <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>Edit Quote</ListItemText>
+          </MenuItem>
+        )}
         <MenuItem onClick={() => handleDownloadPDF(selectedQuote)} sx={{ py: 1.25 }}>
           <ListItemIcon><PictureAsPdfIcon fontSize="small" color="success" /></ListItemIcon>
           <ListItemText>Download PDF</ListItemText>
@@ -772,12 +802,6 @@ const QuoteList = () => {
           <MenuItem onClick={() => handleEmailOpen(selectedQuote)} sx={{ py: 1.25 }}>
             <ListItemIcon><EmailIcon fontSize="small" color="primary" /></ListItemIcon>
             <ListItemText>Send Email</ListItemText>
-          </MenuItem>
-        )}
-        {status !== "Archived" && (
-          <MenuItem onClick={() => { navigate(`/quotes/edit/${selectedQuote?.id}`); handleActionMenuClose(); }}>
-            <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
-            <ListItemText>Edit</ListItemText>
           </MenuItem>
         )}
         <MenuItem onClick={() => { navigate("/quotes/add", { state: { cloneFrom: selectedQuote } }); handleActionMenuClose(); }}>

@@ -1,6 +1,7 @@
 // ── REPLACED — see AddEditBill.jsx.bak for previous version ──────────────────
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
+import { useQueryClient } from "@tanstack/react-query";
 import { createApiUrl } from "../config/api";
 import {
   Alert,
@@ -142,6 +143,7 @@ const TabPanel = ({ children, value, index }) => (
 const AddEditBill = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const [form, setForm] = useState(initialForm);
   const [vendors, setVendors] = useState([]);
@@ -561,6 +563,8 @@ const AddEditBill = () => {
       } else {
         await axios.post(createApiUrl("/api/bills"), payload);
       }
+      queryClient.invalidateQueries({ queryKey: ["bills-list"] });
+      queryClient.invalidateQueries({ queryKey: ["bills-vendors"] });
       navigate("/bills");
     } catch (err) {
       const parsed = parseApiError(err, "Failed to save bill");

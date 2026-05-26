@@ -152,6 +152,8 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
   const { prefs } = useInvoicePreferences();
   const [form, setForm] = useState(initialForm);
   const [customers, setCustomers] = useState([]);
+  const [customersError, setCustomersError] = useState(false);
+  const [loadRetryKey, setLoadRetryKey] = useState(0);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(false);
@@ -159,6 +161,7 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
   const [isArchived, setIsArchived] = useState(false);
   const [errors, setErrors] = useState({});
   const [itemErrors, setItemErrors] = useState([]);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
   const [toast, setToast] = useState({ open: false, severity: 'success', message: '' });
   const [orderNumber, setOrderNumber] = useState('');
   const [dueDateManuallyEdited, setDueDateManuallyEdited] = useState(false);
@@ -217,8 +220,9 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
     const load = async () => {
       try {
         setPageLoading(true);
+        setCustomersError(false);
         const [customersResponse, productsResponse, taxRatesData] = await Promise.all([
-          axios.get(createApiUrl('/api/customers')),
+          axios.get(createApiUrl('/api/customers')).catch(() => { setCustomersError(true); return { data: [] }; }),
           axios.get(createApiUrl('/api/products')).catch(() => ({ data: [] })),
           getTaxRates().catch(() => null),
         ]);
@@ -309,7 +313,7 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invoiceId, prefs.default_payment_terms, quickCreateCustomerId, t]);
+  }, [invoiceId, loadRetryKey, prefs.default_payment_terms, quickCreateCustomerId, t]);
 
   useEffect(() => {
     if (!form.issue_date || !form.payment_terms || dueDateManuallyEdited) return;
@@ -510,6 +514,7 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
       setError('Archived invoices are read-only. Restore the invoice to edit.');
       return;
     }
+    setSubmitAttempted(true);
     const validation = validateInvoiceForm(form, t);
     setErrors(validation.errors);
     setItemErrors(validation.itemErrors);
@@ -615,6 +620,23 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                     {invoiceId && !form.customer_id && !isArchived && (
                       <Alert severity="warning" sx={{ mb: 1 }}>
                         No customer linked. Assign a customer to enable receivables tracking.
+                      </Alert>
+                    )}
+                    {customersError && (
+                      <Alert
+                        severity="error"
+                        sx={{ mb: 1 }}
+                        action={
+                          <Button
+                            color="inherit"
+                            size="small"
+                            onClick={() => setLoadRetryKey((k) => k + 1)}
+                          >
+                            Retry
+                          </Button>
+                        }
+                      >
+                        Failed to load customers. Please retry.
                       </Alert>
                     )}
                     <AppFormField label={t('invoiceForm.customerName')} required testId="invoice-field-customer">
@@ -799,7 +821,7 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                                 <CellField
                                   value={item.rate}
                                   inputProps={{ min: 0, step: 0.01 }}
-                                  onChange={(e) => updateItem(idx, 'rate', parseFloat(e.target.value) || 0)}
+                                  onChange={(e) => updateItem(idx, 'rate', Math.max(0, parseFloat(e.target.value) || 0))}
                                   width="100%"
                                 />
                                 {!!itemErrors[idx]?.rate && (
@@ -923,6 +945,13 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                             <Typography sx={{ fontSize: '0.8rem', color: '#6b7280' }}>IGST</Typography>
                             <Typography sx={{ fontSize: '0.8rem', color: '#374151' }}>+ {Number(gstBreakdown.igst || 0).toFixed(2)}</Typography>
+                          </Box>
+                        )}
+                        {/* ── Tax fallback row (no GST breakdown available) ── */}
+                        {Number(form.total_tax) > 0 && (!form.is_gst_applicable || !gstBreakdown.tax_type || gstBreakdown.tax_type === 'NONE') && (
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                            <Typography sx={{ fontSize: '0.8rem', color: '#6b7280' }}>Tax</Typography>
+                            <Typography sx={{ fontSize: '0.8rem', color: '#374151' }}>+ {Number(form.total_tax).toFixed(2)}</Typography>
                           </Box>
                         )}
 
@@ -1059,6 +1088,13 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                     </Box>
                   </Box>
                 </Box>
+
+                  {submitAttempted && Object.keys(errors).length > 0 && (
+                    <Alert severity="error" sx={{ mb: 1.5 }}>
+                      Please fix {Object.keys(errors).length} error{Object.keys(errors).length > 1 ? 's' : ''}:{' '}
+                      {Object.values(errors).filter(Boolean).join(' · ')}
+                    </Alert>
+                  )}
 
                   <Box sx={{ ...footerSx, justifyContent: 'space-between', px: 0, bgcolor: '#fff' }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

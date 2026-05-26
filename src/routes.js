@@ -4,6 +4,7 @@ import Login from './components/Auth/Login';
 import Dashboard from './pages/Dashboard';
 import InvoiceList from './components/InvoiceList';
 import AddEditInvoice from './components/AddEditInvoice';
+import InvoiceDetail from './pages/InvoiceDetail';
 import CustomerList from './components/CustomerList';
 import AddEditCustomer from './components/AddEditCustomer';
 import ProductList from './components/ProductList';
@@ -26,6 +27,7 @@ import Profile from './pages/Profile';
 import QuoteList from './components/QuoteList';
 import AddEditQuote from './components/AddEditQuote';
 import ConvertQuote from './components/ConvertQuote';
+import QuoteDetail from './pages/QuoteDetail';
 import RecurringProfileList from './components/RecurringProfileList';
 import AddEditRecurringProfile from './components/AddEditRecurringProfile';
 import SalesOrderList from './components/SalesOrderList';
@@ -39,6 +41,7 @@ import BillDetails from './components/BillDetails';
 import AddEditBill from './components/AddEditBill';
 import ExpenseList from './components/ExpenseList';
 import AddEditExpense from './components/AddEditExpense';
+import ExpenseDetail from './pages/ExpenseDetail';
 import Reports from './pages/Reports';
 import ProfitAndLoss from './pages/ProfitAndLoss';
 import ARAgingReport from './pages/ARAgingReport';
@@ -95,9 +98,11 @@ const AppRoutes = () => {
           <Route path="/invoices" element={<InvoiceList />} />
           <Route path="/invoices/add" element={<AddEditInvoice />} />
           <Route path="/invoices/edit/:id" element={<AddEditInvoice />} />
+          <Route path="/invoices/:id" element={<InvoiceDetail />} />
           <Route path="/quotes" element={<QuoteList />} />
           <Route path="/quotes/add" element={<AddEditQuote />} />
           <Route path="/quotes/edit/:id" element={<AddEditQuote />} />
+          <Route path="/quotes/:id" element={<QuoteDetail />} />
           <Route path="/quotes/convert/:id/:type" element={<ConvertQuote />} />
           <Route path="/recurring-profiles" element={<RecurringProfileList />} />
           <Route path="/recurring-profiles/add" element={<AddEditRecurringProfile />} />
@@ -118,6 +123,7 @@ const AppRoutes = () => {
           <Route path="/expenses" element={<ExpenseList />} />
           <Route path="/expenses/add" element={<AddEditExpense />} />
           <Route path="/expenses/edit/:id" element={<AddEditExpense />} />
+          <Route path="/expenses/:id" element={<ExpenseDetail />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/reports/profit-loss" element={<ProfitAndLoss />} />
           <Route path="/reports/ar-aging" element={<ARAgingReport />} />

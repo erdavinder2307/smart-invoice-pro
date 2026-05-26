@@ -144,6 +144,8 @@ const AddEditQuote = () => {
   const [pageLoading, setPageLoading] = useState(false);
   const [error, setError] = useState('');
   const [isArchived, setIsArchived] = useState(false);
+  const [customersError, setCustomersError] = useState(false);
+  const [loadRetryKey, setLoadRetryKey] = useState(0);
   const [showItemErrors, setShowItemErrors] = useState(false);
   const [pendingFiles, setPendingFiles] = useState([]);
   const cellRefs = useRef({});
@@ -351,8 +353,9 @@ const AddEditQuote = () => {
     const load = async () => {
       try {
         setPageLoading(true);
+        setCustomersError(false);
         const [customersResponse, productsResponse] = await Promise.all([
-          axios.get(createApiUrl('/api/customers')),
+          axios.get(createApiUrl('/api/customers')).catch(() => { setCustomersError(true); return { data: [] }; }),
           axios.get(createApiUrl('/api/products')),
         ]);
         if (!active) return;
@@ -426,7 +429,7 @@ const AddEditQuote = () => {
     load();
     return () => { active = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quoteId]);
+  }, [quoteId, loadRetryKey]);
 
   useEffect(() => {
     const lineSubtotal = (form.items || []).reduce((sum, item) => {
@@ -679,6 +682,19 @@ const AddEditQuote = () => {
             >
               <Box sx={{ px: 3, py: 3 }}>
                 <FormLayout>
+                  {customersError && (
+                    <Alert
+                      severity="error"
+                      sx={{ mb: 1.5, borderRadius: '4px' }}
+                      action={
+                        <Button color="inherit" size="small" onClick={() => setLoadRetryKey((k) => k + 1)}>
+                          Retry
+                        </Button>
+                      }
+                    >
+                      Failed to load customers. Check your connection and retry.
+                    </Alert>
+                  )}
                   <AppFormField label="Customer Name" required testId="quote-field-customer">
                     <CustomerSelect
                       customers={customers}
@@ -1075,6 +1091,27 @@ const AddEditQuote = () => {
 
               <Box sx={{ ...footerSx, justifyContent: 'space-between' }}>
                 <Box sx={{ display: 'flex', gap: 1.1, flexWrap: 'wrap' }}>
+                  {quoteId && (form.status === 'Accepted' || form.status === 'Sent') && !form.converted_to_invoice_id && (
+                    <Button
+                      type="button"
+                      variant="outlined"
+                      disabled={loading}
+                      onClick={() => navigate(`/quotes/convert/${quoteId}/invoice`)}
+                      sx={{ ...cancelBtnSx, color: '#1565d8', borderColor: '#1565d8', '&:hover': { borderColor: '#1565d8', bgcolor: '#eff6ff' } }}
+                    >
+                      Convert to Invoice
+                    </Button>
+                  )}
+                  {quoteId && form.converted_to_invoice_id && (
+                    <Button
+                      type="button"
+                      variant="text"
+                      onClick={() => navigate(`/invoices/${form.converted_to_invoice_id}`)}
+                      sx={{ textTransform: 'none', color: '#1565d8', fontSize: '0.8125rem' }}
+                    >
+                      View Invoice →
+                    </Button>
+                  )}
                   <Button type="submit" value="Draft" variant="outlined" disabled={loading || isArchived} sx={cancelBtnSx}>
                     {loading ? 'Saving…' : 'Save as Draft'}
                   </Button>

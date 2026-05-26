@@ -34,7 +34,7 @@ export const checkDependencies = async (entityType, entityId) => {
 export const archiveEntity = async (entityType, entityId) => {
   const path = resolveEntityPath(entityType);
   const response = await axios.post(createApiUrl(`/api/lifecycle/${path}/${entityId}/execute`), {
-    action: "delete",
+    action: "archive",
   });
   return response.data;
 };

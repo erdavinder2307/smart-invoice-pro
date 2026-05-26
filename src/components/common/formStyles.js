@@ -144,14 +144,15 @@ export const FieldLabel = ({ children, required, hint }) => (
 /** FormControl + Select wrapper — every Select must use this. */
 export const AppSelect = ({
     name, value, onChange, children,
-    disabled, displayEmpty, size = 'small', fullWidth = true, width,
+    disabled, displayEmpty, size = 'small', fullWidth = true, width, error,
 }) => (
-    <FormControl size={size} fullWidth={fullWidth} disabled={disabled} sx={width ? { width } : {}}>
+    <FormControl size={size} fullWidth={fullWidth} disabled={disabled} error={error} sx={width ? { width } : {}}>
         <Select
             name={name}
             value={value}
             onChange={onChange}
             displayEmpty={displayEmpty}
+            error={error}
             sx={selectSx}
         >
             {children}

@@ -324,6 +324,7 @@ const VendorList = () => {
     page_size: rowsPerPage,
     q: effectiveSearch,
     status: statusFilter === 'All' ? '' : statusFilter,
+    lifecycle: statusFilter === 'Archived' ? 'archived' : 'active',
     outstanding: getOutstandingQueryValue(outstandingFilter),
     payment_terms: paymentTermsFilter === 'All Terms' ? '' : paymentTermsFilter,
     sort_by: sortBy,

@@ -27,10 +27,11 @@ jest.mock("../../components/Layout/MainLayout", () => ({
 
 // Prevent MUI Popper (search-history dropdown in ListHeader) from creating a
 // popperjs instance that fires async position updates outside act().
+// ListHeader uses a render-prop Popper ({ TransitionProps }) => ..., so we
+// must not render children directly (they're a function, not JSX).
 jest.mock("@mui/material/Popper", () => ({
   __esModule: true,
-  default: ({ open, children }) =>
-    open ? <div data-testid="mock-popper">{children}</div> : null,
+  default: ({ open }) => open ? <div data-testid="mock-popper" /> : null,
 }));
 
 jest.mock("../../context/AuthContext", () => ({

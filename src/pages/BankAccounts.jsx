@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
     getBankAccounts,
+    createBankAccount,
     updateBankAccount,
     deleteBankAccount,
 } from "../services/bankAccountService";
@@ -48,19 +49,32 @@ import EmptyState from '../components/common/EmptyState';
 import ListSummary from '../components/list/ListSummary';
 import buildSummaryFilterItems from '../utils/summaryFilterChips';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 
 const BankAccounts = () => {
+    const navigate = useNavigate();
+    const fallbackUser = useMemo(() => {
+        try {
+            return JSON.parse(localStorage.getItem('user') || 'null');
+        } catch {
+            return null;
+        }
+    }, []);
     const [bankAccounts, setBankAccounts] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState('All');
+    const [addDialogOpen, setAddDialogOpen] = useState(false);
+    const [addForm, setAddForm] = useState({ bank_name: '', account_name: '', account_type: 'current', status: 'active' });
+    const [addLoading, setAddLoading] = useState(false);
     const [editAccount, setEditAccount] = useState(null);
     const [editForm, setEditForm] = useState({ bank_name: '', account_name: '', account_type: '' });
     const [editLoading, setEditLoading] = useState(false);
     const [confirmDeleteId, setConfirmDeleteId] = useState(null);
     const theme = useTheme();
-    const { user } = useAuth();
+    const authValue = useAuth?.() || {};
+    const user = authValue.user || fallbackUser || null;
     const { t } = useTranslation();
 
     const activeCount = bankAccounts.filter(acc => acc.status === 'active').length;
@@ -113,9 +127,36 @@ const BankAccounts = () => {
         fetchBankAccounts();
     }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    const handleOpenAddDialog = () => {
+        setError('');
+        setAddForm({ bank_name: '', account_name: '', account_type: 'current', status: 'active' });
+        setAddDialogOpen(true);
+    };
+
+    const handleAddSave = async () => {
+        if (!addForm.bank_name || !addForm.account_name || !addForm.account_type) {
+            setError('Please fill all required fields.');
+            return;
+        }
+
+        setAddLoading(true);
+        try {
+            await createBankAccount(addForm, user?.id);
+            setAddDialogOpen(false);
+            await fetchBankAccounts();
+        } catch {
+            setError('Failed to create bank account. Please try again.');
+        } finally {
+            setAddLoading(false);
+        }
+    };
+
     const handleImportStatement = (account) => {
-        // Placeholder for future implementation
-        alert(`Import statement for ${account.bank_name} - Coming soon!`);
+        navigate('/bank-import', {
+            state: {
+                bankAccountId: account?.id || '',
+            },
+        });
     };
 
     const handleEditOpen = (account) => {
@@ -204,7 +245,7 @@ const BankAccounts = () => {
                                 variant="contained"
                                 size="large"
                                 startIcon={<AddIcon />}
-                                onClick={() => alert('Add account functionality - Coming soon!')}
+                                onClick={handleOpenAddDialog}
                                 sx={{
                                     borderRadius: 3,
                                     px: 3,
@@ -319,7 +360,7 @@ const BankAccounts = () => {
                                                     icon={<AccountBalanceIcon />}
                                                     title="No bank accounts yet"
                                                     subtitle="Get started by adding your first bank account"
-                                                    action={{ label: 'Add Your First Account', onClick: () => alert('Add account functionality - Coming soon!') }}
+                                                    action={{ label: 'Add Your First Account', onClick: handleOpenAddDialog }}
                                                 />
                                             </TableCell>
                                         </TableRow>
@@ -443,6 +484,57 @@ const BankAccounts = () => {
                     </CardContent>
                 </Card>
             </Box>
+
+            {/* Add Dialog */}
+            <Dialog open={addDialogOpen} onClose={() => setAddDialogOpen(false)} maxWidth="xs" fullWidth>
+                <DialogTitle>Add Bank Account</DialogTitle>
+                <DialogContent sx={{ pt: '12px !important', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <TextField
+                        label="Bank Name"
+                        fullWidth
+                        size="small"
+                        value={addForm.bank_name}
+                        onChange={(e) => setAddForm((f) => ({ ...f, bank_name: e.target.value }))}
+                    />
+                    <TextField
+                        label="Account Name"
+                        fullWidth
+                        size="small"
+                        value={addForm.account_name}
+                        onChange={(e) => setAddForm((f) => ({ ...f, account_name: e.target.value }))}
+                    />
+                    <FormControl fullWidth size="small">
+                        <InputLabel>Account Type</InputLabel>
+                        <Select
+                            label="Account Type"
+                            value={addForm.account_type}
+                            onChange={(e) => setAddForm((f) => ({ ...f, account_type: e.target.value }))}
+                        >
+                            {['savings', 'current', 'credit', 'cash'].map((t) => (
+                                <MenuItem key={t} value={t} sx={{ textTransform: 'capitalize' }}>{t}</MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                    <FormControl fullWidth size="small">
+                        <InputLabel>Status</InputLabel>
+                        <Select
+                            label="Status"
+                            value={addForm.status}
+                            onChange={(e) => setAddForm((f) => ({ ...f, status: e.target.value }))}
+                        >
+                            <MenuItem value="active">Active</MenuItem>
+                            <MenuItem value="inactive">Inactive</MenuItem>
+                        </Select>
+                    </FormControl>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button onClick={() => setAddDialogOpen(false)} disabled={addLoading}>Cancel</Button>
+                    <Button variant="contained" onClick={handleAddSave} disabled={addLoading}>
+                        {addLoading ? 'Creating…' : 'Create'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
             {/* Edit Dialog */}
             <Dialog open={!!editAccount} onClose={() => setEditAccount(null)} maxWidth="xs" fullWidth>
                 <DialogTitle>Edit Bank Account</DialogTitle>

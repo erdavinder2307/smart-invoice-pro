@@ -24,6 +24,7 @@ import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import MainLayout from "../components/Layout/MainLayout";
 import { createApiUrl } from "../config/api";
 import { getAuditLogs } from "../services/auditLogService";
+import { normalizePaymentTerms } from "../utils/invoiceFormValidation";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const formatDate = (dateStr) => {
@@ -41,6 +42,15 @@ const formatCurrency = (amount) =>
     currency: "INR",
     maximumFractionDigits: 2,
   }).format(Number(amount) || 0);
+
+const looksLikeUuid = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
+
+const formatRecordedBy = (value) => {
+  const raw = String(value || "").trim();
+  if (!raw) return "—";
+  if (looksLikeUuid(raw)) return "User";
+  return raw;
+};
 
 const STATUS_COLORS = {
   Draft:            "default",
@@ -190,6 +200,16 @@ const InvoiceDetail = () => {
               size="small"
               sx={{ fontWeight: 600 }}
             />
+            {["Issued", "Partially Paid"].includes(invoice.status) &&
+              invoice.due_date &&
+              new Date(invoice.due_date) < new Date() && (
+                <Chip
+                  label="OVERDUE"
+                  color="error"
+                  size="small"
+                  sx={{ fontWeight: 700, letterSpacing: 0.5 }}
+                />
+              )}
           </Box>
           <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
             <Button
@@ -242,7 +262,7 @@ const InvoiceDetail = () => {
           <Box sx={{ flex: "1 1 200px" }}>
             <InfoRow label="Issue Date" value={formatDate(invoice.issue_date)} />
             <InfoRow label="Due Date" value={formatDate(invoice.due_date)} />
-            <InfoRow label="Payment Terms" value={invoice.payment_terms} />
+            <InfoRow label="Payment Terms" value={normalizePaymentTerms(invoice.payment_terms)} />
           </Box>
           <Box sx={{ flex: "1 1 200px" }}>
             <InfoRow label="Salesperson" value={invoice.salesperson} />
@@ -356,7 +376,7 @@ const InvoiceDetail = () => {
                     <TableCell sx={{ fontSize: "0.84rem", fontWeight: 600 }}>{formatCurrency(pmt.amount)}</TableCell>
                     <TableCell sx={{ fontSize: "0.84rem" }}>{pmt.payment_mode || "—"}</TableCell>
                     <TableCell sx={{ fontSize: "0.84rem", color: "#6b7280" }}>{pmt.reference_number || pmt.reference || "—"}</TableCell>
-                    <TableCell sx={{ fontSize: "0.84rem", color: "#6b7280" }}>{pmt.recorded_by || "—"}</TableCell>
+                    <TableCell sx={{ fontSize: "0.84rem", color: "#6b7280" }}>{formatRecordedBy(pmt.recorded_by)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

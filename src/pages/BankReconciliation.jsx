@@ -9,6 +9,7 @@ import {
 } from '@mui/material';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import PsychologyIcon from '@mui/icons-material/Psychology';
 import LinkIcon from '@mui/icons-material/Link';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
 import AddIcon from '@mui/icons-material/Add';
@@ -24,6 +25,7 @@ import { useAuth } from '../context/AuthContext';
 import MainLayout from '../components/Layout/MainLayout';
 import ListSummary from '../components/list/ListSummary';
 import buildSummaryFilterItems from '../utils/summaryFilterChips';
+import { useLocation } from 'react-router-dom';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const fmt = (n) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(n ?? 0);
@@ -41,7 +43,7 @@ const EXPENSE_CATEGORIES = [
 // ─────────────────────────────────────────────────────────────────────────────
 const BankReconciliation = () => {
   const { user } = useAuth();
-  const headers = user?.id ? { 'X-User-Id': user.id } : {};
+  const location = useLocation();
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [tab, setTab] = useState(0);                  // 0=Transactions, 1=Upload
@@ -49,7 +51,10 @@ const BankReconciliation = () => {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [autoMatching, setAutoMatching] = useState(false);
+  const [aiMatching, setAiMatching] = useState(false);
+  const [aiResult, setAiResult] = useState(null);   // { newly_matched, processed }
   const [toast, setToast] = useState({ open: false, msg: '', severity: 'success' });
+  const [importNotice, setImportNotice] = useState(null);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState('');
@@ -58,6 +63,7 @@ const BankReconciliation = () => {
 
   // Upload
   const fileRef = useRef(null);
+  const prefillAppliedRef = useRef(false);
   const [dragOver, setDragOver] = useState(false);
   const [uploadFile, setUploadFile]   = useState(null);
   const [bankAccountId, setBankAccountId] = useState('');
@@ -86,7 +92,7 @@ const BankReconciliation = () => {
       const params = {};
       if (statusFilter) params.status = statusFilter;
       if (bankAccountId) params.bank_account_id = bankAccountId;
-      const res = await axios.get(createApiUrl('/api/reconciliation/transactions'), { headers, params });
+      const res = await axios.get(createApiUrl('/api/reconciliation/transactions'), { params });
       setTransactions(res.data);
       if (!statusFilter) setAllTransactionsTotal(res.data.length);
     } catch {
@@ -100,13 +106,40 @@ const BankReconciliation = () => {
   const loadBankAccounts = useCallback(async () => {
     if (!user?.id) return;
     try {
-      const res = await axios.get(createApiUrl('/api/bank-accounts'), { headers });
+      const res = await axios.get(createApiUrl('/api/bank-accounts'));
       setBankAccounts(res.data || []);
     } catch { /* non-fatal */ }
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { loadTransactions(); }, [loadTransactions]);
   useEffect(() => { loadBankAccounts(); }, [loadBankAccounts]);
+
+  useEffect(() => {
+    const navState = location.state || {};
+    if (prefillAppliedRef.current) return;
+
+    if (navState.importBatchId) {
+      const importedCount = Number(navState.importedCount || 0);
+      setImportNotice({
+        batchId: navState.importBatchId,
+        importedCount,
+      });
+      setTab(0);
+    }
+
+    if (!navState.openImportTab && !navState.bankAccountId) {
+      prefillAppliedRef.current = true;
+      return;
+    }
+
+    if (navState.bankAccountId) {
+      setBankAccountId(navState.bankAccountId);
+    }
+    if (navState.openImportTab) {
+      setTab(1);
+    }
+    prefillAppliedRef.current = true;
+  }, [location.state]);
 
   // ── Toast helper ───────────────────────────────────────────────────────────
   const showToast = (msg, severity = 'success') => setToast({ open: true, msg, severity });
@@ -128,7 +161,7 @@ const BankReconciliation = () => {
       if (bankAccountId) fd.append('bank_account_id', bankAccountId);
 
       const res = await axios.post(createApiUrl('/api/reconciliation/upload'), fd, {
-        headers: { ...headers, 'Content-Type': 'multipart/form-data' },
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
       showToast(`Imported ${res.data.imported} transactions (${res.data.transactions.filter(t => t.match_status === 'matched').length} auto-matched)`);
       setUploadFile(null);
@@ -141,11 +174,30 @@ const BankReconciliation = () => {
     }
   };
 
+  // ── AI Match (Claude-powered) ────────────────────────────────────────────
+  const handleAiMatch = async () => {
+    setAiMatching(true);
+    setAiResult(null);
+    try {
+      const res = await axios.post(createApiUrl('/api/reconciliation/ai-match'), { confidence_threshold: 0.80 });
+      setAiResult(res.data);
+      showToast(`AI matched ${res.data.newly_matched} of ${res.data.processed} transactions`);
+      loadTransactions();
+    } catch (err) {
+      const msg = err?.response?.status === 503
+        ? 'AI matching unavailable — ANTHROPIC_API_KEY not configured'
+        : 'AI match failed';
+      showToast(msg, 'error');
+    } finally {
+      setAiMatching(false);
+    }
+  };
+
   // ── Auto-match ─────────────────────────────────────────────────────────────
   const handleAutoMatch = async () => {
     setAutoMatching(true);
     try {
-      const res = await axios.post(createApiUrl('/api/reconciliation/auto-match'), {}, { headers });
+      const res = await axios.post(createApiUrl('/api/reconciliation/auto-match'), {});
       showToast(`Auto-matched ${res.data.newly_matched} of ${res.data.processed} unmatched transactions`);
       loadTransactions();
     } catch {
@@ -158,7 +210,7 @@ const BankReconciliation = () => {
   // ── Unmatch ────────────────────────────────────────────────────────────────
   const handleUnmatch = async (txn) => {
     try {
-      await axios.post(createApiUrl(`/api/reconciliation/${txn.id}/unmatch`), {}, { headers });
+      await axios.post(createApiUrl(`/api/reconciliation/${txn.id}/unmatch`), {});
       showToast('Transaction unmatched');
       loadTransactions();
     } catch {
@@ -170,7 +222,7 @@ const BankReconciliation = () => {
   const handleDelete = async (txn) => {
     if (!window.confirm(`Delete transaction "${txn.description}"?`)) return;
     try {
-      await axios.delete(createApiUrl(`/api/reconciliation/${txn.id}`), { headers });
+      await axios.delete(createApiUrl(`/api/reconciliation/${txn.id}`));
       showToast('Transaction deleted');
       loadTransactions();
     } catch {
@@ -193,7 +245,6 @@ const BankReconciliation = () => {
     setMatchLoading(true);
     try {
       const res = await axios.get(createApiUrl('/api/reconciliation/matchable'), {
-        headers,
         params: { type: matchType, q: matchSearch },
       });
       setMatchables(res.data);
@@ -209,7 +260,7 @@ const BankReconciliation = () => {
       await axios.post(createApiUrl(`/api/reconciliation/${matchTxn.id}/match`), {
         match_type: matchType,
         match_id: selectedMatch.id,
-      }, { headers });
+      });
       showToast(`Matched to ${matchType} #${selectedMatch.invoice_number || selectedMatch.vendor_name}`);
       setMatchDlg(false);
       loadTransactions();
@@ -228,7 +279,7 @@ const BankReconciliation = () => {
   const handleCreateExpense = async () => {
     setExpLoading(true);
     try {
-      await axios.post(createApiUrl(`/api/reconciliation/${expTxn.id}/create-expense`), expForm, { headers });
+      await axios.post(createApiUrl(`/api/reconciliation/${expTxn.id}/create-expense`), expForm);
       showToast('Expense created and transaction matched');
       setExpDlg(false);
       loadTransactions();
@@ -258,6 +309,17 @@ const BankReconciliation = () => {
   return (
     <MainLayout title="Bank Reconciliation" subtitle="Import bank statements and match transactions to invoices & expenses">
       <Box sx={{ flex: 1, width: '100%' }}>
+
+        {importNotice && (
+          <Alert
+            severity="success"
+            sx={{ mb: 2 }}
+            onClose={() => setImportNotice(null)}
+          >
+            Import batch <strong>{importNotice.batchId}</strong> approved and sent to reconciliation.
+            {importNotice.importedCount > 0 ? ` ${importNotice.importedCount} transaction(s) were created.` : ''}
+          </Alert>
+        )}
 
         {/* ── Summary Chips ─────────────────────────────────────────── */}
         <ListSummary
@@ -296,6 +358,18 @@ const BankReconciliation = () => {
                 >
                   {autoMatching ? 'Matching…' : 'Auto-Match'}
                 </Button>
+                <Tooltip title="Use Claude AI to intelligently match unmatched transactions by description, amount & date">
+                  <span>
+                    <Button
+                      size="small" variant="contained" color="secondary"
+                      startIcon={aiMatching ? <CircularProgress size={14} color="inherit" /> : <PsychologyIcon />}
+                      onClick={handleAiMatch}
+                      disabled={aiMatching || !stats.unmatched}
+                    >
+                      {aiMatching ? 'AI Matching…' : 'AI Match'}
+                    </Button>
+                  </span>
+                </Tooltip>
               </Box>
             )}
           </Box>

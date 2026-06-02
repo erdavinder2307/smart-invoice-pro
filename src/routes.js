@@ -20,6 +20,7 @@ import Features from './pages/Features';
 import Contact from './pages/Contact';
 import ThemeExample from './components/ThemeExample';
 import BankAccounts from './pages/BankAccounts';
+import BankImportWorkflow from './pages/BankImportWorkflow';
 import BankReconciliation from './pages/BankReconciliation';
 import PortalInvoiceView from './pages/PortalInvoiceView';
 import ComingSoon from './pages/ComingSoon';
@@ -144,6 +145,7 @@ const AppRoutes = () => {
           <Route path="/products/:id" element={<ProductDetail />} />
           <Route path="/stock-adjustment" element={<StockAdjustment />} />
           <Route path="/bank-accounts" element={<BankAccounts />} />
+          <Route path="/bank-import" element={<BankImportWorkflow />} />
           <Route path="/bank-reconciliation" element={<BankReconciliation />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/settings" element={<UserManagement />} />

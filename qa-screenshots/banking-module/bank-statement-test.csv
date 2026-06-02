@@ -1,0 +1,4 @@
+Date,Description,Amount,Balance
+2026-05-01,Customer Payment INV-0042,300.00,10000.00
+2026-05-03,Supplier Payment,-250.00,9750.00
+2026-05-10,Unknown Transaction,-75.00,9675.00

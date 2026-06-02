@@ -37,7 +37,9 @@ export const calculateInvoiceTotals = ({
 
   const subtotal = normalizedItems.reduce((sum, item) => sum + item.line_base, 0);
   const itemTax = normalizedItems.reduce((sum, item) => sum + item.line_tax, 0);
-  const totalTax = isGstApplicable ? itemTax + Math.max(0, toNumber(manualTax, 0)) : 0;
+  const safeManualTax = Math.max(0, toNumber(manualTax, 0));
+  // If row-level tax has already been computed, don't add manual GST fields again.
+  const totalTax = isGstApplicable ? (itemTax > 0 ? itemTax : safeManualTax) : 0;
 
   const safeInvoiceDiscount = Math.max(0, toNumber(invoiceDiscount, 0));
   const safeRoundOff = toNumber(roundOff, 0);

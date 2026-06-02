@@ -45,7 +45,7 @@ import { generateInvoiceMockData } from '../utils/mockDataGenerators';
 import { applyApiErrors, parseApiError } from '../utils/apiErrors';
 import { calculateInvoiceTotals } from '../utils/invoiceCalculations';
 import { buildInvoicePayload } from '../utils/invoicePayload';
-import { deriveDueDate, validateInvoiceForm } from '../utils/invoiceFormValidation';
+import { deriveDueDate, normalizePaymentTerms, validateInvoiceForm } from '../utils/invoiceFormValidation';
 import { isAutoFillEnabled } from '../utils/autoFillAccess';
 
 const paymentTermsOptions = ['Due on Receipt', 'Net 7', 'Net 15', 'Net 30', 'Net 45'];
@@ -133,12 +133,26 @@ const CellField = ({ value, onChange, type = 'number', width = 90, inputProps, p
     type={type}
     value={value}
     onChange={onChange}
+    onFocus={(e) => e.target.select()}
     placeholder={placeholder}
     inputRef={inputRef}
     inputProps={inputProps}
     sx={{ ...tableInputSx, width }}
   />
 );
+
+const normalizeDateForInput = (value) => {
+  if (!value) return '';
+  const str = String(value);
+  const direct = str.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (direct) return direct[1];
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '';
+  const y = parsed.getFullYear();
+  const m = String(parsed.getMonth() + 1).padStart(2, '0');
+  const d = String(parsed.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
 
 const AddEditInvoice = ({ onSuccess, onCancel }) => {
   const isDevAutoFillEnabled = isAutoFillEnabled();
@@ -165,7 +179,7 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
   const [toast, setToast] = useState({ open: false, severity: 'success', message: '' });
   const [orderNumber, setOrderNumber] = useState('');
   const [dueDateManuallyEdited, setDueDateManuallyEdited] = useState(false);
-  const [submitMode, setSubmitMode] = useState('send');
+  const submitModeRef = useRef('send');
   const [tdsMode, setTdsMode] = useState('tds');
   const [tdsTaxOption, setTdsTaxOption] = useState('');
   const [tcsTaxOption, setTcsTaxOption] = useState('');
@@ -204,10 +218,14 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
     setError('');
   }, [customers, isDevAutoFillEnabled, products]);
 
-  const submitWithShortcut = useCallback(() => {
-    setSubmitMode('send');
-    formRef.current?.requestSubmit();
+  const setSubmitIntent = useCallback((mode) => {
+    submitModeRef.current = mode;
   }, []);
+
+  const submitWithShortcut = useCallback(() => {
+    setSubmitIntent('send');
+    formRef.current?.requestSubmit();
+  }, [setSubmitIntent]);
 
   useFormSubmitShortcut(submitWithShortcut, !pageLoading && !loading);
 
@@ -239,10 +257,16 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
           if (!active) return;
           const archived = String(invoiceResponse.data?.lifecycle_status || invoiceResponse.data?.status || '').toUpperCase() === 'ARCHIVED' || Boolean(invoiceResponse.data?.is_deleted);
           setIsArchived(archived);
+          const normalizedIssueDate = normalizeDateForInput(invoiceResponse.data?.issue_date);
+          const normalizedDueDate = normalizeDateForInput(invoiceResponse.data?.due_date);
+          const normalizedTerms = normalizePaymentTerms(invoiceResponse.data?.payment_terms);
 
           setForm((prev) => ({
             ...prev,
             ...invoiceResponse.data,
+            issue_date: normalizedIssueDate || prev.issue_date,
+            due_date: normalizedDueDate || prev.due_date,
+            payment_terms: normalizedTerms,
             items: Array.isArray(invoiceResponse.data?.items) && invoiceResponse.data.items.length
               ? invoiceResponse.data.items.map((item) => ({ ...initialForm.items[0], ...item }))
               : [...initialForm.items],
@@ -259,44 +283,48 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
               const cloneResponse = await axios.get(createApiUrl(`/api/invoices/${cloneSourceId}`));
               if (!active) return;
               const src = cloneResponse.data;
+              const normalizedTerms = normalizePaymentTerms(src.payment_terms || prefs.default_payment_terms || 'Net 30');
               setForm((prev) => ({
                 ...prev,
                 ...src,
                 id: undefined,
                 invoice_number: nextNumber,
                 issue_date: today,
-                due_date: deriveDueDate(today, src.payment_terms || prefs.default_payment_terms || 'Net 30'),
+                due_date: deriveDueDate(today, normalizedTerms),
                 amount_paid: 0,
                 balance_due: src.total_amount || 0,
+                payment_terms: normalizedTerms,
                 status: 'Draft',
                 items: Array.isArray(src.items) && src.items.length
                   ? src.items.map((item) => ({ ...initialForm.items[0], ...item }))
                   : [...initialForm.items],
               }));
             } else {
+              const normalizedTerms = normalizePaymentTerms(prefs.default_payment_terms || 'Net 30');
               setForm((prev) => ({
                 ...prev,
                 invoice_number:   nextNumber,
                 issue_date:       today,
-                due_date:         deriveDueDate(today, prefs.default_payment_terms || 'Net 30'),
+                due_date:         deriveDueDate(today, normalizedTerms),
                 customer_id:      quickCreateCustomerId || prev.customer_id || '',
-                payment_terms:    prefs.default_payment_terms || 'Net 30',
-                notes:            prefs.default_notes         || '',
-                terms_conditions: prefs.default_terms         || '',
+                payment_terms:    normalizedTerms,
+                notes:            prev.notes            || prefs.default_notes  || '',
+                terms_conditions: prev.terms_conditions || prefs.default_terms  || '',
                 status: 'Draft',
               }));
             }
           } catch {
             if (!active) return;
+            const normalizedTerms = normalizePaymentTerms(prefs.default_payment_terms || 'Net 30');
             setForm((prev) => ({
               ...prev,
               invoice_number:   'INV-00001',
               issue_date:       today,
-              due_date:         deriveDueDate(today, prefs.default_payment_terms || 'Net 30'),
+              due_date:         deriveDueDate(today, normalizedTerms),
               customer_id:      quickCreateCustomerId || prev.customer_id || '',
-              payment_terms:    prefs.default_payment_terms || 'Net 30',
-              notes:            prefs.default_notes         || '',
-              terms_conditions: prefs.default_terms         || '',
+              payment_terms:    normalizedTerms,
+              notes:            prev.notes            || prefs.default_notes  || '',
+              terms_conditions: prev.terms_conditions || prefs.default_terms  || '',
               status: 'Draft',
             }));
           }
@@ -421,7 +449,7 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
             || selectedCustomer.company_name
             || '')
         : '';
-      const customerPaymentTerms = selectedCustomer?.payment_terms || '';
+      const customerPaymentTerms = normalizePaymentTerms(selectedCustomer?.payment_terms || '');
       setForm((prev) => {
         const updates = { customer_id: value, customer_name: customerName };
         if (customerPaymentTerms && !dueDateManuallyEdited) {
@@ -429,6 +457,10 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
         }
         return { ...prev, ...updates };
       });
+      return;
+    }
+    if (name === 'payment_terms') {
+      setForm((prev) => ({ ...prev, [name]: normalizePaymentTerms(value) }));
       return;
     }
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -490,8 +522,6 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
     });
   };
 
-  const { isValid } = useMemo(() => validateInvoiceForm(form, t), [form, t]);
-
   const handleDownloadPDF = async () => {
     try {
       const res = await axios.get(createApiUrl(`/api/invoices/${invoiceId}/pdf`), { responseType: 'blob' });
@@ -527,7 +557,8 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
     setError('');
 
     try {
-      const nextStatus = submitMode === 'draft'
+      const currentSubmitMode = submitModeRef.current;
+      const nextStatus = currentSubmitMode === 'draft'
         ? 'Draft'
         : (form.status === 'Paid' || form.status === 'Cancelled' ? form.status : 'Issued');
 
@@ -1101,10 +1132,10 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                     <Button
                       type="button"
                       variant="outlined"
-                      disabled={loading || !isValid || isArchived}
+                      disabled={loading || isArchived}
                       sx={cancelBtnSx}
                       onClick={() => {
-                        setSubmitMode('draft');
+                        setSubmitIntent('draft');
                         formRef.current?.requestSubmit();
                       }}
                     >
@@ -1114,10 +1145,10 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                     <Button
                       type="button"
                       variant="contained"
-                      disabled={loading || !isValid || isArchived}
+                      disabled={loading || isArchived}
                       sx={saveBtnSx}
                       onClick={() => {
-                        setSubmitMode('send');
+                        setSubmitIntent('send');
                         formRef.current?.requestSubmit();
                       }}
                     >

@@ -199,9 +199,9 @@ describe('AddEditInvoice', () => {
 
     const quantityInput = screen.getAllByDisplayValue('1')[0];
     fireEvent.change(quantityInput, { target: { value: '0' } });
-    const saveButton = screen.getByRole('button', { name: 'Save and Send' });
+    fireEvent.click(screen.getByRole('button', { name: 'Save and Send' }));
 
-    await waitFor(() => expect(saveButton).toBeDisabled());
+    expect(await screen.findByText(/Qty must be greater than 0/i)).toBeInTheDocument();
     expect(createInvoice).not.toHaveBeenCalled();
   });
 
@@ -262,13 +262,32 @@ describe('AddEditInvoice', () => {
     expect(hasMinZero).toBe(true);
   });
 
-  it('disables Save and Send when form is invalid (no customer selected)', async () => {
+  it('shows validation when Save and Send is clicked with no customer selected', async () => {
     renderWithProviders(<AddEditInvoice />);
     await screen.findByText('New Invoice');
 
-    // With no customer selected, form is invalid — Save and Send must be disabled
     const saveButton = screen.getByRole('button', { name: /Save and Send/i });
-    expect(saveButton).toBeDisabled();
+    expect(saveButton).not.toBeDisabled();
+    fireEvent.click(saveButton);
+
+    expect(await screen.findByText(/Please select a customer\./i)).toBeInTheDocument();
     expect(createInvoice).not.toHaveBeenCalled();
+  });
+
+  it('submits Draft status when Save as Draft is clicked', async () => {
+    renderWithProviders(<AddEditInvoice />);
+
+    await screen.findByText('New Invoice');
+
+    fireEvent.change(screen.getByTestId('customer-select'), { target: { name: 'customer_id', value: 'cust-1' } });
+    const itemInput = screen.getAllByPlaceholderText('Type or click to select an item.')[0];
+    fireEvent.change(itemInput, { target: { value: 'Test Item' } });
+
+    createInvoice.mockResolvedValue({ id: 'inv-1' });
+    fireEvent.click(screen.getByRole('button', { name: 'Save as Draft' }));
+
+    await waitFor(() => expect(createInvoice).toHaveBeenCalledTimes(1));
+    const payload = createInvoice.mock.calls[0][0];
+    expect(payload.status).toBe('Draft');
   });
 });

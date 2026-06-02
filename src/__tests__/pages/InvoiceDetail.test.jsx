@@ -119,6 +119,35 @@ describe('InvoiceDetail', () => {
     expect(screen.getByText('davinder')).toBeInTheDocument();
   });
 
+  it('normalizes payment terms label from net_30 to Net 30', async () => {
+    axios.get.mockResolvedValue({ data: { ...SAMPLE_INVOICE, payment_terms: 'net_30' } });
+    renderDetail();
+
+    await screen.findByText('INV-00042');
+    expect(screen.getByText('Net 30')).toBeInTheDocument();
+  });
+
+  it('shows generic recorded-by label when payment history has UUID', async () => {
+    axios.get.mockResolvedValue({
+      data: {
+        ...SAMPLE_INVOICE,
+        payment_history: [
+          {
+            payment_date: '2026-05-10',
+            amount: 5000,
+            payment_mode: 'Bank Transfer',
+            reference_number: 'REF-001',
+            recorded_by: 'bded861f-40b5-4d1b-8e97-b2d684ab80f7',
+          },
+        ],
+      },
+    });
+    renderDetail();
+
+    await screen.findByText('INV-00042');
+    expect(screen.getByText('User')).toBeInTheDocument();
+  });
+
   it('shows "No payments recorded yet" when payment history is empty', async () => {
     axios.get.mockResolvedValue({ data: { ...SAMPLE_INVOICE, payment_history: [] } });
     renderDetail();
@@ -168,5 +197,25 @@ describe('InvoiceDetail', () => {
 
     await screen.findByText('INV-00042');
     expect(screen.getByText('Implementation Service')).toBeInTheDocument();
+  });
+
+  it('shows OVERDUE chip when invoice is Issued and due date is in the past (BUG-009)', async () => {
+    axios.get.mockResolvedValue({
+      data: { ...SAMPLE_INVOICE, status: 'Issued', due_date: '2025-01-01' },
+    });
+    renderDetail();
+
+    await screen.findByText('INV-00042');
+    expect(screen.getByText('OVERDUE')).toBeInTheDocument();
+  });
+
+  it('does not show OVERDUE chip when invoice is Paid even if due date is in the past', async () => {
+    axios.get.mockResolvedValue({
+      data: { ...SAMPLE_INVOICE, status: 'Paid', due_date: '2025-01-01' },
+    });
+    renderDetail();
+
+    await screen.findByText('INV-00042');
+    expect(screen.queryByText('OVERDUE')).not.toBeInTheDocument();
   });
 });

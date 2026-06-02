@@ -1,4 +1,5 @@
 import { calculateInvoiceTotals } from "./invoiceCalculations";
+import { normalizePaymentTerms } from "./invoiceFormValidation";
 
 export const buildInvoicePayload = (form) => {
   const manualTax = Number(form.cgst_amount || 0) + Number(form.sgst_amount || 0) + Number(form.igst_amount || 0);
@@ -31,7 +32,7 @@ export const buildInvoicePayload = (form) => {
     invoice_number: form.invoice_number,
     issue_date: form.issue_date,
     due_date: form.due_date,
-    payment_terms: form.payment_terms,
+    payment_terms: normalizePaymentTerms(form.payment_terms),
     status: form.status,
     payment_mode: form.payment_mode || "",
     invoice_type: form.invoice_type || "Tax Invoice",

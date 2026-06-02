@@ -1,7 +1,15 @@
 const parseDate = (value) => {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(String(value))) return null;
-  const d = new Date(`${value}T00:00:00`);
+  const [year, month, day] = String(value).split("-").map(Number);
+  const d = new Date(year, (month || 1) - 1, day || 1);
   return Number.isNaN(d.getTime()) ? null : d;
+};
+
+const formatYyyyMmDd = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 };
 
 const isRowMeaningful = (item = {}) =>
@@ -18,13 +26,43 @@ export const buildPaymentTermsDaysMap = {
   "Net 45": 45,
 };
 
+const PAYMENT_TERMS_ALIASES = {
+  due_on_receipt: "Due on Receipt",
+  net_7: "Net 7",
+  net_15: "Net 15",
+  net_30: "Net 30",
+  net_45: "Net 45",
+};
+
+export const normalizePaymentTerms = (value) => {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (buildPaymentTermsDaysMap[raw] != null) return raw;
+
+  const directAlias = PAYMENT_TERMS_ALIASES[raw.toLowerCase()];
+  if (directAlias) return directAlias;
+
+  const netDaysMatch = raw.match(/net[\s_\-]?(\d+)/i);
+  if (netDaysMatch) {
+    const normalized = `Net ${Number(netDaysMatch[1])}`;
+    if (buildPaymentTermsDaysMap[normalized] != null) return normalized;
+  }
+
+  if (/due[\s_\-]?on[\s_\-]?receipt/i.test(raw)) {
+    return "Due on Receipt";
+  }
+
+  return raw;
+};
+
 export const deriveDueDate = (issueDate, paymentTerms) => {
   const issue = parseDate(issueDate);
   if (!issue) return "";
-  const days = buildPaymentTermsDaysMap[paymentTerms] ?? 0;
+  const normalizedTerms = normalizePaymentTerms(paymentTerms);
+  const days = buildPaymentTermsDaysMap[normalizedTerms] ?? 0;
   const due = new Date(issue);
   due.setDate(due.getDate() + days);
-  return due.toISOString().slice(0, 10);
+  return formatYyyyMmDd(due);
 };
 
 export const validateInvoiceForm = (form = {}, t) => {

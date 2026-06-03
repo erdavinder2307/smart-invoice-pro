@@ -27,3 +27,24 @@ package-lock.json
 
 # QA credentials — never commit
 .env.qa
+
+# QA runtime artifacts (keep folder structure via .gitkeep)
+/qa/screenshots/*
+!/qa/screenshots/.gitkeep
+/qa/reports/*
+!/qa/reports/.gitkeep
+/qa/evidence/*
+!/qa/evidence/.gitkeep
+/qa/bugs/*
+!/qa/bugs/.gitkeep
+
+# Playwright output directories
+playwright-report/
+test-results/
+
+# General logs
+*.log
+
+# Temporary directories
+tmp/
+temp/

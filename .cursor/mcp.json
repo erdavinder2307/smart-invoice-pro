@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest",
+        "--browser",
+        "chrome",
+        "--headed",
+        "--viewport-size",
+        "1440,900"
+      ]
+    }
+  }
+}

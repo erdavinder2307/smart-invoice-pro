@@ -1,0 +1,17 @@
+{
+  "full-lifecycle": {
+    "customer": { "name": "QA Lifecycle Customer", "email": "qa-lifecycle@solidevbooks.test" },
+    "lines": [
+      { "source": "catalog", "sku": "QA-WID-001", "quantity": 2 },
+      { "description": "Consulting Fee", "quantity": 1, "rate": 500.0, "tax": 10 }
+    ],
+    "expected_after_draft": {
+      "note": "Fill after capture; validator compares subtotal/tax/total"
+    },
+    "payment": { "method": "Bank Transfer", "amount": "invoice_total" }
+  },
+  "partial-payment": {
+    "lines": [{ "description": "Partial Pay Test", "quantity": 1, "rate": 400.0, "tax": 10 }],
+    "payments": [{ "percent": 50 }, { "percent": 50 }]
+  }
+}

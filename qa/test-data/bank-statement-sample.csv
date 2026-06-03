@@ -1,0 +1,5 @@
+Date,Description,Amount,Balance
+2026-05-01,Opening Balance,0,10000.00
+2026-05-02,Customer Payment INV-1001,1180.00,11180.00
+2026-05-03,Office Supplies,-250.50,10929.50
+2026-05-04,Stripe Payout,540.00,11469.50

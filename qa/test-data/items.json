@@ -1,0 +1,20 @@
+[
+  {
+    "type": "goods",
+    "name": "QA Widget Pro",
+    "sku": "QA-WID-001",
+    "sale_price": 99.0,
+    "purchase_price": 45.0,
+    "tax": 10,
+    "track_inventory": true,
+    "opening_stock": 100
+  },
+  {
+    "type": "service",
+    "name": "QA Consulting Hour",
+    "sku": "QA-SVC-001",
+    "sale_price": 150.0,
+    "tax": 10,
+    "track_inventory": false
+  }
+]

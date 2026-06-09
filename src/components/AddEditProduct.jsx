@@ -211,8 +211,8 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
     const newErrors = {};
     if (!form.name.trim()) {
       newErrors.name = 'Item name is required';
-    } else if (form.name.trim().length > 255) {
-      newErrors.name = 'Item name must be 255 characters or fewer';
+    } else if (form.name.trim().length > 150) {
+      newErrors.name = 'Item name must be 150 characters or fewer';
     }
     if (!form.unit.trim()) {
       newErrors.unit = 'Unit is required';
@@ -226,7 +226,7 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
         newErrors.price = `Selling price cannot exceed ₹${MAX_PRICE.toLocaleString('en-IN')}`;
       }
     }
-    if (form.purchase_enabled) {
+    if (form.purchase_enabled && form.item_type !== 'service') {
       if (form.purchase_rate === '' || form.purchase_rate === null) {
         newErrors.purchase_rate = 'Cost price is required';
       } else if (Number(form.purchase_rate) < 0) {
@@ -369,7 +369,7 @@ const AddEditProduct = ({ onSuccess, onCancel }) => {
                 onChange={handleChange}
                 error={!!errors.name}
                 helperText={errors.name || ''}
-                inputProps={{ maxLength: 255 }}
+                inputProps={{ maxLength: 150 }}
                 sx={{ width: TOP_FIELD_WIDTH, maxWidth: '100%' }}
               />
 

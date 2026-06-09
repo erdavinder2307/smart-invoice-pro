@@ -7,7 +7,7 @@ const AppLayout = () => {
   return (
     <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "grey.50" }}>
       <Sidebar />
-      <Box sx={{ flex: 1, width: 0, minWidth: 0 }}>
+      <Box sx={{ flex: 1, width: 0, minWidth: 0, overflowX: "hidden" }}>
         <Outlet />
       </Box>
     </Box>

@@ -1,0 +1,19 @@
+{
+  "name": "solidev-books-core-regression",
+  "description": "Core bookkeeping workflows for autonomous QA regression",
+  "workflows": [
+    "01-login",
+    "02-customers",
+    "03-items",
+    "04-quotes",
+    "05-invoices",
+    "06-payments",
+    "07-vendors",
+    "08-purchase-orders",
+    "09-bank-imports",
+    "10-reconciliation"
+  ],
+  "extended": [
+    "11-invoice-lifecycle-full"
+  ]
+}

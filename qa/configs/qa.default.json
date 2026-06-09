@@ -1,0 +1,15 @@
+{
+  "baseUrl": "http://localhost:3000",
+  "apiUrl": "http://127.0.0.1:5001",
+  "viewport": { "width": 1440, "height": 900 },
+  "browser": "chrome",
+  "headed": true,
+  "screenshotDir": "qa/screenshots",
+  "reportsDir": "qa/reports",
+  "evidenceDir": "qa/evidence",
+  "bugsDir": "qa/bugs",
+  "testDataDir": "qa/test-data",
+  "workflowsDir": "qa/workflows",
+  "legacyWorkflowsDir": "qa-workflows",
+  "regressionManifest": "qa/regression-manifest.json"
+}

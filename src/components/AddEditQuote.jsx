@@ -180,6 +180,7 @@ const AddEditQuote = () => {
     () => (form.items || []).map((item) => ({
       name: item.name && String(item.name).trim() ? '' : 'Item is required.',
       quantity: Number(item.quantity) > 0 ? '' : 'Quantity must be greater than 0.',
+      rate: Number(item.rate) > 0 ? '' : 'Rate must be greater than zero.',
     })),
     [form.items],
   );
@@ -601,6 +602,11 @@ const AddEditQuote = () => {
     }
     if (validItems.some((item) => item.quantity <= 0)) {
       setError('Item quantity must be greater than 0.');
+      setLoading(false);
+      return;
+    }
+    if (validItems.some((item) => item.rate <= 0)) {
+      setError('Item rate must be greater than zero.');
       setLoading(false);
       return;
     }
@@ -1091,7 +1097,7 @@ const AddEditQuote = () => {
 
               <Box sx={{ ...footerSx, justifyContent: 'space-between' }}>
                 <Box sx={{ display: 'flex', gap: 1.1, flexWrap: 'wrap' }}>
-                  {quoteId && (form.status === 'Accepted' || form.status === 'Sent') && !form.converted_to_invoice_id && (
+                  {quoteId && form.status !== 'Cancelled' && !form.converted_to_invoice_id && (
                     <Button
                       type="button"
                       variant="outlined"

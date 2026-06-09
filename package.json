@@ -40,7 +40,20 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "postinstall": "node scripts/patch-mui-chip.js"
+    "postinstall": "node scripts/patch-mui-chip.js",
+    "qa": "node qa/engine/index.js",
+    "qa:list": "node qa/engine/index.js list",
+    "qa:parse": "node qa/engine/index.js parse",
+    "qa:run": "node qa/engine/index.js run",
+    "qa:login": "node qa/engine/index.js session login",
+    "qa:regression": "node qa/engine/index.js regression",
+    "qa:verify": "node qa/engine/index.js verify-browser",
+    "qa:validate": "node qa/engine/index.js validate",
+    "qa:data": "node qa/engine/index.js test-data",
+    "qa:bug": "node qa/engine/index.js bug",
+    "qa:compare": "node qa/engine/index.js compare",
+    "qa:seed-excel": "node qa/scripts/seed-excel.js",
+    "qa:playwright": "playwright test -c qa/configs/playwright.config.js"
   },
   "eslintConfig": {
     "extends": [
@@ -125,5 +138,11 @@
         "lines": 50
       }
     }
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "csv-parse": "^6.2.1",
+    "dotenv": "^17.4.2",
+    "playwright": "^1.60.0"
   }
 }

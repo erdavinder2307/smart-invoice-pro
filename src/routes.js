@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import React from 'react';
 import Login from './components/Auth/Login';
 import Dashboard from './pages/Dashboard';
@@ -148,7 +148,7 @@ const AppRoutes = () => {
           <Route path="/bank-import" element={<BankImportWorkflow />} />
           <Route path="/bank-reconciliation" element={<BankReconciliation />} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="/settings" element={<UserManagement />} />
+          <Route path="/settings" element={<Navigate to="/settings/organization-profile" replace />} />
           <Route path="/settings/users" element={<UserManagement />} />
           <Route path="/settings/organization-profile" element={<OrganizationProfile />} />
           <Route path="/settings/branding" element={<BrandingSettings />} />

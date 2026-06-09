@@ -29,10 +29,8 @@ import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import EditIcon from "@mui/icons-material/Edit";
 import BlockIcon from "@mui/icons-material/Block";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
-import axios from "axios";
 
 import { C, fieldSx } from "../components/common/formStyles";
-import { createApiUrl } from "../config/api";
 import { useAuth } from "../context/AuthContext";
 import {
   getSettingsUsers,
@@ -53,10 +51,19 @@ const ROLE_COLORS = {
 const EMPTY_INVITE = { name: "", email: "", username: "", password: "", role_id: "" };
 const EMPTY_EDIT   = { role_id: "", role: "" };
 
-function avatarInitials(name, username) {
-  const src = name || username || "?";
+const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+
+export const getUserDisplayName = (u) =>
+  u?.name || u?.username || u?.email || "Unknown user";
+
+export const getUserDisplayEmail = (u) =>
+  u?.email || u?.username || "—";
+
+function avatarInitials(u) {
+  const src = getUserDisplayName(u);
   return src.charAt(0).toUpperCase();
 }
+
 function avatarColor(str) {
   const palette = ["#1976d2","#388e3c","#f57c00","#7b1fa2","#c62828","#0097a7","#5d4037"];
   let h = 0;
@@ -64,28 +71,25 @@ function avatarColor(str) {
   return palette[Math.abs(h) % palette.length];
 }
 
-// ── Main Component ────────────────────────────────────────────────────────────
 export default function UserManagement() {
   const { user, isAdmin } = useAuth();
   const [users, setUsers]           = useState([]);
   const [roles, setRoles]           = useState([]);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState("");
+  const [accessDenied, setAccessDenied] = useState(false);
   const [toast, setToast]           = useState({ open: false, message: "", severity: "success" });
 
-  // Invite dialog
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteForm, setInviteForm] = useState(EMPTY_INVITE);
   const [inviting, setInviting]     = useState(false);
   const [inviteErr, setInviteErr]   = useState("");
 
-  // Edit role dialog
   const [editOpen, setEditOpen]     = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [editForm, setEditForm]     = useState(EMPTY_EDIT);
   const [saving, setSaving]         = useState(false);
 
-  // Deactivate confirm
   const [confirmOpen, setConfirmOpen]   = useState(false);
   const [confirmTarget, setConfirmTarget] = useState(null);
 
@@ -93,40 +97,73 @@ export default function UserManagement() {
     setToast({ open: true, message, severity });
 
   const fetchData = useCallback(async () => {
+    if (!isAdmin) {
+      setLoading(false);
+      setAccessDenied(true);
+      setUsers([]);
+      return;
+    }
+
     setLoading(true);
     setError("");
+    setAccessDenied(false);
     try {
       const [usersData, rolesData] = await Promise.all([
         getSettingsUsers(),
         getRoles(),
       ]);
-      setUsers(usersData.users || usersData);
-      setRoles(rolesData.roles || rolesData);
-    } catch {
-      // Fallback to legacy endpoint
-      try {
-        const res = await axios.get(createApiUrl("/api/users"), { headers: { "X-User-Id": user?.id } });
-        setUsers(res.data);
-      } catch {
-        setError("Failed to load users.");
+      setUsers(Array.isArray(usersData) ? usersData : (usersData.users || []));
+      setRoles(Array.isArray(rolesData) ? rolesData : (rolesData.roles || []));
+    } catch (err) {
+      if (err?.response?.status === 403) {
+        setAccessDenied(true);
+        setUsers([]);
+      } else {
+        setError(err?.response?.data?.error || "Failed to load users.");
       }
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [isAdmin]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // ── Invite ──────────────────────────────────────────────────────────────────
+  const handleInviteEmailChange = (email) => {
+    setInviteForm((f) => {
+      const next = { ...f, email };
+      if (!f.username.trim() && email.includes("@")) {
+        next.username = email.split("@")[0];
+      }
+      return next;
+    });
+  };
+
   const handleInviteSubmit = async () => {
-    if (!inviteForm.username.trim() || !inviteForm.password.trim()) {
-      setInviteErr("Username and password are required.");
+    const email = inviteForm.email.trim();
+    const username = inviteForm.username.trim();
+    const password = inviteForm.password.trim();
+
+    if (!email) {
+      setInviteErr("Email is required.");
       return;
     }
+    if (!isValidEmail(email)) {
+      setInviteErr("Enter a valid email address.");
+      return;
+    }
+    if (!username) {
+      setInviteErr("Username is required.");
+      return;
+    }
+    if (!password || password.length < 8) {
+      setInviteErr("Password must be at least 8 characters.");
+      return;
+    }
+
     setInviting(true);
     setInviteErr("");
     try {
-      await inviteUser(inviteForm);
+      await inviteUser({ ...inviteForm, email, username, password });
       setInviteOpen(false);
       showToast("User invited successfully.");
       fetchData();
@@ -137,7 +174,6 @@ export default function UserManagement() {
     }
   };
 
-  // ── Edit role ───────────────────────────────────────────────────────────────
   const openEdit = (u) => {
     setEditTarget(u);
     setEditForm({ role_id: u.role_id || "", role: u.role || "" });
@@ -150,11 +186,7 @@ export default function UserManagement() {
       if (editForm.role_id) {
         await updateSettingsUser(editTarget.id, { role_id: editForm.role_id });
       } else if (editForm.role) {
-        await axios.put(
-          createApiUrl(`/api/users/${editTarget.id}/role`),
-          { role: editForm.role },
-          { headers: { "X-User-Id": user?.id } }
-        );
+        await updateSettingsUser(editTarget.id, { role: editForm.role });
       }
       setEditOpen(false);
       showToast("Role updated.");
@@ -166,16 +198,16 @@ export default function UserManagement() {
     }
   };
 
-  // ── Deactivate/Activate ──────────────────────────────────────────────────────
   const handleToggleActive = async () => {
     setConfirmOpen(false);
+    const label = getUserDisplayName(confirmTarget);
     try {
       if (confirmTarget.is_active === false) {
         await updateSettingsUser(confirmTarget.id, { is_active: true });
-        showToast(`${confirmTarget.username} reactivated.`);
+        showToast(`${label} reactivated.`);
       } else {
         await deactivateUser(confirmTarget.id);
-        showToast(`${confirmTarget.username} deactivated.`);
+        showToast(`${label} deactivated.`);
       }
       fetchData();
     } catch (err) {
@@ -183,16 +215,26 @@ export default function UserManagement() {
     }
   };
 
-  // ── Role label helper ────────────────────────────────────────────────────────
   const getRoleLabel = (u) => {
     if (u.role_id && roles.length) {
-      const r = roles.find((r) => r.id === u.role_id);
+      const r = roles.find((role) => role.id === u.role_id);
       if (r) return r.name;
     }
     return u.role || "—";
   };
 
-  // ── Render ──────────────────────────────────────────────────────────────────
+  if (!isAdmin && !loading) {
+    return (
+      <MainLayout>
+        <Box sx={{ p: 3, bgcolor: C.pageBg, minHeight: "calc(100vh - 64px)" }}>
+          <Alert severity="warning">
+            Admin access is required to manage users. Contact your organization administrator.
+          </Alert>
+        </Box>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
       <Box sx={{ p: 3, bgcolor: C.pageBg, minHeight: "calc(100vh - 64px)" }}>
@@ -215,17 +257,22 @@ export default function UserManagement() {
             )}
           </Box>
 
+          {accessDenied && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              Admin access is required to view the user list.
+            </Alert>
+          )}
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
           {loading ? (
             <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}><CircularProgress size={32} /></Box>
           ) : (
             <Paper elevation={0} sx={{ border: `1px solid ${C.border}`, borderRadius: "4px", bgcolor: C.white }}>
-              <TableContainer sx={{ overflowX: "hidden" }}>
-                <Table size="small" sx={{ tableLayout: "fixed" }}>
+              <TableContainer sx={{ overflowX: "auto" }}>
+                <Table size="small" sx={{ tableLayout: "auto", minWidth: 640 }}>
                   <TableHead>
                     <TableRow sx={{ bgcolor: C.sectionBg, "& th": { fontWeight: 600, fontSize: "0.75rem", color: C.hint, borderBottom: `1px solid ${C.border}` } }}>
-                      <TableCell sx={{ pl: 2 }}>User</TableCell>
+                      <TableCell sx={{ pl: 2, width: "40%" }}>User</TableCell>
                       <TableCell>Role</TableCell>
                       <TableCell>Status</TableCell>
                       <TableCell>Member Since</TableCell>
@@ -237,26 +284,28 @@ export default function UserManagement() {
                       const isSelf   = u.id === user?.id;
                       const isActive = u.is_active !== false;
                       const roleLabel = getRoleLabel(u);
+                      const displayName = getUserDisplayName(u);
+                      const displayEmail = getUserDisplayEmail(u);
                       return (
                         <TableRow key={u.id}
                           sx={{ "&:last-child td": { border: 0 }, opacity: isActive ? 1 : 0.55, "& td": { fontSize: "0.8125rem", py: 1.25 } }}>
                           <TableCell sx={{ pl: 2 }}>
-                            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                              <Avatar sx={{ width: 32, height: 32, fontSize: "0.8125rem", bgcolor: avatarColor(u.username) }}>
-                                {avatarInitials(u.name, u.username)}
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, minWidth: 0 }}>
+                              <Avatar sx={{ width: 32, height: 32, fontSize: "0.8125rem", bgcolor: avatarColor(displayName), flexShrink: 0 }}>
+                                {avatarInitials(u)}
                               </Avatar>
-                              <Box>
+                              <Box sx={{ minWidth: 0 }}>
                                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-                                  <Typography sx={{ fontSize: "0.8125rem", fontWeight: 500, color: C.label }}>
-                                    {u.name || u.username}
+                                  <Typography noWrap sx={{ fontSize: "0.8125rem", fontWeight: 500, color: C.label }}>
+                                    {displayName}
                                   </Typography>
                                   {isSelf && (
                                     <Chip label="You" size="small" variant="outlined"
                                       sx={{ height: 16, fontSize: "0.65rem", "& .MuiChip-label": { px: 0.75 } }} />
                                   )}
                                 </Box>
-                                <Typography sx={{ fontSize: "0.75rem", color: C.hint }}>
-                                  {u.email || u.username}
+                                <Typography noWrap sx={{ fontSize: "0.75rem", color: C.hint }}>
+                                  {displayEmail}
                                 </Typography>
                               </Box>
                             </Box>
@@ -297,7 +346,7 @@ export default function UserManagement() {
                         </TableRow>
                       );
                     })}
-                    {users.length === 0 && (
+                    {users.length === 0 && !accessDenied && (
                       <TableRow>
                         <TableCell colSpan={isAdmin ? 5 : 4} align="center" sx={{ py: 4, color: C.hint }}>
                           No users found.
@@ -309,21 +358,22 @@ export default function UserManagement() {
               </TableContainer>
             </Paper>
           )}
+        </Box>
       </Box>
-          </Box>
 
-      {/* ── Invite Dialog ──────────────────────────────────────────────────── */}
       <Dialog open={inviteOpen} onClose={() => setInviteOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle sx={{ fontSize: "0.9375rem", fontWeight: 700, pb: 1 }}>Invite User</DialogTitle>
         <DialogContent dividers sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 2 }}>
           {inviteErr && <Alert severity="error">{inviteErr}</Alert>}
-          <TextField label="Name"      size="small" fullWidth value={inviteForm.name}
+          <TextField label="Name" size="small" fullWidth value={inviteForm.name}
             onChange={(e) => setInviteForm((f) => ({ ...f, name: e.target.value }))} sx={fieldSx} />
-          <TextField label="Email"     size="small" fullWidth type="email" value={inviteForm.email}
-            onChange={(e) => setInviteForm((f) => ({ ...f, email: e.target.value }))} sx={fieldSx} />
-          <TextField label="Username *" size="small" fullWidth value={inviteForm.username}
+          <TextField label="Email *" size="small" fullWidth type="email" required value={inviteForm.email}
+            onChange={(e) => handleInviteEmailChange(e.target.value)} sx={fieldSx} />
+          <TextField label="Username *" size="small" fullWidth required value={inviteForm.username}
             onChange={(e) => setInviteForm((f) => ({ ...f, username: e.target.value }))} sx={fieldSx} />
-          <TextField label="Password *" size="small" fullWidth type="password" value={inviteForm.password}
+          <TextField label="Password *" size="small" fullWidth type="password" required
+            helperText="Minimum 8 characters"
+            value={inviteForm.password}
             onChange={(e) => setInviteForm((f) => ({ ...f, password: e.target.value }))} sx={fieldSx} />
           <TextField label="Role" size="small" fullWidth select value={inviteForm.role_id}
             onChange={(e) => setInviteForm((f) => ({ ...f, role_id: e.target.value }))} sx={fieldSx}>
@@ -340,10 +390,9 @@ export default function UserManagement() {
         </DialogActions>
       </Dialog>
 
-      {/* ── Edit Role Dialog ────────────────────────────────────────────────── */}
       <Dialog open={editOpen} onClose={() => setEditOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle sx={{ fontSize: "0.9375rem", fontWeight: 700, pb: 1 }}>
-          Edit Role — {editTarget?.name || editTarget?.username}
+          Edit Role — {editTarget ? getUserDisplayName(editTarget) : ""}
         </DialogTitle>
         <DialogContent dividers sx={{ pt: 2 }}>
           {roles.length > 0 ? (
@@ -351,7 +400,7 @@ export default function UserManagement() {
               onChange={(e) => setEditForm((f) => ({ ...f, role_id: e.target.value }))} sx={fieldSx}>
               {roles.map((r) => (
                 <MenuItem key={r.id} value={r.id} sx={{ fontSize: "0.875rem" }}>
-                  {r.name}{r.is_system ? " (System)" : ""}
+                  {r.name}{r.is_system_role ? " (System)" : ""}
                 </MenuItem>
               ))}
             </TextField>
@@ -372,7 +421,6 @@ export default function UserManagement() {
         </DialogActions>
       </Dialog>
 
-      {/* ── Confirm Toggle ───────────────────────────────────────────────────── */}
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle sx={{ fontSize: "0.9375rem", fontWeight: 700 }}>
           {confirmTarget?.is_active === false ? "Activate User" : "Deactivate User"}
@@ -380,8 +428,8 @@ export default function UserManagement() {
         <DialogContent>
           <Typography sx={{ fontSize: "0.875rem" }}>
             {confirmTarget?.is_active === false
-              ? `Reactivate ${confirmTarget?.name || confirmTarget?.username}? They will regain access.`
-              : `Deactivate ${confirmTarget?.name || confirmTarget?.username}? They will lose access immediately.`
+              ? `Reactivate ${getUserDisplayName(confirmTarget)}? They will regain access.`
+              : `Deactivate ${getUserDisplayName(confirmTarget)}? They will lose access immediately.`
             }
           </Typography>
         </DialogContent>
@@ -395,7 +443,6 @@ export default function UserManagement() {
         </DialogActions>
       </Dialog>
 
-      {/* ── Toast ───────────────────────────────────────────────────────────── */}
       <Snackbar open={toast.open} autoHideDuration={3500}
         onClose={() => setToast((t) => ({ ...t, open: false }))}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}>

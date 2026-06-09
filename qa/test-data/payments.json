@@ -1,0 +1,13 @@
+[
+  {
+    "scenario": "full",
+    "method": "Bank Transfer",
+    "amount_rule": "invoice_total"
+  },
+  {
+    "scenario": "partial",
+    "method": "Cash",
+    "amount_rule": "percent",
+    "percent": 50
+  }
+]

@@ -1,0 +1,3 @@
+name,email,phone,billing_address
+QA CSV Customer One,qa-csv1@solidevbooks.test,+61400000003,"3 CSV Road, Brisbane QLD 4000"
+QA CSV Customer Two,qa-csv2@solidevbooks.test,+61400000004,"4 Import Lane, Perth WA 6000"

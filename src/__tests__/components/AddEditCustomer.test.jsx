@@ -87,7 +87,8 @@ describe('AddEditCustomer', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Save' }));
 
     expect(await screen.findByText('Required for business customers')).toBeInTheDocument();
-    expect(screen.getAllByText('Required').length).toBeGreaterThanOrEqual(3);
+    expect(screen.getByText('At least one of email or phone is required')).toBeInTheDocument();
+    expect(screen.getAllByText('Required').length).toBeGreaterThanOrEqual(1);
     expect(axios.post).not.toHaveBeenCalled();
   });
 

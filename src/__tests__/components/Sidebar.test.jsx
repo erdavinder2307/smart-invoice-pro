@@ -1,9 +1,15 @@
 import React from 'react';
 import { renderWithProviders, screen, fireEvent } from '../../test-utils';
 import { useAuth } from '../../context/AuthContext';
+import { useMe } from '../../context/MeContext';
 import Sidebar from '../../components/Sidebar';
 
 const mockNavigate = jest.fn();
+
+jest.mock('../../context/MeContext', () => ({
+  useMe: jest.fn(),
+  MeProvider: ({ children }) => children,
+}));
 
 jest.mock('react-router-dom', () => {
   const actual = jest.requireActual('react-router-dom');
@@ -17,6 +23,14 @@ jest.mock('react-router-dom', () => {
 beforeEach(() => {
   jest.clearAllMocks();
   localStorage.clear();
+  useMe.mockReturnValue({
+    me: { full_name: 'Test User', display_name: 'Test User', role: 'Admin' },
+    meLoading: false,
+    meError: null,
+    refreshMe: jest.fn(),
+    displayName: 'Test User',
+    initials: 'TU',
+  });
   // Reset to default admin user for each test
   useAuth.mockReturnValue({
     user: { id: '1', username: 'admin', role: 'Admin' },

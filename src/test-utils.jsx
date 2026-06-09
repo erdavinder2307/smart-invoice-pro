@@ -84,6 +84,20 @@ const mockSidebarValue = {
   isMobile: false,
 };
 
+const mockMeValue = {
+  me: {
+    full_name: 'Test User',
+    display_name: 'Test User',
+    email: 'test@example.com',
+    role: 'Admin',
+  },
+  meLoading: false,
+  meError: null,
+  refreshMe: jest.fn(),
+  displayName: 'Test User',
+  initials: 'TU',
+};
+
 // ── Mock context modules ─────────────────────────────────────────────────────
 
 jest.mock('./context/AuthContext', () => ({
@@ -122,6 +136,23 @@ jest.mock('./context/SidebarContext', () => ({
   ...jest.requireActual('./context/SidebarContext'),
   useSidebar: jest.fn(() => mockSidebarValue),
   SidebarProvider: ({ children }) => children,
+}));
+
+jest.mock('./context/MeContext', () => ({
+  useMe: jest.fn(() => ({
+    me: {
+      full_name: 'Test User',
+      display_name: 'Test User',
+      email: 'test@example.com',
+      role: 'Admin',
+    },
+    meLoading: false,
+    meError: null,
+    refreshMe: jest.fn(),
+    displayName: 'Test User',
+    initials: 'TU',
+  })),
+  MeProvider: ({ children }) => children,
 }));
 
 jest.mock('./context/DashboardFilterContext', () => ({

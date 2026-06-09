@@ -32,7 +32,7 @@ import {
   Cancel,
   LoginOutlined
 } from "@mui/icons-material";
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import Header from '../Layout/Header';
 import Footer from '../Layout/Footer';
 import SeoHead from '../../seo/SeoHead';
@@ -99,6 +99,9 @@ const LoginPage = () => {
 
     if (!username) {
       nextFieldErrors.username = 'Username is required.';
+      firstError = firstError || nextFieldErrors.username;
+    } else if (!isSignup && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(username)) {
+      nextFieldErrors.username = 'Enter a valid email address.';
       firstError = firstError || nextFieldErrors.username;
     }
     if (!password.trim()) {
@@ -295,28 +298,45 @@ const LoginPage = () => {
                       </Box>
                     </motion.div>
 
-                    {/* Alerts */}
-                    {sessionExpired && !error && (
-                      <motion.div variants={fadeInUp}>
-                        <Alert severity="warning" sx={{ mb: 3, borderRadius: 2 }}>
-                          Session expired. Please login again.
-                        </Alert>
-                      </motion.div>
-                    )}
-                    {error && (
-                      <motion.div variants={fadeInUp}>
-                        <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
-                          {error}
-                        </Alert>
-                      </motion.div>
-                    )}
-                    {success && (
-                      <motion.div variants={fadeInUp}>
-                        <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }}>
-                          {success}
-                        </Alert>
-                      </motion.div>
-                    )}
+                    {/* Alerts — AnimatePresence avoids stagger-hidden opacity on dynamic errors */}
+                    <AnimatePresence mode="wait">
+                      {sessionExpired && !error && (
+                        <motion.div
+                          key="session-expired"
+                          initial={{ opacity: 0, y: -8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
+                        >
+                          <Alert severity="warning" sx={{ mb: 3, borderRadius: 2 }}>
+                            Session expired. Please login again.
+                          </Alert>
+                        </motion.div>
+                      )}
+                      {error && (
+                        <motion.div
+                          key="login-error"
+                          initial={{ opacity: 0, y: -8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
+                        >
+                          <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
+                            {error}
+                          </Alert>
+                        </motion.div>
+                      )}
+                      {success && (
+                        <motion.div
+                          key="login-success"
+                          initial={{ opacity: 0, y: -8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
+                        >
+                          <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }}>
+                            {success}
+                          </Alert>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
 
                     {/* Form */}
                     <Box component="form" onSubmit={handleSubmit} noValidate sx={{ width: '100%' }}>
@@ -325,6 +345,7 @@ const LoginPage = () => {
                         fullWidth
                         label="Username"
                         name="username"
+                        type="email"
                         value={credentials.username}
                         onChange={handleChange}
                         error={Boolean(fieldErrors.username)}

@@ -1,6 +1,7 @@
 import {
   deriveDueDate,
   normalizePaymentTerms,
+  validateInvoiceForm,
 } from '../../utils/invoiceFormValidation';
 
 describe('invoiceFormValidation helpers', () => {
@@ -15,5 +16,15 @@ describe('invoiceFormValidation helpers', () => {
 
   it('keeps due date same day for due_on_receipt', () => {
     expect(deriveDueDate('2026-05-26', 'due_on_receipt')).toBe('2026-05-26');
+  });
+
+  it('rejects zero rate on meaningful line items', () => {
+    const { itemErrors } = validateInvoiceForm({
+      customer_id: 'c1',
+      issue_date: '2026-05-26',
+      due_date: '2026-06-25',
+      items: [{ name: 'Widget', quantity: 2, rate: 0 }],
+    });
+    expect(itemErrors[0].rate).toBe('Rate must be greater than zero');
   });
 });

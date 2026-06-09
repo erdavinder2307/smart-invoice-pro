@@ -419,8 +419,8 @@ const AddEditPurchaseOrder = () => {
         fieldErrors[`item_${index}_quantity`] = "Quantity must be greater than 0";
       }
 
-      if (Number.isNaN(rate) || rate < 0) {
-        fieldErrors[`item_${index}_rate`] = "Rate cannot be negative";
+      if (Number.isNaN(rate) || rate <= 0) {
+        fieldErrors[`item_${index}_rate`] = "Rate must be greater than zero";
       }
 
       if (Number.isNaN(tax) || tax < 0) {

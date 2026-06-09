@@ -1,0 +1,16 @@
+[
+  {
+    "name": "QA Customer Alpha",
+    "email": "qa-alpha@solidevbooks.test",
+    "phone": "+61 400 000 001",
+    "billing_address": "1 QA Street, Melbourne VIC 3000",
+    "tags": ["qa", "regression"]
+  },
+  {
+    "name": "QA Customer Beta",
+    "email": "qa-beta@solidevbooks.test",
+    "phone": "+61 400 000 002",
+    "billing_address": "2 Test Avenue, Sydney NSW 2000",
+    "tags": ["qa"]
+  }
+]

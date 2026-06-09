@@ -110,7 +110,7 @@ describe('LoginPage', () => {
 
     renderWithProviders(<LoginPage />);
 
-    fireEvent.change(getUsernameInput(), { target: { value: 'admin' } });
+    fireEvent.change(getUsernameInput(), { target: { value: 'admin@example.com' } });
     fireEvent.change(getPasswordInput(), { target: { value: 'Pass123!' } });
 
     const submitBtn = screen.getByRole('button', { name: /sign in/i });
@@ -118,7 +118,7 @@ describe('LoginPage', () => {
 
     await waitFor(() => {
       expect(mockLogin).toHaveBeenCalledWith(
-        expect.objectContaining({ username: 'admin', password: 'Pass123!' })
+        expect.objectContaining({ username: 'admin@example.com', password: 'Pass123!' })
       );
     });
   });
@@ -141,7 +141,7 @@ describe('LoginPage', () => {
 
     renderWithProviders(<LoginPage />);
 
-    fireEvent.change(getUsernameInput(), { target: { value: 'admin' } });
+    fireEvent.change(getUsernameInput(), { target: { value: 'admin@example.com' } });
     fireEvent.change(getPasswordInput(), { target: { value: 'wrong' } });
 
     const submitBtn = screen.getByRole('button', { name: /sign in/i });

@@ -1,11 +1,17 @@
 const normalizeEmail = (value) => String(value || "").trim().toLowerCase();
 const normalizePhone = (value) => String(value || "").replace(/\D/g, "");
 const normalizeGstin = (value) => String(value || "").trim().toUpperCase();
+const normalizeName = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
 
 const buildCandidateIdentity = (customer = {}) => ({
   email: normalizeEmail(customer.email),
   phones: [customer.phone, customer.mobile].map(normalizePhone).filter(Boolean),
   gstin: normalizeGstin(customer.gst_number),
+  names: [
+    normalizeName(customer.company_name),
+    normalizeName(customer.display_name),
+    normalizeName(customer.name),
+  ].filter(Boolean),
 });
 
 export const findDuplicateCustomer = (customers = [], candidate = {}, currentCustomerId = null) => {
@@ -13,6 +19,7 @@ export const findDuplicateCustomer = (customers = [], candidate = {}, currentCus
 
   return customers.find((customer) => {
     if (!customer || customer.id === currentCustomerId) return false;
+    if (String(customer.status || "").toUpperCase() === "ARCHIVED") return false;
     const existingIdentity = buildCandidateIdentity(customer);
 
     if (candidateIdentity.email && candidateIdentity.email === existingIdentity.email) {
@@ -30,26 +37,19 @@ export const findDuplicateCustomer = (customers = [], candidate = {}, currentCus
       return true;
     }
 
+    if (
+      candidateIdentity.names.length > 0
+      && candidateIdentity.names.some((name) => existingIdentity.names.includes(name))
+    ) {
+      return true;
+    }
+
     return false;
   }) || null;
 };
 
 export const getDuplicateFieldLabel = (customers = [], candidate = {}, currentCustomerId = null) => {
-  const duplicate = customers.find((customer) => {
-    if (!customer || customer.id === currentCustomerId) return false;
-    const existingIdentity = buildCandidateIdentity(customer);
-    const candidateIdentity = buildCandidateIdentity(candidate);
-
-    return Boolean(
-      (candidateIdentity.email && candidateIdentity.email === existingIdentity.email)
-      || (
-        candidateIdentity.phones.length > 0
-        && candidateIdentity.phones.some((phone) => existingIdentity.phones.includes(phone))
-      )
-      || (candidateIdentity.gstin && candidateIdentity.gstin === existingIdentity.gstin)
-    );
-  });
-
+  const duplicate = findDuplicateCustomer(customers, candidate, currentCustomerId);
   if (!duplicate) return "";
 
   const candidateIdentity = buildCandidateIdentity(candidate);
@@ -58,26 +58,27 @@ export const getDuplicateFieldLabel = (customers = [], candidate = {}, currentCu
   if (candidateIdentity.email && candidateIdentity.email === existingIdentity.email) return "email";
   if (candidateIdentity.phones.some((phone) => existingIdentity.phones.includes(phone))) return "phone";
   if (candidateIdentity.gstin && candidateIdentity.gstin === existingIdentity.gstin) return "GSTIN";
+  if (candidateIdentity.names.some((name) => existingIdentity.names.includes(name))) return "company name";
   return "record";
 };
 
 export const dedupeCustomers = (customers = []) => {
-  // Exclude archived customers — they have been intentionally merged/removed
   const activeCustomers = customers.filter(
-    (c) => !c.status || c.status.toUpperCase() !== 'ARCHIVED'
+    (c) => !c.status || c.status.toUpperCase() !== "ARCHIVED",
   );
 
-  const keyOwner = new Map(); // key → canonical customer
+  const keyOwner = new Map();
   const uniqueCustomers = [];
   let duplicateCount = 0;
   const duplicateRecords = [];
 
   activeCustomers.forEach((customer) => {
-    const { email, phones, gstin } = buildCandidateIdentity(customer);
+    const { email, phones, gstin, names } = buildCandidateIdentity(customer);
     const keys = [
       email ? `email:${email}` : null,
       ...phones.map((phone) => `phone:${phone}`),
       gstin ? `gstin:${gstin}` : null,
+      ...names.map((name) => `name:${name}`),
     ].filter(Boolean);
 
     const matchKey = keys.find((key) => keyOwner.has(key));

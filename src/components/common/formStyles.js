@@ -72,17 +72,19 @@ export const ZohoRow = ({ label, required, hint, children, noDivider, alignStart
         <Box
             sx={{
                 display: 'flex',
-                alignItems: alignStart ? 'flex-start' : 'center',
+                flexDirection: { xs: 'column', sm: 'row' },
+                alignItems: { xs: 'stretch', sm: alignStart ? 'flex-start' : 'center' },
                 py: 1.25,
-                minHeight: 52,
+                minHeight: { xs: 'auto', sm: 52 },
             }}
         >
             <Box
                 sx={{
-                    width: labelWidth,
-                    minWidth: labelWidth,
+                    width: { xs: '100%', sm: labelWidth },
+                    minWidth: { xs: 'auto', sm: labelWidth },
                     flexShrink: 0,
-                    pr: 2,
+                    pr: { xs: 0, sm: 2 },
+                    pb: { xs: 0.5, sm: 0 },
                     pt: alignStart ? '8px' : 0,
                 }}
             >
@@ -97,7 +99,7 @@ export const ZohoRow = ({ label, required, hint, children, noDivider, alignStart
                         gap: 0.5,
                         lineHeight: 1.5,
                         userSelect: 'none',
-                        whiteSpace: 'nowrap',
+                        whiteSpace: { xs: 'normal', sm: 'nowrap' },
                     }}
                 >
                     {label}

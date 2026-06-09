@@ -42,13 +42,13 @@ export const normalizePaymentTerms = (value) => {
   const directAlias = PAYMENT_TERMS_ALIASES[raw.toLowerCase()];
   if (directAlias) return directAlias;
 
-  const netDaysMatch = raw.match(/net[\s_\-]?(\d+)/i);
+  const netDaysMatch = raw.match(/net[\s_-]?(\d+)/i);
   if (netDaysMatch) {
     const normalized = `Net ${Number(netDaysMatch[1])}`;
     if (buildPaymentTermsDaysMap[normalized] != null) return normalized;
   }
 
-  if (/due[\s_\-]?on[\s_\-]?receipt/i.test(raw)) {
+  if (/due[\s_-]?on[\s_-]?receipt/i.test(raw)) {
     return "Due on Receipt";
   }
 
@@ -111,7 +111,7 @@ export const validateInvoiceForm = (form = {}, t) => {
     if (!Number.isFinite(qty) || qty <= 0) rowError.quantity = "Qty must be greater than 0";
 
     const rate = Number(row.rate);
-    if (!Number.isFinite(rate) || rate < 0) rowError.rate = "Rate cannot be negative";
+    if (!Number.isFinite(rate) || rate <= 0) rowError.rate = "Rate must be greater than zero";
 
     const discount = Number(row.discount || 0);
     if (!Number.isFinite(discount) || discount < 0) rowError.discount = "Discount cannot be negative";

@@ -16,7 +16,7 @@ function validateLineItems(lineItems) {
     computedTax += lineTax;
 
     if (qty <= 0) errors.push(`Line ${i + 1}: quantity must be positive`);
-    if (rate < 0) errors.push(`Line ${i + 1}: rate cannot be negative`);
+    if (rate <= 0) errors.push(`Line ${i + 1}: rate must be greater than zero`);
   }
 
   return { computedSubtotal, computedTax, computedTotal: computedSubtotal + computedTax, errors };

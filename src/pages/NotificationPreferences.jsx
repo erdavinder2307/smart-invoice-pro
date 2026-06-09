@@ -36,6 +36,14 @@ const NOTIF_GROUPS = [
       { key: "operational_alerts",     label: "Operational Alerts", hint: "Low-stock alerts and system notices" },
     ],
   },
+  {
+    id: "billing",
+    label: "Billing & Account",
+    items: [
+      { key: "billing_notifications",      label: "Billing Alerts",       hint: "Subscription, plan, and payment method notices" },
+      { key: "invoice_delivery_notifications", label: "Invoice Delivery", hint: "When invoices are sent or viewed by customers" },
+    ],
+  },
 ];
 
 const DEFAULT_PREFS = {
@@ -44,7 +52,15 @@ const DEFAULT_PREFS = {
   approval_notifications: true,
   reminder_notifications: true,
   operational_alerts:     true,
+  billing_notifications:  true,
+  invoice_delivery_notifications: true,
 };
+
+function normalizeNotificationPrefs(raw) {
+  return Object.fromEntries(
+    Object.keys(DEFAULT_PREFS).map((k) => [k, Boolean(raw?.[k] ?? DEFAULT_PREFS[k])])
+  );
+}
 
 export default function NotificationPreferences() {
   const [prefs, setPrefs] = useState(DEFAULT_PREFS);
@@ -56,9 +72,9 @@ export default function NotificationPreferences() {
     setLoading(true);
     try {
       const data = await getPreferences();
-      setPrefs({ ...DEFAULT_PREFS, ...(data.notification_preferences || {}) });
+      setPrefs(normalizeNotificationPrefs(data.notification_preferences || {}));
     } catch {
-      // Use defaults
+      setPrefs(DEFAULT_PREFS);
     } finally {
       setLoading(false);
     }
@@ -74,6 +90,8 @@ export default function NotificationPreferences() {
     setSaving(true);
     try {
       await updatePreferences({ notification_preferences: prefs });
+      const data = await getPreferences();
+      setPrefs(normalizeNotificationPrefs(data.notification_preferences || {}));
       setToast({ open: true, message: "Notification preferences saved", severity: "success" });
     } catch {
       setToast({ open: true, message: "Failed to save preferences", severity: "error" });
@@ -87,15 +105,21 @@ export default function NotificationPreferences() {
 
   return (
     <MainLayout title="Notification Preferences">
-      <Box sx={{ bgcolor: C.pageBg, minHeight: "100vh", pb: 6 }}>
-        <Container maxWidth={false} sx={{ pt: 3, px: 2.5 }}>
+      <Box sx={{ bgcolor: C.pageBg, minHeight: "100vh", pb: 6, overflowX: "hidden" }}>
+        <Container maxWidth={false} sx={{ pt: 3, px: { xs: 1.5, md: 2.5 } }}>
           <Box sx={{ minWidth: 0 }}>
             <Paper
               elevation={0}
               sx={{ bgcolor: C.white, border: `1px solid ${C.border}`, borderRadius: "4px", overflow: "hidden" }}
             >
-              {NOTIF_GROUPS.map(({ id, label, items }, groupIdx) => (
-                <Box key={id} sx={{ px: 3, ...(groupIdx > 0 ? { borderTop: `1px solid ${C.divider}` } : {}) }}>
+              {loading && (
+                <Box sx={{ px: 3, py: 2, display: "flex", alignItems: "center", gap: 1 }}>
+                  <CircularProgress size={16} />
+                  <Typography sx={{ fontSize: "0.8125rem", color: C.hint }}>Loading preferences…</Typography>
+                </Box>
+              )}
+              {!loading && NOTIF_GROUPS.map(({ id, label, items }, groupIdx) => (
+                <Box key={id} sx={{ px: { xs: 2, md: 3 }, ...(groupIdx > 0 ? { borderTop: `1px solid ${C.divider}` } : {}) }}>
                   <SectionHeader>{label}</SectionHeader>
                   {items.map(({ key, label: itemLabel, hint }, idx) => (
                     <ZohoRow key={key} label={itemLabel} hint={hint} noDivider={idx === items.length - 1}>
@@ -105,7 +129,8 @@ export default function NotificationPreferences() {
                             checked={Boolean(prefs[key])}
                             onChange={() => handleToggle(key)}
                             size="small"
-                            disabled={loading}
+                            disabled={loading || saving}
+                            inputProps={{ "data-testid": `notif-${key}` }}
                           />
                         }
                         label={
@@ -142,7 +167,6 @@ export default function NotificationPreferences() {
               </Box>
             </Paper>
 
-            {/* Status line */}
             <Box sx={{ mt: 1.5, px: 0.25 }}>
               <Typography sx={{ fontSize: "0.8125rem", color: C.hint }}>
                 {loading ? "Loading…" : `${enabledCount} of ${total} notification types enabled`}

@@ -69,7 +69,7 @@ const MainLayout = ({
                 </Box>
 
                 {/* Main Content Area */}
-                <Box sx={{ flex: 1, minWidth: 0, bgcolor: "grey.50", overflowY: "auto" }}>
+                <Box sx={{ flex: 1, minWidth: 0, bgcolor: "grey.50", overflowY: "auto", overflowX: "hidden" }}>
                     <Container maxWidth={false} sx={{ px: { xs: 1.5, md: 2.5 }, py: 2 }}>
                         {children}
                     </Container>

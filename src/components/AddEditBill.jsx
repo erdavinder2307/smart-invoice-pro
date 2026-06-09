@@ -441,8 +441,8 @@ const AddEditBill = () => {
       const rate = toNumber(item.rate, NaN);
       if (isNaN(qty) || qty <= 0)
         fieldErrors[`item_${index}_quantity`] = "Quantity must be greater than 0";
-      if (isNaN(rate) || rate < 0)
-        fieldErrors[`item_${index}_rate`] = "Rate cannot be negative";
+      if (isNaN(rate) || rate <= 0)
+        fieldErrors[`item_${index}_rate`] = "Rate must be greater than zero";
     });
 
     return fieldErrors;

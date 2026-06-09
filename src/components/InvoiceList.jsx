@@ -38,7 +38,6 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EmailIcon from "@mui/icons-material/Email";
@@ -170,6 +169,7 @@ const InvoiceList = () => {
   const [emailDialog, setEmailDialog]       = useState(EMPTY_EMAIL_DIALOG);
   const [voidDialog, setVoidDialog]         = useState(EMPTY_VOID_DIALOG);
   const [uiError, setUiError]               = useState("");
+  const [paymentConfirmOpen, setPaymentConfirmOpen] = useState(false);
 
   const debouncedSearch = useDebouncedValue(search, 300);
   const { sortBy, sortOrder, handleSort, setSort } = useTableSorting("created_at", "desc", "invoices");
@@ -267,9 +267,14 @@ const InvoiceList = () => {
       setPaymentDialog(EMPTY_PAYMENT_DIALOG);
       setUiError("");
     },
-    onError: () => {
+    onError: (err) => {
       setPaymentDialog((prev) => ({ ...prev, submitting: false }));
-      setUiError("Failed to record payment.");
+      const detailsAmount = err?.response?.data?.details?.amount;
+      setUiError(
+        detailsAmount
+          || err?.response?.data?.error
+          || "Failed to record payment.",
+      );
     },
   });
 
@@ -405,8 +410,15 @@ const InvoiceList = () => {
   };
 
   const handleSubmitPayment = () => {
+    const { invoice, amount, paymentDate, paymentMode } = paymentDialog;
+    if (!invoice || !amount) return;
+    setPaymentConfirmOpen(true);
+  };
+
+  const handleConfirmPayment = () => {
     const { invoice, amount, paymentDate, paymentMode, reference } = paymentDialog;
     if (!invoice || !amount) return;
+    setPaymentConfirmOpen(false);
     setPaymentDialog((prev) => ({ ...prev, submitting: true }));
     paymentMutation.mutate({
       id: invoice.id,
@@ -891,18 +903,6 @@ const InvoiceList = () => {
           </MenuItem>
         )}
         {status !== "Archived" && (
-          <MenuItem
-            onClick={() => {
-              bulkMutation.mutate({ action: "mark_paid", ids: [activeInvoice?.id] });
-              handleActionMenuClose();
-            }}
-            disabled={activeInvoice?.status === "Paid"}
-          >
-            <ListItemIcon><CheckCircleIcon fontSize="small" color="success" /></ListItemIcon>
-            <ListItemText>Mark as Paid</ListItemText>
-          </MenuItem>
-        )}
-        {status !== "Archived" && (
           <MenuItem onClick={() => handleOpenEmail(activeInvoice)}>
             <ListItemIcon><EmailIcon fontSize="small" color="primary" /></ListItemIcon>
             <ListItemText>Send Invoice</ListItemText>
@@ -991,7 +991,13 @@ const InvoiceList = () => {
             value={paymentDialog.amount}
             onChange={(e) => setPaymentDialog((d) => ({ ...d, amount: e.target.value }))}
             fullWidth size="small" required autoFocus
-            inputProps={{ min: 0.01, step: "0.01" }}
+            placeholder={`Max ${formatAmount(paymentDialog.invoice?.balance_due || 0)}`}
+            helperText={`Maximum: ${formatAmount(paymentDialog.invoice?.balance_due || 0)}`}
+            inputProps={{
+              min: 0.01,
+              max: Number(paymentDialog.invoice?.balance_due) || undefined,
+              step: "0.01",
+            }}
             InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }}
           />
           <TextField
@@ -1031,6 +1037,22 @@ const InvoiceList = () => {
             sx={{ textTransform: "none", boxShadow: "none" }}
           >
             {paymentDialog.submitting ? "Saving…" : "Record Payment"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={paymentConfirmOpen} onClose={() => setPaymentConfirmOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Confirm Payment</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            Record payment of {formatAmount(Number(paymentDialog.amount) || 0)} via{" "}
+            {paymentDialog.paymentMode} on {paymentDialog.paymentDate}?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPaymentConfirmOpen(false)} sx={{ textTransform: "none" }}>Cancel</Button>
+          <Button variant="contained" color="success" onClick={handleConfirmPayment} sx={{ textTransform: "none" }}>
+            Confirm
           </Button>
         </DialogActions>
       </Dialog>

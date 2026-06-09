@@ -52,7 +52,6 @@ const BankReconciliation = () => {
   const [uploading, setUploading] = useState(false);
   const [autoMatching, setAutoMatching] = useState(false);
   const [aiMatching, setAiMatching] = useState(false);
-  const [aiResult, setAiResult] = useState(null);   // { newly_matched, processed }
   const [toast, setToast] = useState({ open: false, msg: '', severity: 'success' });
   const [importNotice, setImportNotice] = useState(null);
 
@@ -177,10 +176,8 @@ const BankReconciliation = () => {
   // ── AI Match (Claude-powered) ────────────────────────────────────────────
   const handleAiMatch = async () => {
     setAiMatching(true);
-    setAiResult(null);
     try {
       const res = await axios.post(createApiUrl('/api/reconciliation/ai-match'), { confidence_threshold: 0.80 });
-      setAiResult(res.data);
       showToast(`AI matched ${res.data.newly_matched} of ${res.data.processed} transactions`);
       loadTransactions();
     } catch (err) {

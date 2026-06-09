@@ -252,6 +252,7 @@ const PhoneInput = ({ codeField, codeVal, numField, numVal, onChange, placeholde
       onChange={onChange}
       size="small"
       placeholder={placeholder}
+      inputProps={{ maxLength: 15 }}
       error={!!error}
       helperText={helperText}
       sx={{
@@ -598,9 +599,17 @@ const AddEditCustomer = () => {
   const validate = () => {
     const e = {};
     if (!form.display_name.trim()) e.display_name = 'Required';
-    if (!form.email.trim()) e.email = 'Required';
-    else if (!isValidEmail(form.email)) e.email = 'Invalid email address';
-    if (!form.phone.trim()) e.phone = 'Required';
+    if (form.company_name.trim().length > 100) {
+      e.company_name = 'Company name cannot exceed 100 characters';
+    }
+    if (!form.email.trim() && !form.phone.trim()) {
+      e.phone = 'At least one of email or phone is required';
+    }
+    if (form.email.trim() && !isValidEmail(form.email)) e.email = 'Invalid email address';
+    if (form.phone.trim()) {
+      const digits = form.phone.replace(/\D/g, '');
+      if (digits.length > 15) e.phone = 'Phone number cannot exceed 15 digits';
+    }
     if (form.customer_type === 'business' && !form.company_name.trim()) e.company_name = 'Required for business customers';
     if (!isValidGST(form.gst_number)) e.gst_number = 'Invalid GST format (e.g. 27AABCU9603R1ZX)';
     if (!isValidPAN(form.pan)) e.pan = 'Invalid PAN format (e.g. AAACI2405N)';
@@ -895,6 +904,7 @@ const AddEditCustomer = () => {
                       onChange={handleChange}
                       size="small"
                       fullWidth
+                      inputProps={{ maxLength: 100 }}
                       error={!!errors.company_name}
                       helperText={errors.company_name}
                       sx={fieldSx}

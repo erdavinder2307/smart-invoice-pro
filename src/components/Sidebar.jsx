@@ -31,6 +31,7 @@ import LogoutIcon from "@mui/icons-material/Logout";
 
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
+import { useMe } from "../context/MeContext";
 import { useSidebar } from "../context/SidebarContext";
 import { NAV_CONFIG } from "../config/navConfig";
 import Logo from "./common/Logo";
@@ -47,6 +48,7 @@ const Sidebar = () => {
   const theme = useTheme();
   const { t } = useTranslation();
   const { logout, isAdmin } = useAuth();
+  const { displayName: meDisplayName, initials: meInitials } = useMe();
   const {
     isCollapsed,
     toggleSidebar,
@@ -147,16 +149,15 @@ const Sidebar = () => {
 
   // ── User info ─────────────────────────────────────────────────────────────
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-  const displayName = storedUser.name || storedUser.username || t('sidebar.adminUser');
-  const getInitials = () => {
+  const displayName = meDisplayName || storedUser.name || storedUser.username || t('sidebar.adminUser');
+  const initials = meInitials || (() => {
     if (!displayName) return 'U';
-    const parts = displayName.trim().split(/\s+/).filter(p => p.length > 0);
+    const parts = displayName.trim().split(/\s+/).filter((p) => p.length > 0);
     if (parts.length >= 2) {
       return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
     }
     return parts[0].charAt(0).toUpperCase();
-  };
-  const initials = getInitials();
+  })();
 
   // ── Logout handlers ───────────────────────────────────────────────────────
   const handleLogoutClick = () => setShowLogoutDialog(true);

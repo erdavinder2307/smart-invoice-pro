@@ -1,5 +1,23 @@
 # Solidev Books — QA Agent Operating Instructions
 
+## Process documentation (canonical)
+
+Human and agent **QA standards** (severity, templates, workflow checklists, execution process) live at:
+
+**`../../docs/qa/`** (repo root: `invoicing/docs/qa/`)
+
+| Document | Use |
+|----------|-----|
+| `QA_SEVERITY_MATRIX.md` | Classify every defect (bookkeeping-first) |
+| `QA_RESULTS_TEMPLATE.md` | Bug and test result format |
+| `QA_WORKFLOW_CHECKLIST.md` | What to verify per business workflow |
+| `QA_TEST_EXECUTION_PROCESS.md` | 11-step manual + agent execution |
+| `QA_TESTING_GUIDELINES.md` | Principles and test types |
+
+File bugs and reports using those templates; align `npm run qa:bug --` fields with `qa/templates/bug-report.md`.
+
+---
+
 ## Business Objective
 
 Enable autonomous AI agents to execute bookkeeping workflows in a real Chrome browser, validate operational finance behavior, capture evidence, and produce regression-ready artifacts.

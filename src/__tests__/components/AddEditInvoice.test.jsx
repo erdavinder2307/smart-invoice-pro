@@ -153,10 +153,12 @@ describe('AddEditInvoice', () => {
 
     await screen.findByText('New Invoice');
 
-    // Set required fields: customer and at least one item with a name
+    // Set required fields: customer and at least one item with a name and rate
     fireEvent.change(screen.getByTestId('customer-select'), { target: { name: 'customer_id', value: 'cust-1' } });
     const itemInput = screen.getAllByPlaceholderText('Type or click to select an item.')[0];
     fireEvent.change(itemInput, { target: { value: 'Test Item' } });
+    const rateInput = screen.getAllByDisplayValue('0')[0];
+    fireEvent.change(rateInput, { target: { value: '100' } });
 
     createInvoice.mockResolvedValue({ id: 'inv-1' });
     fireEvent.click(screen.getByRole('button', { name: 'Save and Send' }));
@@ -210,10 +212,12 @@ describe('AddEditInvoice', () => {
 
     await screen.findByText('New Invoice');
 
-    // Set required fields: customer and at least one item with a name
+    // Set required fields: customer and at least one item with a name and rate
     fireEvent.change(screen.getByTestId('customer-select'), { target: { name: 'customer_id', value: 'cust-1' } });
     const itemInput = screen.getAllByPlaceholderText('Type or click to select an item.')[0];
     fireEvent.change(itemInput, { target: { value: 'Test Item' } });
+    const rateInput = screen.getAllByDisplayValue('0')[0];
+    fireEvent.change(rateInput, { target: { value: '100' } });
 
     let resolveCreate;
     createInvoice.mockImplementation(
@@ -282,6 +286,8 @@ describe('AddEditInvoice', () => {
     fireEvent.change(screen.getByTestId('customer-select'), { target: { name: 'customer_id', value: 'cust-1' } });
     const itemInput = screen.getAllByPlaceholderText('Type or click to select an item.')[0];
     fireEvent.change(itemInput, { target: { value: 'Test Item' } });
+    const rateInput = screen.getAllByDisplayValue('0')[0];
+    fireEvent.change(rateInput, { target: { value: '100' } });
 
     createInvoice.mockResolvedValue({ id: 'inv-1' });
     fireEvent.click(screen.getByRole('button', { name: 'Save as Draft' }));

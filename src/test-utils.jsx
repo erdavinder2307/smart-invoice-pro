@@ -98,6 +98,21 @@ const mockMeValue = {
   initials: 'TU',
 };
 
+const mockOrgGstValue = {
+  loading: false,
+  error: null,
+  gst_mode: 'FULL_GST',
+  gst_registration_type: 'regular',
+  gst_enabled: true,
+  gstin: '',
+  seller_state: '',
+  isGstEnabled: true,
+  isSalesTaxAllowed: true,
+  isComposition: false,
+  isUnregistered: false,
+  refresh: jest.fn(),
+};
+
 // ── Mock context modules ─────────────────────────────────────────────────────
 
 jest.mock('./context/AuthContext', () => ({
@@ -139,19 +154,7 @@ jest.mock('./context/SidebarContext', () => ({
 }));
 
 jest.mock('./context/MeContext', () => ({
-  useMe: jest.fn(() => ({
-    me: {
-      full_name: 'Test User',
-      display_name: 'Test User',
-      email: 'test@example.com',
-      role: 'Admin',
-    },
-    meLoading: false,
-    meError: null,
-    refreshMe: jest.fn(),
-    displayName: 'Test User',
-    initials: 'TU',
-  })),
+  useMe: jest.fn(() => mockMeValue),
   MeProvider: ({ children }) => children,
 }));
 
@@ -167,6 +170,43 @@ jest.mock('./context/DashboardFilterContext', () => ({
   })),
   DashboardFilterProvider: ({ children }) => children,
 }));
+
+jest.mock('./context/OrgGstContext', () => ({
+  ...jest.requireActual('./context/OrgGstContext'),
+  useOrgGst: jest.fn(() => mockOrgGstValue),
+  OrgGstProvider: ({ children }) => children,
+}));
+
+function resetMockHook(hook, value) {
+  if (hook && typeof hook.mockReturnValue === 'function') {
+    hook.mockReturnValue(value);
+  }
+}
+
+/** Reset all context hook mocks after clearAllMocks/resetAllMocks in individual tests. */
+export function resetContextMocks() {
+  const { useAuth } = require('./context/AuthContext');
+  const { usePermission } = require('./context/PermissionContext');
+  const { useBranding } = require('./context/BrandingContext');
+  const { useNotifications } = require('./context/NotificationContext');
+  const { useInvoicePreferences } = require('./context/InvoicePreferencesContext');
+  const { useSidebar } = require('./context/SidebarContext');
+  const { useMe } = require('./context/MeContext');
+  const { useOrgGst } = require('./context/OrgGstContext');
+
+  resetMockHook(useAuth, mockAuthValue);
+  resetMockHook(usePermission, mockPermissionValue);
+  resetMockHook(useBranding, mockBrandingValue);
+  resetMockHook(useNotifications, mockNotificationsValue);
+  resetMockHook(useInvoicePreferences, mockInvoicePreferencesValue);
+  resetMockHook(useSidebar, mockSidebarValue);
+  resetMockHook(useMe, mockMeValue);
+  resetMockHook(useOrgGst, mockOrgGstValue);
+}
+
+beforeEach(() => {
+  resetContextMocks();
+});
 
 // ── Theme ────────────────────────────────────────────────────────────────────
 
@@ -204,6 +244,8 @@ export function renderWithProviders(
     ...renderOptions
   } = {}
 ) {
+  resetContextMocks();
+
   // Apply overrides to the mocked hooks when provided
   if (authValue) {
     const { useAuth } = require('./context/AuthContext');

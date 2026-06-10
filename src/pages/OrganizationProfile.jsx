@@ -37,6 +37,7 @@ import {
   updateOrgProfile,
   uploadOrgLogo,
 } from "../services/organizationProfileService";
+import { resolveMediaUrl } from "../utils/mediaUrl";
 
 // ── Static dropdown options ───────────────────────────────────────────────────
 const INDUSTRIES = [
@@ -72,6 +73,19 @@ const COUNTRIES = [
   "South Africa",
   "Other",
 ];
+
+// Section content padding — keeps dividers/footer from touching field edges
+const sectionBoxSx = {
+  px: 3,
+  pt: 0,
+  pb: 3,
+  borderTop: `1px solid ${C.divider}`,
+};
+
+const sectionBoxSxLast = {
+  ...sectionBoxSx,
+  pb: 4,
+};
 
 // ── Section header (matches AddEditExpense pattern) ───────────────────────────
 function SectionHeader({ children }) {
@@ -445,7 +459,7 @@ export default function OrganizationProfile() {
         setForm(loadedForm);
         savedForm.current = loadedForm;
         savedLogoPreview.current = data.logo_url || null;
-        if (data.logo_url) setLogoPreview(data.logo_url);
+        if (data.logo_url) setLogoPreview(resolveMediaUrl(data.logo_url));
       } catch {
         setToast({
           open: true,
@@ -476,7 +490,11 @@ export default function OrganizationProfile() {
     if (savedForm.current) setForm(savedForm.current);
     setErrors({});
     setLogoFile(null);
-    setLogoPreview(savedLogoPreview.current);
+    setLogoPreview(
+      savedLogoPreview.current
+        ? resolveMediaUrl(savedLogoPreview.current)
+        : null
+    );
     setLogoError("");
     pendingFile.current = null;
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -499,8 +517,8 @@ export default function OrganizationProfile() {
       setLogoError("Only PNG, JPG, GIF, or WebP images are allowed.");
       return;
     }
-    if (file.size > 1 * 1024 * 1024) {
-      setLogoError("Logo must be smaller than 1 MB.");
+    if (file.size > 10 * 1024 * 1024) {
+      setLogoError("Logo must be smaller than 10 MB.");
       return;
     }
 
@@ -567,8 +585,11 @@ export default function OrganizationProfile() {
       const updatedForm = { ...form, logo_url: saved.logo_url || logo_url };
       setForm(updatedForm);
       savedForm.current = updatedForm;
-      savedLogoPreview.current = saved.logo_url || logo_url || null;
-      if (saved.logo_url) setLogoPreview(null); // server URL — don't need object URL
+      const persistedLogoUrl = saved.logo_url || logo_url || "";
+      savedLogoPreview.current = persistedLogoUrl || null;
+      setLogoPreview(
+        persistedLogoUrl ? resolveMediaUrl(persistedLogoUrl) : null
+      );
       setLogoFile(null);
       pendingFile.current = null;
       setToast({
@@ -621,12 +642,12 @@ export default function OrganizationProfile() {
                 }}
               >
                 {/* ══ LOGO ═══════════════════════════════════════════════════ */}
-                <Box sx={{ px: 3 }}>
+                <Box sx={{ px: 3, pb: 2.5 }}>
                   <SectionHeader>Logo</SectionHeader>
 
                   <ZohoRow
                     label="Organization Logo"
-                    hint="PNG, JPG, GIF or WebP. Max 1 MB."
+                    hint="PNG, JPG, GIF or WebP. Max 10 MB."
                     noDivider
                     alignStart
                   >
@@ -749,12 +770,7 @@ export default function OrganizationProfile() {
                 </Box>
 
                 {/* ══ ORGANIZATION DETAILS ═══════════════════════════════════ */}
-                <Box
-                  sx={{
-                    px: 3,
-                    borderTop: `1px solid ${C.divider}`,
-                  }}
-                >
+                <Box sx={sectionBoxSx}>
                   <SectionHeader>Organization Details</SectionHeader>
 
                   <FormLayout>
@@ -831,12 +847,7 @@ export default function OrganizationProfile() {
                 </Box>
 
                 {/* ══ ADDRESS ════════════════════════════════════════════════ */}
-                <Box
-                  sx={{
-                    px: 3,
-                    borderTop: `1px solid ${C.divider}`,
-                  }}
-                >
+                <Box sx={sectionBoxSx}>
                   <SectionHeader>Address</SectionHeader>
 
                   <FormLayout>
@@ -895,12 +906,7 @@ export default function OrganizationProfile() {
                 </Box>
 
                 {/* ══ CONTACT INFO ═══════════════════════════════════════════ */}
-                <Box
-                  sx={{
-                    px: 3,
-                    borderTop: `1px solid ${C.divider}`,
-                  }}
-                >
+                <Box sx={sectionBoxSxLast}>
                   <SectionHeader>Contact Info</SectionHeader>
 
                   <FormLayout>

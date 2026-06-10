@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useOrgGst } from '../context/OrgGstContext';
 import axios from "axios";
 import { createApiUrl } from "../config/api";
 import {
@@ -66,6 +67,7 @@ const AddEditSalesOrder = () => {
   const { id } = useParams();
   const navigate = useNavigate();  const { t } = useTranslation();  const location = useLocation();
   const soId = id;
+  const { isSalesTaxAllowed, isComposition } = useOrgGst();
   const [form, setForm] = useState(initialForm);
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -77,6 +79,20 @@ const AddEditSalesOrder = () => {
     context: { customers },
     fillEmptyOnly: true,
   });
+
+  // Enforce org GST mode
+  useEffect(() => {
+    if (!isSalesTaxAllowed && form.is_gst_applicable) {
+      setForm((prev) => ({
+        ...prev,
+        is_gst_applicable: false,
+        cgst_amount: 0,
+        sgst_amount: 0,
+        igst_amount: 0,
+        total_tax: 0,
+      }));
+    }
+  }, [isSalesTaxAllowed, form.is_gst_applicable]);
 
   useEffect(() => {
     // Fetch customers
@@ -324,17 +340,25 @@ const AddEditSalesOrder = () => {
               </Box>
 
               <ZohoRow label="GST Applicable" noDivider>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      name="is_gst_applicable"
-                      checked={form.is_gst_applicable}
-                      onChange={handleChange}
-                      color="primary"
-                    />
-                  }
-                  label=""
-                />
+                {!isSalesTaxAllowed ? (
+                  <Alert severity={isComposition ? "warning" : "info"} sx={{ py: 0.5, fontSize: '0.75rem' }}>
+                    {isComposition
+                      ? "Composition scheme — cannot charge GST on sales."
+                      : "Unregistered — GST not applicable."}
+                  </Alert>
+                ) : (
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        name="is_gst_applicable"
+                        checked={form.is_gst_applicable}
+                        onChange={handleChange}
+                        color="primary"
+                      />
+                    }
+                    label=""
+                  />
+                )}
               </ZohoRow>
 
               {form.is_gst_applicable && (

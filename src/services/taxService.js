@@ -3,8 +3,15 @@ import { createApiUrl } from '../config/api';
 
 // ── Tax Rates ─────────────────────────────────────────────────────────────────
 
-export const getTaxRates = async () => {
-  const response = await axios.get(createApiUrl('/api/settings/taxes'));
+/**
+ * @param {boolean} forSales - pass true to get only rates available for sales documents.
+ *   Returns empty array for Composition/Unregistered orgs (no GST on sales).
+ */
+export const getTaxRates = async (forSales = false) => {
+  const url = forSales
+    ? createApiUrl('/api/settings/taxes?for_sales=true')
+    : createApiUrl('/api/settings/taxes');
+  const response = await axios.get(url);
   return response.data;
 };
 

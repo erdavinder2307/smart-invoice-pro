@@ -38,6 +38,7 @@ export const NAV_CONFIG = {
     labelKey: "sidebarNav.items",
     icon: <Inventory2Icon />,
     path: "/products",
+    permission: { module: "products", action: "view" },
   },
   sales: {
     id: "sales",
@@ -46,10 +47,10 @@ export const NAV_CONFIG = {
     icon: <PointOfSaleIcon />,
     expandable: true,
     children: [
-      { id: "customers", label: "Customers", labelKey: "sidebarNav.customers", icon: <PeopleIcon />, path: "/customers" },
-      { id: "quotes", label: "Quotes", labelKey: "sidebarNav.quotes", icon: <RequestQuoteIcon />, path: "/quotes" },
-      { id: "invoices", label: "Invoices", labelKey: "sidebarNav.invoices", icon: <ReceiptIcon />, path: "/invoices" },
-      { id: "recurring", label: "Recurring Invoices", labelKey: "sidebarNav.recurringInvoices", icon: <EventRepeatIcon />, path: "/recurring-profiles" },
+      { id: "customers", label: "Customers", labelKey: "sidebarNav.customers", icon: <PeopleIcon />, path: "/customers", permission: { module: "customers", action: "view" } },
+      { id: "quotes", label: "Quotes", labelKey: "sidebarNav.quotes", icon: <RequestQuoteIcon />, path: "/quotes", permission: { module: "quotes", action: "view" } },
+      { id: "invoices", label: "Invoices", labelKey: "sidebarNav.invoices", icon: <ReceiptIcon />, path: "/invoices", permission: { module: "invoices", action: "view" } },
+      { id: "recurring", label: "Recurring Invoices", labelKey: "sidebarNav.recurringInvoices", icon: <EventRepeatIcon />, path: "/recurring-profiles", permission: { module: "invoices", action: "view" } },
     ],
   },
   purchases: {
@@ -59,9 +60,9 @@ export const NAV_CONFIG = {
     icon: <ShoppingCartIcon />,
     expandable: true,
     children: [
-      { id: "vendors", label: "Vendors", labelKey: "sidebarNav.vendors", icon: <LocalShippingIcon />, path: "/vendors" },
-      { id: "purchase-orders", label: "Purchase Orders", labelKey: "sidebarNav.purchaseOrders", icon: <ShoppingCartIcon />, path: "/purchase-orders" },
-      { id: "bills", label: "Bills", labelKey: "sidebarNav.bills", icon: <AssignmentIcon />, path: "/bills" },
+      { id: "vendors", label: "Vendors", labelKey: "sidebarNav.vendors", icon: <LocalShippingIcon />, path: "/vendors", permission: { module: "vendors", action: "view" } },
+      { id: "purchase-orders", label: "Purchase Orders", labelKey: "sidebarNav.purchaseOrders", icon: <ShoppingCartIcon />, path: "/purchase-orders", permission: { module: "purchase_orders", action: "view" } },
+      { id: "bills", label: "Bills", labelKey: "sidebarNav.bills", icon: <AssignmentIcon />, path: "/bills", permission: { module: "bills", action: "view" } },
     ],
   },
   banking: {
@@ -70,8 +71,9 @@ export const NAV_CONFIG = {
     labelKey: "sidebarNav.banking",
     icon: <AccountBalanceIcon />,
     expandable: true,
+    permission: { module: "banking", action: "view" },
     children: [
-      { id: "bank-accounts", label: "Bank Accounts", labelKey: "sidebarNav.bankAccounts", icon: <AccountBalanceIcon />, path: "/bank-accounts" },
+      { id: "bank-accounts", label: "Bank Accounts", labelKey: "sidebarNav.bankAccounts", icon: <AccountBalanceIcon />, path: "/bank-accounts", permission: { module: "banking", action: "view" } },
     ],
   },
   reports: {
@@ -80,8 +82,9 @@ export const NAV_CONFIG = {
     labelKey: "sidebarNav.reports",
     icon: <AssessmentIcon />,
     path: "/reports",
+    permission: { module: "reports", action: "view" },
   },
-  // ── My Account (visible to all users) ────────────────────────────────────
+  // ── My Account (visible to all authenticated users) ───────────────────────
   myAccount: {
     id: "myAccount",
     label: "My Account",
@@ -95,24 +98,24 @@ export const NAV_CONFIG = {
       { id: "security",         label: "Security",         labelKey: "accountNav.security",         icon: <LockOutlinedIcon sx={{ fontSize: 20 }} />,      path: "/settings/security" },
     ],
   },
-  // ── Organisation Settings (admin only) ───────────────────────────────────
+  // ── Organisation Settings — section shows if ANY child is accessible ────────
   settings: {
     id: "settings",
     label: "Settings",
     labelKey: "sidebarNav.settings",
     icon: <SettingsIcon />,
-    adminOnly: true,
+    // No top-level permission — visibility driven by children (see renderExpandableSection)
     expandable: true,
     children: [
-      { id: "org-profile",          label: "Organization Profile", labelKey: "settingsNav.organization",      icon: <BusinessIcon sx={{ fontSize: 20 }} />,           path: "/settings/organization-profile" },
-      { id: "branding",             label: "Branding",             labelKey: "settingsNav.branding",           icon: <BrushIcon sx={{ fontSize: 20 }} />,              path: "/settings/branding" },
-      { id: "invoice-preferences",  label: "Invoice Preferences",  labelKey: "settingsNav.invoicePreferences", icon: <DescriptionIcon sx={{ fontSize: 20 }} />,        path: "/settings/invoice-preferences" },
-      { id: "taxes",                label: "Taxes",                labelKey: "settingsNav.taxes",              icon: <ReceiptLongIcon sx={{ fontSize: 20 }} />,        path: "/settings/taxes" },
-      { id: "users",                label: "User Management",      labelKey: "settingsNav.userManagement",     icon: <PeopleIcon sx={{ fontSize: 20 }} />,             path: "/settings/users" },
-      { id: "roles",                label: "Roles",                labelKey: "settingsNav.roles",              icon: <AdminPanelSettingsIcon sx={{ fontSize: 20 }} />, path: "/settings/roles" },
-      { id: "automation",           label: "Automation",           labelKey: "settingsNav.automation",         icon: <NotificationsActiveIcon sx={{ fontSize: 20 }} />, path: "/settings/automation" },
-      { id: "integrations",         label: "Integrations",         labelKey: "settingsNav.integrations",       icon: <ExtensionIcon sx={{ fontSize: 20 }} />,          path: "/settings/integrations" },
-      { id: "audit-log",            label: "Audit Log",            labelKey: "settingsNav.auditLog",           icon: <HistoryIcon sx={{ fontSize: 20 }} />,            path: "/settings/audit-log" },
+      { id: "org-profile",          label: "Organization Profile", labelKey: "settingsNav.organization",      icon: <BusinessIcon sx={{ fontSize: 20 }} />,           path: "/settings/organization-profile", permission: { module: "settings",        action: "view" } },
+      { id: "branding",             label: "Branding",             labelKey: "settingsNav.branding",           icon: <BrushIcon sx={{ fontSize: 20 }} />,              path: "/settings/branding",             permission: { module: "settings",        action: "view" } },
+      { id: "invoice-preferences",  label: "Invoice Preferences",  labelKey: "settingsNav.invoicePreferences", icon: <DescriptionIcon sx={{ fontSize: 20 }} />,        path: "/settings/invoice-preferences",  permission: { module: "settings",        action: "view" } },
+      { id: "taxes",                label: "Taxes",                labelKey: "settingsNav.taxes",              icon: <ReceiptLongIcon sx={{ fontSize: 20 }} />,        path: "/settings/taxes",                permission: { module: "settings",        action: "view" } },
+      { id: "users",                label: "User Management",      labelKey: "settingsNav.userManagement",     icon: <PeopleIcon sx={{ fontSize: 20 }} />,             path: "/settings/users",                permission: { module: "user_management", action: "view" } },
+      { id: "roles",                label: "Roles",                labelKey: "settingsNav.roles",              icon: <AdminPanelSettingsIcon sx={{ fontSize: 20 }} />, path: "/settings/roles",                permission: { module: "roles",           action: "view" } },
+      { id: "automation",           label: "Automation",           labelKey: "settingsNav.automation",         icon: <NotificationsActiveIcon sx={{ fontSize: 20 }} />, path: "/settings/automation",          permission: { module: "automation",      action: "view" } },
+      { id: "integrations",         label: "Integrations",         labelKey: "settingsNav.integrations",       icon: <ExtensionIcon sx={{ fontSize: 20 }} />,          path: "/settings/integrations",         permission: { module: "integrations",    action: "view" } },
+      { id: "audit-log",            label: "Audit Log",            labelKey: "settingsNav.auditLog",           icon: <HistoryIcon sx={{ fontSize: 20 }} />,            path: "/settings/audit-log",            permission: { module: "audit_logs",      action: "view" } },
     ],
   },
 };

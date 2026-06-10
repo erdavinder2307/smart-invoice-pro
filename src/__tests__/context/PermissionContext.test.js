@@ -1,3 +1,5 @@
+jest.unmock('../../context/PermissionContext');
+
 import React from 'react';
 import { render, screen, act } from '@testing-library/react';
 import { PermissionProvider, usePermission, PERMISSION_MODULES, MODULE_LABELS } from '../../context/PermissionContext';
@@ -92,7 +94,8 @@ describe('PermissionContext', () => {
   it('exports PERMISSION_MODULES with expected modules', () => {
     const expectedModules = [
       'invoices', 'quotes', 'customers', 'products', 'vendors',
-      'purchase_orders', 'bills', 'expenses', 'reports', 'settings',
+      'purchase_orders', 'bills', 'expenses', 'banking', 'reports', 'settings',
+      'user_management', 'roles', 'audit_logs', 'automation', 'integrations',
     ];
     expect(Object.keys(PERMISSION_MODULES)).toEqual(expectedModules);
   });

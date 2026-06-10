@@ -5,6 +5,7 @@ import {
   Alert,
   Box,
   Button,
+  Chip,
   CircularProgress,
   Container,
   Dialog,
@@ -32,6 +33,7 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 
 import { useAuth } from "../context/AuthContext";
 import { useBranding, BRANDING_DEFAULTS } from "../context/BrandingContext";
+import { resolveMediaUrl } from "../utils/mediaUrl";
 import {
   C,
   ZohoRow,
@@ -42,6 +44,7 @@ import {
 import FormInput from "../components/common/FormInput";
 import { getBranding, updateBranding } from "../services/brandingService";
 import { uploadOrgLogo } from "../services/organizationProfileService";
+import { createApiUrl } from "../config/api";
 
 // ── Section header ────────────────────────────────────────────────────────────
 function SectionHeader({ children }) {
@@ -239,7 +242,7 @@ function InvoicePreview({ primary, secondary, accent, orgName, logoUrl, showLogo
         {/* Footer */}
         <Box sx={{ mt: 1.5, pt: 1, borderTop: `1px solid ${C.divider}` }}>
           <Typography sx={{ fontSize: "0.5625rem", color: C.hint, textAlign: "center" }}>
-            Thank you for your business · Solidev Books
+            Thank you for your business · {name}
           </Typography>
         </Box>
       </Box>
@@ -534,6 +537,8 @@ export default function BrandingSettings() {
   const [cropOpen, setCropOpen] = useState(false);
   const [cropSrc, setCropSrc] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewPdfUrl, setPreviewPdfUrl] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   // Admin guard
   useEffect(() => {
@@ -559,7 +564,7 @@ export default function BrandingSettings() {
         setForm(loadedForm);
         savedForm.current = loadedForm;
         savedLogoPreview.current = data.logo_url || null;
-        if (data.logo_url) setLogoPreview(data.logo_url);
+        if (data.logo_url) setLogoPreview(resolveMediaUrl(data.logo_url));
       } catch {
         setToast({ open: true, message: "Failed to load branding settings.", severity: "error" });
       } finally {
@@ -567,6 +572,35 @@ export default function BrandingSettings() {
       }
     })();
   }, [isAdmin]);
+
+  // Load PDF preview when drawer opens
+  useEffect(() => {
+    if (!previewOpen) {
+      if (previewPdfUrl) {
+        URL.revokeObjectURL(previewPdfUrl);
+        setPreviewPdfUrl(null);
+      }
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      setPreviewLoading(true);
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch(createApiUrl("/api/settings/branding/preview?doc_type=invoice"), {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error("Preview unavailable");
+        const blob = await res.blob();
+        if (!cancelled) setPreviewPdfUrl(URL.createObjectURL(blob));
+      } catch {
+        // falls back to the JS mock below
+      } finally {
+        if (!cancelled) setPreviewLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [previewOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Field helpers ─────────────────────────────────────────────────────────
   const setColor = useCallback((field, value) => {
@@ -655,7 +689,11 @@ export default function BrandingSettings() {
       const updatedForm = { ...form };
       if (logo_url) updatedForm.logo_url = logo_url;
       savedForm.current = updatedForm;
-      savedLogoPreview.current = logo_url || null;
+      const persistedLogoUrl = (saved.logo_url || logo_url || "").trim();
+      savedLogoPreview.current = persistedLogoUrl || null;
+      setLogoPreview(
+        persistedLogoUrl ? resolveMediaUrl(persistedLogoUrl) : null
+      );
 
       setToast({ open: true, message: "Branding updated successfully.", severity: "success" });
     } catch (err) {
@@ -669,7 +707,11 @@ export default function BrandingSettings() {
   const handleDiscard = () => {
     if (savedForm.current) setForm(savedForm.current);
     setLogoFile(null);
-    setLogoPreview(savedLogoPreview.current);
+    setLogoPreview(
+      savedLogoPreview.current
+        ? resolveMediaUrl(savedLogoPreview.current)
+        : null
+    );
     setLogoError("");
     pendingFile.current = null;
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -894,17 +936,31 @@ export default function BrandingSettings() {
 
                   {/* ══ EMAIL SETTINGS ══════════════════════════════════════ */}
                   <Box sx={{ px: 3, borderTop: `1px solid ${C.divider}` }}>
-                    <SectionHeader>Email Header</SectionHeader>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
+                      <SectionHeader sx={{ mb: 0 }}>Email Header</SectionHeader>
+                      <Chip
+                        label="Coming Soon"
+                        size="small"
+                        sx={{
+                          fontSize: "0.7rem",
+                          height: 20,
+                          bgcolor: "#FEF3C7",
+                          color: "#92400E",
+                          fontWeight: 600,
+                        }}
+                      />
+                    </Box>
 
                     <FormInput
                       label="Email Header Logo URL"
-                      hint="Override the logo URL used in outgoing invoice emails. Leave blank to use the organization logo."
+                      hint="A custom logo URL for email headers. This feature is in development — the value is saved but not yet applied to outgoing emails."
                       noDivider
                       value={form.email_header_logo_url}
                       onChange={(e) =>
                         setForm((prev) => ({ ...prev, email_header_logo_url: e.target.value }))
                       }
                       placeholder="https://cdn.example.com/logo.png"
+                      disabled
                     />
                   </Box>
 
@@ -989,22 +1045,48 @@ export default function BrandingSettings() {
         anchor="right"
         open={previewOpen}
         onClose={() => setPreviewOpen(false)}
-        PaperProps={{ sx: { width: { xs: "100%", md: "75%" }, p: 3, bgcolor: C.pageBg } }}
+        PaperProps={{ sx: { width: { xs: "100%", md: "70%", lg: "55%" }, p: 3, bgcolor: C.pageBg, display: "flex", flexDirection: "column" } }}
       >
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-          <Typography sx={{ fontWeight: 600, fontSize: "1rem" }}>Invoice Preview</Typography>
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2, flexShrink: 0 }}>
+          <Box>
+            <Typography sx={{ fontWeight: 600, fontSize: "1rem" }}>Invoice Preview</Typography>
+            <Typography sx={{ fontSize: "0.75rem", color: C.hint }}>
+              {previewPdfUrl
+                ? "Rendered by the same engine as production PDFs."
+                : "Save settings first, then reopen to see updated branding."}
+            </Typography>
+          </Box>
           <IconButton onClick={() => setPreviewOpen(false)} size="small">
             <CloseIcon />
           </IconButton>
         </Box>
-        <InvoicePreview
-          primary={form.primary_color}
-          secondary={form.secondary_color}
-          accent={form.accent_color}
-          orgName={ctxBranding.organization_name}
-          logoUrl={logoPreview || ctxBranding.logo_url}
-          showLogo={form.invoice_template_settings.show_logo}
-        />
+
+        {previewLoading && (
+          <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", flex: 1 }}>
+            <CircularProgress size={32} />
+          </Box>
+        )}
+
+        {!previewLoading && previewPdfUrl && (
+          <Box sx={{ flex: 1, border: `1px solid ${C.border}`, borderRadius: 1, overflow: "hidden" }}>
+            <iframe
+              src={previewPdfUrl}
+              title="Invoice PDF Preview"
+              style={{ width: "100%", height: "100%", border: "none", minHeight: 600 }}
+            />
+          </Box>
+        )}
+
+        {!previewLoading && !previewPdfUrl && (
+          <InvoicePreview
+            primary={form.primary_color}
+            secondary={form.secondary_color}
+            accent={form.accent_color}
+            orgName={ctxBranding.organization_name}
+            logoUrl={logoPreview || ctxBranding.logo_url}
+            showLogo={form.invoice_template_settings.show_logo}
+          />
+        )}
       </Drawer>
 
       <Snackbar

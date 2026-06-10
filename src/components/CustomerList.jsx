@@ -54,6 +54,7 @@ import BulkActionBar from "./list/BulkActionBar";
 import ArchiveDialog from "./common/ArchiveDialog";
 import LifecycleArchiveDialog from "./common/LifecycleArchiveDialog";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
+import { usePermission } from "../context/PermissionContext";
 import {
   buildApiDateFilterParams,
   formatDateFilterLabel,
@@ -166,6 +167,10 @@ const CustomerList = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+  const { can } = usePermission();
+  const canCreate = can('customers', 'create');
+  const canEdit   = can('customers', 'edit');
+  const canDelete = can('customers', 'delete');
   const [customers, setCustomers] = useState([]);
   const [error, setError] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
@@ -589,7 +594,7 @@ const CustomerList = () => {
       <ListHeader
         title={tl("customerList.title", "Customer Management Dashboard")}
         summary={loading ? tl("customerList.summaryLoading", "Loading...") : tl("customerList.summary", `${filteredCustomers.length} customers`, { count: filteredCustomers.length })}
-        rightAction={
+        rightAction={canCreate && (
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -598,7 +603,7 @@ const CustomerList = () => {
           >
             {tl("customerList.new", "New")}
           </Button>
-        }
+        )}
         searchValue={searchTerm}
         onSearchChange={setSearchTerm}
         onHistorySelect={setImmediateSearchTerm}
@@ -693,12 +698,8 @@ const CustomerList = () => {
                   navigate(`/customers/${customer.id}`);
                 }
               }}
-              onEdit={() => {
-                if (!isArchived) {
-                  navigate(`/customers/edit/${customer.id}`);
-                }
-              }}
-              onDelete={() => (statusFilter === "Archived" ? setRestoreTargetId(customer.id) : setConfirmDeleteId(customer.id))}
+              onEdit={canEdit ? (() => { if (!isArchived) { navigate(`/customers/edit/${customer.id}`); } }) : undefined}
+              onDelete={canDelete ? (() => (statusFilter === "Archived" ? setRestoreTargetId(customer.id) : setConfirmDeleteId(customer.id))) : undefined}
               deleteLabel={statusFilter === "Archived" ? "Restore customer" : "Archive customer"}
               deleteColor={statusFilter === "Archived" ? "#059669" : "#ef4444"}
               deleteHoverBg={statusFilter === "Archived" ? "#ecfdf5" : "#fef2f2"}
@@ -892,23 +893,25 @@ const CustomerList = () => {
                       </IconButton>
                     </Tooltip>
                   )}
-                  {!isArchived && (
+                  {!isArchived && canEdit && (
                     <Tooltip title={tl("customerList.actions.edit", "Edit")}>
                       <IconButton aria-label={`Edit ${customer.name}`} size="small" onClick={() => navigate(`/customers/edit/${customer.id}`)} sx={{ color: "#5f87e7" }}>
                         <EditIcon sx={{ fontSize: 17 }} />
                       </IconButton>
                     </Tooltip>
                   )}
-                  <Tooltip title={statusFilter === "Archived" ? tl("common.restore", "Restore") : tl("customerList.actions.delete", "Archive")}>
-                    <IconButton
-                      aria-label={statusFilter === "Archived" ? `Restore ${customer.name}` : `Archive ${customer.name}`}
-                      size="small"
-                      onClick={() => (statusFilter === "Archived" ? setRestoreTargetId(customer.id) : setConfirmDeleteId(customer.id))}
-                      sx={{ color: statusFilter === "Archived" ? "#059669" : "#ef4444" }}
-                    >
-                      {statusFilter === "Archived" ? <RestoreIcon sx={{ fontSize: 17 }} /> : <DeleteIcon sx={{ fontSize: 17 }} />}
-                    </IconButton>
-                  </Tooltip>
+                  {canDelete && (
+                    <Tooltip title={statusFilter === "Archived" ? tl("common.restore", "Restore") : tl("customerList.actions.delete", "Archive")}>
+                      <IconButton
+                        aria-label={statusFilter === "Archived" ? `Restore ${customer.name}` : `Archive ${customer.name}`}
+                        size="small"
+                        onClick={() => (statusFilter === "Archived" ? setRestoreTargetId(customer.id) : setConfirmDeleteId(customer.id))}
+                        sx={{ color: statusFilter === "Archived" ? "#059669" : "#ef4444" }}
+                      >
+                        {statusFilter === "Archived" ? <RestoreIcon sx={{ fontSize: 17 }} /> : <DeleteIcon sx={{ fontSize: 17 }} />}
+                      </IconButton>
+                    </Tooltip>
+                  )}
                 </Box>
               </TableCell>
             </TableRow>

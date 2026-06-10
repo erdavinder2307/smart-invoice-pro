@@ -16,17 +16,22 @@ export const BRANDING_DEFAULTS = {
   invoice_template_settings: { show_logo: true, show_signature: false },
 };
 
-function buildTheme(branding) {
+/**
+ * Builds a tenant-coloured MUI theme.
+ * Reserved for Phase 4 Appearance module — NOT used by BrandingProvider.
+ * Exported so the future AppearanceProvider can import it without duplication.
+ */
+export function buildAppearanceTheme(branding) {
   return createTheme({
     ...baseTheme,
     palette: {
       ...baseTheme.palette,
       primary: {
         ...baseTheme.palette.primary,
-        main:          branding.primary_color   || BRANDING_DEFAULTS.primary_color,
-        dark:          adjustLightness(branding.primary_color   || BRANDING_DEFAULTS.primary_color, -20),
-        light:         adjustLightness(branding.primary_color   || BRANDING_DEFAULTS.primary_color, +20),
-        contrastText:  '#FFFFFF',
+        main:         branding.primary_color   || BRANDING_DEFAULTS.primary_color,
+        dark:         adjustLightness(branding.primary_color   || BRANDING_DEFAULTS.primary_color, -20),
+        light:        adjustLightness(branding.primary_color   || BRANDING_DEFAULTS.primary_color, +20),
+        contrastText: '#FFFFFF',
       },
       secondary: {
         ...baseTheme.palette.secondary,
@@ -53,14 +58,24 @@ function adjustLightness(hex, shift) {
   }
 }
 
+/**
+ * BrandingProvider — stores customer-facing branding data in context.
+ *
+ * The staff app always uses the static product theme (baseTheme) regardless of
+ * tenant branding colours.  Tenant colours affect only customer-facing outputs:
+ * PDFs, emails, and the customer portal.
+ *
+ * If explicit staff UI theming is ever needed, introduce a separate
+ * AppearanceProvider (Phase 4) that wraps children with buildAppearanceTheme().
+ */
 export function BrandingProvider({ children }) {
   const [branding, setBranding] = useState(BRANDING_DEFAULTS);
-  const [, setLoaded]     = useState(false);
+  const [, setLoaded] = useState(false);
 
   const refreshBranding = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      if (!token) return;              // not authenticated yet
+      if (!token) return;
       const data = await getBranding();
       setBranding((prev) => ({ ...prev, ...data }));
     } catch {
@@ -70,12 +85,9 @@ export function BrandingProvider({ children }) {
     }
   }, []);
 
-  // Load on mount (once the user may already be logged in)
   useEffect(() => {
     refreshBranding();
   }, [refreshBranding]);
-
-  const theme = useMemo(() => buildTheme(branding), [branding]);
 
   const value = useMemo(
     () => ({ branding, setBranding, refreshBranding }),
@@ -84,7 +96,8 @@ export function BrandingProvider({ children }) {
 
   return (
     <BrandingContext.Provider value={value}>
-      <ThemeProvider theme={theme}>
+      {/* Always use the static product theme — tenant colours do not theme the staff UI */}
+      <ThemeProvider theme={baseTheme}>
         <CssBaseline />
         {children}
       </ThemeProvider>

@@ -19,8 +19,14 @@ export const PERMISSION_MODULES = {
   purchase_orders: ['view', 'create', 'edit', 'delete'],
   bills:           ['view', 'create', 'edit', 'delete'],
   expenses:        ['view', 'create', 'edit', 'delete'],
+  banking:         ['view', 'create', 'edit'],
   reports:         ['view'],
   settings:        ['view', 'edit'],
+  user_management: ['view', 'invite', 'edit', 'suspend'],
+  roles:           ['view', 'edit'],
+  audit_logs:      ['view'],
+  automation:      ['view', 'edit'],
+  integrations:    ['view', 'edit'],
 };
 
 export const MODULE_LABELS = {
@@ -32,8 +38,14 @@ export const MODULE_LABELS = {
   purchase_orders: 'Purchase Orders',
   bills:           'Bills',
   expenses:        'Expenses',
+  banking:         'Banking',
   reports:         'Reports',
   settings:        'Settings',
+  user_management: 'User Management',
+  roles:           'Roles',
+  audit_logs:      'Audit Logs',
+  automation:      'Automation',
+  integrations:    'Integrations',
 };
 
 export const PermissionProvider = ({ children }) => {

@@ -41,6 +41,7 @@ import SectionHeader from "../components/common/SectionHeader";
 import StatusBadge from "../components/common/StatusBadge";
 import { useDashboardFilter } from "../context/DashboardFilterContext";
 import DashboardSearchBox from "../components/Dashboard/DashboardSearchBox";
+import { usePermission } from "../context/PermissionContext";
 import { dashboardActions } from "./dashboardActions";
 import { safeClick } from "../utils/safeClick";
 import { getComparisonLabel } from "../utils/dashboardComparison";
@@ -60,6 +61,7 @@ const DashboardPage = () => {
   const DUE_SOON_DAYS = 2;
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { can, isAdmin: permIsAdmin } = usePermission();
 
   // ── API state ─────────────────────────────────────────────────────────────
   const [summary, setSummary] = useState(null);
@@ -269,6 +271,7 @@ const DashboardPage = () => {
     return [
       {
         key: "overdue",
+        module: "invoices",
         label: "Overdue invoices",
         count: Number(summary?.overdue_count || 0),
         cta: "View",
@@ -277,6 +280,7 @@ const DashboardPage = () => {
       },
       {
         key: "due_today",
+        module: "invoices",
         label: "Due today invoices",
         count: dueTodayCount,
         cta: "View",
@@ -285,6 +289,7 @@ const DashboardPage = () => {
       },
       {
         key: "inventory",
+        module: "products",
         label: "Inventory alerts",
         count: lowStock.length,
         cta: "Resolve",
@@ -358,6 +363,7 @@ const DashboardPage = () => {
   const performanceKpis = useMemo(() => [
     {
       key: "customers_added",
+      module: "customers",
       label: t("dashboard.kpi.customersAdded"),
       icon: <People sx={{ fontSize: 22, color: "primary.main" }} />,
       accentColor: "primary.main",
@@ -369,6 +375,7 @@ const DashboardPage = () => {
     },
     {
       key: "invoices_created",
+      module: "invoices",
       label: t("dashboard.kpi.invoicesCreated"),
       icon: <Receipt sx={{ fontSize: 22, color: "info.main" }} />,
       accentColor: "info.main",
@@ -380,6 +387,7 @@ const DashboardPage = () => {
     },
     {
       key: "revenue",
+      module: "invoices",
       label: t("dashboard.kpi.revenue"),
       icon: <AttachMoney sx={{ fontSize: 22, color: "success.main" }} />,
       accentColor: "success.main",
@@ -392,6 +400,7 @@ const DashboardPage = () => {
     },
     {
       key: "payments_received",
+      module: "invoices",
       label: t("dashboard.kpi.paymentsReceived"),
       icon: <Payments sx={{ fontSize: 22, color: "secondary.main" }} />,
       accentColor: "secondary.main",
@@ -404,6 +413,7 @@ const DashboardPage = () => {
     },
     {
       key: "payables",
+      module: "expenses",
       label: t("dashboard.kpi.expensesPayables"),
       icon: <AccountBalance sx={{ fontSize: 22, color: "error.main" }} />,
       accentColor: "error.main",
@@ -419,6 +429,7 @@ const DashboardPage = () => {
   const currentStateKpis = useMemo(() => [
     {
       label: t("dashboard.kpi.overdueInvoicesCurrent"),
+      module: "invoices",
       value: summary?.metrics?.overdue_invoices_current?.value ?? summary?.overdue_count ?? 0,
       icon: <Warning sx={{ fontSize: 22, color: "error.main" }} />,
       accentColor: "error.main",
@@ -427,6 +438,7 @@ const DashboardPage = () => {
     },
     {
       label: t("dashboard.kpi.inventoryAlertsCurrent"),
+      module: "products",
       value: lowStock.length,
       icon: <Inventory sx={{ fontSize: 22, color: "secondary.main" }} />,
       accentColor: "secondary.main",
@@ -438,6 +450,7 @@ const DashboardPage = () => {
   const businessSizeKpis = useMemo(() => [
     {
       label: t("dashboard.kpi.totalCustomers"),
+      module: "customers",
       value: summary?.metrics?.total_customers?.value ?? summary?.total_customers ?? 0,
       icon: <People sx={{ fontSize: 22, color: "primary.main" }} />,
       accentColor: "primary.main",
@@ -446,6 +459,7 @@ const DashboardPage = () => {
     },
     {
       label: t("dashboard.kpi.totalProducts"),
+      module: "products",
       value: summary?.metrics?.total_products?.value ?? summary?.total_products ?? 0,
       icon: <Inventory sx={{ fontSize: 22, color: "info.main" }} />,
       accentColor: "info.main",
@@ -453,6 +467,24 @@ const DashboardPage = () => {
       onClick: safeClick(actionHandlers.goToProducts),
     },
   ], [actionHandlers, summary, t]);
+
+  // ── Permission-filtered KPI lists ─────────────────────────────────────────
+  const visiblePerformanceKpis = useMemo(
+    () => performanceKpis.filter(k => permIsAdmin || !k.module || can(k.module, 'view')),
+    [performanceKpis, permIsAdmin, can]
+  );
+  const visibleCurrentStateKpis = useMemo(
+    () => currentStateKpis.filter(k => permIsAdmin || !k.module || can(k.module, 'view')),
+    [currentStateKpis, permIsAdmin, can]
+  );
+  const visibleBusinessSizeKpis = useMemo(
+    () => businessSizeKpis.filter(k => permIsAdmin || !k.module || can(k.module, 'view')),
+    [businessSizeKpis, permIsAdmin, can]
+  );
+  const visibleActionRequiredItems = useMemo(
+    () => actionRequiredItems.filter(item => permIsAdmin || !item.module || can(item.module, 'view')),
+    [actionRequiredItems, permIsAdmin, can]
+  );
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const fmt = (v) => (v !== undefined && v !== null ? v.toLocaleString() : "—");
@@ -559,7 +591,7 @@ const DashboardPage = () => {
             SECTION 2 — KPI Summary Cards (Real + Derived)
         ══════════════════════════════════════════════════════════════════ */}
         {/* Overdue alert banner */}
-        {!summaryLoading && summary?.overdue_count > 0 && (
+        {!summaryLoading && summary?.overdue_count > 0 && (permIsAdmin || can('invoices', 'view')) && (
           <Alert
             severity="error"
             icon={<Warning fontSize="inherit" />}
@@ -575,131 +607,142 @@ const DashboardPage = () => {
           </Alert>
         )}
         <Container maxWidth="xl" disableGutters>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
-            <Box sx={{ width: 3, height: 18, borderRadius: 4, bgcolor: "primary.main", flexShrink: 0 }} />
-            <Typography variant="subtitle2" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: "0.08em" }}>
-              {t('dashboard.sections.performance')}
-            </Typography>
-          </Box>
+          {visiblePerformanceKpis.length > 0 && (
+            <>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
+                <Box sx={{ width: 3, height: 18, borderRadius: 4, bgcolor: "primary.main", flexShrink: 0 }} />
+                <Typography variant="subtitle2" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                  {t('dashboard.sections.performance')}
+                </Typography>
+              </Box>
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                  gap: 3,
+                  mb: 4,
+                }}
+              >
+                {visiblePerformanceKpis.map((kpi) => {
+                  const metric = getMetric(kpi.key, 0);
+                  const trend = typeof metric.percentage_change === "number" ? metric.percentage_change : undefined;
+                  const hasNoData = !summaryLoading && !summaryError && metric.value === 0;
+                  const valueLabel = summaryLoading
+                    ? undefined
+                    : summaryError
+                      ? "—"
+                      : `${kpi.prefix || ""}${fmt(metric.value)}`;
 
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: 3,
-              mb: 4,
-            }}
-          >
-            {performanceKpis.map((kpi) => {
-              const metric = getMetric(kpi.key, 0);
-              const trend = typeof metric.percentage_change === "number" ? metric.percentage_change : undefined;
-              const hasNoData = !summaryLoading && !summaryError && metric.value === 0;
-              const valueLabel = summaryLoading
-                ? undefined
-                : summaryError
-                  ? "—"
-                  : `${kpi.prefix || ""}${fmt(metric.value)}`;
+                  return (
+                    <StatCard
+                      key={kpi.key}
+                      icon={kpi.icon}
+                      label={kpi.label}
+                      value={valueLabel}
+                      loading={summaryLoading}
+                      trend={trend}
+                      trendLabel={`${metricContextLabel.current} (${trend >= 0 ? "+" : ""}${trend ?? 0}% ${metricContextLabel.previous})`}
+                      accentColor={kpi.accentColor}
+                      iconBg={kpi.iconBg}
+                      onClick={kpi.onClick}
+                      emptyState={
+                        hasNoData
+                          ? {
+                              message: kpi.emptyMessage,
+                              actionLabel: kpi.emptyActionLabel,
+                              onAction: kpi.emptyAction,
+                            }
+                          : undefined
+                      }
+                    />
+                  );
+                })}
+              </Box>
+            </>
+          )}
 
-              return (
-                <StatCard
-                  key={kpi.key}
-                  icon={kpi.icon}
-                  label={kpi.label}
-                  value={valueLabel}
-                  loading={summaryLoading}
-                  trend={trend}
-                  trendLabel={`${metricContextLabel.current} (${trend >= 0 ? "+" : ""}${trend ?? 0}% ${metricContextLabel.previous})`}
-                  accentColor={kpi.accentColor}
-                  iconBg={kpi.iconBg}
-                  onClick={kpi.onClick}
-                  emptyState={
-                    hasNoData
-                      ? {
-                          message: kpi.emptyMessage,
-                          actionLabel: kpi.emptyActionLabel,
-                          onAction: kpi.emptyAction,
-                        }
-                      : undefined
-                  }
-                />
-              );
-            })}
-          </Box>
+          {visibleCurrentStateKpis.length > 0 && (
+            <>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
+                <Box sx={{ width: 3, height: 18, borderRadius: 4, bgcolor: "error.main", flexShrink: 0 }} />
+                <Typography variant="subtitle2" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                  {t('dashboard.sections.currentState')}
+                </Typography>
+              </Box>
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                  gap: 3,
+                  mb: 4,
+                }}
+              >
+                {visibleCurrentStateKpis.map((kpi) => {
+                  const valueLabel = summaryLoading
+                    ? undefined
+                    : summaryError
+                      ? "—"
+                      : fmt(kpi.value);
 
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
-            <Box sx={{ width: 3, height: 18, borderRadius: 4, bgcolor: "error.main", flexShrink: 0 }} />
-            <Typography variant="subtitle2" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: "0.08em" }}>
-              {t('dashboard.sections.currentState')}
-            </Typography>
-          </Box>
+                  return (
+                    <StatCard
+                      key={kpi.label}
+                      icon={kpi.icon}
+                      label={kpi.label}
+                      value={valueLabel}
+                      loading={summaryLoading}
+                      accentColor={kpi.accentColor}
+                      iconBg={kpi.iconBg}
+                      onClick={kpi.onClick}
+                      trendLabel={t('dashboard.kpi.currentState')}
+                      sx={{ bgcolor: "error.50" }}
+                    />
+                  );
+                })}
+              </Box>
+            </>
+          )}
 
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: 3,
-              mb: 4,
-            }}
-          >
-            {currentStateKpis.map((kpi) => {
-              const valueLabel = summaryLoading
-                ? undefined
-                : summaryError
-                  ? "—"
-                  : fmt(kpi.value);
-
-              return (
-                <StatCard
-                  key={kpi.label}
-                  icon={kpi.icon}
-                  label={kpi.label}
-                  value={valueLabel}
-                  loading={summaryLoading}
-                  accentColor={kpi.accentColor}
-                  iconBg={kpi.iconBg}
-                  onClick={kpi.onClick}
-                  trendLabel={t('dashboard.kpi.currentState')}
-                  sx={{ bgcolor: "error.50" }}
-                />
-              );
-            })}
-          </Box>
-
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
-            <Box sx={{ width: 3, height: 18, borderRadius: 4, bgcolor: "info.main", flexShrink: 0 }} />
-            <Typography variant="subtitle2" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: "0.08em" }}>
-              {t('dashboard.sections.businessSize')}
-            </Typography>
-          </Box>
-
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: 3,
-              mb: 4,
-            }}
-          >
-            {businessSizeKpis.map((kpi) => (
-              <StatCard
-                key={kpi.label}
-                icon={kpi.icon}
-                label={kpi.label}
-                value={summaryLoading ? undefined : summaryError ? "—" : fmt(kpi.value)}
-                loading={summaryLoading}
-                accentColor={kpi.accentColor}
-                iconBg={kpi.iconBg}
-                onClick={kpi.onClick}
-                trendLabel={t('dashboard.kpi.staticMetric')}
-                sx={{ bgcolor: "background.paper" }}
-              />
-            ))}
-          </Box>
+          {visibleBusinessSizeKpis.length > 0 && (
+            <>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
+                <Box sx={{ width: 3, height: 18, borderRadius: 4, bgcolor: "info.main", flexShrink: 0 }} />
+                <Typography variant="subtitle2" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                  {t('dashboard.sections.businessSize')}
+                </Typography>
+              </Box>
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                  gap: 3,
+                  mb: 4,
+                }}
+              >
+                {visibleBusinessSizeKpis.map((kpi) => (
+                  <StatCard
+                    key={kpi.label}
+                    icon={kpi.icon}
+                    label={kpi.label}
+                    value={summaryLoading ? undefined : summaryError ? "—" : fmt(kpi.value)}
+                    loading={summaryLoading}
+                    accentColor={kpi.accentColor}
+                    iconBg={kpi.iconBg}
+                    onClick={kpi.onClick}
+                    trendLabel={t('dashboard.kpi.staticMetric')}
+                    sx={{ bgcolor: "background.paper" }}
+                  />
+                ))}
+              </Box>
+            </>
+          )}
         </Container>
 
         {/* ══════════════════════════════════════════════════════════════════
-            SECTION 3 — Revenue Analytics
+            SECTION 3 — Revenue Analytics (invoices permission required)
         ══════════════════════════════════════════════════════════════════ */}
+        {(permIsAdmin || can('invoices', 'view')) && (
+          <>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
           <Box sx={{ width: 3, height: 18, borderRadius: 4, bgcolor: "success.main", flexShrink: 0 }} />
           <Typography variant="subtitle2" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: "0.08em" }}>
@@ -708,7 +751,7 @@ const DashboardPage = () => {
         </Box>
 
         <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid size={{ xs: 12, md: 8 }}>
+          <Grid size={{ xs: 12, md: (permIsAdmin || can('products', 'view')) ? 8 : 12 }}>
             <RevenueTrendChart
               data={filteredRevenue}
               loading={revenueLoading}
@@ -719,6 +762,7 @@ const DashboardPage = () => {
               onCreateInvoice={safeClick(actionHandlers.goToAddInvoice)}
             />
           </Grid>
+          {(permIsAdmin || can('products', 'view')) && (
           <Grid size={{ xs: 12, md: 4 }}>
             <InventoryOverviewCard
               lowStock={lowStock}
@@ -730,11 +774,16 @@ const DashboardPage = () => {
               onItemClick={(item) => navigate(`/products/edit/${item.product_id || item.id}`)}
             />
           </Grid>
+          )}
         </Grid>
+          </>
+        )}
 
         {/* ══════════════════════════════════════════════════════════════════
-            SECTION 4 — Full Inventory Table
+            SECTION 4 — Full Inventory Table (products permission)
         ══════════════════════════════════════════════════════════════════ */}
+        {(permIsAdmin || can('products', 'view')) && (
+          <>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
           <Box sx={{ width: 3, height: 18, borderRadius: 4, bgcolor: "warning.main", flexShrink: 0 }} />
           <Typography variant="subtitle2" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: "0.08em" }}>
@@ -744,10 +793,14 @@ const DashboardPage = () => {
         <Box sx={{ mb: 4 }}>
           <ProductStockSummary />
         </Box>
+          </>
+        )}
 
         {/* ══════════════════════════════════════════════════════════════════
             SECTION 5 — Recent Invoices (Grouped + Actionable)
         ══════════════════════════════════════════════════════════════════ */}
+        {(permIsAdmin || can('invoices', 'view')) && (
+          <>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
           <Box sx={{ width: 3, height: 18, borderRadius: 4, bgcolor: "secondary.main", flexShrink: 0 }} />
           <Typography variant="subtitle2" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: "0.08em" }}>
@@ -891,9 +944,8 @@ const DashboardPage = () => {
           )}
         </SectionPaper>
 
-        {/* ══════════════════════════════════════════════════════════════════
-            SECTION 6 — Action Required
-        ══════════════════════════════════════════════════════════════════ */}
+        {visibleActionRequiredItems.length > 0 && (
+          <>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
           <Box sx={{ width: 3, height: 18, borderRadius: 4, bgcolor: "error.main", flexShrink: 0 }} />
           <Typography variant="subtitle2" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: "0.08em" }}>
@@ -901,7 +953,7 @@ const DashboardPage = () => {
           </Typography>
         </Box>
         <Grid container spacing={2.5} sx={{ mb: 4 }}>
-          {actionRequiredItems.map((item) => (
+          {visibleActionRequiredItems.map((item) => (
             <Grid key={item.key} size={{ xs: 12, md: 4 }}>
               <SectionPaper>
                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -919,10 +971,16 @@ const DashboardPage = () => {
             </Grid>
           ))}
         </Grid>
+          </>
+        )}
+          </>
+        )}
 
         {/* ══════════════════════════════════════════════════════════════════
-            SECTION 7 — Quick Actions
+            SECTION 7 — Quick Actions (filtered by permissions)
         ══════════════════════════════════════════════════════════════════ */}
+        {(permIsAdmin || can('invoices', 'create') || can('customers', 'create') || can('products', 'create')) && (
+          <>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
           <Box sx={{ width: 3, height: 18, borderRadius: 4, bgcolor: "primary.main", flexShrink: 0 }} />
           <Typography variant="subtitle2" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: "0.08em" }}>
@@ -932,6 +990,7 @@ const DashboardPage = () => {
 
         <SectionPaper sx={{ mb: 4 }}>
           <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
+            {(permIsAdmin || can('invoices', 'create')) && (
             <Button
               variant="contained"
               startIcon={<Add />}
@@ -941,6 +1000,8 @@ const DashboardPage = () => {
               New Invoice
               <Chip size="small" label="N" sx={{ ml: 1, height: 18, fontSize: 10 }} />
             </Button>
+            )}
+            {(permIsAdmin || can('customers', 'create')) && (
             <Button
               variant="outlined"
               startIcon={<Add />}
@@ -950,6 +1011,8 @@ const DashboardPage = () => {
               Add Customer
               <Chip size="small" label="C" sx={{ ml: 1, height: 18, fontSize: 10 }} />
             </Button>
+            )}
+            {(permIsAdmin || can('products', 'create')) && (
             <Button
               variant="outlined"
               startIcon={<Add />}
@@ -959,6 +1022,7 @@ const DashboardPage = () => {
               Add Product
               <Chip size="small" label="P" sx={{ ml: 1, height: 18, fontSize: 10 }} />
             </Button>
+            )}
             <Tooltip title="Coming Soon">
               <span>
                 <Button
@@ -973,10 +1037,14 @@ const DashboardPage = () => {
             </Tooltip>
           </Stack>
         </SectionPaper>
+          </>
+        )}
 
         {/* ══════════════════════════════════════════════════════════════════
-            SECTION 8 — Smart Suggestions
+            SECTION 8 — Smart Suggestions (admin/settings only)
         ══════════════════════════════════════════════════════════════════ */}
+        {permIsAdmin && (
+          <>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
           <Box sx={{ width: 3, height: 18, borderRadius: 4, bgcolor: "info.main", flexShrink: 0 }} />
           <Typography variant="subtitle2" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: "0.08em" }}>
@@ -1009,6 +1077,8 @@ const DashboardPage = () => {
             </SectionPaper>
           </Grid>
         </Grid>
+          </>
+        )}
 
       </Box>
     </MainLayout>

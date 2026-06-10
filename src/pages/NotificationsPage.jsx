@@ -22,15 +22,30 @@ import MainLayout from '../components/Layout/MainLayout';
 import SectionHeader from '../components/common/SectionHeader';
 import EmptyState from '../components/common/EmptyState';
 import { useNotifications } from '../context/NotificationContext';
+import { usePermission } from '../context/PermissionContext';
 import { useTranslation } from 'react-i18next';
 
-const FILTERS = [
+// Maps notification type → required module permission (module, action)
+const NOTIFICATION_PERMISSIONS = {
+  invoice_created:            { module: 'invoices', action: 'view' },
+  payment_received:           { module: 'invoices', action: 'view' },
+  recurring_invoice_generated:{ module: 'invoices', action: 'view' },
+  customer_created:           { module: 'customers', action: 'view' },
+  reminder_sent:              { module: 'invoices', action: 'view' },
+  low_stock:                  { module: 'products', action: 'view' },
+  bank_import_started:        { module: 'banking', action: 'view' },
+  bank_import_ready:          { module: 'banking', action: 'view' },
+  bank_import_approved:       { module: 'banking', action: 'view' },
+};
+
+const ALL_FILTERS = [
   { label: 'All', value: 'all' },
-  { label: 'Invoices', value: 'invoice_created' },
-  { label: 'Payments', value: 'payment_received' },
-  { label: 'Customers', value: 'customer_created' },
-  { label: 'Reminders', value: 'reminder_sent' },
-  { label: 'Low Stock', value: 'low_stock' },
+  { label: 'Invoices', value: 'invoice_created',  module: 'invoices' },
+  { label: 'Payments', value: 'payment_received', module: 'invoices' },
+  { label: 'Customers', value: 'customer_created', module: 'customers' },
+  { label: 'Reminders', value: 'reminder_sent',   module: 'invoices' },
+  { label: 'Low Stock', value: 'low_stock',        module: 'products' },
+  { label: 'Banking', value: 'bank_import_started', module: 'banking' },
 ];
 
 const TYPE_ICON = {
@@ -58,18 +73,37 @@ const NotificationsPage = () => {
   const { notifications, loading, unreadCount, markRead, markAllAsRead } = useNotifications();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { can, isAdmin: permIsAdmin } = usePermission();
   const [activeFilter, setActiveFilter] = useState('all');
 
-  const filtered =
-    activeFilter === 'all'
-      ? notifications
-      : notifications.filter((n) => n.type === activeFilter);
+  // Only show notifications for modules the user can access
+  const allowedNotifications = notifications.filter((n) => {
+    const perm = NOTIFICATION_PERMISSIONS[n.type];
+    if (!perm) return true; // unknown types always visible
+    return permIsAdmin || can(perm.module, perm.action);
+  });
+
+  // Only show filter chips for modules the user can access
+  const visibleFilters = ALL_FILTERS.filter((f) => {
+    if (f.value === 'all') return true;
+    return permIsAdmin || can(f.module, 'view');
+  });
+
+  const matchesFilter = (n, filter) => {
+    if (filter === 'all') return true;
+    if (filter === 'bank_import_started') {
+      return ['bank_import_started', 'bank_import_ready', 'bank_import_approved'].includes(n.type);
+    }
+    return n.type === filter;
+  };
+
+  const filtered = allowedNotifications.filter((n) => matchesFilter(n, activeFilter));
 
   const handleItemClick = (n) => {
     if (!n.is_read) markRead(n.id);
-    if (n.entity_type === 'invoice') navigate('/invoices');
-    else if (n.entity_type === 'customer') navigate('/customers');
-    else if (n.entity_type === 'product') navigate('/inventory');
+    if (n.entity_type === 'invoice' && (permIsAdmin || can('invoices', 'view'))) navigate('/invoices');
+    else if (n.entity_type === 'customer' && (permIsAdmin || can('customers', 'view'))) navigate('/customers');
+    else if (n.entity_type === 'product' && (permIsAdmin || can('products', 'view'))) navigate('/inventory');
   };
 
   return (
@@ -92,7 +126,7 @@ const NotificationsPage = () => {
 
         {/* Filter chips */}
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 3 }}>
-          {FILTERS.map((f) => (
+          {visibleFilters.map((f) => (
             <Chip
               key={f.value}
               label={f.label}

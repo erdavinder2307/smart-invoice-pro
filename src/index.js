@@ -13,6 +13,7 @@ import { SidebarProvider } from './context/SidebarContext';
 import { KeyboardShortcutsProvider } from './context/KeyboardShortcutsContext';
 import { DashboardFilterProvider } from './context/DashboardFilterContext';
 import { MeProvider } from './context/MeContext';
+import { OrgGstProvider } from './context/OrgGstContext';
 import axios from 'axios';
 import authService from './services/authService';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -166,15 +167,17 @@ root.render(
             <SidebarProvider>
               <MeProvider>
                 <InvoicePreferencesProvider>
-                  <PermissionProvider>
-                    <NotificationProvider>
-                      <KeyboardShortcutsProvider>
-                                <DashboardFilterProvider>
-                                  <App />
-                                </DashboardFilterProvider>
-                              </KeyboardShortcutsProvider>
-                    </NotificationProvider>
-                  </PermissionProvider>
+                  <OrgGstProvider>
+                    <PermissionProvider>
+                      <NotificationProvider>
+                        <KeyboardShortcutsProvider>
+                          <DashboardFilterProvider>
+                            <App />
+                          </DashboardFilterProvider>
+                        </KeyboardShortcutsProvider>
+                      </NotificationProvider>
+                    </PermissionProvider>
+                  </OrgGstProvider>
                 </InvoicePreferencesProvider>
               </MeProvider>
             </SidebarProvider>

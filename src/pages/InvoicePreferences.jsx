@@ -215,10 +215,10 @@ export default function InvoicePreferences() {
               >
 
                 {/* ══ INVOICE NUMBERING ══════════════════════════════════════ */}
-                <Box sx={{ px: 3 }}>
+                <Box sx={{ px: 3, pt: 2 }}>
                   <SectionHeader>Invoice Numbering</SectionHeader>
 
-                  <FormLayout>
+                  <FormLayout sx={{ mt: 2, mb: 1 }}>
                     <AppFormField label="Auto-generate Number" testId="invoice-pref-field-auto-generate">
                       <FormControlLabel
                         control={
@@ -306,10 +306,10 @@ export default function InvoicePreferences() {
                 </Box>
 
                 {/* ══ PAYMENT TERMS ══════════════════════════════════════════ */}
-                <Box sx={{ px: 3, borderTop: `1px solid ${C.divider}` }}>
+                <Box sx={{ px: 3, pt: 2, borderTop: `1px solid ${C.divider}` }}>
                   <SectionHeader>Payment Terms</SectionHeader>
 
-                  <FormLayout>
+                  <FormLayout sx={{ mt: 2, mb: 1 }}>
                     <AppFormField label="Default Payment Terms" hint="Applied to new invoices when no term is specified." layout="half" testId="invoice-pref-field-payment-terms">
                       <AppSelect value={form.default_payment_terms} onChange={(e) => set('default_payment_terms', e.target.value)}>
                         {PAYMENT_TERMS_OPTIONS.map((term) => (
@@ -342,10 +342,10 @@ export default function InvoicePreferences() {
                 </Box>
 
                 {/* ══ DEFAULT CONTENT ════════════════════════════════════════ */}
-                <Box sx={{ px: 3, borderTop: `1px solid ${C.divider}` }}>
+                <Box sx={{ px: 3, pt: 2, borderTop: `1px solid ${C.divider}` }}>
                   <SectionHeader>Default Content</SectionHeader>
 
-                  <FormLayout>
+                  <FormLayout sx={{ mt: 2, mb: 1 }}>
                     <AppFormField label="Customer Notes" hint="Pre-filled in the Notes field of every new invoice." testId="invoice-pref-field-notes">
                       <TextField
                         multiline

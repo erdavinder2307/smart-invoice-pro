@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import { createApiUrl } from '../config/api';
+import { useOrgGst } from '../context/OrgGstContext';
 import {
   Alert,
   Autocomplete,
@@ -137,6 +138,7 @@ const AddEditQuote = () => {
   const { t } = useTranslation();
   const location = useLocation();
   const quoteId = id;
+  const { isSalesTaxAllowed } = useOrgGst();
   const [form, setForm] = useState(initialForm);
   const [customers, setCustomers] = useState([]);
   const [products, setProducts] = useState([]);
@@ -431,6 +433,20 @@ const AddEditQuote = () => {
     return () => { active = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quoteId, loadRetryKey]);
+
+  // Enforce org GST mode: Composition/Unregistered cannot have GST on sales
+  useEffect(() => {
+    if (!isSalesTaxAllowed && form.is_gst_applicable) {
+      setForm((prev) => ({
+        ...prev,
+        is_gst_applicable: false,
+        cgst_amount: 0,
+        sgst_amount: 0,
+        igst_amount: 0,
+        total_tax: 0,
+      }));
+    }
+  }, [isSalesTaxAllowed, form.is_gst_applicable]);
 
   useEffect(() => {
     const lineSubtotal = (form.items || []).reduce((sum, item) => {

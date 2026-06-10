@@ -57,6 +57,7 @@ import BulkActionBar from "./list/BulkActionBar";
 import ArchiveDialog from "./common/ArchiveDialog";
 import LifecycleArchiveDialog from "./common/LifecycleArchiveDialog";
 import useTableSorting from "../hooks/useTableSorting";
+import { usePermission } from "../context/PermissionContext";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import useListController from "../hooks/useListController";
 import { createApiUrl } from "../config/api";
@@ -95,6 +96,10 @@ const QuoteList = () => {
   const location = useLocation();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
+  const { can } = usePermission();
+  const canCreate = can('quotes', 'create');
+  const canEdit   = can('quotes', 'edit');
+  const canDelete = can('quotes', 'delete');
 
   const {
     page,
@@ -440,14 +445,14 @@ const QuoteList = () => {
             >
               Export
             </Button>
-            <Button
+            {canCreate && <Button
               variant="contained"
               onClick={() => navigate("/quotes/add")}
               startIcon={<AddIcon fontSize="small" />}
               sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
             >
               {t("quoteList.newQuote")}
-            </Button>
+            </Button>}
           </Box>
         }
         searchValue={search}
@@ -788,7 +793,7 @@ const QuoteList = () => {
           <ListItemIcon><VisibilityIcon fontSize="small" /></ListItemIcon>
           <ListItemText>View Details</ListItemText>
         </MenuItem>
-        {status !== "Archived" && (
+        {status !== "Archived" && canEdit && (
           <MenuItem onClick={() => { navigate(`/quotes/edit/${selectedQuote?.id}`); handleActionMenuClose(); }} sx={{ py: 1.25 }}>
             <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
             <ListItemText>Edit Quote</ListItemText>
@@ -798,32 +803,36 @@ const QuoteList = () => {
           <ListItemIcon><PictureAsPdfIcon fontSize="small" color="success" /></ListItemIcon>
           <ListItemText>Download PDF</ListItemText>
         </MenuItem>
-        {status !== "Archived" && (
+        {status !== "Archived" && canEdit && (
           <MenuItem onClick={() => handleEmailOpen(selectedQuote)} sx={{ py: 1.25 }}>
             <ListItemIcon><EmailIcon fontSize="small" color="primary" /></ListItemIcon>
             <ListItemText>Send Email</ListItemText>
           </MenuItem>
         )}
-        <MenuItem onClick={() => { navigate("/quotes/add", { state: { cloneFrom: selectedQuote } }); handleActionMenuClose(); }}>
-          <ListItemIcon><ContentCopyIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>Duplicate</ListItemText>
-        </MenuItem>
-        {status !== "Archived" && (
+        {canCreate && (
+          <MenuItem onClick={() => { navigate("/quotes/add", { state: { cloneFrom: selectedQuote } }); handleActionMenuClose(); }}>
+            <ListItemIcon><ContentCopyIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>Duplicate</ListItemText>
+          </MenuItem>
+        )}
+        {status !== "Archived" && canEdit && (
           <MenuItem onClick={handleConvertToInvoice} disabled={selectedQuote?.status === "Converted"}>
             <ListItemIcon><ReceiptIcon fontSize="small" /></ListItemIcon>
             <ListItemText>Convert to Invoice</ListItemText>
           </MenuItem>
         )}
-        {status !== "Archived" && (
+        {status !== "Archived" && canEdit && (
           <MenuItem onClick={handleConvertToSalesOrder} disabled={selectedQuote?.status === "Converted"}>
             <ListItemIcon><ShoppingCartIcon fontSize="small" /></ListItemIcon>
             <ListItemText>Convert to Sales Order</ListItemText>
           </MenuItem>
         )}
-        <MenuItem onClick={() => { setConfirmDeleteId(selectedQuote?.id); handleActionMenuClose(); }}>
-          <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
-          <ListItemText>Archive</ListItemText>
-        </MenuItem>
+        {canDelete && (
+          <MenuItem onClick={() => { setConfirmDeleteId(selectedQuote?.id); handleActionMenuClose(); }}>
+            <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
+            <ListItemText>Archive</ListItemText>
+          </MenuItem>
+        )}
         {status === "Archived" && (
           <MenuItem onClick={() => { setRestoreTargetId(selectedQuote?.id); handleActionMenuClose(); }}>
             <ListItemIcon><RestoreIcon fontSize="small" color="success" /></ListItemIcon>

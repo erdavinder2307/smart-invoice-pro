@@ -19,7 +19,20 @@ import MailOutlineIcon from '@mui/icons-material/MailOutline';
 import InventoryOutlinedIcon from '@mui/icons-material/InventoryOutlined';
 import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
 import { useNotifications } from '../../context/NotificationContext';
+import { usePermission } from '../../context/PermissionContext';
 import { safeClick } from '../../utils/safeClick';
+
+const NOTIFICATION_PERMISSIONS = {
+  invoice_created:             { module: 'invoices', action: 'view' },
+  payment_received:            { module: 'invoices', action: 'view' },
+  recurring_invoice_generated: { module: 'invoices', action: 'view' },
+  customer_created:            { module: 'customers', action: 'view' },
+  reminder_sent:               { module: 'invoices', action: 'view' },
+  low_stock:                   { module: 'products', action: 'view' },
+  bank_import_started:         { module: 'banking', action: 'view' },
+  bank_import_ready:           { module: 'banking', action: 'view' },
+  bank_import_approved:        { module: 'banking', action: 'view' },
+};
 
 const TYPE_ICON = {
   invoice_created: <ReceiptOutlinedIcon fontSize="small" sx={{ color: 'primary.main' }} />,
@@ -43,9 +56,17 @@ function relativeTime(iso) {
 
 const NotificationDropdown = ({ anchorEl, onClose }) => {
   const { notifications, unreadCount, loading, markRead, markAllAsRead } = useNotifications();
+  const { can, isAdmin: permIsAdmin } = usePermission();
   const navigate = useNavigate();
   const open = Boolean(anchorEl);
-  const preview = notifications.slice(0, 10);
+
+  // Filter out notifications the user lacks permission to see
+  const allowedNotifications = notifications.filter((n) => {
+    const perm = NOTIFICATION_PERMISSIONS[n.type];
+    if (!perm) return true;
+    return permIsAdmin || can(perm.module, perm.action);
+  });
+  const preview = allowedNotifications.slice(0, 10);
 
   const handleViewAll = () => {
     onClose();
@@ -55,11 +76,11 @@ const NotificationDropdown = ({ anchorEl, onClose }) => {
   const handleItemClick = (n) => {
     if (!n.is_read) markRead(n.id);
     onClose();
-    if (n.entity_type === 'invoice' && n.entity_id) {
+    if (n.entity_type === 'invoice' && n.entity_id && (permIsAdmin || can('invoices', 'view'))) {
       navigate(`/invoices`);
-    } else if (n.entity_type === 'customer' && n.entity_id) {
+    } else if (n.entity_type === 'customer' && n.entity_id && (permIsAdmin || can('customers', 'view'))) {
       navigate(`/customers`);
-    } else if (n.entity_type === 'product' && n.entity_id) {
+    } else if (n.entity_type === 'product' && n.entity_id && (permIsAdmin || can('products', 'view'))) {
       navigate(`/inventory`);
     }
   };

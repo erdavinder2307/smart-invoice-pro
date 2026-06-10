@@ -33,6 +33,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import { useMe } from "../context/MeContext";
 import { useSidebar } from "../context/SidebarContext";
+import { usePermission } from "../context/PermissionContext";
 import { NAV_CONFIG } from "../config/navConfig";
 import Logo from "./common/Logo";
 import { BRANDING } from "../config/branding";
@@ -48,6 +49,8 @@ const Sidebar = () => {
   const theme = useTheme();
   const { t } = useTranslation();
   const { logout, isAdmin } = useAuth();
+  const { can, isAdmin: permIsAdmin } = usePermission();
+  const effectiveIsAdmin = isAdmin || permIsAdmin;
   const { displayName: meDisplayName, initials: meInitials } = useMe();
   const {
     isCollapsed,
@@ -239,7 +242,8 @@ const Sidebar = () => {
 
   // ── Render simple nav item ────────────────────────────────────────────────
   const renderNavItem = (config, isChild = false, forceExpanded = false) => {
-    if (config.adminOnly && !isAdmin) return null;
+    if (config.adminOnly && !effectiveIsAdmin) return null;
+    if (config.permission && !effectiveIsAdmin && !can(config.permission.module, config.permission.action)) return null;
 
     const showLabels = forceExpanded || !isDesktopCollapsed;
     const showTooltip = isDesktopCollapsed && !forceExpanded;
@@ -291,7 +295,14 @@ const Sidebar = () => {
 
   // ── Render expandable section ─────────────────────────────────────────────
   const renderExpandableSection = (sectionKey, config, forceExpanded = false) => {
-    if (config.adminOnly && !isAdmin) return null;
+    if (config.adminOnly && !effectiveIsAdmin) return null;
+    if (config.permission && !effectiveIsAdmin && !can(config.permission.module, config.permission.action)) return null;
+
+    // For sections without a top-level permission, check if at least one child is visible
+    const visibleChildren = config.children?.filter(child =>
+      !child.permission || effectiveIsAdmin || can(child.permission.module, child.permission.action)
+    ) ?? [];
+    if (config.children && visibleChildren.length === 0) return null;
 
     const showLabels = forceExpanded || !isDesktopCollapsed;
     const showTooltip = isDesktopCollapsed && !forceExpanded;
@@ -410,16 +421,50 @@ const Sidebar = () => {
         <List sx={{ px: isDesktopCollapsed && !forceExpanded ? 1 : 1.5 }} disablePadding>
           {renderNavItem(NAV_CONFIG.dashboard, false, forceExpanded)}
           {renderNavItem(NAV_CONFIG.items, false, forceExpanded)}
-          {renderGroupLabel("Sales & Purchases", forceExpanded)}
-          {renderExpandableSection("sales", NAV_CONFIG.sales, forceExpanded)}
-          {renderExpandableSection("purchases", NAV_CONFIG.purchases, forceExpanded)}
-          {renderGroupLabel("Banking & Reports", forceExpanded)}
-          {renderExpandableSection("banking", NAV_CONFIG.banking, forceExpanded)}
-          {renderNavItem(NAV_CONFIG.reports, false, forceExpanded)}
+
+          {/* ── Sales & Purchases — only show label when at least one child visible ── */}
+          {(() => {
+            const salesSection = renderExpandableSection("sales", NAV_CONFIG.sales, forceExpanded);
+            const purchasesSection = renderExpandableSection("purchases", NAV_CONFIG.purchases, forceExpanded);
+            if (!salesSection && !purchasesSection) return null;
+            return (
+              <>
+                {renderGroupLabel("Sales & Purchases", forceExpanded)}
+                {salesSection}
+                {purchasesSection}
+              </>
+            );
+          })()}
+
+          {/* ── Banking & Reports — only show label when at least one child visible ── */}
+          {(() => {
+            const bankingSection = renderExpandableSection("banking", NAV_CONFIG.banking, forceExpanded);
+            const reportsItem = renderNavItem(NAV_CONFIG.reports, false, forceExpanded);
+            if (!bankingSection && !reportsItem) return null;
+            return (
+              <>
+                {renderGroupLabel("Banking & Reports", forceExpanded)}
+                {bankingSection}
+                {reportsItem}
+              </>
+            );
+          })()}
+
+          {/* ── My Account — always visible for authenticated users ── */}
           {renderGroupLabel("My Account", forceExpanded)}
           {renderExpandableSection("myAccount", NAV_CONFIG.myAccount, forceExpanded)}
-          {renderGroupLabel("Organisation", forceExpanded)}
-          {renderExpandableSection("settings", NAV_CONFIG.settings, forceExpanded)}
+
+          {/* ── Organisation / Settings — only show when user has settings access ── */}
+          {(() => {
+            const settingsSection = renderExpandableSection("settings", NAV_CONFIG.settings, forceExpanded);
+            if (!settingsSection) return null;
+            return (
+              <>
+                {renderGroupLabel("Organisation", forceExpanded)}
+                {settingsSection}
+              </>
+            );
+          })()}
         </List>
       </Box>
 

@@ -94,7 +94,7 @@ describe('LoginPage', () => {
 
   it('calls login on form submit', async () => {
     const mockLogin = jest.fn().mockResolvedValue('token');
-    useAuth.mockReturnValue({
+    const guestAuth = {
       login: mockLogin,
       register: jest.fn(),
       sessionExpired: false,
@@ -106,9 +106,9 @@ describe('LoginPage', () => {
       canApprove: false,
       logout: jest.fn(),
       loading: false,
-    });
+    };
 
-    renderWithProviders(<LoginPage />);
+    renderWithProviders(<LoginPage />, { authValue: guestAuth });
 
     fireEvent.change(getUsernameInput(), { target: { value: 'admin@example.com' } });
     fireEvent.change(getPasswordInput(), { target: { value: 'Pass123!' } });
@@ -125,7 +125,7 @@ describe('LoginPage', () => {
 
   it('shows error message on login failure', async () => {
     const mockLogin = jest.fn().mockRejectedValue(new Error('Invalid'));
-    useAuth.mockReturnValue({
+    const guestAuth = {
       login: mockLogin,
       register: jest.fn(),
       sessionExpired: false,
@@ -137,9 +137,9 @@ describe('LoginPage', () => {
       canApprove: false,
       logout: jest.fn(),
       loading: false,
-    });
+    };
 
-    renderWithProviders(<LoginPage />);
+    renderWithProviders(<LoginPage />, { authValue: guestAuth });
 
     fireEvent.change(getUsernameInput(), { target: { value: 'admin@example.com' } });
     fireEvent.change(getPasswordInput(), { target: { value: 'wrong' } });

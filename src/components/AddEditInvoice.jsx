@@ -4,6 +4,7 @@ import { createInvoice, updateInvoice } from '../services/invoiceService';
 import { createApiUrl } from '../config/api';
 import { useInvoicePreferences } from '../context/InvoicePreferencesContext';
 import { getTaxRates, calculateInvoiceTax } from '../services/taxService';
+import { useOrgGst } from '../context/OrgGstContext';
 import {
   Alert,
   Autocomplete,
@@ -164,6 +165,7 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
   const quickCreateCustomerId = location.state?.quickCreateCustomerId || '';
   const shouldFocusItemInput = Boolean(location.state?.focusItemInput);
   const { prefs } = useInvoicePreferences();
+  const { isSalesTaxAllowed, isComposition, isUnregistered } = useOrgGst();
   const [form, setForm] = useState(initialForm);
   const [customers, setCustomers] = useState([]);
   const [customersError, setCustomersError] = useState(false);
@@ -242,7 +244,7 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
         const [customersResponse, productsResponse, taxRatesData] = await Promise.all([
           axios.get(createApiUrl('/api/customers')).catch(() => { setCustomersError(true); return { data: [] }; }),
           axios.get(createApiUrl('/api/products')).catch(() => ({ data: [] })),
-          getTaxRates().catch(() => null),
+          getTaxRates(true).catch(() => null), // for_sales=true: returns [] for Composition/Unregistered
         ]);
         if (!active) return;
 
@@ -365,6 +367,20 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
 
     return () => clearTimeout(timer);
   }, [focusItemPending, form.customer_id, pageLoading]);
+
+  // Enforce org GST mode: Composition/Unregistered cannot have GST on sales
+  useEffect(() => {
+    if (!isSalesTaxAllowed && form.is_gst_applicable) {
+      setForm((prev) => ({
+        ...prev,
+        is_gst_applicable: false,
+        cgst_amount: 0,
+        sgst_amount: 0,
+        igst_amount: 0,
+        total_tax: 0,
+      }));
+    }
+  }, [isSalesTaxAllowed, form.is_gst_applicable]);
 
   useEffect(() => {
     const manualTax = Number(form.cgst_amount || 0) + Number(form.sgst_amount || 0) + Number(form.igst_amount || 0);
@@ -958,6 +974,18 @@ const AddEditInvoice = ({ onSuccess, onCancel }) => {
                           <Typography sx={{ fontSize: '0.84rem', color: '#1f2937', fontWeight: 600 }}>{t('invoiceForm.subTotal')}</Typography>
                           <Typography sx={{ fontSize: '0.84rem', color: '#111827', fontWeight: 700 }}>{formatCurrencyByLocale(form.subtotal || 0, i18n.language)}</Typography>
                         </Box>
+
+                        {/* ── Composition / Unregistered notice ── */}
+                        {isComposition && (
+                          <Alert severity="warning" sx={{ mb: 1, py: 0.5, fontSize: '0.75rem' }}>
+                            Composition scheme — no GST on sales.
+                          </Alert>
+                        )}
+                        {isUnregistered && (
+                          <Alert severity="info" sx={{ mb: 1, py: 0.5, fontSize: '0.75rem' }}>
+                            Unregistered — GST not applicable.
+                          </Alert>
+                        )}
 
                         {/* ── GST Breakdown ── */}
                         {form.is_gst_applicable && gstBreakdown.tax_type === 'CGST_SGST' && (

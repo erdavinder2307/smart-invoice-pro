@@ -75,21 +75,29 @@ describe('Sidebar', () => {
     expect(screen.getByText('Settings')).toBeInTheDocument();
   });
 
-  it('hides Settings for non-admin users', () => {
-    useAuth.mockReturnValue({
-      user: { id: '2', username: 'viewer', role: 'Viewer' },
-      isAuthenticated: true,
-      isAdmin: false,
-      isManager: false,
-      canApprove: false,
-      logout: jest.fn(),
-      login: jest.fn(),
-      register: jest.fn(),
-      loading: false,
-      sessionExpired: false,
-      userRole: 'Viewer',
+  it('hides Settings for non-admin users without settings permissions', () => {
+    renderWithProviders(<Sidebar />, {
+      authValue: {
+        user: { id: '2', username: 'viewer', role: 'Viewer' },
+        isAuthenticated: true,
+        isAdmin: false,
+        isManager: false,
+        canApprove: false,
+        logout: jest.fn(),
+        login: jest.fn(),
+        register: jest.fn(),
+        loading: false,
+        sessionExpired: false,
+        userRole: 'Viewer',
+      },
+      permValue: {
+        isAdmin: false,
+        can: jest.fn(() => false),
+        loading: false,
+        permissions: {},
+        refetch: jest.fn(),
+      },
     });
-    renderWithProviders(<Sidebar />);
     expect(screen.queryByText('Settings')).not.toBeInTheDocument();
   });
 

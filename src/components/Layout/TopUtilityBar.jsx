@@ -25,6 +25,7 @@ import { useTranslation } from "react-i18next";
 import { safeClick } from "../../utils/safeClick";
 import { useAuth } from "../../context/AuthContext";
 import { useMe } from "../../context/MeContext";
+import { usePermission } from "../../context/PermissionContext";
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
 
@@ -50,6 +51,8 @@ const TopUtilityBar = ({ searchPlaceholder = "", onSearchChange, onMenuClick }) 
   const { logout } = useAuth();
   const { me, meLoading, displayName } = useMe();
   const { unreadCount } = useNotifications();
+  const { can, isAdmin: permIsAdmin } = usePermission();
+  const canAccessSettings = permIsAdmin || can('settings', 'view') || can('user_management', 'view') || can('roles', 'view');
   const { openShortcutsModal } = useKeyboardShortcutsContext();
   const navigate = useNavigate();
 
@@ -118,11 +121,13 @@ const TopUtilityBar = ({ searchPlaceholder = "", onSearchChange, onMenuClick }) 
           </IconButton>
         </Tooltip>
 
-        <Tooltip title={t("common.settings")}>
-          <IconButton color="inherit" onClick={() => navigate("/settings")}>
-            <SettingsOutlinedIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        {canAccessSettings && (
+          <Tooltip title={t("common.settings")}>
+            <IconButton color="inherit" onClick={() => navigate("/settings")}>
+              <SettingsOutlinedIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
 
         {/* Avatar button */}
         <Tooltip title="Account">

@@ -25,6 +25,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { createApiUrl } from '../config/api';
 import PayNowModal from '../components/PayNowModal';
+import { resolveMediaUrl } from '../utils/mediaUrl';
 
 const statusColors = {
   Paid: 'success',
@@ -43,9 +44,23 @@ const fmtDate = (d) => {
   catch { return d; }
 };
 
+const _DEFAULT_BRANDING = {
+  primary_color: '#1a237e',
+  accent_color:  '#2d6cdf',
+  logo_url:      '',
+  organization_name: 'Solidev Books',
+  gst_mode: 'FULL_GST',
+  gstin: '',
+};
+
 const PortalInvoiceView = () => {
   const { token } = useParams();
   const [invoice, setInvoice] = useState(null);
+  const [branding, setBranding] = useState(_DEFAULT_BRANDING);
+  // Derived GST display flags from branding payload
+  const portalGstMode = branding.gst_mode || 'FULL_GST';
+  const showGstOnPortal = portalGstMode === 'FULL_GST' && Boolean(invoice?.is_gst_applicable);
+  const isPortalComposition = portalGstMode === 'COMPOSITION';
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [payNowOpen, setPayNowOpen] = useState(false);
@@ -60,6 +75,9 @@ const PortalInvoiceView = () => {
         if (res.ok) {
           const data = await res.json();
           setInvoice(data);
+          if (data.branding) {
+            setBranding({ ..._DEFAULT_BRANDING, ...data.branding });
+          }
         } else {
           const err = await res.json();
           setError(err.error || 'Invoice not found.');
@@ -104,17 +122,28 @@ const PortalInvoiceView = () => {
         {/* Header bar */}
         <Box display="flex" alignItems="center" justifyContent="space-between" mb={3}>
           <Box display="flex" alignItems="center" gap={1.5}>
-            <Box
-              sx={{
-                width: 44, height: 44, borderRadius: 2,
-                bgcolor: 'primary.main', display: 'flex',
-                alignItems: 'center', justifyContent: 'center',
-              }}
-            >
-              <ReceiptIcon sx={{ color: 'white', fontSize: 24 }} />
-            </Box>
+            {branding.logo_url ? (
+              <Box
+                component="img"
+                src={resolveMediaUrl(branding.logo_url)}
+                alt={branding.organization_name || 'Logo'}
+                sx={{ maxHeight: 44, maxWidth: 160, objectFit: 'contain' }}
+              />
+            ) : (
+              <Box
+                sx={{
+                  width: 44, height: 44, borderRadius: 2,
+                  bgcolor: branding.primary_color, display: 'flex',
+                  alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <ReceiptIcon sx={{ color: 'white', fontSize: 24 }} />
+              </Box>
+            )}
             <Box>
-              <Typography variant="h6" fontWeight={700} lineHeight={1.2}>Solidev Books</Typography>
+              <Typography variant="h6" fontWeight={700} lineHeight={1.2}>
+                {branding.organization_name || 'Solidev Books'}
+              </Typography>
               <Typography variant="caption" color="text.secondary">Secure Invoice Portal</Typography>
             </Box>
           </Box>
@@ -136,7 +165,7 @@ const PortalInvoiceView = () => {
           <Box
             sx={{
               px: 4, py: 3,
-              background: 'linear-gradient(135deg, #1a237e 0%, #283593 100%)',
+              background: branding.primary_color,
               color: 'white',
               display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
               flexWrap: 'wrap', gap: 2,
@@ -206,7 +235,7 @@ const PortalInvoiceView = () => {
                       <TableCell sx={{ fontWeight: 700 }}>Description</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 700 }}>Qty</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 700 }}>Rate</TableCell>
-                      {invoice.is_gst_applicable && (
+                      {showGstOnPortal && (
                         <TableCell align="right" sx={{ fontWeight: 700 }}>Tax</TableCell>
                       )}
                       <TableCell align="right" sx={{ fontWeight: 700 }}>Amount</TableCell>
@@ -224,7 +253,7 @@ const PortalInvoiceView = () => {
                         </TableCell>
                         <TableCell align="right">{item.quantity || 1}</TableCell>
                         <TableCell align="right">{fmt(item.unit_price || item.rate || 0)}</TableCell>
-                        {invoice.is_gst_applicable && (
+                        {showGstOnPortal && (
                           <TableCell align="right">{item.tax_rate || item.gst_rate || 0}%</TableCell>
                         )}
                         <TableCell align="right" sx={{ fontWeight: 600 }}>{fmt(item.amount || item.total || 0)}</TableCell>
@@ -246,7 +275,7 @@ const PortalInvoiceView = () => {
                   <Typography variant="body2" color="text.secondary">Subtotal</Typography>
                   <Typography variant="body2" fontWeight={500}>{fmt(invoice.subtotal)}</Typography>
                 </Box>
-                {invoice.is_gst_applicable && (
+                {showGstOnPortal && (
                   <>
                     {invoice.cgst_amount > 0 && (
                       <Box display="flex" justifyContent="space-between" py={0.75}>
@@ -267,6 +296,13 @@ const PortalInvoiceView = () => {
                       </Box>
                     )}
                   </>
+                )}
+                {isPortalComposition && (
+                  <Box py={0.75}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                      Composition Taxable Person. Not eligible to collect tax on supplies.
+                    </Typography>
+                  </Box>
                 )}
                 {invoice.total_tax > 0 && (
                   <Box display="flex" justifyContent="space-between" py={0.75}>
@@ -340,7 +376,8 @@ const PortalInvoiceView = () => {
           {/* Footer */}
           <Box px={4} py={2} bgcolor="grey.50" borderTop="1px solid" borderColor="divider">
             <Typography variant="caption" color="text.secondary" display="block" textAlign="center">
-              This is a secure, read-only invoice view. Powered by Solidev Books.
+              This is a secure, read-only invoice view.
+              {branding.organization_name ? ` Issued by ${branding.organization_name}.` : ''}
             </Typography>
           </Box>
         </Paper>

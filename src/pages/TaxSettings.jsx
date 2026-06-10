@@ -14,6 +14,8 @@ import {
   IconButton,
   MenuItem,
   Paper,
+  Radio,
+  RadioGroup,
   Snackbar,
   Switch,
   Table,
@@ -29,6 +31,8 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 
 import { C, fieldSx, saveBtnSx } from "../components/common/formStyles";
 import {
@@ -38,6 +42,7 @@ import {
   deleteTaxRate,
 } from "../services/taxService";
 import { getOrgProfile, updateOrgProfile } from "../services/organizationProfileService";
+import { useOrgGst } from "../context/OrgGstContext";
 
 const EMPTY_RATE = { name: "", rate: "", type: "GST", is_default: false };
 // ── Tax Rate Dialog ───────────────────────────────────────────────────────────
@@ -145,8 +150,37 @@ function TaxRateDialog({ open, onClose, onSave, initial }) {
   );
 }
 
+// ── Per-type contextual help text ────────────────────────────────────────────
+const REG_TYPE_INFO = {
+  regular: {
+    label: "Regular",
+    badge: null,
+    help: "Full GST taxpayer. GSTIN is mandatory. CGST/SGST/IGST will be calculated and shown on all sales documents.",
+    gstinRequired: true,
+    canChargeTax: true,
+  },
+  composition: {
+    label: "Composition Scheme",
+    badge: "Restricted",
+    badgeColor: "warning",
+    help: 'Registered under the GST Composition Scheme. GSTIN is mandatory, but you cannot collect GST on sales. A statutory note — "Composition Taxable Person. Not eligible to collect tax on supplies." — will appear on invoices automatically.',
+    gstinRequired: true,
+    canChargeTax: false,
+  },
+  unregistered: {
+    label: "Unregistered",
+    badge: "No GST",
+    badgeColor: "default",
+    help: "Your business is not registered under GST. GSTIN is not required. No GST will appear on any sales or purchase documents.",
+    gstinRequired: false,
+    canChargeTax: false,
+  },
+};
+
 // ── Main Component ────────────────────────────────────────────────────────────
 const TaxSettings = () => {
+  const { reload: reloadGstContext } = useOrgGst();
+
   const [rates, setRates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -154,12 +188,15 @@ const TaxSettings = () => {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [snack, setSnack] = useState({ open: false, message: "", severity: "success" });
 
-  // GST Settings (from org profile)
-  const [gstEnabled, setGstEnabled] = useState(true);
+  // GST Settings — registration type is now the single source of truth
   const [gstin, setGstin] = useState("");
   const [gstRegType, setGstRegType] = useState("regular");
   const [profileData, setProfileData] = useState(null);
   const [gstSaving, setGstSaving] = useState(false);
+  const [gstErrors, setGstErrors] = useState({});
+  // Confirm dialog when switching to Unregistered with existing GSTIN
+  const [unregConfirmOpen, setUnregConfirmOpen] = useState(false);
+  const [pendingRegType, setPendingRegType] = useState(null);
 
   const toast = useCallback((message, severity = "success") => {
     setSnack({ open: true, message, severity });
@@ -174,7 +211,6 @@ const TaxSettings = () => {
         if (!active) return;
         setRates(Array.isArray(ratesData) ? ratesData : []);
         setProfileData(profile);
-        setGstEnabled(profile.gst_enabled !== false);
         setGstin(profile.gstin || "");
         setGstRegType(profile.gst_registration_type || "regular");
       } catch {
@@ -187,20 +223,56 @@ const TaxSettings = () => {
     return () => { active = false; };
   }, [toast]);
 
+  const handleRegTypeChange = (newType) => {
+    if (newType === "unregistered" && gstin) {
+      // Warn: switching to Unregistered clears GSTIN
+      setPendingRegType(newType);
+      setUnregConfirmOpen(true);
+    } else {
+      setGstRegType(newType);
+      setGstErrors({});
+    }
+  };
+
+  const confirmUnregistered = () => {
+    setGstRegType(pendingRegType);
+    setGstin("");
+    setGstErrors({});
+    setUnregConfirmOpen(false);
+    setPendingRegType(null);
+  };
+
+  const validateGstForm = () => {
+    const errs = {};
+    const info = REG_TYPE_INFO[gstRegType] || REG_TYPE_INFO.regular;
+    if (info.gstinRequired) {
+      if (!gstin.trim()) {
+        errs.gstin = `GSTIN is required for ${info.label} registration type.`;
+      } else if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(gstin.trim().toUpperCase())) {
+        errs.gstin = "Invalid GSTIN format. Expected 15-character GSTIN (e.g. 22AAAAA0000A1Z5).";
+      }
+    }
+    setGstErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
   const handleSaveGstSettings = async () => {
     if (!profileData) return;
+    if (!validateGstForm()) return;
     setGstSaving(true);
     try {
       const updated = await updateOrgProfile({
         ...profileData,
-        gst_enabled: gstEnabled,
-        gstin,
+        gstin: gstRegType === "unregistered" ? "" : gstin.trim().toUpperCase(),
         gst_registration_type: gstRegType,
       });
       setProfileData(updated);
+      setGstRegType(updated.gst_registration_type || gstRegType);
+      reloadGstContext(); // refresh all components that depend on OrgGstContext
       toast("GST settings saved");
-    } catch {
-      toast("Failed to save GST settings", "error");
+    } catch (err) {
+      const msg = err?.response?.data?.error || "Failed to save GST settings";
+      toast(msg, "error");
     } finally {
       setGstSaving(false);
     }
@@ -238,8 +310,8 @@ const TaxSettings = () => {
 
   return (
     <MainLayout>
-      <Box sx={{ bgcolor: "#f8fafc", minHeight: "100vh", py: 2.5, px: { xs: 1, md: 3 } }}>
-        <Box sx={{ maxWidth: 1020, mx: "auto", minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+      <Box sx={{ bgcolor: C.pageBg, minHeight: "100vh", pb: 6 }}>
+        <Box sx={{ pt: 3, px: 2.5, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
             {/* ── Page header ── */}
             <Box>
               <Typography sx={{ fontSize: "1.5rem", fontWeight: 600, color: "#151a25" }}>
@@ -256,80 +328,114 @@ const TaxSettings = () => {
               </Box>
             ) : (
               <>
-                {/* ── GST Settings Card ── */}
+                {/* ── GST Registration Type Card ── */}
                 <Paper
                   elevation={0}
-                  sx={{
-                    border: `1px solid ${C.border}`,
-                    borderRadius: "4px",
-                    overflow: "hidden",
-                  }}
+                  sx={{ border: `1px solid ${C.border}`, borderRadius: "4px", overflow: "hidden" }}
                 >
-                  <Box
-                    sx={{
-                      px: 2.5,
-                      py: 1.5,
-                      borderBottom: `1px solid ${C.divider}`,
-                      bgcolor: "#fafbfc",
-                    }}
-                  >
+                  <Box sx={{ px: 2.5, py: 1.5, borderBottom: `1px solid ${C.divider}`, bgcolor: "#fafbfc" }}>
                     <Typography sx={{ fontSize: "0.875rem", fontWeight: 600, color: "#2d3748" }}>
-                      GST Settings
+                      GST Registration
+                    </Typography>
+                    <Typography sx={{ fontSize: "0.75rem", color: C.hint, mt: 0.25 }}>
+                      Your registration type determines how GST is applied across all documents.
                     </Typography>
                   </Box>
-                  <Box sx={{ px: 2.5, py: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+                  <Box sx={{ px: 2.5, py: 2, display: "flex", flexDirection: "column", gap: 2.5 }}>
 
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                      <FormControlLabel
-                        control={
-                          <Switch
-                            checked={gstEnabled}
-                            onChange={(e) => setGstEnabled(e.target.checked)}
-                            size="small"
+                    {/* Registration type radio group */}
+                    <RadioGroup
+                      value={gstRegType}
+                      onChange={(e) => handleRegTypeChange(e.target.value)}
+                      sx={{ gap: 1 }}
+                    >
+                      {Object.entries(REG_TYPE_INFO).map(([value, info]) => (
+                        <Box
+                          key={value}
+                          onClick={() => handleRegTypeChange(value)}
+                          sx={{
+                            display: "flex",
+                            alignItems: "flex-start",
+                            gap: 1.5,
+                            p: 1.5,
+                            border: `1px solid ${gstRegType === value ? "#1a56db" : C.border}`,
+                            borderRadius: "6px",
+                            bgcolor: gstRegType === value ? "#f0f4ff" : "#fff",
+                            cursor: "pointer",
+                            transition: "all 0.15s",
+                            "&:hover": { borderColor: "#1a56db", bgcolor: "#f7f9ff" },
+                          }}
+                        >
+                          <FormControlLabel
+                            value={value}
+                            control={<Radio size="small" sx={{ p: 0.5 }} />}
+                            label=""
+                            sx={{ m: 0 }}
                           />
-                        }
-                        label={
-                          <Typography sx={{ fontSize: "0.8125rem", fontWeight: 500 }}>
-                            Enable GST
-                          </Typography>
-                        }
-                      />
-                      <Typography sx={{ fontSize: "0.75rem", color: C.hint }}>
-                        When enabled, CGST/SGST or IGST is automatically calculated on invoices.
-                      </Typography>
-                    </Box>
+                          <Box sx={{ flex: 1 }}>
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.25 }}>
+                              <Typography sx={{ fontSize: "0.8125rem", fontWeight: 600, color: "#2d3748" }}>
+                                {info.label}
+                              </Typography>
+                              {info.badge && (
+                                <Chip
+                                  label={info.badge}
+                                  size="small"
+                                  color={info.badgeColor}
+                                  sx={{ fontSize: "0.65rem", height: 18 }}
+                                />
+                              )}
+                            </Box>
+                            <Typography sx={{ fontSize: "0.75rem", color: C.hint, lineHeight: 1.5 }}>
+                              {info.help}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      ))}
+                    </RadioGroup>
 
-                    {gstEnabled && (
-                      <Box
-                        sx={{
-                          display: "grid",
-                          gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-                          gap: 2,
-                        }}
-                      >
+                    {/* GSTIN field — shown only when required */}
+                    {REG_TYPE_INFO[gstRegType]?.gstinRequired && (
+                      <Box>
                         <TextField
                           label="GSTIN"
                           value={gstin}
-                          onChange={(e) => setGstin(e.target.value.toUpperCase())}
+                          onChange={(e) => {
+                            setGstin(e.target.value.toUpperCase());
+                            if (gstErrors.gstin) setGstErrors((p) => ({ ...p, gstin: "" }));
+                          }}
                           size="small"
-                          sx={fieldSx}
+                          sx={{ ...fieldSx, maxWidth: 340 }}
                           placeholder="22AAAAA0000A1Z5"
-                          helperText="15-character GST Identification Number"
+                          helperText={gstErrors.gstin || "15-character GST Identification Number"}
+                          error={Boolean(gstErrors.gstin)}
                           inputProps={{ maxLength: 15 }}
+                          fullWidth
                         />
-                        <TextField
-                          select
-                          label="GST Registration Type"
-                          value={gstRegType}
-                          onChange={(e) => setGstRegType(e.target.value)}
-                          size="small"
-                          sx={fieldSx}
-                        >
-                          <MenuItem value="regular">Regular</MenuItem>
-                          <MenuItem value="composition">Composition Scheme</MenuItem>
-                          <MenuItem value="unregistered">Unregistered</MenuItem>
-                        </TextField>
                       </Box>
+                    )}
+
+                    {/* Composition warning banner */}
+                    {gstRegType === "composition" && (
+                      <Alert
+                        severity="warning"
+                        icon={<InfoOutlinedIcon sx={{ fontSize: 18 }} />}
+                        sx={{ fontSize: "0.8125rem", py: 0.75 }}
+                      >
+                        Composition dealers cannot collect GST on sales. Tax columns will be hidden from
+                        invoices and quotes. A statutory declaration will be printed on all sales documents.
+                      </Alert>
+                    )}
+
+                    {/* Unregistered info banner */}
+                    {gstRegType === "unregistered" && (
+                      <Alert
+                        severity="info"
+                        icon={<InfoOutlinedIcon sx={{ fontSize: 18 }} />}
+                        sx={{ fontSize: "0.8125rem", py: 0.75 }}
+                      >
+                        No GST will appear on invoices, quotes, or PDFs. GST reports will be unavailable.
+                      </Alert>
                     )}
 
                     <Box sx={{ display: "flex", justifyContent: "flex-end", pt: 0.5 }}>
@@ -501,6 +607,40 @@ const TaxSettings = () => {
             sx={{ bgcolor: "#e53935", "&:hover": { bgcolor: "#c62828" }, textTransform: "none", fontSize: "0.8125rem" }}
           >
             Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ── Unregistered confirmation dialog ── */}
+      <Dialog open={unregConfirmOpen} onClose={() => setUnregConfirmOpen(false)} maxWidth="xs">
+        <DialogTitle sx={{ fontSize: "1rem", fontWeight: 600, display: "flex", alignItems: "center", gap: 1 }}>
+          <WarningAmberIcon sx={{ color: "#f59e0b", fontSize: 20 }} />
+          Switch to Unregistered?
+        </DialogTitle>
+        <DialogContent>
+          <Typography sx={{ fontSize: "0.875rem", lineHeight: 1.6 }}>
+            Switching to <strong>Unregistered</strong> will clear your saved GSTIN
+            (<strong>{gstin}</strong>) and disable all GST on future documents.
+            <br /><br />
+            Existing documents will not be changed.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => { setUnregConfirmOpen(false); setPendingRegType(null); }}
+            size="small"
+            sx={{ color: C.hint, textTransform: "none" }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={confirmUnregistered}
+            size="small"
+            variant="contained"
+            disableElevation
+            sx={{ bgcolor: "#e53935", "&:hover": { bgcolor: "#c62828" }, textTransform: "none", fontSize: "0.8125rem" }}
+          >
+            Switch to Unregistered
           </Button>
         </DialogActions>
       </Dialog>

@@ -60,6 +60,7 @@ import buildSummaryFilterItems from "../utils/summaryFilterChips";
 import BulkActionBar from "./list/BulkActionBar";
 import ArchiveDialog from "./common/ArchiveDialog";
 import LifecycleArchiveDialog from "./common/LifecycleArchiveDialog";
+import { usePermission } from "../context/PermissionContext";
 import useTableSorting from "../hooks/useTableSorting";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { useListController } from "../hooks/useListController";
@@ -128,6 +129,10 @@ const InvoiceList = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const { can } = usePermission();
+  const canCreate = can('invoices', 'create');
+  const canEdit   = can('invoices', 'edit');
+  const canDelete = can('invoices', 'delete');
 
   const {
     page,
@@ -410,7 +415,7 @@ const InvoiceList = () => {
   };
 
   const handleSubmitPayment = () => {
-    const { invoice, amount, paymentDate, paymentMode } = paymentDialog;
+    const { invoice, amount } = paymentDialog;
     if (!invoice || !amount) return;
     setPaymentConfirmOpen(true);
   };
@@ -497,14 +502,16 @@ const InvoiceList = () => {
             >
               Export
             </Button>
-            <Button
-              variant="contained"
-              onClick={() => navigate("/invoices/add")}
-              startIcon={<AddIcon fontSize="small" />}
-              sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
-            >
-              New Invoice
-            </Button>
+            {canCreate && (
+              <Button
+                variant="contained"
+                onClick={() => navigate("/invoices/add")}
+                startIcon={<AddIcon fontSize="small" />}
+                sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
+              >
+                New Invoice
+              </Button>
+            )}
           </Box>
         }
         searchValue={search}
@@ -885,7 +892,7 @@ const InvoiceList = () => {
           <ListItemIcon><VisibilityIcon fontSize="small" /></ListItemIcon>
           <ListItemText>View Details</ListItemText>
         </MenuItem>
-        {status !== "Archived" && (
+        {status !== "Archived" && canEdit && (
           <MenuItem
             onClick={() => {
               navigate(`/invoices/edit/${activeInvoice?.id}`);
@@ -896,13 +903,13 @@ const InvoiceList = () => {
             <ListItemText>Edit Invoice</ListItemText>
           </MenuItem>
         )}
-        {status !== "Archived" && (
+        {status !== "Archived" && canEdit && (
           <MenuItem onClick={() => handleOpenPayment(activeInvoice)} disabled={activeInvoice?.status === "Paid"}>
             <ListItemIcon><AttachMoneyIcon fontSize="small" color="success" /></ListItemIcon>
             <ListItemText>Record Payment</ListItemText>
           </MenuItem>
         )}
-        {status !== "Archived" && (
+        {status !== "Archived" && canEdit && (
           <MenuItem onClick={() => handleOpenEmail(activeInvoice)}>
             <ListItemIcon><EmailIcon fontSize="small" color="primary" /></ListItemIcon>
             <ListItemText>Send Invoice</ListItemText>
@@ -912,14 +919,18 @@ const InvoiceList = () => {
           <ListItemIcon><PictureAsPdfIcon fontSize="small" color="error" /></ListItemIcon>
           <ListItemText>Download PDF</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => { navigate("/invoices/add", { state: { cloneFrom: activeInvoice } }); handleActionMenuClose(); }}>
-          <ListItemIcon><ContentCopyIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>Duplicate</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={() => { setConfirmDeleteId(activeInvoice?.id); handleActionMenuClose(); }}>
-          <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
-          <ListItemText>Archive</ListItemText>
-        </MenuItem>
+        {canCreate && (
+          <MenuItem onClick={() => { navigate("/invoices/add", { state: { cloneFrom: activeInvoice } }); handleActionMenuClose(); }}>
+            <ListItemIcon><ContentCopyIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>Duplicate</ListItemText>
+          </MenuItem>
+        )}
+        {canDelete && (
+          <MenuItem onClick={() => { setConfirmDeleteId(activeInvoice?.id); handleActionMenuClose(); }}>
+            <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
+            <ListItemText>Archive</ListItemText>
+          </MenuItem>
+        )}
         {["Issued", "Partially Paid", "Overdue"].includes(activeInvoice?.status) && (
           <MenuItem onClick={() => { setVoidDialog({ open: true, invoice: activeInvoice, reason: "", submitting: false }); handleActionMenuClose(); }}>
             <ListItemIcon><CancelIcon fontSize="small" color="warning" /></ListItemIcon>

@@ -51,20 +51,7 @@ describe('Header', () => {
   });
 
   it('shows login button when not authenticated', () => {
-    useAuth.mockReturnValue({
-      user: null,
-      isAuthenticated: false,
-      userRole: null,
-      isAdmin: false,
-      isManager: false,
-      canApprove: false,
-      login: jest.fn(),
-      logout: jest.fn(),
-      register: jest.fn(),
-      loading: false,
-      sessionExpired: false,
-    });
-    renderWithProviders(<Header />);
+    renderWithProviders(<Header />, { authValue: defaultAuth });
     expect(screen.getByText(/login|sign in/i)).toBeInTheDocument();
   });
 

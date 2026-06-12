@@ -11,6 +11,15 @@ const getHeaders = () => ({
 
 // ── Tenants ──────────────────────────────────────────────────────────────────
 
+export const createTenant = async ({ name, plan = 'trial', status = 'active' }) => {
+  const response = await axios.post(
+    `${API_URL}/admin/tenants`,
+    { name, plan, status },
+    { headers: getHeaders() }
+  );
+  return response.data;
+};
+
 export const listTenants = async (page = 0, limit = 50) => {
   const response = await axios.get(`${API_URL}/admin/tenants`, {
     headers: getHeaders(),
@@ -115,6 +124,7 @@ export const getAdminAuditLogs = async (params = {}) => {
 };
 
 const adminApiService = {
+  createTenant,
   listTenants,
   getTenant,
   updateTenantStatus,

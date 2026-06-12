@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -22,10 +23,20 @@ import {
   DialogContentText,
   DialogActions,
   TablePagination,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import AddIcon from '@mui/icons-material/Add';
 import AdminLayout from '../components/AdminLayout';
-import { listTenants, updateTenantStatus, deleteTenant } from '../services/adminApiService';
+import {
+  listTenants,
+  createTenant,
+  updateTenantStatus,
+  deleteTenant,
+} from '../services/adminApiService';
 
 const STATUS_COLORS = {
   active: 'success',
@@ -44,6 +55,9 @@ const Tenants = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedTenant, setSelectedTenant] = useState(null);
   const [deleteDialog, setDeleteDialog] = useState(false);
+  const [createDialog, setCreateDialog] = useState(false);
+  const [createForm, setCreateForm] = useState({ name: '', plan: 'trial' });
+  const [creating, setCreating] = useState(false);
 
   const fetchTenants = useCallback(async () => {
     setLoading(true);
@@ -83,6 +97,25 @@ const Tenants = () => {
     }
   };
 
+  const handleCreate = async () => {
+    if (!createForm.name.trim()) return;
+    setCreating(true);
+    setError('');
+    try {
+      await createTenant({
+        name: createForm.name.trim(),
+        plan: createForm.plan,
+      });
+      setCreateDialog(false);
+      setCreateForm({ name: '', plan: 'trial' });
+      fetchTenants();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to create tenant');
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const handleDelete = async () => {
     setDeleteDialog(false);
     if (!selectedTenant) return;
@@ -100,9 +133,18 @@ const Tenants = () => {
         <Typography variant="h4" fontWeight={700}>
           Tenants
         </Typography>
-        <Button variant="outlined" onClick={fetchTenants}>
-          Refresh
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setCreateDialog(true)}
+          >
+            Create Tenant
+          </Button>
+          <Button variant="outlined" onClick={fetchTenants}>
+            Refresh
+          </Button>
+        </Box>
       </Box>
 
       {error && (
@@ -138,7 +180,15 @@ const Tenants = () => {
                 ) : (
                   tenants.map((tenant) => (
                     <TableRow key={tenant.id} hover>
-                      <TableCell>{tenant.name || tenant.id}</TableCell>
+                      <TableCell>
+                        <Button
+                          component={RouterLink}
+                          to={`/admin/tenants/${tenant.id}`}
+                          sx={{ textTransform: 'none', p: 0, minWidth: 0 }}
+                        >
+                          {tenant.name || tenant.id}
+                        </Button>
+                      </TableCell>
                       <TableCell>{tenant.plan || '—'}</TableCell>
                       <TableCell>
                         <Chip
@@ -192,6 +242,43 @@ const Tenants = () => {
           Delete
         </MenuItem>
       </Menu>
+
+      <Dialog open={createDialog} onClose={() => setCreateDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Create Tenant</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Organization Name"
+            fullWidth
+            value={createForm.name}
+            onChange={(e) => setCreateForm((f) => ({ ...f, name: e.target.value }))}
+          />
+          <FormControl fullWidth margin="dense">
+            <InputLabel>Plan</InputLabel>
+            <Select
+              value={createForm.plan}
+              label="Plan"
+              onChange={(e) => setCreateForm((f) => ({ ...f, plan: e.target.value }))}
+            >
+              <MenuItem value="trial">Trial</MenuItem>
+              <MenuItem value="starter">Starter</MenuItem>
+              <MenuItem value="pro">Pro</MenuItem>
+              <MenuItem value="enterprise">Enterprise</MenuItem>
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCreateDialog(false)}>Cancel</Button>
+          <Button
+            onClick={handleCreate}
+            variant="contained"
+            disabled={creating || !createForm.name.trim()}
+          >
+            {creating ? 'Creating…' : 'Create'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog open={deleteDialog} onClose={() => setDeleteDialog(false)}>
         <DialogTitle>Delete Tenant</DialogTitle>

@@ -467,7 +467,8 @@
     "roles": "Roles",
     "automation": "Automation",
     "integrations": "Integrations",
-    "auditLog": "Audit Log"
+    "auditLog": "Audit Log",
+    "activity": "Activity"
   },
   "sidebarNav": {
     "dashboard": "Dashboard",
@@ -946,6 +947,13 @@
       "reminders": "Reminders",
       "lowStock": "Low Stock"
     }
+  },
+  "activity": {
+    "title": "Activity",
+    "noEntries": "No activity recorded yet.",
+    "accessDenied": "Access denied. You do not have permission to view activity.",
+    "failedFetch": "Failed to load activity. Please try again.",
+    "exportFailed": "Failed to export activity. Please try again."
   },
   "auditLog": {
     "title": "Audit Log",

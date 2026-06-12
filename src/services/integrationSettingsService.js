@@ -12,3 +12,13 @@ export const saveIntegrationSettings = async (payload) => {
   const { data } = await axios.put(BASE, payload);
   return data;
 };
+
+export const sendTestEmail = async (to) => {
+  const { data } = await axios.post(`${BASE}/test-email`, { to });
+  return data;
+};
+
+export const getWebhookLogs = async () => {
+  const { data } = await axios.get(`${BASE}/webhook-logs`);
+  return data;
+};

@@ -115,7 +115,7 @@ export const NAV_CONFIG = {
       { id: "roles",                label: "Roles",                labelKey: "settingsNav.roles",              icon: <AdminPanelSettingsIcon sx={{ fontSize: 20 }} />, path: "/settings/roles",                permission: { module: "roles",           action: "view" } },
       { id: "automation",           label: "Automation",           labelKey: "settingsNav.automation",         icon: <NotificationsActiveIcon sx={{ fontSize: 20 }} />, path: "/settings/automation",          permission: { module: "automation",      action: "view" } },
       { id: "integrations",         label: "Integrations",         labelKey: "settingsNav.integrations",       icon: <ExtensionIcon sx={{ fontSize: 20 }} />,          path: "/settings/integrations",         permission: { module: "integrations",    action: "view" } },
-      { id: "audit-log",            label: "Audit Log",            labelKey: "settingsNav.auditLog",           icon: <HistoryIcon sx={{ fontSize: 20 }} />,            path: "/settings/audit-log",            permission: { module: "audit_logs",      action: "view" } },
+      { id: "activity",             label: "Activity",             labelKey: "settingsNav.activity",           icon: <HistoryIcon sx={{ fontSize: 20 }} />,            path: "/activity",                      permission: { module: "audit_logs",      action: "view" } },
     ],
   },
 };

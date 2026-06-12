@@ -4,6 +4,7 @@ import AdminProtectedRoute from './AdminProtectedRoute';
 import AdminLogin from '../pages/Login';
 import AdminDashboard from '../pages/Dashboard';
 import Tenants from '../pages/Tenants';
+import TenantDetail from '../pages/TenantDetail';
 import Users from '../pages/Users';
 import FeatureFlags from '../pages/FeatureFlags';
 import AuditLogs from '../pages/AuditLogs';
@@ -25,6 +26,14 @@ const AdminRoutes = () => {
         element={
           <AdminProtectedRoute>
             <Tenants />
+          </AdminProtectedRoute>
+        }
+      />
+      <Route
+        path="tenants/:tenantId"
+        element={
+          <AdminProtectedRoute>
+            <TenantDetail />
           </AdminProtectedRoute>
         }
       />

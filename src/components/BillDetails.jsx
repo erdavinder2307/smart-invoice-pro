@@ -14,6 +14,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import MainLayout from "./Layout/MainLayout";
 import StatusBadge from "./common/StatusBadge";
 import { getBillById, markBillAsPaid } from "../services/billService";
+import EntityActivityPanel from "./Activity/EntityActivityPanel";
 
 const formatAmount = (value) => `₹${Number(value || 0).toFixed(2)}`;
 
@@ -139,6 +140,8 @@ const BillDetails = () => {
             )}
           </Paper>
         )}
+
+        <EntityActivityPanel entityType="bill" entityId={id} />
       </Box>
     </MainLayout>
   );

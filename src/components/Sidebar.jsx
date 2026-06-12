@@ -49,7 +49,7 @@ const Sidebar = () => {
   const theme = useTheme();
   const { t } = useTranslation();
   const { logout, isAdmin } = useAuth();
-  const { can, isAdmin: permIsAdmin } = usePermission();
+  const { can, isAdmin: permIsAdmin, loaded: permissionsLoaded } = usePermission();
   const effectiveIsAdmin = isAdmin || permIsAdmin;
   const { displayName: meDisplayName, initials: meInitials } = useMe();
   const {
@@ -168,7 +168,7 @@ const Sidebar = () => {
   const handleLogoutConfirm = () => {
     setShowLogoutDialog(false);
     logout();
-    navigate("/");
+    // AppLayout redirects unauthenticated users to /login — avoid competing navigations
   };
 
   const handlePopoverClose = () => {
@@ -243,7 +243,7 @@ const Sidebar = () => {
   // ── Render simple nav item ────────────────────────────────────────────────
   const renderNavItem = (config, isChild = false, forceExpanded = false) => {
     if (config.adminOnly && !effectiveIsAdmin) return null;
-    if (config.permission && !effectiveIsAdmin && !can(config.permission.module, config.permission.action)) return null;
+    if (config.permission && permissionsLoaded && !effectiveIsAdmin && !can(config.permission.module, config.permission.action)) return null;
 
     const showLabels = forceExpanded || !isDesktopCollapsed;
     const showTooltip = isDesktopCollapsed && !forceExpanded;
@@ -296,11 +296,11 @@ const Sidebar = () => {
   // ── Render expandable section ─────────────────────────────────────────────
   const renderExpandableSection = (sectionKey, config, forceExpanded = false) => {
     if (config.adminOnly && !effectiveIsAdmin) return null;
-    if (config.permission && !effectiveIsAdmin && !can(config.permission.module, config.permission.action)) return null;
+    if (config.permission && permissionsLoaded && !effectiveIsAdmin && !can(config.permission.module, config.permission.action)) return null;
 
     // For sections without a top-level permission, check if at least one child is visible
     const visibleChildren = config.children?.filter(child =>
-      !child.permission || effectiveIsAdmin || can(child.permission.module, child.permission.action)
+      !child.permission || effectiveIsAdmin || !permissionsLoaded || can(child.permission.module, child.permission.action)
     ) ?? [];
     if (config.children && visibleChildren.length === 0) return null;
 

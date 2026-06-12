@@ -3,9 +3,10 @@ import { useAuth } from './AuthContext';
 import { getMyPermissions } from '../services/rolesService';
 
 const PermissionContext = createContext({
-  permissions: {},
+  permissions: undefined,
   can: () => false,
   loading: false,
+  loaded: false,
   refetch: () => {},
 });
 
@@ -50,16 +51,14 @@ export const MODULE_LABELS = {
 
 export const PermissionProvider = ({ children }) => {
   const { user, isAuthenticated } = useAuth();
-  const [permissions, setPermissions] = useState({});
+  const [permissions, setPermissions] = useState(undefined);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   const fetchPermissions = useCallback(async () => {
-    if (!isAuthenticated || !user) {
-      setPermissions({});
-      setIsAdmin(false);
-      return;
-    }
+    if (!isAuthenticated || !user) return;
+
     setLoading(true);
     try {
       const data = await getMyPermissions();
@@ -72,25 +71,39 @@ export const PermissionProvider = ({ children }) => {
       }
       setPermissions({});
     } finally {
+      setLoaded(true);
       setLoading(false);
     }
   }, [isAuthenticated, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    if (!isAuthenticated || !user) {
+      setPermissions(undefined);
+      setIsAdmin(false);
+      setLoaded(true);
+      setLoading(false);
+      return;
+    }
+
+    setLoaded(false);
+    setPermissions(undefined);
     fetchPermissions();
-  }, [fetchPermissions]);
+  }, [isAuthenticated, user?.id, fetchPermissions]);
 
   /** Check if the current user can perform action on module */
   const can = useCallback(
     (module, action) => {
+      if (!loaded) return false;
       if (isAdmin) return true;
-      return Boolean(permissions[module]?.[action]);
+      return Boolean(permissions?.[module]?.[action]);
     },
-    [isAdmin, permissions]
+    [isAdmin, permissions, loaded]
   );
 
   return (
-    <PermissionContext.Provider value={{ permissions, isAdmin, can, loading, refetch: fetchPermissions }}>
+    <PermissionContext.Provider
+      value={{ permissions, isAdmin, can, loading, loaded, refetch: fetchPermissions }}
+    >
       {children}
     </PermissionContext.Provider>
   );

@@ -49,17 +49,8 @@ const Header = () => {
   const { user, isAuthenticated, logout } = useAuth();
 
   const [anchorElUser, setAnchorElUser] = useState(null);
-  const [shouldNavigateHome, setShouldNavigateHome] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-
-  // Navigate to home after logout completes and state updates
-  useEffect(() => {
-    if (shouldNavigateHome && !isAuthenticated) {
-      navigate('/');
-      setShouldNavigateHome(false);
-    }
-  }, [shouldNavigateHome, isAuthenticated, navigate]);
 
   // Close drawer on route change
   useEffect(() => {
@@ -91,7 +82,9 @@ const Header = () => {
   const handleLogoutConfirm = () => {
     setShowLogoutDialog(false);
     logout();
-    setShouldNavigateHome(true);
+    if (location.pathname !== '/login') {
+      navigate('/login', { replace: true });
+    }
   };
 
   const handleLogoutCancel = () => {

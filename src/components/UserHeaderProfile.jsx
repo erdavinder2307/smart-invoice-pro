@@ -64,7 +64,6 @@ const UserHeaderProfile = () => {
     const handleLogoutConfirm = () => {
         setShowLogoutDialog(false);
         logout();
-        navigate('/');
     };
 
     const handleLogoutCancel = () => {

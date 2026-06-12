@@ -67,16 +67,16 @@ export const AuthProvider = ({ children }) => {
         return token;
     };
 
-    const logout = () => {
+    const logout = useCallback(() => {
         const username = user?.username;
-        authService.logout();
         setUser(null);
         setSessionExpired(false);
-        // Track logout event
         if (username) {
             analyticsService.trackLogout(username);
         }
-    };
+        // Clears localStorage synchronously inside logout(), then revokes server-side
+        authService.logout().catch(() => {});
+    }, [user]);
 
     const register = async (credentials) => {
         return authService.register(credentials);

@@ -29,6 +29,22 @@ describe('adminApiService', () => {
       expect(result.tenants).toEqual([]);
     });
 
+    it('createTenant sends POST with name and plan', async () => {
+      axios.post.mockResolvedValue({ data: { id: 't-new', name: 'New Org' } });
+      const result = await adminApiService.createTenant({
+        name: 'New Org',
+        plan: 'trial',
+      });
+      expect(axios.post).toHaveBeenCalledWith(
+        expect.stringContaining('/admin/tenants'),
+        { name: 'New Org', plan: 'trial', status: 'active' },
+        expect.objectContaining({
+          headers: expect.objectContaining({ Authorization: 'Bearer test-admin-token' }),
+        })
+      );
+      expect(result.name).toBe('New Org');
+    });
+
     it('getTenant sends correct request', async () => {
       axios.get.mockResolvedValue({ data: { id: 't-1', name: 'Test' } });
       const result = await adminApiService.getTenant('t-1');

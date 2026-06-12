@@ -22,21 +22,30 @@ const register = async (credentials) => {
   return response.data;
 };
 
-const logout = async () => {
-  const refreshToken = localStorage.getItem('refresh_token');
-  try {
-    await axios.post(
-      `${API_URL}/auth/logout`,
-      { refresh_token: refreshToken },
-      { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
-    );
-  } catch (error) {
-    // Ignore logout API errors — clear local state regardless
-  }
+const clearLocalSession = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('refresh_token');
   localStorage.removeItem('user');
   delete axios.defaults.headers.common['Authorization'];
+};
+
+const logout = async () => {
+  const refreshToken = localStorage.getItem('refresh_token');
+  const token = localStorage.getItem('token');
+  // Clear immediately so route guards and Login cannot read stale tokens.
+  clearLocalSession();
+  try {
+    await axios.post(
+      `${API_URL}/auth/logout`,
+      { refresh_token: refreshToken },
+      {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        _skipAuthRetry: true,
+      }
+    );
+  } catch {
+    // Ignore logout API errors — local session is already cleared
+  }
 };
 
 const refreshAccessToken = async () => {
@@ -64,6 +73,7 @@ const authService = {
   login,
   register,
   logout,
+  clearLocalSession,
   refreshAccessToken,
 };
 

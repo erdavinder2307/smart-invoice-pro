@@ -2,7 +2,7 @@ import React from 'react';
 import { renderWithProviders, screen, waitFor } from '../../test-utils';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import InvoiceDetail from '../../pages/InvoiceDetail';
-import { getAuditLogs } from '../../services/auditLogService';
+import { getEntityActivity } from '../../services/auditLogService';
 import axios from 'axios';
 
 const mockNavigate = jest.fn();
@@ -10,7 +10,7 @@ const mockNavigate = jest.fn();
 jest.mock('axios');
 
 jest.mock('../../services/auditLogService', () => ({
-  getAuditLogs: jest.fn(),
+  getEntityActivity: jest.fn().mockResolvedValue({ logs: [], total: 0 }),
 }));
 
 jest.mock('../../components/Layout/MainLayout', () => ({
@@ -70,18 +70,6 @@ beforeEach(() => {
 
   axios.get.mockResolvedValue({ data: SAMPLE_INVOICE });
 
-  getAuditLogs.mockResolvedValue({
-    logs: [
-      {
-        id: 'log-1',
-        action: 'CREATE',
-        changed_by: 'davinder',
-        timestamp: '2026-05-01T10:00:00Z',
-        description: 'Invoice created',
-      },
-    ],
-    total: 1,
-  });
 });
 
 const renderDetail = () => {

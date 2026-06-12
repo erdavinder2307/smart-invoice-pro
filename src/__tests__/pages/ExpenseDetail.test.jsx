@@ -2,7 +2,7 @@ import React from 'react';
 import { renderWithProviders, screen, waitFor } from '../../test-utils';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ExpenseDetail from '../../pages/ExpenseDetail';
-import { getAuditLogs } from '../../services/auditLogService';
+import { getEntityActivity } from '../../services/auditLogService';
 import { getExpenseById } from '../../services/expenseService';
 
 const mockNavigate = jest.fn();
@@ -12,7 +12,7 @@ jest.mock('../../services/expenseService', () => ({
 }));
 
 jest.mock('../../services/auditLogService', () => ({
-  getAuditLogs: jest.fn(),
+  getEntityActivity: jest.fn(),
 }));
 
 jest.mock('../../components/Layout/MainLayout', () => ({
@@ -54,14 +54,14 @@ beforeEach(() => {
 
   getExpenseById.mockResolvedValue(SAMPLE_EXPENSE);
 
-  getAuditLogs.mockResolvedValue({
+  getEntityActivity.mockResolvedValue({
     logs: [
       {
         id: 'log-1',
         action: 'CREATE',
-        changed_by: 'davinder',
-        timestamp: '2026-05-01T10:00:00Z',
-        description: 'Expense created',
+        summary: 'Staples (2500) created',
+        user_name: 'davinder',
+        created_at: '2026-05-01T10:00:00Z',
       },
     ],
     total: 1,
@@ -110,7 +110,10 @@ describe('ExpenseDetail', () => {
   it('shows activity log entries', async () => {
     renderDetail();
     await screen.findAllByText('Staples');
-    expect(await screen.findByText('Expense created')).toBeInTheDocument();
+    expect(await screen.findByText('Staples (2500) created')).toBeInTheDocument();
+    expect(getEntityActivity).toHaveBeenCalledWith(
+      expect.objectContaining({ entity_type: 'expense', entity_id: 'exp-001' })
+    );
   });
 
   it('shows "No receipt attached." when receipt_url is null', async () => {

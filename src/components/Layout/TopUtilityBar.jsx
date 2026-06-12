@@ -208,7 +208,7 @@ const TopUtilityBar = ({ searchPlaceholder = "", onSearchChange, onMenuClick }) 
         </DialogContent>
         <DialogActions sx={{ p: 2, pt: 0 }}>
           <Button onClick={() => setShowLogoutDialog(false)} variant="outlined" sx={{ textTransform: "none", borderRadius: 2 }}>Cancel</Button>
-          <Button onClick={() => { setShowLogoutDialog(false); logout(); navigate("/"); }} variant="contained" color="error" autoFocus sx={{ textTransform: "none", borderRadius: 2 }}>Sign Out</Button>
+          <Button onClick={() => { setShowLogoutDialog(false); logout(); }} variant="contained" color="error" autoFocus sx={{ textTransform: "none", borderRadius: 2 }}>Sign Out</Button>
         </DialogActions>
       </Dialog>
     </Box>

@@ -23,7 +23,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import MainLayout from "../components/Layout/MainLayout";
 import { createApiUrl } from "../config/api";
-import { getAuditLogs } from "../services/auditLogService";
+import EntityActivityPanel from "../components/Activity/EntityActivityPanel";
 import { normalizePaymentTerms } from "../utils/invoiceFormValidation";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -107,14 +107,6 @@ const InvoiceDetail = () => {
     },
     enabled: Boolean(id),
   });
-
-  // Fetch audit logs for this invoice
-  const { data: auditData } = useQuery({
-    queryKey: ["invoice-audit-logs", id],
-    queryFn: () => getAuditLogs({ entity_type: "invoice", entity_id: id, limit: 50 }),
-    enabled: Boolean(id),
-  });
-  const auditLogs = auditData?.logs || [];
 
   const handleDownloadPDF = async () => {
     setPdfError("");
@@ -384,50 +376,7 @@ const InvoiceDetail = () => {
           </TableContainer>
         )}
 
-        {/* ── Activity Log ───────────────────────────────────────────── */}
-        <Typography sx={{ fontSize: "1rem", fontWeight: 700, color: "#111827", mb: 1.5 }}>
-          Activity Log
-        </Typography>
-        {auditLogs.length === 0 ? (
-          <Paper variant="outlined" sx={{ p: 3, mb: 3, borderRadius: 2, textAlign: "center" }}>
-            <Typography sx={{ color: "#9ca3af", fontSize: "0.84rem" }}>
-              No activity recorded yet.
-            </Typography>
-          </Paper>
-        ) : (
-          <Paper variant="outlined" sx={{ borderRadius: 2, mb: 3 }}>
-            {auditLogs.map((log, idx) => (
-              <Box
-                key={log.id || idx}
-                sx={{
-                  px: 2.5,
-                  py: 1.5,
-                  borderBottom: idx < auditLogs.length - 1 ? "1px solid #f3f4f6" : "none",
-                  display: "flex",
-                  gap: 2,
-                  alignItems: "flex-start",
-                }}
-              >
-                <Box sx={{ minWidth: 110 }}>
-                  <Typography sx={{ fontSize: "0.75rem", color: "#9ca3af" }}>
-                    {formatDate(log.timestamp || log.created_at)}
-                  </Typography>
-                </Box>
-                <Box>
-                  <Typography sx={{ fontSize: "0.84rem", color: "#374151" }}>
-                    <strong>{log.action || "Action"}</strong>
-                    {log.changed_by && ` by ${log.changed_by}`}
-                  </Typography>
-                  {log.description && (
-                    <Typography sx={{ fontSize: "0.79rem", color: "#6b7280", mt: 0.25 }}>
-                      {log.description}
-                    </Typography>
-                  )}
-                </Box>
-              </Box>
-            ))}
-          </Paper>
-        )}
+        <EntityActivityPanel entityType="invoice" entityId={id} />
 
       </Box>
     </MainLayout>

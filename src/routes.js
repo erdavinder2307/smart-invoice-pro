@@ -65,6 +65,7 @@ import IntegrationSettings from './pages/IntegrationSettings';
 import InventorySettings from './pages/InventorySettings';
 import NotificationsPage from './pages/NotificationsPage';
 import AuditLogPage from './pages/AuditLogPage';
+import ActivityCenterPage from './pages/ActivityCenterPage';
 import CustomerDetailPage from './pages/CustomerDetailPage';
 import SearchResultsPage from './pages/SearchResultsPage';
 import AdminRoutes from './admin/routes/AdminRoutes';
@@ -250,6 +251,7 @@ const AppRoutes = () => {
             <Route path="/settings/roles" element={<RoleManagement />} />
           </Route>
           <Route element={<PermissionRoute module="audit_logs" action="view" />}>
+            <Route path="/activity" element={<ActivityCenterPage />} />
             <Route path="/settings/audit-log" element={<AuditLogPage />} />
             <Route path="/settings/audit-logs" element={<AuditLogPage />} />
           </Route>

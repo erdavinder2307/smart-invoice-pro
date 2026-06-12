@@ -153,8 +153,20 @@ describe('LoginPage', () => {
   });
 
   it('redirects to dashboard if already logged in', () => {
-    localStorage.setItem('token', 'existing-token');
+    useAuth.mockReturnValue({
+      login: jest.fn(),
+      register: jest.fn(),
+      sessionExpired: false,
+      user: { id: '1', username: 'admin' },
+      isAuthenticated: true,
+      userRole: 'Admin',
+      isAdmin: true,
+      isManager: true,
+      canApprove: true,
+      logout: jest.fn(),
+      loading: false,
+    });
     renderWithProviders(<LoginPage />);
-    expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
+    expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
   });
 });

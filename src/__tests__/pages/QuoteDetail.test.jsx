@@ -2,7 +2,7 @@ import React from 'react';
 import { renderWithProviders, screen, waitFor } from '../../test-utils';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import QuoteDetail from '../../pages/QuoteDetail';
-import { getAuditLogs } from '../../services/auditLogService';
+import { getEntityActivity } from '../../services/auditLogService';
 import { getQuoteById, downloadQuotePdf } from '../../services/quoteService';
 
 const mockNavigate = jest.fn();
@@ -13,7 +13,7 @@ jest.mock('../../services/quoteService', () => ({
 }));
 
 jest.mock('../../services/auditLogService', () => ({
-  getAuditLogs: jest.fn(),
+  getEntityActivity: jest.fn(),
 }));
 
 jest.mock('../../components/Layout/MainLayout', () => ({
@@ -66,14 +66,14 @@ beforeEach(() => {
 
   getQuoteById.mockResolvedValue(SAMPLE_QUOTE);
 
-  getAuditLogs.mockResolvedValue({
+  getEntityActivity.mockResolvedValue({
     logs: [
       {
         id: 'log-1',
         action: 'CREATE',
-        changed_by: 'davinder',
-        timestamp: '2026-05-01T10:00:00Z',
-        description: 'Quote created',
+        summary: 'QT-00042 created',
+        user_name: 'davinder',
+        created_at: '2026-05-01T10:00:00Z',
       },
     ],
     total: 1,
@@ -117,16 +117,19 @@ describe('QuoteDetail', () => {
     renderDetail();
 
     await screen.findByText('QT-00042');
-    expect(screen.getByText('Quote created')).toBeInTheDocument();
+    expect(await screen.findByText('QT-00042 created')).toBeInTheDocument();
     expect(screen.getAllByText(/davinder/i).length).toBeGreaterThan(0);
+    expect(getEntityActivity).toHaveBeenCalledWith(
+      expect.objectContaining({ entity_type: 'quote', entity_id: 'qt-detail-001' })
+    );
   });
 
   it('shows "No activity recorded yet" when audit logs are empty', async () => {
-    getAuditLogs.mockResolvedValue({ logs: [], total: 0 });
+    getEntityActivity.mockResolvedValue({ logs: [], total: 0 });
     renderDetail();
 
     await screen.findByText('QT-00042');
-    expect(screen.getByText('No activity recorded yet.')).toBeInTheDocument();
+    expect(await screen.findByText('No activity recorded yet.')).toBeInTheDocument();
   });
 
   it('shows loading skeleton while fetching', () => {

@@ -32,6 +32,7 @@ const mockPermissionValue = {
   isAdmin: true,
   can: jest.fn(() => true),
   loading: false,
+  loaded: true,
   refetch: jest.fn(),
 };
 

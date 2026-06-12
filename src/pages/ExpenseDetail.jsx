@@ -16,7 +16,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import MainLayout from "../components/Layout/MainLayout";
-import { getAuditLogs } from "../services/auditLogService";
+import EntityActivityPanel from "../components/Activity/EntityActivityPanel";
 import { getExpenseById } from "../services/expenseService";
 import { createApiUrl } from "../config/api";
 
@@ -67,14 +67,6 @@ const ExpenseDetail = () => {
     queryFn: () => getExpenseById(id),
     enabled: Boolean(id),
   });
-
-  // Fetch audit logs
-  const { data: auditData } = useQuery({
-    queryKey: ["expense-audit-logs", id],
-    queryFn: () => getAuditLogs({ entity_type: "expense", entity_id: id, limit: 50 }),
-    enabled: Boolean(id),
-  });
-  const auditLogs = auditData?.logs || [];
 
   // ── Loading ────────────────────────────────────────────────────────────
   if (isLoading) {
@@ -257,40 +249,7 @@ const ExpenseDetail = () => {
           </Paper>
         )}
 
-        {/* ── Activity Log ───────────────────────────────────────────── */}
-        <Typography sx={{ fontSize: "1rem", fontWeight: 700, color: "#111827", mb: 1.5 }}>
-          Activity Log
-        </Typography>
-        {auditLogs.length === 0 ? (
-          <Paper variant="outlined" sx={{ p: 3, mb: 3, borderRadius: 2, textAlign: "center" }}>
-            <Typography sx={{ color: "#9ca3af", fontSize: "0.84rem" }}>
-              No activity recorded yet.
-            </Typography>
-          </Paper>
-        ) : (
-          <Paper variant="outlined" sx={{ p: 2, mb: 3, borderRadius: 2 }}>
-            {auditLogs.map((log, idx) => (
-              <Box
-                key={log.id || idx}
-                sx={{
-                  display: "flex",
-                  gap: 1.5,
-                  py: 1,
-                  borderBottom: idx < auditLogs.length - 1 ? "1px solid #f3f4f6" : "none",
-                }}
-              >
-                <Box sx={{ flex: 1 }}>
-                  <Typography sx={{ fontSize: "0.82rem", color: "#111827" }}>
-                    {log.description || log.action || "Action performed"}
-                  </Typography>
-                  <Typography sx={{ fontSize: "0.75rem", color: "#9ca3af" }}>
-                    {log.changed_by || log.user_id || "—"} · {formatDate(log.timestamp || log.created_at)}
-                  </Typography>
-                </Box>
-              </Box>
-            ))}
-          </Paper>
-        )}
+        <EntityActivityPanel entityType="expense" entityId={id} />
       </Box>
     </MainLayout>
   );

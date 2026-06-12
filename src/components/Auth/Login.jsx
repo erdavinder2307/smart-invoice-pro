@@ -40,7 +40,7 @@ import { useAuth } from "../../context/AuthContext";
 import analyticsService from "../../services/analyticsService";
 
 const LoginPage = () => {
-  const { login, register, sessionExpired } = useAuth();
+  const { login, register, sessionExpired, isAuthenticated, loading: authLoading } = useAuth();
   const [credentials, setCredentials] = useState({ username: "", password: "", confirmPassword: "" });
   const [fieldErrors, setFieldErrors] = useState({ username: "", password: "", confirmPassword: "" });
   const [error, setError] = useState("");
@@ -59,12 +59,12 @@ const LoginPage = () => {
   });
   const navigate = useNavigate();
 
-  // Redirect to dashboard if already logged in
+  // Redirect to dashboard only when AuthContext confirms an active session
   useEffect(() => {
-    if (localStorage.getItem('token')) {
-      navigate('/dashboard');
+    if (!authLoading && isAuthenticated) {
+      navigate('/dashboard', { replace: true });
     }
-  }, [navigate]);
+  }, [authLoading, isAuthenticated, navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

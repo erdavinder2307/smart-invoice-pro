@@ -12,11 +12,12 @@ jest.mock('../../services/rolesService');
 afterEach(() => jest.clearAllMocks());
 
 function PermConsumer() {
-  const { can, isAdmin, loading } = usePermission();
+  const { can, isAdmin, loading, loaded } = usePermission();
   return (
     <div>
       <span data-testid="isAdmin">{String(isAdmin)}</span>
       <span data-testid="loading">{String(loading)}</span>
+      <span data-testid="loaded">{String(loaded)}</span>
       <span data-testid="can-invoices-view">{String(can('invoices', 'view'))}</span>
       <span data-testid="can-invoices-delete">{String(can('invoices', 'delete'))}</span>
       <span data-testid="can-settings-edit">{String(can('settings', 'edit'))}</span>
@@ -77,7 +78,32 @@ describe('PermissionContext', () => {
       renderWithPerm({ user: null, isAuthenticated: false });
     });
 
+    expect(screen.getByTestId('loaded')).toHaveTextContent('true');
     expect(screen.getByTestId('can-invoices-view')).toHaveTextContent('false');
+  });
+
+  it('starts unloaded for authenticated users and does not treat loading as denied', async () => {
+    let resolvePermissions;
+    getMyPermissions.mockReturnValue(
+      new Promise((resolve) => {
+        resolvePermissions = resolve;
+      })
+    );
+
+    renderWithPerm();
+
+    expect(screen.getByTestId('loaded')).toHaveTextContent('false');
+    expect(screen.getByTestId('can-invoices-view')).toHaveTextContent('false');
+
+    await act(async () => {
+      resolvePermissions({
+        is_admin: false,
+        permissions: { invoices: { view: true } },
+      });
+    });
+
+    expect(screen.getByTestId('loaded')).toHaveTextContent('true');
+    expect(screen.getByTestId('can-invoices-view')).toHaveTextContent('true');
   });
 
   it('falls back to admin when API fails and user role is Admin', async () => {

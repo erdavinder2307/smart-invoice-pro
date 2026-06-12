@@ -104,6 +104,7 @@ describe('AuthContext', () => {
     localStorage.setItem('token', 'token');
     authService.logout.mockImplementation(() => {
       localStorage.clear();
+      return Promise.resolve();
     });
 
     await act(async () => {

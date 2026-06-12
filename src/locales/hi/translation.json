@@ -466,7 +466,8 @@
     "roles": "भूमिकाएं",
     "automation": "स्वचालन",
     "integrations": "एकीकरण",
-    "auditLog": "ऑडिट लॉग"
+    "auditLog": "ऑडिट लॉग",
+    "activity": "गतिविधि"
   },
   "sidebarNav": {
     "dashboard": "डैशबोर्ड",
@@ -899,6 +900,12 @@
       "reminders": "अनुस्मारक",
       "lowStock": "कम स्टॉक"
     }
+  },
+  "activity": {
+    "title": "गतिविधि",
+    "noEntries": "अभी तक कोई गतिविधि दर्ज नहीं है।",
+    "accessDenied": "पहुंच अस्वीकृत। आपके पास गतिविधि देखने की अनुमति नहीं है।",
+    "failedFetch": "गतिविधि लोड करने में विफल। कृपया पुनः प्रयास करें।"
   },
   "auditLog": {
     "title": "ऑडिट लॉग",

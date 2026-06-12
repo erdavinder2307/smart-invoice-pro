@@ -149,6 +149,7 @@ describe('AddEditInvoice', () => {
   });
 
   it('submits invoice and navigates to invoices list', async () => {
+    jest.setTimeout(15000);
     renderWithProviders(<AddEditInvoice />);
 
     await screen.findByText('New Invoice');

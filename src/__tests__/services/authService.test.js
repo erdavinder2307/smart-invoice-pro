@@ -86,6 +86,31 @@ describe('authService', () => {
     });
   });
 
+  describe('demoLogin', () => {
+    it('stores token and user from demo-login response', async () => {
+      axios.post.mockResolvedValue({
+        data: {
+          access_token: 'demo-access',
+          refresh_token: 'demo-refresh',
+          user: { id: '1', username: 'demo-sales', role: 'Sales', is_demo: true },
+        },
+      });
+
+      const result = await authService.demoLogin({ role: 'Sales' });
+
+      expect(result).toBe('demo-access');
+      expect(axios.post).toHaveBeenCalledWith(
+        expect.stringContaining('/auth/demo-login'),
+        { role: 'Sales' }
+      );
+      expect(localStorage.getItem('token')).toBe('demo-access');
+      expect(JSON.parse(localStorage.getItem('user'))).toMatchObject({
+        role: 'Sales',
+        is_demo: true,
+      });
+    });
+  });
+
   describe('refreshAccessToken', () => {
     it('refreshes and stores new token', async () => {
       localStorage.setItem('refresh_token', 'old-refresh');

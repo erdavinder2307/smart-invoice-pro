@@ -83,6 +83,8 @@ import MyProfile from './pages/MyProfile';
 import SecurityPage from './pages/SecurityPage';
 import Preferences from './pages/Preferences';
 import NotificationPreferences from './pages/NotificationPreferences';
+import DemoRouteBlock from './components/DemoRouteBlock';
+import { RootPage, DemoAwareLogin, DemoAwareSignup } from './components/DemoAwareRoutes';
 
 const AppRoutes = () => {
   return (
@@ -90,13 +92,13 @@ const AppRoutes = () => {
       <PageTracker />
       <RouteSeoManager />
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<RootPage />} />
         <Route path="/about" element={<About />} />
         <Route path="/features" element={<Features />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/theme-example" element={<ThemeExample />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
+        <Route path="/login" element={<DemoAwareLogin />} />
+        <Route path="/signup" element={<DemoAwareSignup />} />
         <Route element={<AppLayout />}>
           {/* /forbidden — always accessible to authenticated users */}
           <Route path="/forbidden" element={<Forbidden />} />
@@ -238,34 +240,34 @@ const AppRoutes = () => {
           {/* ── Settings — admin / settings.view ─────────────────── */}
           <Route element={<PermissionRoute module="settings" action="view" />}>
             <Route path="/settings" element={<Navigate to="/settings/organization-profile" replace />} />
-            <Route path="/settings/organization-profile" element={<OrganizationProfile />} />
-            <Route path="/settings/branding" element={<BrandingSettings />} />
-            <Route path="/settings/invoice-preferences" element={<InvoicePreferences />} />
-            <Route path="/settings/taxes" element={<TaxSettings />} />
-            <Route path="/settings/inventory" element={<InventorySettings />} />
+            <Route path="/settings/organization-profile" element={<DemoRouteBlock><OrganizationProfile /></DemoRouteBlock>} />
+            <Route path="/settings/branding" element={<DemoRouteBlock><BrandingSettings /></DemoRouteBlock>} />
+            <Route path="/settings/invoice-preferences" element={<DemoRouteBlock><InvoicePreferences /></DemoRouteBlock>} />
+            <Route path="/settings/taxes" element={<DemoRouteBlock><TaxSettings /></DemoRouteBlock>} />
+            <Route path="/settings/inventory" element={<DemoRouteBlock><InventorySettings /></DemoRouteBlock>} />
           </Route>
           <Route element={<PermissionRoute module="user_management" action="view" />}>
-            <Route path="/settings/users" element={<UserManagement />} />
+            <Route path="/settings/users" element={<DemoRouteBlock><UserManagement /></DemoRouteBlock>} />
           </Route>
           <Route element={<PermissionRoute module="roles" action="view" />}>
-            <Route path="/settings/roles" element={<RoleManagement />} />
+            <Route path="/settings/roles" element={<DemoRouteBlock><RoleManagement /></DemoRouteBlock>} />
           </Route>
           <Route element={<PermissionRoute module="audit_logs" action="view" />}>
-            <Route path="/activity" element={<ActivityCenterPage />} />
-            <Route path="/settings/audit-log" element={<AuditLogPage />} />
-            <Route path="/settings/audit-logs" element={<AuditLogPage />} />
+            <Route path="/activity" element={<DemoRouteBlock><ActivityCenterPage /></DemoRouteBlock>} />
+            <Route path="/settings/audit-log" element={<DemoRouteBlock><AuditLogPage /></DemoRouteBlock>} />
+            <Route path="/settings/audit-logs" element={<DemoRouteBlock><AuditLogPage /></DemoRouteBlock>} />
           </Route>
           <Route element={<PermissionRoute module="automation" action="view" />}>
-            <Route path="/settings/automation" element={<AutomationSettings />} />
+            <Route path="/settings/automation" element={<DemoRouteBlock><AutomationSettings /></DemoRouteBlock>} />
           </Route>
           <Route element={<PermissionRoute module="integrations" action="view" />}>
-            <Route path="/settings/integrations" element={<IntegrationSettings />} />
+            <Route path="/settings/integrations" element={<DemoRouteBlock><IntegrationSettings /></DemoRouteBlock>} />
           </Route>
 
           {/* ── My Account — all authenticated users (no perm check) */}
           <Route path="/profile" element={<Profile />} />
           <Route path="/settings/my-profile" element={<MyProfile />} />
-          <Route path="/settings/security" element={<SecurityPage />} />
+          <Route path="/settings/security" element={<DemoRouteBlock><SecurityPage /></DemoRouteBlock>} />
           <Route path="/settings/preferences" element={<Preferences />} />
           <Route path="/settings/notifications" element={<NotificationPreferences />} />
           <Route path="/notifications" element={<NotificationsPage />} />

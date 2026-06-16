@@ -17,6 +17,18 @@ const login = async (credentials) => {
   return accessToken;
 };
 
+const demoLogin = async ({ role }) => {
+  const response = await axios.post(`${API_URL}/auth/demo-login`, { role });
+  const { token, access_token, refresh_token, user } = response.data;
+  const accessToken = access_token || token;
+
+  localStorage.setItem('token', accessToken);
+  localStorage.setItem('refresh_token', refresh_token);
+  localStorage.setItem('user', JSON.stringify(user));
+  axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+  return accessToken;
+};
+
 const register = async (credentials) => {
   const response = await axios.post(`${API_URL}/auth/register`, credentials);
   return response.data;
@@ -71,6 +83,7 @@ const refreshAccessToken = async () => {
 
 const authService = {
   login,
+  demoLogin,
   register,
   logout,
   clearLocalSession,

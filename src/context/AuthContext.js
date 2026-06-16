@@ -67,6 +67,16 @@ export const AuthProvider = ({ children }) => {
         return token;
     };
 
+    const demoLogin = async ({ role }) => {
+        setSessionExpired(false);
+        const token = await authService.demoLogin({ role });
+        const savedUser = localStorage.getItem('user');
+        if (savedUser) {
+            setUser(JSON.parse(savedUser));
+        }
+        return token;
+    };
+
     const logout = useCallback(() => {
         const username = user?.username;
         setUser(null);
@@ -96,6 +106,7 @@ export const AuthProvider = ({ children }) => {
         isManager,
         canApprove,
         login,
+        demoLogin,
         logout,
         register,
         loading,

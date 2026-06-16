@@ -4,6 +4,14 @@ import { AuthProvider, useAuth } from '../../context/AuthContext';
 import authService from '../../services/authService';
 
 jest.mock('../../services/authService');
+jest.mock('../../services/analyticsService', () => ({
+  __esModule: true,
+  default: {
+    trackLogin: jest.fn(),
+    trackLogout: jest.fn(),
+    trackInteractiveWorkspaceStart: jest.fn(),
+  },
+}));
 
 afterEach(() => {
   jest.clearAllMocks();
@@ -143,5 +151,42 @@ describe('AuthContext', () => {
 
     expect(() => render(<BadComponent />)).toThrow('useAuth must be used within an AuthProvider');
     consoleSpy.mockRestore();
+  });
+
+  it('demoLogin sets user from authService response', async () => {
+    const mockUser = { id: 'demo-1', username: 'demo-sales', role: 'Sales', is_demo: true };
+    authService.demoLogin.mockResolvedValue('demo-token');
+    localStorage.setItem('user', JSON.stringify(mockUser));
+
+    function DemoConsumer() {
+      const auth = useAuth();
+      return (
+        <div>
+          <span data-testid="authenticated">{String(auth.isAuthenticated)}</span>
+          <span data-testid="username">{auth.user?.username || 'none'}</span>
+          <button data-testid="demo-login" onClick={() => auth.demoLogin({ role: 'Sales' })}>
+            Demo
+          </button>
+        </div>
+      );
+    }
+
+    await act(async () => {
+      render(
+        <AuthProvider>
+          <DemoConsumer />
+        </AuthProvider>
+      );
+    });
+
+    await act(async () => {
+      screen.getByTestId('demo-login').click();
+    });
+
+    await waitFor(() => {
+      expect(authService.demoLogin).toHaveBeenCalledWith({ role: 'Sales' });
+      expect(screen.getByTestId('authenticated')).toHaveTextContent('true');
+      expect(screen.getByTestId('username')).toHaveTextContent('demo-sales');
+    });
   });
 });

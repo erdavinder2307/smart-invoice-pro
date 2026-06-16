@@ -10,6 +10,13 @@ import { useAuth } from '../../context/AuthContext';
 // Mock Header and Footer to avoid their complex rendering (useMediaQuery, etc.)
 jest.mock('../../components/Layout/Header', () => () => <div data-testid="mock-header" />);
 jest.mock('../../components/Layout/Footer', () => () => <div data-testid="mock-footer" />);
+jest.mock('../../services/analyticsService', () => ({
+  __esModule: true,
+  default: {
+    trackSignup: jest.fn(),
+    trackLogin: jest.fn(),
+  },
+}));
 
 // react-router-dom navigation mock
 const mockNavigate = jest.fn();
@@ -168,5 +175,104 @@ describe('LoginPage', () => {
     });
     renderWithProviders(<LoginPage />);
     expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
+  });
+
+  const guestAuth = {
+    login: jest.fn(),
+    register: jest.fn(),
+    sessionExpired: false,
+    user: null,
+    isAuthenticated: false,
+    userRole: null,
+    isAdmin: false,
+    isManager: false,
+    canApprove: false,
+    logout: jest.fn(),
+    loading: false,
+  };
+
+  it('shows session expired alert', () => {
+    renderWithProviders(<LoginPage />, {
+      authValue: { ...guestAuth, sessionExpired: true },
+    });
+    expect(screen.getByText(/session expired\. please login again/i)).toBeInTheDocument();
+  });
+
+  it('navigates to dashboard after successful login', async () => {
+    const mockLogin = jest.fn().mockResolvedValue('token');
+
+    renderWithProviders(<LoginPage />, {
+      authValue: { ...guestAuth, login: mockLogin },
+    });
+
+    fireEvent.change(getUsernameInput(), { target: { value: 'admin@example.com' } });
+    fireEvent.change(getPasswordInput(), { target: { value: 'Pass123!' } });
+
+    const submitBtn = screen.getByRole('button', { name: /sign in/i });
+    await act(async () => { fireEvent.click(submitBtn); });
+
+    await waitFor(() => {
+      expect(mockLogin).toHaveBeenCalled();
+      expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
+    });
+  });
+
+  it('shows registration failure message', async () => {
+    const mockRegister = jest.fn().mockRejectedValue(new Error('duplicate'));
+
+    renderWithProviders(<LoginPage />, {
+      authValue: { ...guestAuth, register: mockRegister },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /sign up/i }));
+
+    fireEvent.change(getUsernameInput(), { target: { value: 'newuser@example.com' } });
+    fireEvent.change(getPasswordInput(), { target: { value: 'Pass123!' } });
+    fireEvent.change(document.querySelector('input[name="confirmPassword"]'), {
+      target: { value: 'Pass123!' },
+    });
+
+    await act(async () => {
+      fireEvent.submit(document.querySelector('form'));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/registration failed/i)).toBeInTheDocument();
+    });
+  });
+
+  it('toggles remember me checkbox', () => {
+    renderWithProviders(<LoginPage />, { authValue: guestAuth });
+
+    const remember = screen.getByRole('checkbox', { name: /remember me/i });
+    expect(remember).not.toBeChecked();
+    fireEvent.click(remember);
+    expect(remember).toBeChecked();
+  });
+
+  it('completes signup successfully', async () => {
+    const mockRegister = jest.fn().mockResolvedValue({ message: 'ok' });
+
+    renderWithProviders(<LoginPage />, {
+      authValue: { ...guestAuth, register: mockRegister },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /sign up/i }));
+
+    fireEvent.change(getUsernameInput(), { target: { value: 'newuser@example.com' } });
+    fireEvent.change(getPasswordInput(), { target: { value: 'Pass123!' } });
+    fireEvent.change(document.querySelector('input[name="confirmPassword"]'), {
+      target: { value: 'Pass123!' },
+    });
+
+    await act(async () => {
+      fireEvent.submit(document.querySelector('form'));
+    });
+
+    await waitFor(() => {
+      expect(mockRegister).toHaveBeenCalledWith({
+        username: 'newuser@example.com',
+        password: 'Pass123!',
+      });
+      expect(screen.getByText(/account created successfully/i)).toBeInTheDocument();
+    });
   });
 });

@@ -35,6 +35,7 @@ import { useMe } from "../context/MeContext";
 import { useSidebar } from "../context/SidebarContext";
 import { usePermission } from "../context/PermissionContext";
 import { NAV_CONFIG } from "../config/navConfig";
+import { demoSettingsBlockedPrefixes, isDemoUser } from "../utils/demoMode";
 import Logo from "./common/Logo";
 import { BRANDING } from "../config/branding";
 
@@ -48,7 +49,7 @@ const Sidebar = () => {
   const location = useLocation();
   const theme = useTheme();
   const { t } = useTranslation();
-  const { logout, isAdmin } = useAuth();
+  const { logout, isAdmin, user } = useAuth();
   const { can, isAdmin: permIsAdmin, loaded: permissionsLoaded } = usePermission();
   const effectiveIsAdmin = isAdmin || permIsAdmin;
   const { displayName: meDisplayName, initials: meInitials } = useMe();
@@ -293,6 +294,13 @@ const Sidebar = () => {
     );
   };
 
+  const isDemoBlockedPath = (path) => {
+    if (!isDemoUser(user)) return false;
+    return demoSettingsBlockedPrefixes.some(
+      (prefix) => path === prefix || path.startsWith(`${prefix}/`)
+    );
+  };
+
   // ── Render expandable section ─────────────────────────────────────────────
   const renderExpandableSection = (sectionKey, config, forceExpanded = false) => {
     if (config.adminOnly && !effectiveIsAdmin) return null;
@@ -300,7 +308,8 @@ const Sidebar = () => {
 
     // For sections without a top-level permission, check if at least one child is visible
     const visibleChildren = config.children?.filter(child =>
-      !child.permission || effectiveIsAdmin || !permissionsLoaded || can(child.permission.module, child.permission.action)
+      !isDemoBlockedPath(child.path) &&
+      (!child.permission || effectiveIsAdmin || !permissionsLoaded || can(child.permission.module, child.permission.action))
     ) ?? [];
     if (config.children && visibleChildren.length === 0) return null;
 

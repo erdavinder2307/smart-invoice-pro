@@ -4,6 +4,7 @@ import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
 import Sidebar from "../Sidebar";
 import { useAuth } from "../../context/AuthContext";
+import { isDemoHost } from "../../utils/demoMode";
 
 const AppLayout = () => {
   const { user, loading } = useAuth();
@@ -17,7 +18,7 @@ const AppLayout = () => {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to={isDemoHost() ? "/" : "/login"} replace />;
   }
 
   return (

@@ -27,12 +27,14 @@ const HeroSection = () => {
       description="Manage invoices, payments, inventory, workflows, and financial operations from one connected platform."
       primaryAction={{
         label: 'Start Free',
-        onClick: () => navigate('/login')
+        onClick: () => navigate('/login'),
       }}
       secondaryAction={{
-        label: 'Explore Dashboard',
+        label: 'Explore Interactive Workspace',
         startIcon: <PlayCircleOutline />,
-        onClick: () => navigate('/dashboard')
+        onClick: () => {
+          navigate('/demo');
+        },
       }}
       tags={['No credit card', 'Setup in 2 min', 'Cancel anytime']}
       titleSx={{ fontSize: { xs: '2.25rem', sm: '2.9rem', md: '3.8rem' }, letterSpacing: '-0.03em', lineHeight: 1.04 }}

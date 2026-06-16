@@ -11,6 +11,7 @@ import Collapse from "@mui/material/Collapse";
 import Popover from "@mui/material/Popover";
 import Divider from "@mui/material/Divider";
 import Box from "@mui/material/Box";
+import Chip from "@mui/material/Chip";
 import Avatar from "@mui/material/Avatar";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
@@ -35,7 +36,7 @@ import { useMe } from "../context/MeContext";
 import { useSidebar } from "../context/SidebarContext";
 import { usePermission } from "../context/PermissionContext";
 import { NAV_CONFIG } from "../config/navConfig";
-import { demoSettingsBlockedPrefixes, isDemoUser } from "../utils/demoMode";
+import { demoSettingsBlockedPrefixes, isDemoUser, isInteractiveWorkspace } from "../utils/demoMode";
 import Logo from "./common/Logo";
 import { BRANDING } from "../config/branding";
 
@@ -394,6 +395,21 @@ const Sidebar = () => {
               <Typography variant="caption" sx={{ color: "grey.500" }}>
                 {BRANDING.tagline}
               </Typography>
+              {isInteractiveWorkspace(user) && (
+                <Chip
+                  label="Interactive Workspace"
+                  size="small"
+                  sx={{
+                    mt: 0.75,
+                    height: 20,
+                    fontSize: "0.65rem",
+                    fontWeight: 700,
+                    bgcolor: "rgba(59, 130, 246, 0.25)",
+                    color: "#bfdbfe",
+                    border: "1px solid rgba(147, 197, 253, 0.35)",
+                  }}
+                />
+              )}
             </Box>
           )}
         </Box>

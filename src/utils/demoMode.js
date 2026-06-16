@@ -1,4 +1,5 @@
 const DEMO_HOST = 'demo.solidevbooks.com';
+export const INTERACTIVE_WORKSPACE_URL = 'https://demo.solidevbooks.com';
 
 export const isDemoHost = () => {
   if (typeof window === 'undefined' || !window.location) {
@@ -8,6 +9,8 @@ export const isDemoHost = () => {
 };
 
 export const isDemoUser = (user) => Boolean(user?.is_demo);
+
+export const isInteractiveWorkspace = (user) => isDemoHost() || isDemoUser(user);
 
 export const demoSettingsBlockedPrefixes = [
   '/settings/organization-profile',

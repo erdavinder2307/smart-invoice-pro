@@ -72,7 +72,9 @@ export const AuthProvider = ({ children }) => {
         const token = await authService.demoLogin({ role });
         const savedUser = localStorage.getItem('user');
         if (savedUser) {
-            setUser(JSON.parse(savedUser));
+            const userData = JSON.parse(savedUser);
+            setUser(userData);
+            analyticsService.trackInteractiveWorkspaceStart(userData.role, userData.is_demo ? 'demo_login' : 'email');
         }
         return token;
     };

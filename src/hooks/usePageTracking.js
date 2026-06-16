@@ -78,6 +78,13 @@ export const usePageTracking = () => {
 
     const pageTitle = getPageTitle(location.pathname);
     analyticsService.trackPageView(location.pathname, pageTitle);
+
+    const isDemo =
+      window.location.hostname === 'demo.solidevbooks.com' ||
+      Boolean(JSON.parse(localStorage.getItem('user') || '{}').is_demo);
+    if (isDemo) {
+      analyticsService.trackInteractiveWorkspaceVisit(pageTitle, location.pathname);
+    }
   }, [location]);
 };
 

@@ -86,6 +86,8 @@ import NotificationPreferences from './pages/NotificationPreferences';
 import DemoRouteBlock from './components/DemoRouteBlock';
 import { RootPage, DemoAwareLogin, DemoAwareSignup } from './components/DemoAwareRoutes';
 
+import DemoLanding from './pages/DemoLanding';
+
 const AppRoutes = () => {
   return (
     <Router>
@@ -93,6 +95,7 @@ const AppRoutes = () => {
       <RouteSeoManager />
       <Routes>
         <Route path="/" element={<RootPage />} />
+        <Route path="/demo" element={<DemoLanding />} />
         <Route path="/about" element={<About />} />
         <Route path="/features" element={<Features />} />
         <Route path="/contact" element={<Contact />} />

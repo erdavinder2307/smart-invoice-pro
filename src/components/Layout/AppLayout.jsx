@@ -3,6 +3,7 @@ import { Outlet, Navigate } from "react-router-dom";
 import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
 import Sidebar from "../Sidebar";
+import DemoBanner from "../DemoBanner";
 import { useAuth } from "../../context/AuthContext";
 import { isDemoHost } from "../../utils/demoMode";
 
@@ -24,8 +25,11 @@ const AppLayout = () => {
   return (
     <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "grey.50" }}>
       <Sidebar />
-      <Box sx={{ flex: 1, width: 0, minWidth: 0, overflowX: "hidden" }}>
-        <Outlet />
+      <Box sx={{ flex: 1, width: 0, minWidth: 0, overflowX: "hidden", display: "flex", flexDirection: "column" }}>
+        <DemoBanner />
+        <Box sx={{ flex: 1, overflowX: "hidden" }}>
+          <Outlet />
+        </Box>
       </Box>
     </Box>
   );

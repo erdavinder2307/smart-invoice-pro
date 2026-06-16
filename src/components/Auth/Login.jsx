@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -30,7 +30,8 @@ import {
   Security,
   CheckCircle,
   Cancel,
-  LoginOutlined
+  LoginOutlined,
+  BugReport
 } from "@mui/icons-material";
 import { AnimatePresence, motion } from 'framer-motion';
 import Header from '../Layout/Header';
@@ -38,6 +39,55 @@ import Footer from '../Layout/Footer';
 import SeoHead from '../../seo/SeoHead';
 import { useAuth } from "../../context/AuthContext";
 import analyticsService from "../../services/analyticsService";
+
+// ── Dev-only autofill config (only active in NODE_ENV=development) ───────────
+const IS_DEV = process.env.NODE_ENV === 'development';
+
+const DEV_USERS = IS_DEV
+  ? [
+      {
+        role: 'Admin',
+        color: '#dc2626',
+        bg: 'rgba(220,38,38,0.12)',
+        email: process.env.REACT_APP_DEV_ADMIN_EMAIL || 'dev.admin@solidevbooks.local',
+        password: process.env.REACT_APP_DEV_ADMIN_PASSWORD || 'DevTest@1234',
+        description: 'Full access to all modules',
+      },
+      {
+        role: 'Manager',
+        color: '#7c3aed',
+        bg: 'rgba(124,58,237,0.12)',
+        email: process.env.REACT_APP_DEV_MANAGER_EMAIL || 'dev.manager@solidevbooks.local',
+        password: process.env.REACT_APP_DEV_MANAGER_PASSWORD || 'DevTest@1234',
+        description: 'All modules except settings',
+      },
+      {
+        role: 'Sales',
+        color: '#059669',
+        bg: 'rgba(5,150,105,0.12)',
+        email: process.env.REACT_APP_DEV_SALES_EMAIL || 'dev.sales@solidevbooks.local',
+        password: process.env.REACT_APP_DEV_SALES_PASSWORD || 'DevTest@1234',
+        description: 'Invoices, quotes, customers',
+      },
+      {
+        role: 'Accountant',
+        color: '#0284c7',
+        bg: 'rgba(2,132,199,0.12)',
+        email: process.env.REACT_APP_DEV_ACCOUNTANT_EMAIL || 'dev.accountant@solidevbooks.local',
+        password: process.env.REACT_APP_DEV_ACCOUNTANT_PASSWORD || 'DevTest@1234',
+        description: 'Bills, expenses, reports',
+      },
+      {
+        role: 'Purchaser',
+        color: '#d97706',
+        bg: 'rgba(217,119,6,0.12)',
+        email: process.env.REACT_APP_DEV_PURCHASER_EMAIL || 'dev.purchaser@solidevbooks.local',
+        password: process.env.REACT_APP_DEV_PURCHASER_PASSWORD || 'DevTest@1234',
+        description: 'Vendors, purchase orders, bills',
+      },
+    ]
+  : [];
+
 
 const LoginPage = () => {
   const { login, register, sessionExpired, isAuthenticated, loading: authLoading } = useAuth();
@@ -58,6 +108,7 @@ const LoginPage = () => {
     hasSpecialChar: false
   });
   const navigate = useNavigate();
+  const [activeDevRole, setActiveDevRole] = useState(null);
 
   // Redirect to dashboard only when AuthContext confirms an active session
   useEffect(() => {
@@ -65,6 +116,16 @@ const LoginPage = () => {
       navigate('/dashboard', { replace: true });
     }
   }, [authLoading, isAuthenticated, navigate]);
+
+  // ── Dev autofill handler ──────────────────────────────────────────────────
+  const handleDevAutofill = useCallback((user) => {
+    setCredentials({ username: user.email, password: user.password, confirmPassword: '' });
+    setFieldErrors({ username: '', password: '', confirmPassword: '' });
+    setError('');
+    setSuccess('');
+    setIsSignup(false);
+    setActiveDevRole(user.role);
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -493,7 +554,76 @@ const LoginPage = () => {
                         </motion.div>
                       )}
 
-                      {/* Submit Button */}
+                      {/* ── Dev RBAC Autofill Panel (development only) ── */}
+                      {IS_DEV && !isSignup && (
+                        <Box
+                          sx={{
+                            mb: 3,
+                            p: 2,
+                            borderRadius: 2,
+                            border: '1.5px dashed #f59e0b',
+                            background: 'rgba(254,243,199,0.7)',
+                            backdropFilter: 'blur(4px)',
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1.5 }}>
+                            <BugReport sx={{ fontSize: 16, color: '#b45309' }} />
+                            <Typography
+                              variant="caption"
+                              fontWeight={700}
+                              sx={{ color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.08em' }}
+                            >
+                              Dev — Quick Login
+                            </Typography>
+                          </Box>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                            {DEV_USERS.map((user) => (
+                              <Box
+                                key={user.role}
+                                component="button"
+                                type="button"
+                                id={`dev-autofill-${user.role.toLowerCase()}`}
+                                onClick={() => handleDevAutofill(user)}
+                                title={user.description}
+                                sx={{
+                                  cursor: 'pointer',
+                                  border: activeDevRole === user.role
+                                    ? `2px solid ${user.color}`
+                                    : `1.5px solid ${user.color}55`,
+                                  borderRadius: '20px',
+                                  px: 1.5,
+                                  py: 0.5,
+                                  background: activeDevRole === user.role ? user.bg : 'white',
+                                  color: user.color,
+                                  fontSize: '0.78rem',
+                                  fontWeight: activeDevRole === user.role ? 700 : 500,
+                                  fontFamily: 'inherit',
+                                  transition: 'all 0.15s ease',
+                                  outline: 'none',
+                                  '&:hover': {
+                                    background: user.bg,
+                                    borderColor: user.color,
+                                    fontWeight: 700,
+                                    transform: 'scale(1.04)',
+                                  },
+                                }}
+                              >
+                                {user.role}
+                              </Box>
+                            ))}
+                          </Box>
+                          {activeDevRole && (
+                            <Typography
+                              variant="caption"
+                              sx={{ display: 'block', mt: 1, color: '#78350f', fontSize: '0.7rem' }}
+                            >
+                              Filled as <strong>{activeDevRole}</strong> — press Sign In to continue
+                            </Typography>
+                          )}
+                        </Box>
+                      )}
+
+                     {/* Submit Button */}
                       <motion.div variants={fadeInUp}>
                         <Button
                           component={motion.button}

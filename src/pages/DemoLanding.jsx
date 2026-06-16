@@ -66,14 +66,14 @@ const DemoLanding = () => {
       <div style={{ maxWidth: 960, margin: '0 auto' }}>
         <header style={{ textAlign: 'center', marginBottom: 40 }}>
           <p style={{ letterSpacing: 2, textTransform: 'uppercase', opacity: 0.75, fontSize: 13 }}>
-            Solidev Books Demo
+            Interactive Workspace
           </p>
           <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3rem)', margin: '12px 0' }}>
-            Explore the workflow-driven finance platform
+            Explore Solidev Books
           </h1>
           <p style={{ maxWidth: 640, margin: '0 auto', opacity: 0.85, lineHeight: 1.6 }}>
-            Choose a business role to enter a live demo environment. No signup, no password, no
-            sales call — just explore realistic quote-to-cash workflows.
+            Choose a business role to enter a live workspace with realistic B2B data. No signup,
+            no password, no sales call.
           </p>
         </header>
 
@@ -122,14 +122,14 @@ const DemoLanding = () => {
                 {description}
               </div>
               <div style={{ fontWeight: 600, color: '#93c5fd' }}>
-                {loadingRole === role ? 'Starting…' : 'Enter demo →'}
+                {loadingRole === role ? 'Starting…' : 'Open workspace →'}
               </div>
             </button>
           ))}
         </div>
 
         <footer style={{ textAlign: 'center', marginTop: 48, opacity: 0.65, fontSize: 14 }}>
-          <p>Demo data resets periodically. Production app:{' '}
+          <p>Workspace data resets periodically. Production app:{' '}
             <a href="https://www.solidevbooks.com/login" style={{ color: '#93c5fd' }}>
               sign in here
             </a>

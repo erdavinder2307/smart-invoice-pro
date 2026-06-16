@@ -282,6 +282,38 @@ const analyticsService = {
   },
 
   /**
+   * Interactive Workspace — role selected (no PII)
+   */
+  trackInteractiveWorkspaceStart: (role, method = 'demo_login') => {
+    if (!analytics) return;
+    try {
+      logEvent(analytics, 'interactive_workspace_start', {
+        role: role || 'unknown',
+        method,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('Analytics error (interactive_workspace_start):', error);
+    }
+  },
+
+  /**
+   * Interactive Workspace — module/page visit for lead qualification
+   */
+  trackInteractiveWorkspaceVisit: (module, path) => {
+    if (!analytics) return;
+    try {
+      logEvent(analytics, 'interactive_workspace_visit', {
+        module: module || 'unknown',
+        page_path: path || '',
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('Analytics error (interactive_workspace_visit):', error);
+    }
+  },
+
+  /**
    * Track custom event
    */
   trackEvent: (eventName, eventData = {}) => {

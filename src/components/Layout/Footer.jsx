@@ -109,6 +109,7 @@ const Footer = () => {
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: { xs: 'center', md: 'flex-start' } }}>
               {[
+                { label: 'Interactive Workspace', href: '/demo' },
                 { label: 'Dashboard', href: '/login' },
                 { label: 'Customer Portal', href: '/customer/login' },
                 { label: 'Documentation', href: 'https://docs.solidevbooks.com', external: true },

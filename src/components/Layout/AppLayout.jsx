@@ -1,14 +1,20 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Outlet, Navigate } from "react-router-dom";
 import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
 import Sidebar from "../Sidebar";
 import DemoBanner from "../DemoBanner";
 import { useAuth } from "../../context/AuthContext";
-import { isDemoHost } from "../../utils/demoMode";
+import { isDemoHost, isDemoUser, openInteractiveWorkspace } from "../../utils/demoMode";
 
 const AppLayout = () => {
   const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && isDemoUser(user) && !isDemoHost()) {
+      openInteractiveWorkspace(window.location.pathname || '/dashboard');
+    }
+  }, [loading, user]);
 
   if (loading) {
     return (

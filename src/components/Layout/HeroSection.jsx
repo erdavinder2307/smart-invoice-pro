@@ -4,6 +4,7 @@ import { Hub, PlayCircleOutline } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import PublicHeroSection from './PublicHeroSection';
+import { openInteractiveWorkspace } from '../../utils/demoMode';
 
 const floatLoop = {
   y: [0, -8, 0],
@@ -32,9 +33,7 @@ const HeroSection = () => {
       secondaryAction={{
         label: 'Explore Interactive Workspace',
         startIcon: <PlayCircleOutline />,
-        onClick: () => {
-          navigate('/demo');
-        },
+        onClick: () => openInteractiveWorkspace('/'),
       }}
       tags={['No credit card', 'Setup in 2 min', 'Cancel anytime']}
       titleSx={{ fontSize: { xs: '2.25rem', sm: '2.9rem', md: '3.8rem' }, letterSpacing: '-0.03em', lineHeight: 1.04 }}

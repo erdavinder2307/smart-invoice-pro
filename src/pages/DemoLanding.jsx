@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { createApiUrl } from '../config/api';
 import { useAuth } from '../context/AuthContext';
+import {
+  isDemoHost,
+  openInteractiveWorkspace,
+} from '../utils/demoMode';
 
 const ROLE_ICONS = {
   Sales: '📈',
@@ -19,6 +23,11 @@ const DemoLanding = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (!isDemoHost()) {
+      openInteractiveWorkspace('/');
+      return;
+    }
+
     if (isAuthenticated) {
       navigate('/dashboard', { replace: true });
       return;
@@ -42,7 +51,11 @@ const DemoLanding = () => {
     setLoadingRole(role);
     try {
       await demoLogin({ role });
-      navigate('/dashboard', { replace: true });
+      if (isDemoHost()) {
+        navigate('/dashboard', { replace: true });
+      } else {
+        openInteractiveWorkspace('/dashboard');
+      }
     } catch (err) {
       const msg =
         err.response?.data?.message ||

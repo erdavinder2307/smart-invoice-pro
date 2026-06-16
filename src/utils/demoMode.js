@@ -1,6 +1,23 @@
 const DEMO_HOST = 'demo.solidevbooks.com';
 export const INTERACTIVE_WORKSPACE_URL = 'https://demo.solidevbooks.com';
 
+/** Build a full URL on the Interactive Workspace host (demo subdomain). */
+export const getInteractiveWorkspaceUrl = (path = '/') => {
+  if (!path || path === '/') {
+    return INTERACTIVE_WORKSPACE_URL;
+  }
+  const normalized = path.startsWith('/') ? path : `/${path}`;
+  return `${INTERACTIVE_WORKSPACE_URL}${normalized}`;
+};
+
+/** Navigate the browser to the demo subdomain (required for host-based demo mode). */
+export const openInteractiveWorkspace = (path = '/') => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  window.location.assign(getInteractiveWorkspaceUrl(path));
+};
+
 export const isDemoHost = () => {
   if (typeof window === 'undefined' || !window.location) {
     return false;

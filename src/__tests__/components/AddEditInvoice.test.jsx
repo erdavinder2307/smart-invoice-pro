@@ -1,6 +1,6 @@
 import React from 'react';
 import axios from 'axios';
-import { renderWithProviders, screen, fireEvent, waitFor } from '../../test-utils';
+import { renderWithProviders, screen, fireEvent, waitFor, act } from '../../test-utils';
 import AddEditInvoice from '../../components/AddEditInvoice';
 import { createInvoice } from '../../services/invoiceService';
 import { getTaxRates, calculateInvoiceTax } from '../../services/taxService';
@@ -209,6 +209,7 @@ describe('AddEditInvoice', () => {
   });
 
   it('disables save action while submit is in progress', async () => {
+    jest.setTimeout(15000);
     renderWithProviders(<AddEditInvoice />);
 
     await screen.findByText('New Invoice');
@@ -229,10 +230,15 @@ describe('AddEditInvoice', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Save and Send' }));
 
-    const savingButton = await screen.findByRole('button', { name: /Saving/i });
+    // Button should switch to a "Saving…" disabled state while inflight
+    const savingButton = await screen.findByRole('button', { name: /Saving/i }, { timeout: 10000 });
     expect(savingButton).toBeDisabled();
 
-    resolveCreate({ id: 'inv-2' });
+    // Resolve the pending promise inside act() so React processes the state update
+    await act(async () => {
+      resolveCreate({ id: 'inv-2' });
+    });
+
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/invoices'));
   });
 

@@ -22,6 +22,30 @@ const DemoLanding = () => {
   const [loadingRole, setLoadingRole] = useState('');
   const [error, setError] = useState('');
 
+  const handleStart = async (role) => {
+    setError('');
+    setLoadingRole(role);
+    try {
+      await demoLogin({ role });
+      const params = new URLSearchParams(window.location.search);
+      const isTour = params.get('startTour') === 'true';
+      const targetPath = isTour ? '/dashboard?startTour=true' : '/dashboard';
+      if (isDemoHost()) {
+        navigate(targetPath, { replace: true });
+      } else {
+        openInteractiveWorkspace(targetPath);
+      }
+    } catch (err) {
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        'Unable to start demo session. Please try again.';
+      setError(msg);
+    } finally {
+      setLoadingRole('');
+    }
+  };
+
   useEffect(() => {
     if (!isDemoHost()) {
       openInteractiveWorkspace('/');
@@ -29,7 +53,15 @@ const DemoLanding = () => {
     }
 
     if (isAuthenticated) {
-      navigate('/dashboard', { replace: true });
+      const params = new URLSearchParams(window.location.search);
+      const isTour = params.get('startTour') === 'true';
+      navigate(isTour ? '/dashboard?startTour=true' : '/dashboard', { replace: true });
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('startTour') === 'true') {
+      handleStart('Manager');
       return;
     }
 
@@ -45,27 +77,6 @@ const DemoLanding = () => {
         ]);
       });
   }, [isAuthenticated, navigate]);
-
-  const handleStart = async (role) => {
-    setError('');
-    setLoadingRole(role);
-    try {
-      await demoLogin({ role });
-      if (isDemoHost()) {
-        navigate('/dashboard', { replace: true });
-      } else {
-        openInteractiveWorkspace('/dashboard');
-      }
-    } catch (err) {
-      const msg =
-        err.response?.data?.message ||
-        err.response?.data?.error ||
-        'Unable to start demo session. Please try again.';
-      setError(msg);
-    } finally {
-      setLoadingRole('');
-    }
-  };
 
   return (
     <div

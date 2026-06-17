@@ -7,6 +7,10 @@ import DemoBanner from "../DemoBanner";
 import DemoAttribution from "../DemoAttribution";
 import { useAuth } from "../../context/AuthContext";
 import { isDemoHost, isDemoUser, openInteractiveWorkspace } from "../../utils/demoMode";
+import { TourProvider } from "../../context/TourContext";
+import ProductTour from "../Tour/ProductTour";
+import WelcomeModal from "../Tour/WelcomeModal";
+import CompletionModal from "../Tour/CompletionModal";
 
 const AppLayout = () => {
   const { user, loading } = useAuth();
@@ -30,16 +34,21 @@ const AppLayout = () => {
   }
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "grey.50" }}>
-      <Sidebar />
-      <Box sx={{ flex: 1, width: 0, minWidth: 0, overflowX: "hidden", display: "flex", flexDirection: "column" }}>
-        <DemoBanner />
-        <Box sx={{ flex: 1, overflowX: "hidden", display: "flex", flexDirection: "column" }}>
-          <Outlet />
-          <DemoAttribution />
+    <TourProvider>
+      <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "grey.50" }}>
+        <Sidebar />
+        <Box sx={{ flex: 1, width: 0, minWidth: 0, overflowX: "hidden", display: "flex", flexDirection: "column" }}>
+          <DemoBanner />
+          <Box sx={{ flex: 1, overflowX: "hidden", display: "flex", flexDirection: "column" }}>
+            <Outlet />
+            <DemoAttribution />
+          </Box>
         </Box>
       </Box>
-    </Box>
+      <ProductTour />
+      <WelcomeModal />
+      <CompletionModal />
+    </TourProvider>
   );
 };
 

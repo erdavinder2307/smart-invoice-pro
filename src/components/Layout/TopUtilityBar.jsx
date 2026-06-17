@@ -26,6 +26,9 @@ import { safeClick } from "../../utils/safeClick";
 import { useAuth } from "../../context/AuthContext";
 import { useMe } from "../../context/MeContext";
 import { usePermission } from "../../context/PermissionContext";
+import { useTour } from "../../context/TourContext";
+import { isDemoHost } from "../../utils/demoMode";
+import { PlayCircleOutline } from "@mui/icons-material";
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
 
@@ -52,6 +55,7 @@ const TopUtilityBar = ({ searchPlaceholder = "", onSearchChange, onMenuClick }) 
   const { me, meLoading, displayName } = useMe();
   const { unreadCount } = useNotifications();
   const { can, isAdmin: permIsAdmin } = usePermission();
+  const { startTour } = useTour();
   const canAccessSettings = permIsAdmin || can('settings', 'view') || can('user_management', 'view') || can('roles', 'view');
   const { openShortcutsModal } = useKeyboardShortcutsContext();
   const navigate = useNavigate();
@@ -84,6 +88,7 @@ const TopUtilityBar = ({ searchPlaceholder = "", onSearchChange, onMenuClick }) 
     { icon: <NotificationsNoneIcon fontSize="small" />, label: "Notifications", action: () => navigate("/settings/notifications") },
     { icon: <TuneIcon fontSize="small" />,             label: "Preferences",   action: () => navigate("/settings/preferences") },
     { icon: <LockOutlinedIcon fontSize="small" />,     label: "Security",      action: () => navigate("/settings/security") },
+    ...(isDemoHost() ? [{ icon: <PlayCircleOutline fontSize="small" />, label: "Start Guided Tour", action: () => startTour() }] : []),
     { icon: <HelpOutlineIcon fontSize="small" />,      label: "Help Center",   action: () => window.open("https://solidevbooks.com/support", "_blank") },
   ];
 

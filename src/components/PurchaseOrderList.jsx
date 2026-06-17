@@ -589,6 +589,7 @@ const PurchaseOrderList = () => {
         </Alert>
       )}
 
+      <Box className="tour-purchase-workflow">
       <ResponsiveDataView
         isMobile={isMobile}
         renderCard={(po) => (
@@ -817,6 +818,7 @@ const PurchaseOrderList = () => {
           onRowsPerPageChange: handleChangeRowsPerPage,
         }}
       />
+      </Box>
 
       <Menu anchorEl={actionMenuAnchor} open={Boolean(actionMenuAnchor)} onClose={handleActionMenuClose}>
         <MenuItem

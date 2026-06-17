@@ -32,8 +32,8 @@ const DemoBanner = () => {
     >
       <ScienceOutlinedIcon sx={{ fontSize: 18 }} />
       <Typography component="span" sx={{ fontSize: 'inherit', fontWeight: 500 }}>
-        Interactive Workspace — explore Solidev Books with sample data. Changes may be reset
-        periodically.
+        Interactive Workspace — explore Solidev Books using a realistic sample business
+        environment. Changes may be reset periodically.
       </Typography>
     </Box>
   );

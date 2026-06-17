@@ -616,6 +616,7 @@ const DashboardPage = () => {
                 </Typography>
               </Box>
               <Box
+                className="tour-revenue-cards"
                 sx={{
                   display: "grid",
                   gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",

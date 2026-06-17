@@ -31,6 +31,10 @@ const HeroSection = () => {
         onClick: () => navigate('/login'),
       }}
       secondaryAction={{
+        label: 'Take Guided Tour',
+        onClick: () => openInteractiveWorkspace('/?startTour=true'),
+      }}
+      tertiaryAction={{
         label: 'Explore Interactive Workspace',
         startIcon: <PlayCircleOutline />,
         onClick: () => openInteractiveWorkspace('/'),

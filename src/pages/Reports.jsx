@@ -117,7 +117,7 @@ const Reports = () => {
           </Typography>
         </Paper>
 
-        <Grid container spacing={3}>
+        <Grid container spacing={3} className="tour-reports-area">
           {reports.map((report, index) => (
             <Grid item xs={12} sm={6} md={4} key={index}>
               <Card

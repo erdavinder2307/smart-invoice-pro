@@ -39,8 +39,8 @@ export const HeroBadge = ({ icon, label }) => (
   />
 );
 
-export const HeroActions = ({ primaryAction, secondaryAction }) => (
-  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.75} sx={{ mb: 2.5 }}>
+export const HeroActions = ({ primaryAction, secondaryAction, tertiaryAction }) => (
+  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.75} sx={{ mb: 2.5 }} alignItems={{ xs: 'stretch', sm: 'center' }}>
     {primaryAction && (
       <Button
         component={motion.button}
@@ -106,6 +106,37 @@ export const HeroActions = ({ primaryAction, secondaryAction }) => (
         {secondaryAction.label}
       </Button>
     )}
+
+    {tertiaryAction && (
+      <Button
+        component={motion.button}
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        variant="text"
+        onClick={tertiaryAction.onClick}
+        href={tertiaryAction.href}
+        target={tertiaryAction.target}
+        rel={tertiaryAction.rel}
+        startIcon={tertiaryAction.startIcon}
+        endIcon={tertiaryAction.endIcon}
+        sx={{
+          px: 2.5,
+          py: 1.35,
+          borderRadius: '12px',
+          fontSize: '1rem',
+          fontWeight: 500,
+          color: 'rgba(233, 241, 255, 0.8)',
+          textTransform: 'none',
+          '&:hover': {
+            color: '#ffffff',
+            backgroundColor: 'rgba(255,255,255,0.05)'
+          },
+          ...tertiaryAction.sx
+        }}
+      >
+        {tertiaryAction.label}
+      </Button>
+    )}
   </Stack>
 );
 
@@ -119,6 +150,7 @@ const PublicHeroSection = ({
   descriptionComponent = 'p',
   primaryAction,
   secondaryAction,
+  tertiaryAction,
   tags = [],
   rightContent,
   rootSx,
@@ -201,7 +233,7 @@ const PublicHeroSection = ({
               {description}
             </Typography>
 
-            <HeroActions primaryAction={primaryAction} secondaryAction={secondaryAction} />
+            <HeroActions primaryAction={primaryAction} secondaryAction={secondaryAction} tertiaryAction={tertiaryAction} />
 
             {tags.length > 0 && (
               <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>

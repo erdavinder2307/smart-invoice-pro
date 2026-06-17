@@ -588,6 +588,7 @@ const QuoteList = () => {
         </Alert>
       )}
 
+      <Box className="tour-quote-pipeline">
       <ResponsiveDataView
         isMobile={isMobile}
         renderCard={(quote) => (
@@ -780,6 +781,7 @@ const QuoteList = () => {
           onRowsPerPageChange: handleChangeRowsPerPage,
         }}
       />
+      </Box>
 
       <Menu anchorEl={actionMenuAnchor} open={Boolean(actionMenuAnchor)} onClose={handleActionMenuClose}>
         <MenuItem

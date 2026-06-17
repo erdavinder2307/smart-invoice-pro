@@ -314,7 +314,7 @@ const BankAccounts = () => {
                         )}
 
                         {/* Table */}
-                        <TableContainer sx={{
+                        <TableContainer className="tour-banking-accounts" sx={{
                             borderRadius: 3,
                             overflow: 'hidden',
                             overflowX: 'hidden',

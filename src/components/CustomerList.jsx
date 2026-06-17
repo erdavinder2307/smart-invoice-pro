@@ -686,6 +686,7 @@ const CustomerList = () => {
         ]}
       />
 
+      <Box className="tour-customer-list">
       <ResponsiveDataView
         isMobile={isMobile}
         renderCard={(customer) => {
@@ -926,6 +927,7 @@ const CustomerList = () => {
           onRowsPerPageChange: handleChangeRowsPerPage,
         }}
       />
+      </Box>
 
       <Dialog
         open={paymentDialog.open}

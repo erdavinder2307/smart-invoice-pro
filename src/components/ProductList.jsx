@@ -579,6 +579,7 @@ const ProductList = () => {
         ]}
       />
 
+      <Box className="tour-inventory-status">
       <ResponsiveDataView
         isMobile={isMobile}
         columns={[
@@ -811,6 +812,7 @@ const ProductList = () => {
           onRowsPerPageChange: handleChangeRowsPerPage,
         }}
       />
+      </Box>
 
       <Dialog open={stockDialog.open} onClose={handleCloseStockDialog} maxWidth="xs" fullWidth>
         <DialogTitle sx={{ pb: 1 }}>

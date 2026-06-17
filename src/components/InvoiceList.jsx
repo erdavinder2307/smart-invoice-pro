@@ -632,6 +632,7 @@ const InvoiceList = () => {
         </Alert>
       )}
 
+      <Box className="tour-invoice-lifecycle">
       <ResponsiveDataView
         isMobile={isMobile}
         renderCard={(invoice) => (
@@ -880,6 +881,7 @@ const InvoiceList = () => {
           onRowsPerPageChange: handleChangeRowsPerPage,
         }}
       />
+      </Box>
 
       {/* ── More actions menu ──────────────────────────────────────────────── */}
       <Menu anchorEl={actionMenuAnchor} open={Boolean(actionMenuAnchor)} onClose={handleActionMenuClose}>

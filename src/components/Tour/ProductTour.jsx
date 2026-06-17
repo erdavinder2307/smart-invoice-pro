@@ -7,20 +7,36 @@ const ProductTour = () => {
     run,
     stepIndex,
     stopTour,
-    handleStepNavigation
+    handleStepNavigation,
+    setRun
   } = useTour();
 
   const handleJoyrideCallback = (data) => {
     const { action, index, status, type } = data;
 
+    // Tour finished or skipped by the user
     if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
       stopTour(status === STATUS.FINISHED, status === STATUS.SKIPPED);
-    } else if ([EVENTS.STEP_AFTER, EVENTS.TARGET_NOT_FOUND].includes(type)) {
-      const nextIndex = index + (action === ACTIONS.PREV ? -1 : 1);
-      
-      // If we are at the end of the tour, finish it
-      if (nextIndex >= TOUR_STEPS.length && action !== ACTIONS.PREV) {
+      return;
+    }
+
+    // Step-level navigation (Next / Back / target not found)
+    if ([EVENTS.STEP_AFTER, EVENTS.TARGET_NOT_FOUND].includes(type)) {
+      if (action === ACTIONS.CLOSE) {
+        // X button on a step — treat as skip
+        stopTour(false, true);
+        return;
+      }
+
+      const delta = action === ACTIONS.PREV ? -1 : 1;
+      const nextIndex = index + delta;
+
+      if (nextIndex >= TOUR_STEPS.length) {
+        // Clicked Next on the last step
         stopTour(true);
+      } else if (nextIndex < 0) {
+        // Went back past first step (shouldn't happen, but guard)
+        stopTour(false, true);
       } else {
         handleStepNavigation(nextIndex);
       }
@@ -34,11 +50,20 @@ const ProductTour = () => {
       stepIndex={stepIndex}
       continuous={true}
       scrollToFirstStep={true}
-      showProgress={false}
+      scrollOffset={120}
+      showProgress={true}
       showSkipButton={true}
       disableOverlayClose={true}
       spotlightClicks={false}
+      disableScrolling={false}
       callback={handleJoyrideCallback}
+      locale={{
+        back: 'Back',
+        close: 'Close',
+        last: 'Finish Tour',
+        next: 'Next',
+        skip: 'Skip Tour',
+      }}
       styles={{
         options: {
           arrowColor: '#ffffff',
@@ -46,7 +71,7 @@ const ProductTour = () => {
           overlayColor: 'rgba(5, 12, 36, 0.72)',
           primaryColor: '#2563eb',
           textColor: '#334155',
-          width: 340,
+          width: 360,
           zIndex: 10000,
         },
         tooltip: {
@@ -60,16 +85,19 @@ const ProductTour = () => {
         },
         tooltipTitle: {
           fontWeight: 700,
-          fontSize: '1.15rem',
+          fontSize: '1.1rem',
           color: '#0f172a',
           marginBottom: '8px',
           fontFamily: 'system-ui, -apple-system, sans-serif'
         },
         tooltipContent: {
-          fontSize: '0.925rem',
+          fontSize: '0.9rem',
           color: '#475569',
-          lineHeight: '1.6',
+          lineHeight: '1.65',
           fontFamily: 'system-ui, -apple-system, sans-serif'
+        },
+        tooltipFooter: {
+          marginTop: '16px',
         },
         buttonNext: {
           backgroundColor: '#2563eb',
@@ -77,7 +105,7 @@ const ProductTour = () => {
           borderRadius: '10px',
           fontWeight: 700,
           fontSize: '0.875rem',
-          padding: '10px 18px',
+          padding: '10px 20px',
           color: '#ffffff',
           border: 'none',
           cursor: 'pointer',
@@ -88,7 +116,7 @@ const ProductTour = () => {
           color: '#64748b',
           fontWeight: 600,
           fontSize: '0.875rem',
-          marginRight: '16px',
+          marginRight: '12px',
           border: 'none',
           background: 'none',
           cursor: 'pointer',
@@ -96,12 +124,21 @@ const ProductTour = () => {
         },
         buttonSkip: {
           color: '#94a3b8',
-          fontSize: '0.875rem',
+          fontSize: '0.8125rem',
           fontWeight: 500,
           border: 'none',
           background: 'none',
           cursor: 'pointer',
           fontFamily: 'system-ui, -apple-system, sans-serif'
+        },
+        buttonClose: {
+          color: '#94a3b8',
+          height: 14,
+          width: 14,
+          padding: 0,
+        },
+        spotlight: {
+          borderRadius: '8px',
         }
       }}
     />

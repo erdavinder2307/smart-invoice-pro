@@ -66,7 +66,44 @@ describe('TourContext', () => {
     jest.useRealTimers();
   });
 
-  it('initializes and triggers welcome modal on first dashboard visit (demo host)', () => {
+  // ── Bug fix regression: welcome modal must NOT auto-show on plain dashboard visit ──
+  it('does NOT show welcome modal on plain /dashboard visit (no ?startTour)', () => {
+    render(
+      <TourProvider>
+        <Consumer />
+      </TourProvider>
+    );
+
+    expect(screen.getByTestId('showWelcomeModal').textContent).toBe('false');
+  });
+
+  // ── Bug fix regression: tour must NOT auto-start (no phantom beacon) ─────
+  it('does NOT auto-start tour (run stays false) on /dashboard without explicit start', () => {
+    render(
+      <TourProvider>
+        <Consumer />
+      </TourProvider>
+    );
+
+    act(() => { jest.advanceTimersByTime(1500); });
+    expect(screen.getByTestId('run').textContent).toBe('false');
+  });
+
+  it('does not trigger welcome modal if not on demo host', () => {
+    isDemoHost.mockReturnValue(false);
+    mockLocation = { pathname: '/dashboard', search: '?startTour=true' };
+    render(
+      <TourProvider>
+        <Consumer />
+      </TourProvider>
+    );
+
+    expect(screen.getByTestId('showWelcomeModal').textContent).toBe('false');
+  });
+
+  // ── ?startTour=true URL param ─────────────────────────────────────────────
+  it('shows welcome modal when ?startTour=true is in URL', () => {
+    mockLocation = { pathname: '/dashboard', search: '?startTour=true' };
     render(
       <TourProvider>
         <Consumer />
@@ -74,48 +111,36 @@ describe('TourContext', () => {
     );
 
     expect(screen.getByTestId('showWelcomeModal').textContent).toBe('true');
-    expect(sessionStorage.getItem('solidevbooks_tour_session_seen')).toBe('true');
+    // URL should have been cleared
+    expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
   });
 
-  it('does NOT auto-start tour (run stays false) on /dashboard without explicit start', () => {
-    // Ensures the fix: no phantom beacon without explicit tour start
-    render(
+  it('does not show welcome modal on plain visit even after ?startTour was consumed', () => {
+    // Simulate arriving via ?startTour=true, then navigating away and back
+    mockLocation = { pathname: '/dashboard', search: '?startTour=true' };
+    const { rerender } = render(
       <TourProvider>
         <Consumer />
       </TourProvider>
     );
 
-    // Even after timers fire, run must stay false without explicit startTour()
-    act(() => {
-      jest.advanceTimersByTime(1000);
-    });
+    expect(screen.getByTestId('showWelcomeModal').textContent).toBe('true');
 
+    // Close modal, navigate away then back — no auto-show
+    mockLocation = { pathname: '/customers', search: '' };
+    rerender(<TourProvider><Consumer /></TourProvider>);
+
+    mockLocation = { pathname: '/dashboard', search: '' };
+    rerender(<TourProvider><Consumer /></TourProvider>);
+
+    // welcomeModal was set to false when we closed it (stopTour skipped)
+    // run should still be false — no phantom beacon
+    act(() => { jest.advanceTimersByTime(1000); });
     expect(screen.getByTestId('run').textContent).toBe('false');
   });
 
-  it('does not trigger welcome modal if not on demo host', () => {
-    isDemoHost.mockReturnValue(false);
-    render(
-      <TourProvider>
-        <Consumer />
-      </TourProvider>
-    );
-
-    expect(screen.getByTestId('showWelcomeModal').textContent).toBe('false');
-  });
-
-  it('does not trigger welcome modal if already seen in session', () => {
-    sessionStorage.setItem('solidevbooks_tour_session_seen', 'true');
-    render(
-      <TourProvider>
-        <Consumer />
-      </TourProvider>
-    );
-
-    expect(screen.getByTestId('showWelcomeModal').textContent).toBe('false');
-  });
-
-  it('starts tour manually on dashboard and runs it after timeout', () => {
+  // ── Manual start ─────────────────────────────────────────────────────────
+  it('starts tour manually on dashboard and runs after timeout', () => {
     render(
       <TourProvider>
         <Consumer />
@@ -125,17 +150,14 @@ describe('TourContext', () => {
     fireEvent.click(screen.getByText('start-manual'));
     expect(analyticsService.trackEvent).toHaveBeenCalledWith('tour_started', { mode: 'manual' });
 
-    // Assert run is false before timeout
     expect(screen.getByTestId('run').textContent).toBe('false');
 
-    act(() => {
-      jest.advanceTimersByTime(400);
-    });
+    act(() => { jest.advanceTimersByTime(500); });
 
     expect(screen.getByTestId('run').textContent).toBe('true');
   });
 
-  it('starts tour from non-dashboard path and redirects', () => {
+  it('starts tour from non-dashboard path and navigates to /dashboard', () => {
     mockLocation = { pathname: '/customers', search: '' };
     render(
       <TourProvider>
@@ -148,7 +170,8 @@ describe('TourContext', () => {
     expect(screen.getByTestId('run').textContent).toBe('false');
   });
 
-  it('completes the tour successfully', () => {
+  // ── Tour completion ───────────────────────────────────────────────────────
+  it('completes the tour and shows completion modal', () => {
     render(
       <TourProvider>
         <Consumer />
@@ -156,9 +179,7 @@ describe('TourContext', () => {
     );
 
     fireEvent.click(screen.getByText('start-manual'));
-    act(() => {
-      jest.advanceTimersByTime(400);
-    });
+    act(() => { jest.advanceTimersByTime(500); });
     expect(screen.getByTestId('run').textContent).toBe('true');
 
     fireEvent.click(screen.getByText('stop-completed'));
@@ -168,7 +189,7 @@ describe('TourContext', () => {
     expect(analyticsService.trackEvent).toHaveBeenCalledWith('tour_completed');
   });
 
-  it('skips the tour', () => {
+  it('skips the tour and marks it seen', () => {
     render(
       <TourProvider>
         <Consumer />
@@ -176,9 +197,7 @@ describe('TourContext', () => {
     );
 
     fireEvent.click(screen.getByText('start-manual'));
-    act(() => {
-      jest.advanceTimersByTime(400);
-    });
+    act(() => { jest.advanceTimersByTime(500); });
 
     fireEvent.click(screen.getByText('stop-skipped'));
     expect(screen.getByTestId('run').textContent).toBe('false');
@@ -186,7 +205,8 @@ describe('TourContext', () => {
     expect(analyticsService.trackEvent).toHaveBeenCalledWith('tour_skipped', { step_index: 0 });
   });
 
-  it('handles step navigation and changes route', () => {
+  // ── Step navigation ───────────────────────────────────────────────────────
+  it('navigates to next route on step navigation', () => {
     render(
       <TourProvider>
         <Consumer />
@@ -194,9 +214,7 @@ describe('TourContext', () => {
     );
 
     fireEvent.click(screen.getByText('start-manual'));
-    act(() => {
-      jest.advanceTimersByTime(400);
-    });
+    act(() => { jest.advanceTimersByTime(500); });
 
     fireEvent.click(screen.getByText('next-step'));
     expect(screen.getByTestId('stepIndex').textContent).toBe('1');
@@ -208,7 +226,7 @@ describe('TourContext', () => {
     });
   });
 
-  it('resumes tour once expected route is navigated to (after pendingResume)', () => {
+  it('resumes tour after route change (pendingResume)', () => {
     const { rerender } = render(
       <TourProvider>
         <Consumer />
@@ -216,68 +234,37 @@ describe('TourContext', () => {
     );
 
     fireEvent.click(screen.getByText('start-manual'));
-    act(() => {
-      jest.advanceTimersByTime(400);
-    });
+    act(() => { jest.advanceTimersByTime(500); });
 
-    // Navigate to step 1 route
     fireEvent.click(screen.getByText('next-step'));
     expect(mockNavigate).toHaveBeenCalledWith('/customers');
 
-    // Simulate location route change to customer route
+    // Simulate route change
     mockLocation = { pathname: '/customers', search: '' };
+    rerender(<TourProvider><Consumer /></TourProvider>);
 
-    // Rerender to trigger useLocation change
-    rerender(
-      <TourProvider>
-        <Consumer />
-      </TourProvider>
-    );
+    act(() => { jest.advanceTimersByTime(800); });
 
-    // Advance timers past the 600ms delay
-    act(() => {
-      jest.advanceTimersByTime(700);
-    });
-
-    // Check if run resumed
     expect(screen.getByTestId('run').textContent).toBe('true');
   });
 
   it('does NOT resume tour on route change if tour was never started', () => {
-    // Ensures the phantom beacon fix: auto-resume must not fire without isTourActiveRef
     const { rerender } = render(
       <TourProvider>
         <Consumer />
       </TourProvider>
     );
 
-    // Simulate navigating to /customers without starting tour
+    // Navigate without starting tour
     mockLocation = { pathname: '/customers', search: '' };
-    rerender(
-      <TourProvider>
-        <Consumer />
-      </TourProvider>
-    );
+    rerender(<TourProvider><Consumer /></TourProvider>);
 
-    act(() => {
-      jest.advanceTimersByTime(1000);
-    });
+    act(() => { jest.advanceTimersByTime(1000); });
 
     expect(screen.getByTestId('run').textContent).toBe('false');
   });
 
-  it('handles URL startTour parameter and shows welcome modal', () => {
-    mockLocation = { pathname: '/dashboard', search: '?startTour=true' };
-    render(
-      <TourProvider>
-        <Consumer />
-      </TourProvider>
-    );
-
-    expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
-    expect(screen.getByTestId('showWelcomeModal').textContent).toBe('true');
-  });
-
+  // ── Error boundary ────────────────────────────────────────────────────────
   it('throws error when useTour is used outside TourProvider', () => {
     const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 

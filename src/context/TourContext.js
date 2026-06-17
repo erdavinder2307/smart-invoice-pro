@@ -84,20 +84,18 @@ export const TourProvider = ({ children }) => {
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
 
-  // Check if tour has been seen
-  const [tourSeen, setTourSeen] = useState(() => {
-    return Boolean(localStorage.getItem('solidevbooks_tour_seen'));
-  });
+  const [tourSeen, setTourSeen] = useState(() =>
+    Boolean(localStorage.getItem('solidevbooks_tour_seen'))
+  );
 
-  // *** KEY FIX: guard flag — the auto-resume effect ONLY fires
-  //     when the user has explicitly started the tour (via WelcomeModal or menu).
-  //     Without this flag the effect fires on every render at /dashboard and
-  //     turns run=true before any interaction, causing the beacon and broken Next.
+  // Guard: auto-resume ONLY after explicit startTour() call
   const isTourActiveRef = useRef(false);
-
-  // Also track pending navigation so we know to resume after routing
+  // Guard: only resume after a route change triggered by handleStepNavigation
   const pendingResumeRef = useRef(false);
+  // Avoid processing the ?startTour param twice on fast re-renders
+  const startTourParamConsumedRef = useRef(false);
 
+  // ─── startTour ────────────────────────────────────────────────────────────
   const startTour = useCallback((fromStart = false) => {
     setShowWelcomeModal(false);
     setShowCompletionModal(false);
@@ -105,24 +103,25 @@ export const TourProvider = ({ children }) => {
     analyticsService.trackEvent('tour_started', { mode: fromStart ? 'auto' : 'manual' });
 
     isTourActiveRef.current = true;
+    pendingResumeRef.current = false;
 
     if (location.pathname !== '/dashboard') {
+      // Need to navigate first, then resume
       pendingResumeRef.current = true;
       setRun(false);
       navigate('/dashboard');
     } else {
-      pendingResumeRef.current = false;
-      // Small delay to let DOM settle on the current page
-      setTimeout(() => {
-        setRun(true);
-      }, 300);
+      // Already on dashboard — give DOM time to render the target element
+      setTimeout(() => setRun(true), 400);
     }
   }, [navigate, location.pathname]);
 
+  // ─── stopTour ─────────────────────────────────────────────────────────────
   const stopTour = useCallback((completed = false, skipped = false) => {
     setRun(false);
     isTourActiveRef.current = false;
     pendingResumeRef.current = false;
+
     if (completed) {
       localStorage.setItem('solidevbooks_tour_seen', 'true');
       setTourSeen(true);
@@ -135,66 +134,67 @@ export const TourProvider = ({ children }) => {
     }
   }, [stepIndex]);
 
-  // Handle URL parameters for starting the tour
-  // Reads startTour param ONCE on mount/location change — but does NOT clear the URL eagerly;
-  // only clear once we've consumed it.
+  // ─── URL param: ?startTour=true ───────────────────────────────────────────
+  // Only fires when the search string contains the param.
+  // We clear the URL first, THEN open the welcome modal so the modal button
+  // can call startTour() cleanly with no stale query string.
   useEffect(() => {
     if (!isDemoHost()) return;
-
     const params = new URLSearchParams(location.search);
-    if (params.get('startTour') === 'true') {
-      // Clear URL parameter so it doesn't trigger repeatedly
-      navigate(location.pathname, { replace: true });
+    if (params.get('startTour') !== 'true') return;
+    if (startTourParamConsumedRef.current) return;
 
-      const sessionSeen = sessionStorage.getItem('solidevbooks_tour_session_seen');
-      if (!sessionSeen) {
-        sessionStorage.setItem('solidevbooks_tour_session_seen', 'true');
-        setShowWelcomeModal(true);
-      } else if (!tourSeen) {
-        startTour(true);
-      }
-    } else if (!tourSeen && location.pathname === '/dashboard') {
-      // Auto-show welcome modal on first visit to dashboard inside the session
-      const sessionSeen = sessionStorage.getItem('solidevbooks_tour_session_seen');
-      if (!sessionSeen) {
-        sessionStorage.setItem('solidevbooks_tour_session_seen', 'true');
-        setShowWelcomeModal(true);
-      }
-    }
+    startTourParamConsumedRef.current = true;
+
+    // Clear the param from the URL immediately so it won't re-trigger
+    navigate(location.pathname, { replace: true });
+
+    // Show welcome modal — user clicks "Start Tour" to actually begin
+    setShowWelcomeModal(true);
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.search, location.pathname]);
+  }, [location.search]);
 
+  // Reset the consumed flag when the user navigates away from /dashboard
+  // so that a fresh ?startTour=true link always works
+  useEffect(() => {
+    if (location.pathname !== '/dashboard') {
+      startTourParamConsumedRef.current = false;
+    }
+  }, [location.pathname]);
+
+  // ─── handleStepNavigation ────────────────────────────────────────────────
   const handleStepNavigation = useCallback((nextIdx) => {
-    const nextRoute = STEP_ROUTES[nextIdx];
     analyticsService.trackEvent('tour_step_completed', {
       step_index: stepIndex,
       step_title: TOUR_STEPS[stepIndex]?.title || ''
     });
 
+    const nextRoute = STEP_ROUTES[nextIdx];
     if (nextRoute && location.pathname !== nextRoute) {
-      // Navigating to a different page — pause joyride, set pending resume
+      // Different page → pause Joyride, navigate, let auto-resume pick it up
       setRun(false);
       setStepIndex(nextIdx);
       pendingResumeRef.current = true;
       navigate(nextRoute);
     } else {
-      // Same page — just advance the step index; Joyride will render next step
+      // Same page → just advance; Joyride re-renders with new stepIndex
       setStepIndex(nextIdx);
     }
   }, [location.pathname, navigate, stepIndex]);
 
-  // Auto-resume tour ONLY when the tour is explicitly active and a pending navigation happened
+  // ─── Auto-resume after route change ──────────────────────────────────────
+  // Only fires when: tour is active AND a step navigation triggered a route change
   useEffect(() => {
-    if (!isTourActiveRef.current || !pendingResumeRef.current) return;
+    if (!isTourActiveRef.current) return;
+    if (!pendingResumeRef.current) return;
     if (run) return;
 
     const expectedRoute = STEP_ROUTES[stepIndex];
     if (expectedRoute && location.pathname === expectedRoute) {
       pendingResumeRef.current = false;
-      // Delay to allow DOM elements to render/load API data
-      const timer = setTimeout(() => {
-        setRun(true);
-      }, 600);
+      // Wait for the page components + data to render
+      const timer = setTimeout(() => setRun(true), 700);
       return () => clearTimeout(timer);
     }
   }, [location.pathname, stepIndex, run]);

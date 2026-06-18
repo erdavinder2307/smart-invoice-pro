@@ -28,7 +28,12 @@ jest.mock('react-joyride', () => {
 
 const mockStopTour = jest.fn();
 const mockHandleStepNavigation = jest.fn();
+const mockRetryCurrentStep = jest.fn();
 const mockSetRun = jest.fn();
+
+jest.mock('react-router-dom', () => ({
+  useLocation: () => ({ pathname: '/dashboard', search: '' }),
+}));
 
 jest.mock('../../context/TourContext', () => ({
   useTour: jest.fn(),
@@ -56,6 +61,7 @@ function setupTourMock(overrides = {}) {
     stepIndex: 0,
     stopTour: mockStopTour,
     handleStepNavigation: mockHandleStepNavigation,
+    retryCurrentStep: mockRetryCurrentStep,
     setRun: mockSetRun,
     ...overrides,
   });
@@ -143,23 +149,14 @@ describe('ProductTour', () => {
     expect(mockHandleStepNavigation).not.toHaveBeenCalled();
   });
 
-  // ── EVENTS.TARGET_NOT_FOUND + NEXT ────────────────────────────────────────
-  it('advances via handleStepNavigation when target is not found and action is NEXT', () => {
+  // ── EVENTS.TARGET_NOT_FOUND retries current step ─────────────────────────
+  it('calls retryCurrentStep when target is not found', () => {
     render(<ProductTour />);
     act(() => {
       capturedCallback({ action: ACTIONS.NEXT, index: 1, status: STATUS.RUNNING, type: EVENTS.TARGET_NOT_FOUND });
     });
-    expect(mockHandleStepNavigation).toHaveBeenCalledWith(2);
-  });
-
-  // ── EVENTS.TARGET_NOT_FOUND on last step ─────────────────────────────────
-  it('calls stopTour(true) when target is not found on the last step', () => {
-    const lastStepIndex = TOUR_STEPS.length - 1;
-    render(<ProductTour />);
-    act(() => {
-      capturedCallback({ action: ACTIONS.NEXT, index: lastStepIndex, status: STATUS.RUNNING, type: EVENTS.TARGET_NOT_FOUND });
-    });
-    expect(mockStopTour).toHaveBeenCalledWith(true);
+    expect(mockRetryCurrentStep).toHaveBeenCalled();
+    expect(mockHandleStepNavigation).not.toHaveBeenCalled();
   });
 
   // ── Guard: back before first step ─────────────────────────────────────────

@@ -501,6 +501,7 @@ const DashboardPage = () => {
     >
       <Box
         component="section"
+        className="tour-dashboard-root"
         sx={{
           flex: 1,
           p: { xs: 2, md: 3 },

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { createApiUrl } from '../config/api';
 import { useAuth } from '../context/AuthContext';
+import { armTourStartPending } from '../context/TourContext';
 import {
   isDemoHost,
   openInteractiveWorkspace,
@@ -29,6 +30,9 @@ const DemoLanding = () => {
       await demoLogin({ role });
       const params = new URLSearchParams(window.location.search);
       const isTour = params.get('startTour') === 'true';
+      if (isTour) {
+        armTourStartPending();
+      }
       const targetPath = isTour ? '/dashboard?startTour=true' : '/dashboard';
       if (isDemoHost()) {
         navigate(targetPath, { replace: true });
@@ -55,6 +59,9 @@ const DemoLanding = () => {
     if (isAuthenticated) {
       const params = new URLSearchParams(window.location.search);
       const isTour = params.get('startTour') === 'true';
+      if (isTour) {
+        armTourStartPending();
+      }
       navigate(isTour ? '/dashboard?startTour=true' : '/dashboard', { replace: true });
       return;
     }

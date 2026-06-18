@@ -2,13 +2,39 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { useNavigate, useLocation } from 'react-router-dom';
 import analyticsService from '../services/analyticsService';
 import { isDemoHost } from '../utils/demoMode';
-import { waitForElement } from '../utils/waitForElement';
+import { waitForElement, waitForAnyElement } from '../utils/waitForElement';
 import { tourDebug, tourWarn } from '../utils/tourDebug';
 
 const TourContext = createContext(null);
 
 export const TOUR_STORAGE_KEY = 'solidevbooks_tour_state';
 export const TOUR_SEEN_KEY = 'solidevbooks_tour_seen';
+export const TOUR_START_PENDING_KEY = 'solidevbooks_start_tour_pending';
+
+export function armTourStartPending() {
+  sessionStorage.setItem(TOUR_START_PENDING_KEY, 'true');
+}
+
+export function clearTourStartPending() {
+  sessionStorage.removeItem(TOUR_START_PENDING_KEY);
+}
+
+export function isTourStartPending() {
+  return sessionStorage.getItem(TOUR_START_PENDING_KEY) === 'true';
+}
+
+function readInitialWelcomeModal() {
+  if (typeof window === 'undefined' || !isDemoHost()) return false;
+  if (window.location.pathname !== '/dashboard') return false;
+
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('startTour') === 'true') {
+    armTourStartPending();
+    return true;
+  }
+
+  return isTourStartPending();
+}
 
 export const STEP_ROUTES = {
   0: '/dashboard',
@@ -21,9 +47,13 @@ export const STEP_ROUTES = {
   7: '/reports',
 };
 
+export const STEP_TARGETS = {
+  0: ['.tour-revenue-cards', '.tour-dashboard-kpis', '.tour-dashboard-root'],
+};
+
 export const TOUR_STEPS = [
   {
-    target: '.tour-dashboard-root',
+    target: '.tour-revenue-cards',
     content: 'This dashboard provides operational visibility across your financial workflows. Track revenue, invoices, and expenses in real-time.',
     disableBeacon: true,
     placement: 'bottom',
@@ -100,31 +130,39 @@ function writePersistedTourState(state) {
   }
 }
 
+function clearPersistedTourState() {
+  localStorage.removeItem(TOUR_STORAGE_KEY);
+}
+
 export const TourProvider = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
   const persisted = readPersistedTourState();
+  const recoverIdx = persisted?.stepIndex ?? 0;
+  const canRecoverTour = Boolean(
+    persisted?.tourRunning &&
+    !persisted?.tourCompleted &&
+    STEP_ROUTES[recoverIdx] === location.pathname
+  );
 
   const [run, setRun] = useState(false);
-  const [stepIndex, setStepIndex] = useState(persisted?.stepIndex ?? 0);
-  const [tourRunning, setTourRunning] = useState(Boolean(persisted?.tourRunning));
+  const [stepIndex, setStepIndex] = useState(canRecoverTour ? recoverIdx : 0);
+  const [tourRunning, setTourRunning] = useState(canRecoverTour);
   const [tourCompleted, setTourCompleted] = useState(Boolean(persisted?.tourCompleted));
-  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(readInitialWelcomeModal);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
 
   const [tourSeen, setTourSeen] = useState(() =>
     Boolean(localStorage.getItem(TOUR_SEEN_KEY))
   );
 
-  const isTourActiveRef = useRef(tourRunning);
-  const pendingStepRef = useRef(
-    persisted?.tourRunning ? (persisted.stepIndex ?? 0) : null
-  );
-  const [pendingResume, setPendingResume] = useState(Boolean(persisted?.tourRunning));
+  const isTourActiveRef = useRef(canRecoverTour);
+  const pendingStepRef = useRef(canRecoverTour ? recoverIdx : null);
+  const [pendingResume, setPendingResume] = useState(canRecoverTour);
   const resumeInFlightRef = useRef(false);
   const resumeGenerationRef = useRef(0);
-  const startTourParamConsumedRef = useRef(false);
+  const targetRetryRef = useRef({});
 
   useEffect(() => {
     isTourActiveRef.current = tourRunning;
@@ -142,6 +180,8 @@ export const TourProvider = ({ children }) => {
   }, [stepIndex, tourCompleted]);
 
   const stopTour = useCallback((completed = false, skipped = false) => {
+    clearTourStartPending();
+    setShowWelcomeModal(false);
     setRun(false);
     isTourActiveRef.current = false;
     setPendingResume(false);
@@ -195,7 +235,10 @@ export const TourProvider = ({ children }) => {
     }
 
     setRun(false);
-    const target = await waitForElement(selector, { timeout: 5000 });
+    const selectors = STEP_TARGETS[idx] || [selector];
+    const target = selectors.length > 1
+      ? await waitForAnyElement(selectors, { timeout: 5000 })
+      : await waitForElement(selector, { timeout: 5000 });
 
     if (generation !== resumeGenerationRef.current) {
       resumeInFlightRef.current = false;
@@ -204,8 +247,22 @@ export const TourProvider = ({ children }) => {
     }
 
     if (!target) {
-      tourWarn('TARGET_NOT_FOUND', { idx, selector, route });
+      const attempts = (targetRetryRef.current[idx] ?? 0) + 1;
+      targetRetryRef.current[idx] = attempts;
+      tourWarn('TARGET_NOT_FOUND', { idx, selector, selectors, route, attempt: attempts });
       resumeInFlightRef.current = false;
+
+      if (attempts < 10) {
+        setPendingResume(true);
+        setTimeout(() => {
+          if (!isTourActiveRef.current) return;
+          if ((pendingStepRef.current ?? idx) !== idx) return;
+          resumeCurrentStep(idx);
+        }, 300);
+        return;
+      }
+
+      targetRetryRef.current[idx] = 0;
       if (idx + 1 < TOUR_STEPS.length) {
         pendingStepRef.current = idx + 1;
         setPendingResume(true);
@@ -215,6 +272,8 @@ export const TourProvider = ({ children }) => {
       }
       return;
     }
+
+    targetRetryRef.current[idx] = 0;
 
     await new Promise((resolve) => {
       setTimeout(resolve, 0);
@@ -238,6 +297,8 @@ export const TourProvider = ({ children }) => {
   }, [location.pathname, navigate, persistTour, stopTour]);
 
   const startTour = useCallback((fromStart = false) => {
+    clearTourStartPending();
+    clearPersistedTourState();
     setShowWelcomeModal(false);
     setShowCompletionModal(false);
     setTourCompleted(false);
@@ -246,23 +307,22 @@ export const TourProvider = ({ children }) => {
     isTourActiveRef.current = true;
     resumeGenerationRef.current += 1;
     resumeInFlightRef.current = false;
-    pendingStepRef.current = null;
+    targetRetryRef.current = {};
+    pendingStepRef.current = 0;
+    setPendingResume(false);
+    setRun(false);
 
     analyticsService.trackEvent('tour_started', { mode: fromStart ? 'auto' : 'manual' });
-    persistTour({ tourRunning: true, stepIndex: 0, tourCompleted: false });
 
     tourDebug('startTour', { pathname: location.pathname });
 
     if (location.pathname !== '/dashboard') {
-      pendingStepRef.current = 0;
       setPendingResume(true);
-      setRun(false);
       navigate('/dashboard');
     } else {
-      pendingStepRef.current = 0;
       resumeCurrentStep(0);
     }
-  }, [location.pathname, navigate, persistTour, resumeCurrentStep]);
+  }, [location.pathname, navigate, resumeCurrentStep]);
 
   const handleStepNavigation = useCallback((nextIdx) => {
     if (nextIdx < 0 || nextIdx >= TOUR_STEPS.length) return;
@@ -303,24 +363,28 @@ export const TourProvider = ({ children }) => {
     resumeCurrentStep(stepIndex);
   }, [resumeCurrentStep, stepIndex]);
 
-  // ─── URL param: ?startTour=true (trigger only — state lives in context/storage) ─
+  // ─── URL param: ?startTour=true (trigger only — intent stored in sessionStorage) ─
   useEffect(() => {
     if (!isDemoHost()) return;
+    if (location.pathname !== '/dashboard') return;
+
     const params = new URLSearchParams(location.search);
-    if (params.get('startTour') !== 'true') return;
-    if (startTourParamConsumedRef.current) return;
+    const fromUrl = params.get('startTour') === 'true';
 
-    startTourParamConsumedRef.current = true;
-    navigate(location.pathname, { replace: true });
-    setShowWelcomeModal(true);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.search]);
-
-  useEffect(() => {
-    if (location.pathname !== '/dashboard') {
-      startTourParamConsumedRef.current = false;
+    if (fromUrl) {
+      armTourStartPending();
+      navigate(location.pathname, { replace: true });
+      tourDebug('startTour-url-armed', { pathname: location.pathname });
     }
-  }, [location.pathname]);
+
+    if (fromUrl || isTourStartPending()) {
+      clearPersistedTourState();
+      setTourRunning(false);
+      setPendingResume(false);
+      isTourActiveRef.current = false;
+      setShowWelcomeModal(true);
+    }
+  }, [location.pathname, location.search, navigate]);
 
   // ─── Resume after route change ───────────────────────────────────────────
   useEffect(() => {
@@ -342,11 +406,20 @@ export const TourProvider = ({ children }) => {
     const saved = readPersistedTourState();
     if (!saved?.tourRunning || saved.tourCompleted) return;
 
+    const idx = saved.stepIndex ?? 0;
+    const expectedRoute = STEP_ROUTES[idx];
+
+    if (location.pathname !== expectedRoute) {
+      tourDebug('recover-skip-stale-route', { idx, pathname: location.pathname, expectedRoute });
+      clearPersistedTourState();
+      return;
+    }
+
     tourDebug('recover-from-storage', saved);
     isTourActiveRef.current = true;
     setTourRunning(true);
-    setStepIndex(saved.stepIndex ?? 0);
-    pendingStepRef.current = saved.stepIndex ?? 0;
+    setStepIndex(idx);
+    pendingStepRef.current = idx;
     setPendingResume(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

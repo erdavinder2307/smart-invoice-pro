@@ -1,9 +1,9 @@
 import React from 'react';
 import { render, screen, act, fireEvent, waitFor } from '@testing-library/react';
-import { TourProvider, useTour, TOUR_STEPS, STEP_ROUTES } from '../../context/TourContext';
+import { TourProvider, useTour, TOUR_STEPS, STEP_ROUTES, TOUR_START_PENDING_KEY } from '../../context/TourContext';
 import analyticsService from '../../services/analyticsService';
 import { isDemoHost } from '../../utils/demoMode';
-import { waitForElement } from '../../utils/waitForElement';
+import { waitForElement, waitForAnyElement } from '../../utils/waitForElement';
 
 jest.mock('../../services/analyticsService', () => ({
   trackEvent: jest.fn()
@@ -14,7 +14,8 @@ jest.mock('../../utils/demoMode', () => ({
 }));
 
 jest.mock('../../utils/waitForElement', () => ({
-  waitForElement: jest.fn(() => Promise.resolve({ offsetParent: {} })),
+  waitForElement: jest.fn(),
+  waitForAnyElement: jest.fn(),
 }));
 
 const flushAsync = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -62,6 +63,7 @@ describe('TourContext', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     waitForElement.mockResolvedValue({ offsetParent: document.body, isConnected: true });
+    waitForAnyElement.mockResolvedValue({ offsetParent: document.body, isConnected: true });
     localStorage.clear();
     sessionStorage.clear();
     isDemoHost.mockReturnValue(true);
@@ -120,7 +122,6 @@ describe('TourContext', () => {
   });
 
   it('does not show welcome modal on plain visit even after ?startTour was consumed', async () => {
-    // Simulate arriving via ?startTour=true, then navigating away and back
     mockLocation = { pathname: '/dashboard', search: '?startTour=true' };
     const { rerender } = render(
       <TourProvider>
@@ -130,7 +131,9 @@ describe('TourContext', () => {
 
     expect(screen.getByTestId('showWelcomeModal').textContent).toBe('true');
 
-    // Close modal, navigate away then back — no auto-show
+    // Dismiss welcome — clears session pending flag
+    fireEvent.click(screen.getByText('stop-skipped'));
+
     mockLocation = { pathname: '/customers', search: '' };
     rerender(<TourProvider><Consumer /></TourProvider>);
 
@@ -140,6 +143,7 @@ describe('TourContext', () => {
     await act(async () => {
       await new Promise((r) => setTimeout(r, 50));
     });
+    expect(screen.getByTestId('showWelcomeModal').textContent).toBe('false');
     expect(screen.getByTestId('run').textContent).toBe('false');
   });
 
@@ -156,7 +160,7 @@ describe('TourContext', () => {
     });
 
     await waitFor(() => {
-      expect(waitForElement).toHaveBeenCalled();
+      expect(waitForAnyElement).toHaveBeenCalled();
       expect(screen.getByTestId('run').textContent).toBe('true');
     });
   });
@@ -313,26 +317,46 @@ describe('TourContext', () => {
     expect(screen.getByTestId('tourSeen').textContent).toBe('true');
   });
 
-  // ── startTourParamConsumedRef: double-fire guard ──────────────────────────
-  it('does not show welcome modal twice if location.search re-renders with same param', () => {
-    mockLocation = { pathname: '/dashboard', search: '?startTour=true' };
-    const { rerender } = render(
+  it('shows welcome modal after strict-mode remount when session pending is set', () => {
+    sessionStorage.setItem(TOUR_START_PENDING_KEY, 'true');
+    mockLocation = { pathname: '/dashboard', search: '' };
+
+    const { unmount } = render(
+      <TourProvider>
+        <Consumer />
+      </TourProvider>
+    );
+    unmount();
+
+    render(
       <TourProvider>
         <Consumer />
       </TourProvider>
     );
 
     expect(screen.getByTestId('showWelcomeModal').textContent).toBe('true');
-    expect(mockNavigate).toHaveBeenCalledTimes(1);
-
-    // Re-render with same search string — consumed ref blocks second trigger
-    rerender(<TourProvider><Consumer /></TourProvider>);
-    // navigate should NOT be called again
-    expect(mockNavigate).toHaveBeenCalledTimes(1);
   });
 
-  // ── Reset consumed flag when leaving /dashboard ──────────────────────────
-  it('resets startTourParam consumed flag when navigating away from /dashboard', () => {
+  // ── sessionStorage pending: double-fire guard ─────────────────────────────
+  it('does not call navigate twice if location.search re-renders with same param', () => {
+    mockLocation = { pathname: '/dashboard', search: '?startTour=true' };
+    const { rerender } = render(
+      <TourProvider>
+        <Consumer />
+      </TourProvider>
+    );
+
+    expect(screen.getByTestId('showWelcomeModal').textContent).toBe('true');
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+
+    // After replace navigation the query string is gone (simulate production)
+    mockLocation = { pathname: '/dashboard', search: '' };
+    rerender(<TourProvider><Consumer /></TourProvider>);
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('showWelcomeModal').textContent).toBe('true');
+  });
+
+  it('shows welcome modal again when returning to dashboard with ?startTour=true', () => {
     mockLocation = { pathname: '/dashboard', search: '?startTour=true' };
     const { rerender } = render(
       <TourProvider>
@@ -341,11 +365,11 @@ describe('TourContext', () => {
     );
     expect(screen.getByTestId('showWelcomeModal').textContent).toBe('true');
 
-    // Navigate away — resets consumed flag
+    fireEvent.click(screen.getByText('stop-skipped'));
+
     mockLocation = { pathname: '/customers', search: '' };
     rerender(<TourProvider><Consumer /></TourProvider>);
 
-    // Navigate back to /dashboard with fresh ?startTour=true
     mockLocation = { pathname: '/dashboard', search: '?startTour=true' };
     rerender(<TourProvider><Consumer /></TourProvider>);
 

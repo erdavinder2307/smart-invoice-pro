@@ -607,7 +607,7 @@ const DashboardPage = () => {
             {t('dashboard.overdueFollowUp')}
           </Alert>
         )}
-        <Container maxWidth="xl" disableGutters>
+        <Container maxWidth="xl" disableGutters className="tour-dashboard-kpis">
           {visiblePerformanceKpis.length > 0 && (
             <>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>

@@ -1,29 +1,50 @@
 import React from 'react';
 import { Joyride, ACTIONS, EVENTS, STATUS } from 'react-joyride';
+import { useLocation } from 'react-router-dom';
 import { useTour, TOUR_STEPS } from '../../context/TourContext';
+import { tourDebug, tourWarn } from '../../utils/tourDebug';
 
 const ProductTour = () => {
+  const location = useLocation();
   const {
     run,
     stepIndex,
     stopTour,
     handleStepNavigation,
-    setRun
+    retryCurrentStep,
   } = useTour();
 
   const handleJoyrideCallback = (data) => {
-    const { action, index, status, type } = data;
+    const { action, index, status, type, step } = data;
 
-    // Tour finished or skipped by the user
+    tourDebug('joyride-callback', {
+      action,
+      index,
+      status,
+      type,
+      route: location.pathname,
+      target: step?.target,
+      stepIndex,
+      run,
+    });
+
     if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
       stopTour(status === STATUS.FINISHED, status === STATUS.SKIPPED);
       return;
     }
 
-    // Step-level navigation (Next / Back / target not found)
-    if ([EVENTS.STEP_AFTER, EVENTS.TARGET_NOT_FOUND].includes(type)) {
+    if (type === EVENTS.TARGET_NOT_FOUND) {
+      tourWarn('joyride-TARGET_NOT_FOUND', {
+        index,
+        target: TOUR_STEPS[index]?.target,
+        route: location.pathname,
+      });
+      retryCurrentStep();
+      return;
+    }
+
+    if (type === EVENTS.STEP_AFTER) {
       if (action === ACTIONS.CLOSE) {
-        // X button on a step — treat as skip
         stopTour(false, true);
         return;
       }
@@ -32,10 +53,8 @@ const ProductTour = () => {
       const nextIndex = index + delta;
 
       if (nextIndex >= TOUR_STEPS.length) {
-        // Clicked Next on the last step
         stopTour(true);
       } else if (nextIndex < 0) {
-        // Went back past first step (shouldn't happen, but guard)
         stopTour(false, true);
       } else {
         handleStepNavigation(nextIndex);
@@ -45,15 +64,16 @@ const ProductTour = () => {
 
   return (
     <Joyride
+      key={`tour-${stepIndex}-${location.pathname}`}
       steps={TOUR_STEPS}
       run={run}
       stepIndex={stepIndex}
-      continuous={true}
-      scrollToFirstStep={true}
+      continuous
+      scrollToFirstStep
       scrollOffset={120}
-      showProgress={true}
-      showSkipButton={true}
-      disableOverlayClose={true}
+      showProgress
+      showSkipButton
+      disableOverlayClose
       spotlightClicks={false}
       disableScrolling={false}
       callback={handleJoyrideCallback}
@@ -88,13 +108,13 @@ const ProductTour = () => {
           fontSize: '1.1rem',
           color: '#0f172a',
           marginBottom: '8px',
-          fontFamily: 'system-ui, -apple-system, sans-serif'
+          fontFamily: 'system-ui, -apple-system, sans-serif',
         },
         tooltipContent: {
           fontSize: '0.9rem',
           color: '#475569',
           lineHeight: '1.65',
-          fontFamily: 'system-ui, -apple-system, sans-serif'
+          fontFamily: 'system-ui, -apple-system, sans-serif',
         },
         tooltipFooter: {
           marginTop: '16px',
@@ -110,7 +130,7 @@ const ProductTour = () => {
           border: 'none',
           cursor: 'pointer',
           boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
-          fontFamily: 'system-ui, -apple-system, sans-serif'
+          fontFamily: 'system-ui, -apple-system, sans-serif',
         },
         buttonBack: {
           color: '#64748b',
@@ -120,7 +140,7 @@ const ProductTour = () => {
           border: 'none',
           background: 'none',
           cursor: 'pointer',
-          fontFamily: 'system-ui, -apple-system, sans-serif'
+          fontFamily: 'system-ui, -apple-system, sans-serif',
         },
         buttonSkip: {
           color: '#94a3b8',
@@ -129,7 +149,7 @@ const ProductTour = () => {
           border: 'none',
           background: 'none',
           cursor: 'pointer',
-          fontFamily: 'system-ui, -apple-system, sans-serif'
+          fontFamily: 'system-ui, -apple-system, sans-serif',
         },
         buttonClose: {
           color: '#94a3b8',
@@ -139,7 +159,7 @@ const ProductTour = () => {
         },
         spotlight: {
           borderRadius: '8px',
-        }
+        },
       }}
     />
   );

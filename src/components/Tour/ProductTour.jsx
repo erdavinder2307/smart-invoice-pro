@@ -76,6 +76,7 @@ const ProductTour = () => {
       disableOverlayClose
       spotlightClicks={false}
       disableScrolling={false}
+      options={{ skipBeacon: true }}
       callback={handleJoyrideCallback}
       locale={{
         back: 'Back',

@@ -14,10 +14,10 @@ const ProductTour = () => {
     retryCurrentStep,
   } = useTour();
 
-  const handleJoyrideCallback = (data) => {
+  const handleJoyrideEvent = (data) => {
     const { action, index, status, type, step } = data;
 
-    tourDebug('joyride-callback', {
+    tourDebug('joyride-event', {
       action,
       index,
       status,
@@ -28,7 +28,10 @@ const ProductTour = () => {
       run,
     });
 
-    if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
+    if (
+      [STATUS.FINISHED, STATUS.SKIPPED].includes(status) ||
+      type === EVENTS.TOUR_END
+    ) {
       stopTour(status === STATUS.FINISHED, status === STATUS.SKIPPED);
       return;
     }
@@ -77,7 +80,7 @@ const ProductTour = () => {
       spotlightClicks={false}
       disableScrolling={false}
       options={{ skipBeacon: true }}
-      callback={handleJoyrideCallback}
+      onEvent={handleJoyrideEvent}
       locale={{
         back: 'Back',
         close: 'Close',

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { createApiUrl } from '../config/api';
@@ -23,7 +23,7 @@ const DemoLanding = () => {
   const [loadingRole, setLoadingRole] = useState('');
   const [error, setError] = useState('');
 
-  const handleStart = async (role) => {
+  const handleStart = useCallback(async (role) => {
     setError('');
     setLoadingRole(role);
     try {
@@ -48,7 +48,7 @@ const DemoLanding = () => {
     } finally {
       setLoadingRole('');
     }
-  };
+  }, [demoLogin, navigate]);
 
   useEffect(() => {
     if (!isDemoHost()) {
@@ -83,7 +83,7 @@ const DemoLanding = () => {
           { role: 'Purchaser', title: 'Purchaser', description: 'Vendors and purchase orders' },
         ]);
       });
-  }, [isAuthenticated, navigate]);
+  }, [handleStart, isAuthenticated, navigate]);
 
   return (
     <div

@@ -340,6 +340,8 @@ export const TourProvider = ({ children }) => {
     });
 
     setRun(false);
+    isTourActiveRef.current = true;
+    setTourRunning(true);
     resumeGenerationRef.current += 1;
     resumeInFlightRef.current = false;
     pendingStepRef.current = nextIdx;

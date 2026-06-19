@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, act, fireEvent, waitFor } from '@testing-library/react';
-import { TourProvider, useTour, TOUR_STEPS, STEP_ROUTES, TOUR_START_PENDING_KEY } from '../../context/TourContext';
+import { TourProvider, useTour, TOUR_STEPS, STEP_ROUTES, STEP_TARGETS, TOUR_START_PENDING_KEY, TOUR_STORAGE_KEY, armTourStartPending, clearTourStartPending, isTourStartPending } from '../../context/TourContext';
 import analyticsService from '../../services/analyticsService';
 import { isDemoHost } from '../../utils/demoMode';
 import { waitForElement, waitForAnyElement } from '../../utils/waitForElement';
@@ -40,7 +40,8 @@ function Consumer() {
     tourSeen,
     startTour,
     stopTour,
-    handleStepNavigation
+    handleStepNavigation,
+    retryCurrentStep,
   } = useTour();
 
   return (
@@ -55,6 +56,7 @@ function Consumer() {
       <button onClick={() => stopTour(true, false)}>stop-completed</button>
       <button onClick={() => stopTour(false, true)}>stop-skipped</button>
       <button onClick={() => handleStepNavigation(1)}>next-step</button>
+      <button onClick={() => retryCurrentStep()}>retry-step</button>
     </div>
   );
 }
@@ -406,5 +408,157 @@ describe('TourContext', () => {
 
     expect(() => render(<BadComponent />)).toThrow('useTour must be used within a TourProvider');
     consoleSpy.mockRestore();
+  });
+
+  describe('TOUR_STEPS configuration', () => {
+    it('defines 8 steps with skipBeacon for react-joyride v3', () => {
+      expect(TOUR_STEPS).toHaveLength(8);
+      TOUR_STEPS.forEach((step, idx) => {
+        expect(step.skipBeacon).toBe(true);
+        expect(step.target).toBeTruthy();
+        expect(STEP_ROUTES[idx]).toBeTruthy();
+      });
+    });
+
+    it('maps each step index to the expected route', () => {
+      expect(STEP_ROUTES[0]).toBe('/dashboard');
+      expect(STEP_ROUTES[1]).toBe('/customers');
+      expect(STEP_ROUTES[2]).toBe('/quotes');
+      expect(STEP_ROUTES[3]).toBe('/invoices');
+      expect(STEP_ROUTES[4]).toBe('/products');
+      expect(STEP_ROUTES[5]).toBe('/purchase-orders');
+      expect(STEP_ROUTES[6]).toBe('/bank-accounts');
+      expect(STEP_ROUTES[7]).toBe('/reports');
+    });
+
+    it('uses fallback selectors for dashboard step 0', () => {
+      expect(STEP_TARGETS[0]).toEqual([
+        '.tour-revenue-cards',
+        '.tour-dashboard-kpis',
+        '.tour-dashboard-root',
+      ]);
+    });
+  });
+
+  describe('sessionStorage tour start pending', () => {
+    it('armTourStartPending / clearTourStartPending / isTourStartPending work', () => {
+      expect(isTourStartPending()).toBe(false);
+      armTourStartPending();
+      expect(isTourStartPending()).toBe(true);
+      clearTourStartPending();
+      expect(isTourStartPending()).toBe(false);
+    });
+
+    it('arms sessionStorage when ?startTour=true is consumed', () => {
+      mockLocation = { pathname: '/dashboard', search: '?startTour=true' };
+      render(<TourProvider><Consumer /></TourProvider>);
+      expect(sessionStorage.getItem(TOUR_START_PENDING_KEY)).toBe('true');
+    });
+
+    it('clears sessionStorage when startTour runs', async () => {
+      sessionStorage.setItem(TOUR_START_PENDING_KEY, 'true');
+      render(<TourProvider><Consumer /></TourProvider>);
+
+      await act(async () => {
+        fireEvent.click(screen.getByText('start-manual'));
+      });
+
+      expect(sessionStorage.getItem(TOUR_START_PENDING_KEY)).toBeNull();
+    });
+
+    it('clears sessionStorage when tour is skipped', async () => {
+      sessionStorage.setItem(TOUR_START_PENDING_KEY, 'true');
+      render(<TourProvider><Consumer /></TourProvider>);
+
+      fireEvent.click(screen.getByText('stop-skipped'));
+      expect(sessionStorage.getItem(TOUR_START_PENDING_KEY)).toBeNull();
+    });
+  });
+
+  describe('localStorage recovery', () => {
+    it('resumes in-progress tour when saved route matches current page', async () => {
+      localStorage.setItem(TOUR_STORAGE_KEY, JSON.stringify({
+        tourRunning: true,
+        stepIndex: 1,
+        tourCompleted: false,
+      }));
+      mockLocation = { pathname: '/customers', search: '' };
+
+      render(<TourProvider><Consumer /></TourProvider>);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('stepIndex').textContent).toBe('1');
+        expect(screen.getByTestId('run').textContent).toBe('true');
+      });
+    });
+
+    it('discards stale saved tour when route does not match', async () => {
+      localStorage.setItem(TOUR_STORAGE_KEY, JSON.stringify({
+        tourRunning: true,
+        stepIndex: 3,
+        tourCompleted: false,
+      }));
+      mockLocation = { pathname: '/dashboard', search: '' };
+
+      render(<TourProvider><Consumer /></TourProvider>);
+
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 50));
+      });
+
+      expect(localStorage.getItem(TOUR_STORAGE_KEY)).toBeNull();
+      expect(screen.getByTestId('run').textContent).toBe('false');
+    });
+  });
+
+  describe('target retry and persistence', () => {
+    it('persists tour state when advancing to next step', async () => {
+      render(<TourProvider><Consumer /></TourProvider>);
+
+      fireEvent.click(screen.getByText('start-manual'));
+      await act(async () => { await Promise.resolve(); });
+
+      fireEvent.click(screen.getByText('next-step'));
+
+      const saved = JSON.parse(localStorage.getItem(TOUR_STORAGE_KEY));
+      expect(saved.tourRunning).toBe(true);
+      expect(saved.stepIndex).toBe(1);
+    });
+
+    it('retries current step when retryCurrentStep is invoked', async () => {
+      render(<TourProvider><Consumer /></TourProvider>);
+
+      fireEvent.click(screen.getByText('start-manual'));
+      await waitFor(() => {
+        expect(screen.getByTestId('run').textContent).toBe('true');
+      });
+
+      const callsBefore = waitForAnyElement.mock.calls.length;
+      fireEvent.click(screen.getByText('retry-step'));
+
+      await waitFor(() => {
+        expect(waitForAnyElement.mock.calls.length).toBeGreaterThan(callsBefore);
+      });
+    });
+
+    it('retries target detection before giving up on missing element', async () => {
+      jest.useFakeTimers();
+      waitForAnyElement.mockResolvedValue(null);
+
+      render(<TourProvider><Consumer /></TourProvider>);
+      fireEvent.click(screen.getByText('start-manual'));
+
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      await act(async () => {
+        jest.advanceTimersByTime(350);
+      });
+
+      expect(waitForAnyElement.mock.calls.length).toBeGreaterThan(1);
+      jest.useRealTimers();
+    });
   });
 });

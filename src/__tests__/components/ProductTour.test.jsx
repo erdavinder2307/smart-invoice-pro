@@ -6,8 +6,8 @@ import { ACTIONS, EVENTS, STATUS } from 'react-joyride';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
 
-// Capture the callback prop so we can invoke it directly in tests
-let capturedCallback = null;
+// Capture the onEvent prop so we can invoke it directly in tests
+let capturedOnEvent = null;
 let capturedRun = false;
 let capturedStepIndex = 0;
 
@@ -16,8 +16,8 @@ jest.mock('react-joyride', () => {
   const EVENTS = { STEP_AFTER: 'step:after', TARGET_NOT_FOUND: 'error:target_not_found', TOUR_END: 'tour:end', TOUR_START: 'tour:start' };
   const STATUS = { FINISHED: 'finished', SKIPPED: 'skipped', IDLE: 'idle', READY: 'ready', RUNNING: 'running', WAITING: 'waiting', ERROR: 'error', LOADING: 'loading', PAUSED: 'paused' };
 
-  const Joyride = ({ callback, run, stepIndex }) => {
-    capturedCallback = callback;
+  const Joyride = ({ onEvent, run, stepIndex }) => {
+    capturedOnEvent = onEvent;
     capturedRun = run;
     capturedStepIndex = stepIndex;
     return null; // render nothing
@@ -71,7 +71,7 @@ function setupTourMock(overrides = {}) {
 
 describe('ProductTour', () => {
   beforeEach(() => {
-    capturedCallback = null;
+    capturedOnEvent = null;
     capturedRun = false;
     capturedStepIndex = 0;
     jest.clearAllMocks();
@@ -94,7 +94,7 @@ describe('ProductTour', () => {
   it('calls stopTour(true, false) when STATUS is FINISHED', () => {
     render(<ProductTour />);
     act(() => {
-      capturedCallback({ action: ACTIONS.NEXT, index: 0, status: STATUS.FINISHED, type: EVENTS.TOUR_END });
+      capturedOnEvent({ action: ACTIONS.NEXT, index: 0, status: STATUS.FINISHED, type: EVENTS.TOUR_END });
     });
     expect(mockStopTour).toHaveBeenCalledWith(true, false);
     expect(mockHandleStepNavigation).not.toHaveBeenCalled();
@@ -104,7 +104,7 @@ describe('ProductTour', () => {
   it('calls stopTour(false, true) when STATUS is SKIPPED', () => {
     render(<ProductTour />);
     act(() => {
-      capturedCallback({ action: ACTIONS.SKIP, index: 3, status: STATUS.SKIPPED, type: EVENTS.TOUR_END });
+      capturedOnEvent({ action: ACTIONS.SKIP, index: 3, status: STATUS.SKIPPED, type: EVENTS.TOUR_END });
     });
     expect(mockStopTour).toHaveBeenCalledWith(false, true);
   });
@@ -113,7 +113,7 @@ describe('ProductTour', () => {
   it('calls handleStepNavigation with nextIndex when Next is clicked on a middle step', () => {
     render(<ProductTour />);
     act(() => {
-      capturedCallback({ action: ACTIONS.NEXT, index: 2, status: STATUS.RUNNING, type: EVENTS.STEP_AFTER });
+      capturedOnEvent({ action: ACTIONS.NEXT, index: 2, status: STATUS.RUNNING, type: EVENTS.STEP_AFTER });
     });
     expect(mockHandleStepNavigation).toHaveBeenCalledWith(3);
     expect(mockStopTour).not.toHaveBeenCalled();
@@ -123,7 +123,7 @@ describe('ProductTour', () => {
   it('calls handleStepNavigation with prevIndex when Back is clicked', () => {
     render(<ProductTour />);
     act(() => {
-      capturedCallback({ action: ACTIONS.PREV, index: 3, status: STATUS.RUNNING, type: EVENTS.STEP_AFTER });
+      capturedOnEvent({ action: ACTIONS.PREV, index: 3, status: STATUS.RUNNING, type: EVENTS.STEP_AFTER });
     });
     expect(mockHandleStepNavigation).toHaveBeenCalledWith(2);
   });
@@ -133,7 +133,7 @@ describe('ProductTour', () => {
     const lastStepIndex = TOUR_STEPS.length - 1; // 7
     render(<ProductTour />);
     act(() => {
-      capturedCallback({ action: ACTIONS.NEXT, index: lastStepIndex, status: STATUS.RUNNING, type: EVENTS.STEP_AFTER });
+      capturedOnEvent({ action: ACTIONS.NEXT, index: lastStepIndex, status: STATUS.RUNNING, type: EVENTS.STEP_AFTER });
     });
     expect(mockStopTour).toHaveBeenCalledWith(true);
     expect(mockHandleStepNavigation).not.toHaveBeenCalled();
@@ -143,7 +143,7 @@ describe('ProductTour', () => {
   it('calls stopTour(false, true) when X (close) button is clicked on a step', () => {
     render(<ProductTour />);
     act(() => {
-      capturedCallback({ action: ACTIONS.CLOSE, index: 2, status: STATUS.RUNNING, type: EVENTS.STEP_AFTER });
+      capturedOnEvent({ action: ACTIONS.CLOSE, index: 2, status: STATUS.RUNNING, type: EVENTS.STEP_AFTER });
     });
     expect(mockStopTour).toHaveBeenCalledWith(false, true);
     expect(mockHandleStepNavigation).not.toHaveBeenCalled();
@@ -153,7 +153,7 @@ describe('ProductTour', () => {
   it('calls retryCurrentStep when target is not found', () => {
     render(<ProductTour />);
     act(() => {
-      capturedCallback({ action: ACTIONS.NEXT, index: 1, status: STATUS.RUNNING, type: EVENTS.TARGET_NOT_FOUND });
+      capturedOnEvent({ action: ACTIONS.NEXT, index: 1, status: STATUS.RUNNING, type: EVENTS.TARGET_NOT_FOUND });
     });
     expect(mockRetryCurrentStep).toHaveBeenCalled();
     expect(mockHandleStepNavigation).not.toHaveBeenCalled();
@@ -163,7 +163,7 @@ describe('ProductTour', () => {
   it('calls stopTour(false, true) when Back is clicked on the first step (nextIndex < 0)', () => {
     render(<ProductTour />);
     act(() => {
-      capturedCallback({ action: ACTIONS.PREV, index: 0, status: STATUS.RUNNING, type: EVENTS.STEP_AFTER });
+      capturedOnEvent({ action: ACTIONS.PREV, index: 0, status: STATUS.RUNNING, type: EVENTS.STEP_AFTER });
     });
     expect(mockStopTour).toHaveBeenCalledWith(false, true);
   });
@@ -172,7 +172,7 @@ describe('ProductTour', () => {
   it('does not call stopTour or handleStepNavigation for unrelated event types', () => {
     render(<ProductTour />);
     act(() => {
-      capturedCallback({ action: ACTIONS.START, index: 0, status: STATUS.RUNNING, type: 'tour:start' });
+      capturedOnEvent({ action: ACTIONS.START, index: 0, status: STATUS.RUNNING, type: 'tour:start' });
     });
     expect(mockStopTour).not.toHaveBeenCalled();
     expect(mockHandleStepNavigation).not.toHaveBeenCalled();
@@ -182,7 +182,7 @@ describe('ProductTour', () => {
   it('handles FINISHED status even when type is STEP_AFTER (early return)', () => {
     render(<ProductTour />);
     act(() => {
-      capturedCallback({ action: ACTIONS.NEXT, index: 5, status: STATUS.FINISHED, type: EVENTS.STEP_AFTER });
+      capturedOnEvent({ action: ACTIONS.NEXT, index: 5, status: STATUS.FINISHED, type: EVENTS.STEP_AFTER });
     });
     // Should stop, not navigate
     expect(mockStopTour).toHaveBeenCalledWith(true, false);

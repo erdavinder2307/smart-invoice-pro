@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -18,8 +18,8 @@ import { CheckCircle } from '@mui/icons-material';
 import Header from '../components/Layout/Header';
 import Footer from '../components/Layout/Footer';
 import SeoHead from '../seo/SeoHead';
+import { getBillingPlans } from '../services/billingService';
 import {
-  CHECKOUT_ENABLED,
   PLANS,
   TRIAL_DAYS,
   formatInr,
@@ -29,7 +29,7 @@ import {
 
 const PERIOD_SUFFIX = { monthly: '/month', yearly: '/year' };
 
-const PlanCard = ({ plan, period, onStartTrial }) => {
+const PlanCard = ({ plan, period, checkoutEnabled, onStartTrial, onUpgrade }) => {
   // Plans without a yearly price stay on monthly billing.
   const shownPeriod = plan.prices[period] ? period : 'monthly';
   const price = plan.prices[shownPeriod];
@@ -86,8 +86,8 @@ const PlanCard = ({ plan, period, onStartTrial }) => {
       >
         Start free trial
       </Button>
-      {CHECKOUT_ENABLED && (
-        <Button variant="text" sx={{ mt: 1, textTransform: 'none' }}>
+      {checkoutEnabled && (
+        <Button variant="text" onClick={onUpgrade} sx={{ mt: 1, textTransform: 'none' }}>
           Upgrade
         </Button>
       )}
@@ -98,6 +98,18 @@ const PlanCard = ({ plan, period, onStartTrial }) => {
 const Pricing = () => {
   const navigate = useNavigate();
   const [period, setPeriod] = useState('monthly');
+  const [checkoutEnabled, setCheckoutEnabled] = useState(false);
+
+  // The API decides whether online checkout is on; until it answers, or if it fails, Upgrade stays hidden.
+  useEffect(() => {
+    let active = true;
+    getBillingPlans()
+      .then((data) => active && setCheckoutEnabled(Boolean(data?.checkout_enabled)))
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
@@ -135,7 +147,13 @@ const Pricing = () => {
           <Grid container spacing={3}>
             {PLANS.map((plan) => (
               <Grid key={plan.code} size={{ xs: 12, sm: 6 }}>
-                <PlanCard plan={plan} period={period} onStartTrial={() => navigate('/signup')} />
+                <PlanCard
+                  plan={plan}
+                  period={period}
+                  checkoutEnabled={checkoutEnabled}
+                  onStartTrial={() => navigate('/signup')}
+                  onUpgrade={() => navigate('/settings/billing')}
+                />
               </Grid>
             ))}
           </Grid>

@@ -35,6 +35,7 @@ export const demoSettingsBlockedPrefixes = [
   '/settings/invoice-preferences',
   '/settings/taxes',
   '/settings/inventory',
+  '/settings/billing',
   '/settings/users',
   '/settings/roles',
   '/settings/automation',

@@ -1,408 +1,163 @@
 import React from 'react';
-import { Box, Container, Typography, List, ListItem, ListItemText, Divider, Link } from '@mui/material';
+import { Link } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
-import Header from '../components/Layout/Header';
-import Footer from '../components/Layout/Footer';
-import SeoHead from '../seo/SeoHead';
+import LegalPage from '../components/Layout/LegalPage';
+import { LEGAL_ENTITY } from '../config/legalEntity';
+import { SUPPORT_EMAIL } from './Support';
+import { TRIAL_DAYS, gstPercentLabel } from '../config/plans';
+
+const mail = <Link href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</Link>;
+const page = (to, label) => <Link component={RouterLink} to={to}>{label}</Link>;
 
 const Terms = () => {
   const sections = [
     {
-      title: '1. Agreement to Terms',
-      content: (
-        <>
-          <Typography paragraph>
-            By accessing and using Solidev Books ("Service"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to abide by the above, please do not use this service.
-          </Typography>
-          <Typography paragraph>
-            These Terms apply to all users of the Service, including but not limited to users who are browsers, vendors, customers, merchants, and/or contributors of content.
-          </Typography>
-        </>
-      )
+      title: '1. Who we are',
+      paragraphs: [
+        `Solidev Books is provided by ${LEGAL_ENTITY.name} ("we", "us"), a company registered in India (CIN ${LEGAL_ENTITY.cin}, GSTIN ${LEGAL_ENTITY.gstin}), with its registered office at ${LEGAL_ENTITY.address}.`,
+        'These terms are a contract between us and the business or person that creates a Solidev Books account ("you"). By creating an account or using Solidev Books you accept them. If you accept them for a business, you confirm that you are at least 18 years old and allowed to bind that business.',
+      ],
     },
     {
-      title: '2. Use License',
-      content: (
-        <>
-          <Typography paragraph>
-            Permission is granted to temporarily download one copy of the materials (information or software) on Solidev Books for personal, non-commercial transactional use only. This is the grant of a license, not a transfer of title, and under this license you may not:
-          </Typography>
-          <List sx={{ ml: 2 }}>
-            <ListItem>
-              <ListItemText primary="Modify or copy the materials" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Use the materials for any commercial purpose or for any public display (commercial or non-commercial)" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Attempt to decompile or reverse engineer any software contained on the Service" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Remove any copyright or other proprietary notations from the materials" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Transfer the materials to another person or 'mirror' the materials on any other server" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Engage in any conduct that restricts or inhibits anyone's use or enjoyment of the Service" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Rent, lease, loan, sell, assign, or otherwise transfer your rights to use the Service" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Violate any applicable laws or regulations" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Attempt unauthorized access to the Service or related systems" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Attempt to probe, scan, or test the vulnerability of the Service or related systems" />
-            </ListItem>
-          </List>
-        </>
-      )
+      title: '2. The service',
+      paragraphs: [
+        'Solidev Books is online software for invoices, quotes, payments, expenses, GST reports, bank reconciliation and related accounting work. We keep improving it, so features may change. We will not remove a main feature you are paying for during a paid period without telling you first.',
+        'Solidev Books is a tool. It does not give tax, legal or accounting advice. You are responsible for the entries you make, for checking reports before you rely on them, and for your own GST returns and other statutory filings. Please check them with your CA or accountant.',
+      ],
     },
     {
-      title: '3. Acceptable Use Policy',
-      content: (
-        <>
-          <Typography paragraph>
-            You agree not to use the Service:
-          </Typography>
-          <List sx={{ ml: 2 }}>
-            <ListItem>
-              <ListItemText primary="For any illegal or unauthorized purpose" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="To transmit obscene or offensive content" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="To disrupt the normal flow of dialogue within Solidev Books" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="To harass or cause distress or inconvenience to any person" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="To impersonate or pretend to be anyone or anything" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="To insert your own or third-party advertising, promotion, or solicitation" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="To create false or misleading information" />
-            </ListItem>
-          </List>
-        </>
-      )
+      title: '3. Your account and users',
+      bullets: [
+        'The person who creates the account is its owner and can add users up to the number of seats in your plan. Each plan includes one free seat for your CA or accountant.',
+        'Keep passwords private and tell us at once if you think someone has used your account without permission.',
+        'You are responsible for what your users do in your account.',
+      ],
     },
     {
-      title: '4. Disclaimer of Warranties',
-      content: (
-        <>
-          <Typography paragraph>
-            The materials on Solidev Books are provided on an 'as-is' basis. Solidev Books makes no warranties, expressed or implied, and hereby disclaims and negates all other warranties including, without limitation, implied warranties or conditions of merchantability, fitness for a particular purpose, or non-infringement of intellectual property or other violation of rights.
-          </Typography>
-          <Typography paragraph>
-            Further, Solidev Books does not warrant or make any representations concerning the accuracy, likely results, or reliability of the use of the materials on its website or otherwise relating to such materials or on any sites linked to this site.
-          </Typography>
-        </>
-      )
+      title: '4. Free trial',
+      paragraphs: [
+        `Every new account starts with a ${TRIAL_DAYS}-day free trial with all features. No card is needed and nothing is charged during the trial.`,
+        'When the trial ends you need a paid plan to keep adding new records. Your existing data stays available to view and export for 30 days, so nothing is lost while you decide.',
+      ],
     },
     {
-      title: '5. Limitations of Liability',
-      content: (
-        <>
-          <Typography paragraph>
-            In no event shall Solidev Books or its suppliers be liable for any damages (including, without limitation, damages for loss of data or profit, or due to business interruption) arising out of the use or inability to use the materials on Solidev Books, even if Solidev Books or an authorized representative has been notified orally or in writing of the possibility of such damage.
-          </Typography>
-          <Typography paragraph>
-            In particular, Solidev Books shall not be liable for:
-          </Typography>
-          <List sx={{ ml: 2 }}>
-            <ListItem>
-              <ListItemText primary="Loss of profits or revenue" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Loss of business or contracts" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Loss of anticipated savings" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Loss of data" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Any indirect, incidental, special, or consequential damages" />
-            </ListItem>
-          </List>
-          <Typography paragraph sx={{ mt: 2 }}>
-            Some jurisdictions do not allow the limitation or exclusion of liability for incidental or consequential damages, so some of the above limitations may not apply to you.
-          </Typography>
-        </>
-      )
+      title: '5. Plans, fees and GST',
+      bullets: [
+        <>Prices are shown on our {page('/pricing', 'pricing page')} in Indian rupees and exclude GST. GST (currently {gstPercentLabel}) is added to every payment, and we issue a GST tax invoice for each payment.</>,
+        'Plans are paid in advance, monthly or yearly. Payments are collected by our payment partner Razorpay. When you subscribe you authorise recurring charges (for example a card or UPI AutoPay mandate) for each renewal until you cancel.',
+        'We may change prices. We will tell you at least 30 days before, and a new price applies only from your next renewal.',
+        'If a renewal payment fails we will tell you and try again. If it is still unpaid 15 days after the due date, we may limit the account to view and export only until it is paid.',
+      ],
     },
     {
-      title: '6. Service Availability',
-      content: (
-        <>
-          <Typography paragraph>
-            Solidev Books is provided on an "as available" basis. We do not guarantee:
-          </Typography>
-          <List sx={{ ml: 2 }}>
-            <ListItem>
-              <ListItemText primary="Uninterrupted or error-free access" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="99.9% uptime or any specific uptime guarantee" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="That defects will be corrected" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="That the Service is free of viruses or harmful components" />
-            </ListItem>
-          </List>
-          <Typography paragraph sx={{ mt: 2 }}>
-            We may perform maintenance or updates that temporarily interrupt Service. We will attempt to provide advance notice of planned maintenance.
-          </Typography>
-        </>
-      )
+      title: '6. Cancellation and refunds',
+      paragraphs: [
+        <>You can cancel any time from Settings → Billing. Cancellation takes effect at the end of the period you have paid for. Refunds follow our {page('/refund', 'refund and cancellation policy')}.</>,
+      ],
     },
     {
-      title: '7. Accuracy of Materials',
-      content: (
-        <>
-          <Typography paragraph>
-            The materials appearing on Solidev Books could include technical, typographical, or photographic errors. Solidev Books does not warrant that any of the materials on this website are accurate, complete, or current. Solidev Books may make changes to the materials contained on its website at any time without notice.
-          </Typography>
-        </>
-      )
+      title: '7. Your data',
+      bullets: [
+        'You own the data you put into Solidev Books, including your customers, vendors, items, invoices and bank records.',
+        <>We use your data only to provide and support the service, as our {page('/privacy', 'privacy policy')} explains. We do not sell it or use it for advertising.</>,
+        'When you enter personal data about other people (for example your customers or employees), you are responsible for having the right to do so under the Digital Personal Data Protection Act, 2023 and other laws. We process that data on your behalf.',
+      ],
     },
     {
-      title: '8. Materials License',
-      content: (
-        <>
-          <Typography paragraph>
-            Solidev Books grants you a limited license to access and use the Service for your organization's legitimate business purposes. This license is:
-          </Typography>
-          <List sx={{ ml: 2 }}>
-            <ListItem>
-              <ListItemText primary="Non-exclusive" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Non-transferable" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Revocable" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Subject to termination if you violate these Terms" />
-            </ListItem>
-          </List>
-        </>
-      )
+      title: '8. Export and leaving',
+      paragraphs: [
+        'You can export your data at any time. If your account is cancelled or closed, you have 30 days to export it. After that we delete your data from the live service, and from backups when they expire, except records we must keep by law (for example the tax invoices we issued to you).',
+      ],
     },
     {
-      title: '9. Intellectual Property Rights',
-      content: (
-        <>
-          <Typography paragraph>
-            All content included as part of the Service, such as text, graphics, logos, images, as well as the compilation thereof, and any software used on the website, is the property of Solidev Books or its content suppliers and is protected by international copyright laws.
-          </Typography>
-          <Typography paragraph>
-            You retain all rights to any data or content you provide to Solidev Books ("Your Content"). You grant Solidev Books a license to use Your Content solely to provide the Service and to improve the Service.
-          </Typography>
-          <Typography paragraph>
-            You agree not to reproduce, duplicate, copy, sell, resell or exploit any portion of the Service without express written permission by Solidev Books.
-          </Typography>
-        </>
-      )
+      title: '9. Acceptable use',
+      paragraphs: ['You agree not to:'],
+      bullets: [
+        'use Solidev Books for anything illegal, including fake invoices, tax evasion or money laundering;',
+        'upload malware, or try to break, overload, probe or get around the security of the service;',
+        'access another organisation’s data or try to use the service without an account;',
+        'copy, resell or reverse engineer the software, except where the law allows it;',
+        'store content that is unlawful under Indian law.',
+      ],
     },
     {
-      title: '10. Links',
-      content: (
-        <>
-          <Typography paragraph>
-            Solidev Books has not reviewed all of the sites linked to its website and is not responsible for the contents of any such linked site. The inclusion of any link does not imply endorsement by Solidev Books of the site. Use of any such linked website is at the user's own risk.
-          </Typography>
-          <Typography paragraph>
-            If you have concerns about external links, please contact support@solidevbooks.com.
-          </Typography>
-        </>
-      )
+      title: '10. Availability and support',
+      paragraphs: [
+        <>We work to keep Solidev Books available and secure, but we cannot promise it will never be interrupted. Planned maintenance is done at quiet times where possible. For help, write to {mail} or see the {page('/support', 'support page')}.</>,
+      ],
     },
     {
-      title: '11. Modifications of Terms',
-      content: (
-        <>
-          <Typography paragraph>
-            Solidev Books may revise these Terms of Service for its website at any time without notice. By using this website, you are agreeing to be bound by the then current version of these Terms of Service.
-          </Typography>
-          <Typography paragraph>
-            We will post changes to these Terms on this page. If the changes are material, we will provide at least 30 days' notice before the changes take effect.
-          </Typography>
-        </>
-      )
+      title: '11. Other services',
+      paragraphs: [
+        'Some features rely on other providers, for example Razorpay for payments and an AI service that reads bank statements you upload for reconciliation. Their part of the service is also covered by their own terms. Our privacy policy lists the providers we use.',
+      ],
     },
     {
-      title: '12. Governing Law',
-      content: (
-        <>
-          <Typography paragraph>
-            These Terms and Conditions are governed by and construed in accordance with the laws of the State of California, and you irrevocably submit to the exclusive jurisdiction of the courts located in California.
-          </Typography>
-        </>
-      )
+      title: '12. Our intellectual property',
+      paragraphs: [
+        'The software, design, name and logo of Solidev Books belong to us. These terms give you a limited, non-exclusive, non-transferable right to use the service for your business while your account is active. If you send us suggestions, we may use them without owing you anything.',
+      ],
     },
     {
-      title: '13. Subscription and Billing',
-      content: (
-        <>
-          <Typography paragraph>
-            If you subscribe to a paid plan:
-          </Typography>
-          <List sx={{ ml: 2 }}>
-            <ListItem>
-              <ListItemText primary="Billing occurs according to your subscription plan (monthly, annual, etc.)" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="You authorize us to charge your payment method on a recurring basis" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="You agree to keep your payment information current and accurate" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="If a payment fails, you remain responsible for any charges incurred" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="You may cancel your subscription at any time" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Refunds are not provided for partial months or unused portions of paid subscriptions" />
-            </ListItem>
-          </List>
-          <Typography paragraph>
-            See also our <Link component={RouterLink} to="/refund">refund and cancellation policy</Link>.
-          </Typography>
-        </>
-      )
+      title: '13. Warranties',
+      paragraphs: [
+        'We provide Solidev Books with reasonable skill and care. Apart from that, and to the extent the law allows, the service is provided "as is", without other promises, for example that it will suit a particular purpose or be free of every error.',
+      ],
     },
     {
-      title: '14. Termination',
-      content: (
-        <>
-          <Typography paragraph>
-            We may terminate or suspend your account and right to use the Service immediately, without prior notice or liability, for any reason whatsoever, including if you breach the Terms.
-          </Typography>
-          <Typography paragraph>
-            Upon termination:
-          </Typography>
-          <List sx={{ ml: 2 }}>
-            <ListItem>
-              <ListItemText primary="Your right to access the Service ceases immediately" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="You may request export of your data within 30 days" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="After the export period, data will be deleted per our retention policy" />
-            </ListItem>
-          </List>
-        </>
-      )
+      title: '14. Limit of liability',
+      paragraphs: [
+        'To the extent the law allows, we are not liable for indirect or consequential losses, such as lost profits, lost business or lost data that could have been restored from your own exports. Our total liability for all claims is limited to the fees you paid us in the 12 months before the event that caused the claim.',
+        'Nothing in these terms limits liability that cannot be limited under Indian law, such as liability for fraud.',
+      ],
     },
     {
-      title: '15. Contact',
-      content: (
-        <>
-          <Typography paragraph>
-            If you have any questions about these Terms, please contact:
-          </Typography>
-          <Typography paragraph>
-            <strong>Email:</strong> support@solidevbooks.com<br />
-            <strong>Mailing Address:</strong><br />
-            Solidev Books Inc.<br />
-            San Francisco, CA<br />
-            United States
-          </Typography>
-        </>
-      )
-    }
+      title: '15. Your responsibility to us',
+      paragraphs: [
+        'If someone makes a claim against us because of data you stored or the way you used Solidev Books in breach of these terms or the law, you will cover our reasonable losses and costs from that claim.',
+      ],
+    },
+    {
+      title: '16. Suspension and closing an account',
+      paragraphs: [
+        'We may suspend or close an account that breaks these terms or the law, or that puts the service or other customers at risk. Where we can, we will warn you first and give you time to fix the problem. You keep the right to export your data as described in section 8, unless the law stops us.',
+      ],
+    },
+    {
+      title: '17. Content you store and complaints',
+      paragraphs: [
+        <>Where we act as an intermediary under the Information Technology Act, 2000 for content stored by our users, we follow the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021. Complaints go to the Grievance Officer named in our {page('/privacy', 'privacy policy')}.</>,
+      ],
+    },
+    {
+      title: '18. Changes to these terms',
+      paragraphs: [
+        'We may update these terms. For important changes we will tell you by email or in the app at least 30 days before they apply. If you do not agree, you can cancel before then.',
+      ],
+    },
+    {
+      title: '19. Law and disputes',
+      paragraphs: [
+        'These terms are governed by the laws of India. If there is a dispute, we will both first try to settle it in good faith within 30 days of written notice. If that fails, the courts at Mohali (SAS Nagar), Punjab have exclusive jurisdiction.',
+      ],
+    },
+    {
+      title: '20. Contact',
+      paragraphs: [
+        <>{LEGAL_ENTITY.name}, {LEGAL_ENTITY.address}. Email: {mail}.</>,
+      ],
+    },
   ];
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <SeoHead
-        title="Terms of Service | Solidev Books"
-        description="Read the Terms of Service for Solidev Books. Understand the rules, acceptable use, and legal terms for using our invoicing and financial management platform."
-        canonicalPath="/terms"
-      />
-      <Header />
-
-      <Box sx={{ flex: 1, py: { xs: 6, md: 8 }, bgcolor: '#f8fafc' }}>
-        <Container maxWidth="md">
-          {/* Header */}
-          <Box sx={{ mb: 6 }}>
-            <Typography
-              variant="h2"
-              sx={{
-                fontWeight: 700,
-                mb: 2,
-                fontSize: { xs: '2rem', md: '3rem' },
-                color: '#0f172a'
-              }}
-            >
-              Terms of Service
-            </Typography>
-            <Typography
-              variant="h6"
-              sx={{
-                color: '#64748B',
-                mb: 3,
-                fontSize: { xs: '1rem', md: '1.1rem' }
-              }}
-            >
-              Last Updated: May 6, 2026
-            </Typography>
-            <Typography
-              paragraph
-              sx={{
-                color: '#475569',
-                fontSize: '1.05rem',
-                lineHeight: 1.7
-              }}
-            >
-              Please read these Terms of Service carefully before using Solidev Books. By accessing and using Solidev Books, you acknowledge that you have read, understood, and agree to be bound by all the terms.
-            </Typography>
-          </Box>
-
-          {/* Sections */}
-          {sections.map((section, index) => (
-            <Box key={index} sx={{ mb: 4 }}>
-              <Typography
-                variant="h4"
-                sx={{
-                  fontWeight: 700,
-                  mb: 2,
-                  color: '#0f172a',
-                  fontSize: { xs: '1.5rem', md: '1.875rem' }
-                }}
-              >
-                {section.title}
-              </Typography>
-              <Box sx={{ color: '#475569', lineHeight: 1.8 }}>
-                {section.content}
-              </Box>
-              {index < sections.length - 1 && (
-                <Divider sx={{ mt: 4, mb: 2 }} />
-              )}
-            </Box>
-          ))}
-        </Container>
-      </Box>
-
-      <Footer />
-    </Box>
+    <LegalPage
+      title="Terms of Service"
+      seoTitle="Terms of Service | Solidev Books"
+      seoDescription="Terms of Service for Solidev Books, online accounting and GST invoicing software by Solidev Electrosoft (OPC) Private Limited, India."
+      canonicalPath="/terms"
+      intro="Please read these terms before using Solidev Books. They are written in plain English; the short version is: you own your data, you can cancel any time, prices exclude GST, and Indian law applies."
+      sections={sections}
+    />
   );
 };
 

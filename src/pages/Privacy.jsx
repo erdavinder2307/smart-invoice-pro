@@ -1,518 +1,155 @@
 import React from 'react';
-import { Box, Container, Typography, List, ListItem, ListItemText, Divider } from '@mui/material';
-import Header from '../components/Layout/Header';
-import Footer from '../components/Layout/Footer';
-import SeoHead from '../seo/SeoHead';
+import { Link } from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
+import LegalPage from '../components/Layout/LegalPage';
+import { LEGAL_ENTITY } from '../config/legalEntity';
+import { SUPPORT_EMAIL } from './Support';
+
+export const GRIEVANCE_OFFICER = {
+  name: 'Davinder Pal',
+  email: 'admin@solidevelectrosoft.com',
+};
+
+export const PROCESSORS = [
+  { name: 'Microsoft Azure', purpose: 'hosting, database and file storage in the Central India region, and sending emails (Azure Communication Services)' },
+  { name: 'Razorpay', purpose: 'collecting subscription payments; card, UPI and bank details are entered with Razorpay and never stored by us' },
+  { name: 'Google Firebase', purpose: 'usage analytics and push notifications' },
+  { name: 'Anthropic', purpose: 'reading bank statements you upload and suggesting reconciliation matches (only the content you send to that feature)' },
+];
+
+const mail = (address) => <Link href={`mailto:${address}`}>{address}</Link>;
 
 const Privacy = () => {
   const sections = [
     {
-      title: '1. Introduction',
-      content: (
-        <>
-          <Typography paragraph>
-            Solidev Books Inc. ("we," "us," "our," or "Company") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our software-as-a-service (SaaS) platform, Solidev Books (the "Service").
-          </Typography>
-          <Typography paragraph>
-            Please read this Privacy Policy carefully. By accessing and using Solidev Books, you acknowledge that you have read, understood, and agree to be bound by all the terms of this Privacy Policy. If you do not agree with our policies and practices, please do not use our Service.
-          </Typography>
-        </>
-      )
+      title: '1. Who we are',
+      paragraphs: [
+        `Solidev Books is run by ${LEGAL_ENTITY.name} (CIN ${LEGAL_ENTITY.cin}), ${LEGAL_ENTITY.address} ("we", "us"). This policy explains what personal data we collect when you use the Solidev Books website and apps, why, and the rights you have under the Digital Personal Data Protection Act, 2023 ("DPDP Act").`,
+      ],
     },
     {
-      title: '2. Data We Collect',
-      content: (
-        <>
-          <Typography variant="h6" sx={{ mt: 2, mb: 1, fontWeight: 600 }}>
-            2.1 User Data
-          </Typography>
-          <Typography paragraph>
-            When you register for an account, we collect:
-          </Typography>
-          <List sx={{ ml: 2 }}>
-            <ListItem>
-              <ListItemText primary="Email address" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Full name" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Password (encrypted)" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Organization role and permissions" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Profile information" />
-            </ListItem>
-          </List>
-
-          <Typography variant="h6" sx={{ mt: 2, mb: 1, fontWeight: 600 }}>
-            2.2 Organization Data
-          </Typography>
-          <Typography paragraph>
-            Each organization using Solidev Books provides:
-          </Typography>
-          <List sx={{ ml: 2 }}>
-            <ListItem>
-              <ListItemText primary="Organization name, address, and contact information" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Tax ID and company identification" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Bank account information (for payment reconciliation)" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Branding and configuration settings" />
-            </ListItem>
-          </List>
-
-          <Typography variant="h6" sx={{ mt: 2, mb: 1, fontWeight: 600 }}>
-            2.3 Operational Data
-          </Typography>
-          <Typography paragraph>
-            Your organization creates and manages:
-          </Typography>
-          <List sx={{ ml: 2 }}>
-            <ListItem>
-              <ListItemText primary="Invoices, quotes, and purchase orders" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Customer and vendor information" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Product catalogs and inventory data" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Payment and transaction records" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Financial documents and reports" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Communication history (via our platform)" />
-            </ListItem>
-          </List>
-
-          <Typography variant="h6" sx={{ mt: 2, mb: 1, fontWeight: 600 }}>
-            2.4 Audit and Activity Logs
-          </Typography>
-          <Typography paragraph>
-            We automatically collect audit logs that include:
-          </Typography>
-          <List sx={{ ml: 2 }}>
-            <ListItem>
-              <ListItemText primary="User actions and changes made to data (create, read, update, delete)" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Timestamp and user attribution for each action" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Login and access events" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Administrative actions (user management, settings changes)" />
-            </ListItem>
-          </List>
-
-          <Typography variant="h6" sx={{ mt: 2, mb: 1, fontWeight: 600 }}>
-            2.5 Technical Data
-          </Typography>
-          <Typography paragraph>
-            We collect technical information to improve our Service:
-          </Typography>
-          <List sx={{ ml: 2 }}>
-            <ListItem>
-              <ListItemText primary="IP address" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Browser type and version" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Operating system" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Device information" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Session and cookie information" />
-            </ListItem>
-          </List>
-        </>
-      )
+      title: '2. Our two roles',
+      bullets: [
+        'For your own account (the people who sign up and use Solidev Books), we decide why and how the data is used, so we are the Data Fiduciary.',
+        'For the data you keep in your books about other people (your customers, vendors and employees), your business is the Data Fiduciary and we process it only on your instructions to provide the service.',
+      ],
     },
     {
-      title: '3. Multi-Tenant Data Isolation',
-      content: (
-        <>
-          <Typography paragraph>
-            Solidev Books is a multi-tenant SaaS platform. Each organization's data is:
-          </Typography>
-          <List sx={{ ml: 2 }}>
-            <ListItem>
-              <ListItemText primary="Logically separated and isolated from other organizations" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Accessible only by users who belong to that organization (based on role-based access control)" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Never shared with or accessible to other organizations" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Stored in the same database infrastructure but protected by tenant identifiers and access controls" />
-            </ListItem>
-          </List>
-          <Typography paragraph sx={{ mt: 2 }}>
-            Organization administrators control which users have access to what data within their organization via role-based permissions.
-          </Typography>
-        </>
-      )
+      title: '3. What we collect',
+      bullets: [
+        'Account data: name, email address, phone number if you give it, and your password (stored only as a secure hash).',
+        'Business data: business name, address, GSTIN, PAN and bank details you enter for your invoices.',
+        'Books data: customers, vendors, items, invoices, quotes, payments, expenses and the bank statements you upload.',
+        'Payment data: plan, amount, date and payment reference from Razorpay. We do not see or store full card numbers, UPI PINs or bank passwords.',
+        'Usage and device data: pages used, actions, IP address, browser and device type, error logs, and a notification token if you allow notifications.',
+        'Messages you send us, for example support emails.',
+      ],
     },
     {
-      title: '4. How We Use Your Data',
-      content: (
-        <>
-          <Typography paragraph>
-            We use the information we collect for:
-          </Typography>
-          <List sx={{ ml: 2 }}>
-            <ListItem>
-              <ListItemText primary="Providing and maintaining the Service" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Processing transactions and sending related information" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Sending transactional emails (password reset, notifications)" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Generating audit logs for compliance and accountability" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Automating workflows and recurring tasks (e.g., recurring invoice generation, payment reminders)" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Performing reconciliation and matching of financial transactions" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Supporting role-based access control and permissions" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Analyzing usage patterns to improve the Service (in aggregated form)" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Debugging and troubleshooting technical issues" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Complying with legal obligations" />
-            </ListItem>
-          </List>
-        </>
-      )
+      title: '4. Why we use it',
+      paragraphs: ['We use personal data only for these purposes:'],
+      bullets: [
+        'to create your account, sign you in and run the features you use;',
+        'to bill your subscription and issue GST tax invoices;',
+        'to send service emails and notifications (for example password resets, payment receipts and important changes);',
+        'to keep the service secure, prevent fraud and fix problems;',
+        'to understand how the product is used so we can improve it;',
+        'to meet our legal duties, for example keeping tax records.',
+      ],
+      after: [
+        'We rely on the consent you give when you sign up, and on the legitimate uses the DPDP Act allows, such as meeting legal obligations. We do not sell personal data and do not use it for advertising.',
+      ],
     },
     {
-      title: '5. Data Retention',
-      content: (
-        <>
-          <Typography paragraph>
-            We retain your data according to the following schedule:
-          </Typography>
-          <List sx={{ ml: 2 }}>
-            <ListItem>
-              <ListItemText primary="Active Data: Retained while your account is active. Organization administrators can export or delete their data at any time." />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Soft Deletion: When you delete data within the Service, it is marked as deleted but retained for 30 days in case of accidental deletion." />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Audit Logs: Retained for 2 years for compliance, accountability, and security purposes." />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Backups: Database backups are retained for 90 days." />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Account Deletion: Upon request, we will permanently delete your organization's data within 30 days, except where legally required to retain (e.g., tax records)." />
-            </ListItem>
-          </List>
-        </>
-      )
+      title: '5. Withdrawing consent',
+      paragraphs: [
+        `You can withdraw your consent at any time by writing to ${GRIEVANCE_OFFICER.email}. We will then stop processing your data, except what the law requires us to keep. Withdrawing consent does not affect processing already done, and without it we may not be able to keep your account running.`,
+      ],
     },
     {
-      title: '6. Security of Your Data',
-      content: (
-        <>
-          <Typography paragraph>
-            We implement comprehensive security measures to protect your information:
-          </Typography>
-          <List sx={{ ml: 2 }}>
-            <ListItem>
-              <ListItemText primary="Encryption in Transit: All data transmitted between your device and our servers uses TLS 1.2+ encryption (HTTPS)." />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Authentication: User authentication uses JWT tokens with HS256 signing, tokens expire after 2 hours." />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Password Security: Passwords are hashed using industry-standard algorithms before storage." />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Role-Based Access Control: Users can only access data their role permits." />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Multi-Tenant Isolation: Each organization's data is logically separated and protected from others." />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Hosting Infrastructure: Data is hosted on Microsoft Azure with industry-standard security practices." />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Monitoring: We monitor for unauthorized access attempts and suspicious activity." />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Regular Updates: We maintain current security patches and software updates." />
-            </ListItem>
-          </List>
-          <Typography paragraph sx={{ mt: 2 }}>
-            While we implement robust security measures, no system is completely secure. Please use a strong password and enable two-factor authentication if available.
-          </Typography>
-        </>
-      )
+      title: '6. Where your data is stored',
+      paragraphs: [
+        'Your account and books data are stored on Microsoft Azure in the Central India region. Some providers listed below may process data outside India; we only use providers in countries the Government of India has not restricted under the DPDP Act, and each must protect the data under a contract with us.',
+      ],
     },
     {
-      title: '7. Third-Party Services',
-      content: (
-        <>
-          <Typography paragraph>
-            Our Service uses the following third-party services:
-          </Typography>
-          <List sx={{ ml: 2 }}>
-            <ListItem>
-              <ListItemText primary="Stripe: Processes payment information. We do not store full credit card details. See Stripe's Privacy Policy for details." />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="SendGrid: Sends transactional emails (password reset, notifications). Your email address is shared with SendGrid for email delivery." />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Microsoft Azure: Hosts our infrastructure and database (Azure Cosmos DB). See Azure's Privacy Statement for details." />
-            </ListItem>
-          </List>
-          <Typography paragraph sx={{ mt: 2 }}>
-            These third parties are contractually obligated to use your information only to provide services to us and not to disclose it to unauthorized parties.
-          </Typography>
-        </>
-      )
+      title: '7. Who processes data for us',
+      bullets: PROCESSORS.map((p) => `${p.name}: ${p.purpose}.`),
+      after: [
+        'We share data with no one else, except when the law or a court or government order requires it.',
+      ],
     },
     {
-      title: '8. GDPR Rights (EU Users)',
-      content: (
-        <>
-          <Typography paragraph>
-            If you are located in the European Union, you have the following rights under the General Data Protection Regulation (GDPR):
-          </Typography>
-          <List sx={{ ml: 2 }}>
-            <ListItem>
-              <ListItemText primary="Right of Access: You can request a copy of all personal data we hold about you." />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Right to Rectification: You can request correction of inaccurate data." />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Right to Erasure: You can request deletion of your data (subject to legal retention requirements)." />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Right to Data Portability: You can request your data in a machine-readable format." />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Right to Object: You can object to certain types of data processing." />
-            </ListItem>
-          </List>
-          <Typography paragraph sx={{ mt: 2 }}>
-            To exercise these rights, contact us at privacy@solidevbooks.com. We will respond within 30 days.
-          </Typography>
-        </>
-      )
+      title: '8. Cookies and similar storage',
+      paragraphs: [
+        'We use storage in your browser that is needed to keep you signed in, and analytics (Google Firebase) to count visits and feature use. You can block or delete cookies in your browser settings; the app may then not keep you signed in.',
+      ],
     },
     {
-      title: '9. CCPA Rights (California Users)',
-      content: (
-        <>
-          <Typography paragraph>
-            If you are located in California, you have rights under the California Consumer Privacy Act (CCPA):
-          </Typography>
-          <List sx={{ ml: 2 }}>
-            <ListItem>
-              <ListItemText primary="Right to Know: You can request what personal information we collect." />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Right to Delete: You can request deletion of personal information (with exceptions)." />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Right to Opt-Out: You can opt-out of the sale or sharing of personal information." />
-            </ListItem>
-          </List>
-          <Typography paragraph sx={{ mt: 2 }}>
-            To submit a CCPA request, contact us at privacy@solidevbooks.com.
-          </Typography>
-        </>
-      )
+      title: '9. How long we keep data',
+      bullets: [
+        'While your account is open, we keep your data so the service works.',
+        'After you close your account, you have 30 days to export your data. We then delete it from the live service, and from backups when they expire.',
+        'We keep the tax invoices we issued to you, and the payment records behind them, for as long as GST law requires (currently 72 months from the due date of the annual return for that year).',
+        'Security and error logs are kept for a limited time and then deleted.',
+      ],
     },
     {
-      title: '10. Cookies and Tracking',
-      content: (
-        <>
-          <Typography variant="h6" sx={{ mt: 2, mb: 1, fontWeight: 600 }}>
-            10.1 Session Cookies
-          </Typography>
-          <Typography paragraph>
-            We use session cookies to maintain your authentication state:
-          </Typography>
-          <List sx={{ ml: 2 }}>
-            <ListItem>
-              <ListItemText primary="Purpose: Authentication and session management" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Duration: Session (cleared when you close your browser) or up to 2 hours of inactivity" />
-            </ListItem>
-          </List>
-
-          <Typography variant="h6" sx={{ mt: 2, mb: 1, fontWeight: 600 }}>
-            10.2 No Tracking Technologies
-          </Typography>
-          <Typography paragraph>
-            Solidev Books does not use tracking pixels, third-party analytics cookies, or advertisement-related tracking. We are a business workflow tool, not a consumer product.
-          </Typography>
-        </>
-      )
+      title: '10. Your rights',
+      paragraphs: ['Under the DPDP Act you can:'],
+      bullets: [
+        'get a summary of the personal data we hold about you and how we use it;',
+        'have it corrected, completed or updated;',
+        'have it erased when it is no longer needed, unless the law requires us to keep it;',
+        'nominate another person to use these rights for you if you die or cannot act;',
+        'complain to our Grievance Officer, and then to the Data Protection Board of India if you are not satisfied.',
+      ],
+      after: [
+        <>To use a right, email {mail(GRIEVANCE_OFFICER.email)} from the email of your account. If your data is in another business’s books (for example you are one of their customers), please contact that business first; we will help them answer you.</>,
+      ],
     },
     {
-      title: '11. Notifications System',
-      content: (
-        <>
-          <Typography paragraph>
-            Solidev Books includes a notifications system that:
-          </Typography>
-          <List sx={{ ml: 2 }}>
-            <ListItem>
-              <ListItemText primary="Sends in-app notifications about workflow events, approvals, and important updates" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="May send email notifications for critical events (configurable by organization admins)" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Stores notification history in your account (users can clear history)" />
-            </ListItem>
-          </List>
-          <Typography paragraph sx={{ mt: 2 }}>
-            Email notifications are sent through SendGrid and subject to SendGrid's privacy practices.
-          </Typography>
-        </>
-      )
+      title: '11. Grievance Officer',
+      paragraphs: [
+        `${GRIEVANCE_OFFICER.name}, Grievance Officer, ${LEGAL_ENTITY.name}, ${LEGAL_ENTITY.address}.`,
+        <>Email: {mail(GRIEVANCE_OFFICER.email)}. We acknowledge every complaint within 24 hours and resolve it within 15 days.</>,
+      ],
     },
     {
-      title: '12. Contact Us',
-      content: (
-        <>
-          <Typography paragraph>
-            If you have questions about this Privacy Policy or your data, please contact us:
-          </Typography>
-          <Typography paragraph>
-            <strong>Email:</strong> privacy@solidevbooks.com<br />
-            <strong>Support:</strong> support@solidevbooks.com<br />
-            <strong>Mailing Address:</strong><br />
-            Solidev Books Inc.<br />
-            San Francisco, CA<br />
-            United States
-          </Typography>
-          <Typography paragraph>
-            <strong>Data Protection Officer:</strong> privacy@solidevbooks.com
-          </Typography>
-        </>
-      )
+      title: '12. Security',
+      paragraphs: [
+        'Data is encrypted in transit (HTTPS), passwords are hashed, every organisation’s data is kept separate, and only staff who need it for support or operations can access production data. If a personal data breach happens, we will inform the Data Protection Board of India and the people affected, as the DPDP Act requires.',
+      ],
     },
     {
-      title: '13. Changes to This Policy',
-      content: (
-        <>
-          <Typography paragraph>
-            We may update this Privacy Policy from time to time. We will notify you of material changes by posting the updated policy on our website and updating the "Last Updated" date. Your continued use of the Service constitutes your acceptance of the updated Privacy Policy.
-          </Typography>
-        </>
-      )
-    }
+      title: '13. Children',
+      paragraphs: [
+        'Solidev Books is for businesses and is not meant for anyone under 18. We do not knowingly collect personal data of children.',
+      ],
+    },
+    {
+      title: '14. Changes to this policy',
+      paragraphs: [
+        'If we make important changes, we will tell you by email or in the app before they apply. The date at the top shows the latest version.',
+      ],
+    },
+    {
+      title: '15. Contact',
+      paragraphs: [
+        <>Questions about this policy: {mail(GRIEVANCE_OFFICER.email)}. General help: {mail(SUPPORT_EMAIL)} or our <Link component={RouterLink} to="/support">support page</Link>.</>,
+      ],
+    },
   ];
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <SeoHead
-        title="Privacy Policy | Solidev Books"
-        description="Learn how Solidev Books collects, uses, and protects your data. Read our comprehensive privacy policy covering GDPR, CCPA, and data security."
-        canonicalPath="/privacy"
-      />
-      <Header />
-
-      <Box sx={{ flex: 1, py: { xs: 6, md: 8 }, bgcolor: '#f8fafc' }}>
-        <Container maxWidth="md">
-          {/* Header */}
-          <Box sx={{ mb: 6 }}>
-            <Typography
-              variant="h2"
-              sx={{
-                fontWeight: 700,
-                mb: 2,
-                fontSize: { xs: '2rem', md: '3rem' },
-                color: '#0f172a'
-              }}
-            >
-              Privacy Policy
-            </Typography>
-            <Typography
-              variant="h6"
-              sx={{
-                color: '#64748B',
-                mb: 3,
-                fontSize: { xs: '1rem', md: '1.1rem' }
-              }}
-            >
-              Last Updated: May 6, 2026
-            </Typography>
-            <Typography
-              paragraph
-              sx={{
-                color: '#475569',
-                fontSize: '1.05rem',
-                lineHeight: 1.7
-              }}
-            >
-              This Privacy Policy describes how Solidev Books Inc. collects, uses, and protects your information when you use our software-as-a-service (SaaS) platform.
-            </Typography>
-          </Box>
-
-          {/* Sections */}
-          {sections.map((section, index) => (
-            <Box key={index} sx={{ mb: 4 }}>
-              <Typography
-                variant="h4"
-                sx={{
-                  fontWeight: 700,
-                  mb: 2,
-                  color: '#0f172a',
-                  fontSize: { xs: '1.5rem', md: '1.875rem' }
-                }}
-              >
-                {section.title}
-              </Typography>
-              <Box sx={{ color: '#475569', lineHeight: 1.8 }}>
-                {section.content}
-              </Box>
-              {index < sections.length - 1 && (
-                <Divider sx={{ mt: 4, mb: 2 }} />
-              )}
-            </Box>
-          ))}
-        </Container>
-      </Box>
-
-      <Footer />
-    </Box>
+    <LegalPage
+      title="Privacy Policy"
+      seoTitle="Privacy Policy | Solidev Books"
+      seoDescription="How Solidev Books collects, uses and protects personal data under India's Digital Personal Data Protection Act, 2023, and how to reach our Grievance Officer."
+      canonicalPath="/privacy"
+      intro="In short: your data is stored in India, we use it only to run Solidev Books, we never sell it, and you can ask us to see, correct or delete it."
+      sections={sections}
+    />
   );
 };
 

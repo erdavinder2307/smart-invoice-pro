@@ -11,7 +11,7 @@ import {
   CheckCircle,
   ArrowForward
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Header from '../components/Layout/Header';
 import Footer from '../components/Layout/Footer';
@@ -256,6 +256,10 @@ const Home = () => {
             >
               Get Started Today
             </Button>
+            <Typography sx={{ mt: 2.5, color: 'grey.400', fontSize: '0.95rem' }}>
+              30-day free trial, no card needed ·{' '}
+              <RouterLink to="/pricing" style={{ color: 'inherit', fontWeight: 600 }}>See pricing</RouterLink>
+            </Typography>
           </motion.div>
         </Container>
       </Box>

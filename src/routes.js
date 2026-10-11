@@ -77,6 +77,8 @@ import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import VerifyEmail from './pages/VerifyEmail';
+import AcceptInvite from './pages/AcceptInvite';
 import Signup from './pages/Signup';
 import PageTracker from './components/PageTracker';
 import MyProfile from './pages/MyProfile';
@@ -295,6 +297,8 @@ const AppRoutes = () => {
         {/* Authentication Pages */}
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/accept-invite" element={<AcceptInvite />} />
 
         {/* Super Admin Module — fully isolated */}
         <Route path="/admin/*" element={<AdminRoutes />} />

@@ -54,6 +54,22 @@ export const AuthProvider = ({ children }) => {
         return () => window.removeEventListener('auth:session-expired', handleSessionExpired);
     }, [clearSession]);
 
+    /** Keep the stored user's email_verified in step with the API (banner, 403 EMAIL_NOT_VERIFIED). */
+    const setEmailVerified = useCallback((verified) => {
+        setUser((prev) => {
+            if (!prev || prev.email_verified === verified) return prev;
+            const next = { ...prev, email_verified: verified };
+            localStorage.setItem('user', JSON.stringify(next));
+            return next;
+        });
+    }, []);
+
+    useEffect(() => {
+        const handleNotVerified = () => setEmailVerified(false);
+        window.addEventListener('auth:email-not-verified', handleNotVerified);
+        return () => window.removeEventListener('auth:email-not-verified', handleNotVerified);
+    }, [setEmailVerified]);
+
     const login = async (credentials) => {
         setSessionExpired(false);
         const token = await authService.login(credentials);
@@ -111,6 +127,7 @@ export const AuthProvider = ({ children }) => {
         demoLogin,
         logout,
         register,
+        setEmailVerified,
         loading,
         sessionExpired,
     };

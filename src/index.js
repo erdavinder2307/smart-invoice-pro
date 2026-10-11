@@ -153,6 +153,10 @@ axios.interceptors.response.use(
       }
     }
 
+    if (error.response?.status === 403 && error.response.data?.code === 'EMAIL_NOT_VERIFIED') {
+      window.dispatchEvent(new CustomEvent('auth:email-not-verified'));
+    }
+
     return Promise.reject(error);
   }
 );

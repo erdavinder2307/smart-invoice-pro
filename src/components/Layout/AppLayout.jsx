@@ -4,6 +4,7 @@ import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
 import Sidebar from "../Sidebar";
 import DemoBanner from "../DemoBanner";
+import EmailVerificationBanner from "../EmailVerificationBanner";
 import DemoAttribution from "../DemoAttribution";
 import { useAuth } from "../../context/AuthContext";
 import { isDemoHost, isDemoUser, openInteractiveWorkspace } from "../../utils/demoMode";
@@ -39,6 +40,7 @@ const AppLayout = () => {
         <Sidebar />
         <Box sx={{ flex: 1, width: 0, minWidth: 0, overflowX: "hidden", display: "flex", flexDirection: "column" }}>
           <DemoBanner />
+          <EmailVerificationBanner />
           <Box sx={{ flex: 1, overflowX: "hidden", display: "flex", flexDirection: "column" }}>
             <Outlet />
             <DemoAttribution />

@@ -5,6 +5,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Sidebar from "../Sidebar";
 import DemoBanner from "../DemoBanner";
 import EmailVerificationBanner from "../EmailVerificationBanner";
+import FirstRunWizard from "../FirstRunWizard";
 import DemoAttribution from "../DemoAttribution";
 import { useAuth } from "../../context/AuthContext";
 import { isDemoHost, isDemoUser, openInteractiveWorkspace } from "../../utils/demoMode";
@@ -50,6 +51,7 @@ const AppLayout = () => {
       <ProductTour />
       <WelcomeModal />
       <CompletionModal />
+      <FirstRunWizard />
     </TourProvider>
   );
 };

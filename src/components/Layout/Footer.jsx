@@ -20,6 +20,9 @@ import {
   GitHub
 } from '@mui/icons-material';
 import Logo from '../common/Logo';
+import { LEGAL_ENTITY } from '../../config/legalEntity';
+
+export { LEGAL_ENTITY };
 
 
 const Footer = () => {
@@ -113,7 +116,7 @@ const Footer = () => {
                 { label: 'Dashboard', href: '/login' },
                 { label: 'Customer Portal', href: '/customer/login' },
                 { label: 'Documentation', href: 'https://docs.solidevbooks.com', external: true },
-                { label: 'Contact Support', href: '/contact' },
+                { label: 'Contact Support', href: '/support' },
               ].map(({ label, href, external }) => (
                 <Link 
                   key={label} 
@@ -181,9 +184,12 @@ const Footer = () => {
           </Typography>
           <Box sx={{ display: 'flex', gap: { xs: 2, sm: 3 }, flexWrap: 'wrap', justifyContent: 'center' }}>
             {[
+              { label: 'Pricing', href: '/pricing' },
               { label: 'Privacy Policy', href: '/privacy' },
               { label: 'Terms of Service', href: '/terms' },
+              { label: 'Refund Policy', href: '/refund' },
               { label: 'Cookie Policy', href: '/cookies' },
+              { label: 'Support', href: '/support' },
             ].map(({ label, href }) => (
               <Link
                 key={label}
@@ -195,6 +201,15 @@ const Footer = () => {
             ))}
           </Box>
         </Box>
+
+        <Typography
+          variant="body2"
+          data-testid="footer-legal-entity"
+          sx={{ color: 'grey.500', fontSize: '0.75rem', lineHeight: 1.6, mt: 2.5, textAlign: { xs: 'center', sm: 'left' } }}
+        >
+          Solidev Books is a product of {LEGAL_ENTITY.name} · CIN {LEGAL_ENTITY.cin} · GSTIN {LEGAL_ENTITY.gstin} ·{' '}
+          Registered office: {LEGAL_ENTITY.address}
+        </Typography>
       </Container>
     </Box>
   );

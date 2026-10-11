@@ -44,7 +44,7 @@ import {
   ManageAccounts,
   Speed
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Header from '../components/Layout/Header';
 import Footer from '../components/Layout/Footer';
@@ -867,6 +867,10 @@ const Features = () => {
                 Book an Operations Demo
               </Button>
             </Stack>
+            <Typography sx={{ mt: 2.5, color: '#475569', fontSize: '0.95rem' }}>
+              30-day free trial, no card needed ·{' '}
+              <RouterLink to="/pricing" style={{ color: '#1d4ed8', fontWeight: 600 }}>See pricing</RouterLink>
+            </Typography>
           </Paper>
         </motion.div>
       </Container>

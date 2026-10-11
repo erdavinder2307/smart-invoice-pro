@@ -26,3 +26,18 @@ export const cancelSubscription = async () => {
   const { data } = await axios.post(`${BASE}/subscriptions/cancel`);
   return data;
 };
+
+// Admin: download one GST tax invoice as a PDF (saved as e.g. SB-2026-27-0001.pdf).
+export const downloadTaxInvoicePdf = async (invoice) => {
+  const response = await axios.get(`${BASE}/invoices/${encodeURIComponent(invoice.id)}/pdf`, {
+    responseType: 'blob',
+  });
+  const url = URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', `${(invoice.number || invoice.id).replace(/\//g, '-')}.pdf`);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+};

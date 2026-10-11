@@ -12,6 +12,11 @@ import {
   DialogContentText,
   DialogTitle,
   Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
@@ -19,7 +24,12 @@ import {
 import MainLayout from '../components/Layout/MainLayout';
 import { C } from '../components/common/formStyles';
 import { PLANS, TRIAL_DAYS, formatInr, gstPercentLabel, priceWithGst } from '../config/plans';
-import { cancelSubscription, createSubscription, getSubscription } from '../services/billingService';
+import {
+  cancelSubscription,
+  createSubscription,
+  downloadTaxInvoicePdf,
+  getSubscription,
+} from '../services/billingService';
 import { openSubscriptionCheckout } from '../utils/razorpayCheckout';
 
 // After Checkout closes, the plan changes only when Razorpay's webhook arrives; wait this long for it.
@@ -42,6 +52,11 @@ const formatDate = (iso) => {
     ? null
     : date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 };
+
+const formatInvoiceAmount = (amount) =>
+  typeof amount === 'number'
+    ? `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : '—';
 
 const planName = (code) => {
   if (!code || code === 'trial') return 'Free trial';
@@ -81,6 +96,70 @@ const CurrentPlan = ({ subscription }) => {
         )}
       </Box>
       {detail && <Typography sx={{ fontSize: '0.875rem', color: C.label, mt: 1 }}>{detail}</Typography>}
+    </Paper>
+  );
+};
+
+const TaxInvoices = ({ invoices, onError }) => {
+  const [downloading, setDownloading] = useState(null);
+
+  const handleDownload = async (invoice) => {
+    setDownloading(invoice.id);
+    try {
+      await downloadTaxInvoicePdf(invoice);
+    } catch {
+      onError('Could not download the invoice. Please try again.');
+    } finally {
+      setDownloading(null);
+    }
+  };
+
+  return (
+    <Paper elevation={0} sx={{ border: `1px solid ${C.border}`, borderRadius: '4px', p: 3, mb: 3 }}>
+      <Typography sx={{ fontSize: '1rem', fontWeight: 600, color: C.label, mb: 1 }}>Invoices</Typography>
+      {invoices.length === 0 ? (
+        <Typography sx={{ fontSize: '0.875rem', color: C.hint }}>
+          No invoices yet. A GST tax invoice appears here after each payment.
+        </Typography>
+      ) : (
+        <Box sx={{ overflowX: 'auto' }}>
+          <Table size="small" aria-label="Tax invoices">
+            <TableHead>
+              <TableRow>
+                <TableCell>Invoice</TableCell>
+                <TableCell>Date</TableCell>
+                <TableCell align="right">Amount</TableCell>
+                <TableCell align="right" />
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {invoices.map((invoice) => (
+                <TableRow key={invoice.id}>
+                  <TableCell>
+                    <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: C.label }}>{invoice.number}</Typography>
+                    {invoice.description && (
+                      <Typography sx={{ fontSize: '0.75rem', color: C.hint }}>{invoice.description}</Typography>
+                    )}
+                  </TableCell>
+                  <TableCell>{formatDate(invoice.issue_date) || '—'}</TableCell>
+                  <TableCell align="right">{formatInvoiceAmount(invoice.total)}</TableCell>
+                  <TableCell align="right">
+                    <Button
+                      size="small"
+                      sx={{ textTransform: 'none' }}
+                      disabled={downloading === invoice.id}
+                      onClick={() => handleDownload(invoice)}
+                      aria-label={`Download invoice ${invoice.number} as PDF`}
+                    >
+                      {downloading === invoice.id ? 'Downloading…' : 'Download PDF'}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Box>
+      )}
     </Paper>
   );
 };
@@ -305,6 +384,11 @@ export default function BillingSettings() {
                 issued for every payment. To change plans, cancel first; your plan keeps working until the end of the
                 paid period.
               </Typography>
+
+              <TaxInvoices
+                invoices={subscription.invoices || []}
+                onError={(text) => setNotice({ severity: 'error', text })}
+              />
 
               {canCancel && (
                 <Button

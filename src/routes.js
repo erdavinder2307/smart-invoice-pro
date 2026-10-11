@@ -24,6 +24,7 @@ import BankImportWorkflow from './pages/BankImportWorkflow';
 import BankReconciliation from './pages/BankReconciliation';
 import PortalInvoiceView from './pages/PortalInvoiceView';
 import ComingSoon from './pages/ComingSoon';
+import Pricing from './pages/Pricing';
 import Profile from './pages/Profile';
 import QuoteList from './components/QuoteList';
 import AddEditQuote from './components/AddEditQuote';
@@ -62,6 +63,7 @@ import InvoicePreferences from './pages/InvoicePreferences';
 import TaxSettings from './pages/TaxSettings';
 import AutomationSettings from './pages/AutomationSettings';
 import IntegrationSettings from './pages/IntegrationSettings';
+import BillingSettings from './pages/BillingSettings';
 import InventorySettings from './pages/InventorySettings';
 import NotificationsPage from './pages/NotificationsPage';
 import AuditLogPage from './pages/AuditLogPage';
@@ -248,6 +250,7 @@ const AppRoutes = () => {
             <Route path="/settings/invoice-preferences" element={<DemoRouteBlock><InvoicePreferences /></DemoRouteBlock>} />
             <Route path="/settings/taxes" element={<DemoRouteBlock><TaxSettings /></DemoRouteBlock>} />
             <Route path="/settings/inventory" element={<DemoRouteBlock><InventorySettings /></DemoRouteBlock>} />
+            <Route path="/settings/billing" element={<DemoRouteBlock><BillingSettings /></DemoRouteBlock>} />
           </Route>
           <Route element={<PermissionRoute module="user_management" action="view" />}>
             <Route path="/settings/users" element={<DemoRouteBlock><UserManagement /></DemoRouteBlock>} />
@@ -290,7 +293,7 @@ const AppRoutes = () => {
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/cookies" element={<ComingSoon />} />
-        <Route path="/pricing" element={<ComingSoon />} />
+        <Route path="/pricing" element={<Pricing />} />
 
         {/* Authentication Pages */}
         <Route path="/forgot-password" element={<ForgotPassword />} />

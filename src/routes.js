@@ -24,6 +24,7 @@ import BankImportWorkflow from './pages/BankImportWorkflow';
 import BankReconciliation from './pages/BankReconciliation';
 import PortalInvoiceView from './pages/PortalInvoiceView';
 import ComingSoon from './pages/ComingSoon';
+import Pricing from './pages/Pricing';
 import Profile from './pages/Profile';
 import QuoteList from './components/QuoteList';
 import AddEditQuote from './components/AddEditQuote';
@@ -290,7 +291,7 @@ const AppRoutes = () => {
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/cookies" element={<ComingSoon />} />
-        <Route path="/pricing" element={<ComingSoon />} />
+        <Route path="/pricing" element={<Pricing />} />
 
         {/* Authentication Pages */}
         <Route path="/forgot-password" element={<ForgotPassword />} />

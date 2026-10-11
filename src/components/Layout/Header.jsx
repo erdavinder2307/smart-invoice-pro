@@ -131,6 +131,7 @@ const Header = () => {
     { label: 'Home', path: '/' },
     { label: 'About', path: '/about' },
     { label: 'Features', path: '/features' },
+    { label: 'Pricing', path: '/pricing' },
     { label: 'Contact', path: '/contact' },
     ...(isAuthenticated ? [{ label: 'Dashboard', path: '/dashboard' }] : []),
   ];

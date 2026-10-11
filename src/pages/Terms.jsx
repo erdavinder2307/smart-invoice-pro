@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, Container, Typography, List, ListItem, ListItemText, Divider } from '@mui/material';
+import { Box, Container, Typography, List, ListItem, ListItemText, Divider, Link } from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
 import Header from '../components/Layout/Header';
 import Footer from '../components/Layout/Footer';
 import SeoHead from '../seo/SeoHead';
@@ -280,6 +281,9 @@ const Terms = () => {
               <ListItemText primary="Refunds are not provided for partial months or unused portions of paid subscriptions" />
             </ListItem>
           </List>
+          <Typography paragraph>
+            See also our <Link component={RouterLink} to="/refund">refund and cancellation policy</Link>.
+          </Typography>
         </>
       )
     },

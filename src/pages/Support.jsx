@@ -114,6 +114,11 @@ const Support = () => {
               Please tell us: the email of your Solidev Books account, whether you use the iPhone app or the
               website, and what you saw (a screenshot helps). Never send us your password.
             </Typography>
+            <Typography paragraph sx={{ color: '#475569', fontSize: '1.05rem', lineHeight: 1.7 }}>
+              You can also write to us from the <Link component={RouterLink} to="/contact">contact page</Link>.
+              Questions about payments are answered in our{' '}
+              <Link component={RouterLink} to="/refund">refund and cancellation policy</Link>.
+            </Typography>
           </Box>
 
           <Typography

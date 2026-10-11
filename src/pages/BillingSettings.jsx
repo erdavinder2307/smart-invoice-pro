@@ -100,6 +100,26 @@ const CurrentPlan = ({ subscription }) => {
   );
 };
 
+const invoiceTableSx = {
+  '& thead': { display: { xs: 'none', sm: 'table-header-group' } },
+  '& tbody tr': {
+    display: { xs: 'grid', sm: 'table-row' },
+    gridTemplateColumns: '1fr auto',
+    columnGap: 2,
+    py: { xs: 1.5, sm: 0 },
+    borderBottom: { xs: `1px solid ${C.border}`, sm: 'none' }
+  },
+  '& tbody td': {
+    display: { xs: 'block', sm: 'table-cell' },
+    borderBottom: { xs: 'none' },
+    px: { xs: 0, sm: 2 },
+    py: { xs: 0.25, sm: 0.75 }
+  },
+  '& tbody td.invoice-main, & tbody td.invoice-action': { gridColumn: { xs: '1 / -1', sm: 'auto' } },
+  '& tbody td.invoice-action': { textAlign: { xs: 'left', sm: 'right' } },
+  '& tbody td.invoice-action .MuiButton-root': { ml: { xs: -1, sm: 0 } }
+};
+
 const TaxInvoices = ({ invoices, onError }) => {
   const [downloading, setDownloading] = useState(null);
 
@@ -123,7 +143,8 @@ const TaxInvoices = ({ invoices, onError }) => {
         </Typography>
       ) : (
         <Box sx={{ overflowX: 'auto' }}>
-          <Table size="small" aria-label="Tax invoices">
+          {/* Below sm each row stacks (number, then date and amount, then the download button) so nothing hides in a sideways scroll. */}
+          <Table size="small" aria-label="Tax invoices" sx={invoiceTableSx}>
             <TableHead>
               <TableRow>
                 <TableCell>Invoice</TableCell>
@@ -135,18 +156,22 @@ const TaxInvoices = ({ invoices, onError }) => {
             <TableBody>
               {invoices.map((invoice) => (
                 <TableRow key={invoice.id}>
-                  <TableCell>
-                    <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: C.label }}>{invoice.number}</Typography>
+                  <TableCell className="invoice-main">
+                    <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: C.label, whiteSpace: 'nowrap' }}>
+                      {invoice.number}
+                    </Typography>
                     {invoice.description && (
                       <Typography sx={{ fontSize: '0.75rem', color: C.hint }}>{invoice.description}</Typography>
                     )}
                   </TableCell>
-                  <TableCell>{formatDate(invoice.issue_date) || '—'}</TableCell>
-                  <TableCell align="right">{formatInvoiceAmount(invoice.total)}</TableCell>
-                  <TableCell align="right">
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatDate(invoice.issue_date) || '—'}</TableCell>
+                  <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                    {formatInvoiceAmount(invoice.total)}
+                  </TableCell>
+                  <TableCell align="right" className="invoice-action">
                     <Button
                       size="small"
-                      sx={{ textTransform: 'none' }}
+                      sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
                       disabled={downloading === invoice.id}
                       onClick={() => handleDownload(invoice)}
                       aria-label={`Download invoice ${invoice.number} as PDF`}

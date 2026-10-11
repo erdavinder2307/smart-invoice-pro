@@ -152,7 +152,7 @@ const Terms = () => {
   return (
     <LegalPage
       title="Terms of Service"
-      seoTitle="Terms of Service | Solidev Books"
+      seoTitle="Terms of Service"
       seoDescription="Terms of Service for Solidev Books, online accounting and GST invoicing software by Solidev Electrosoft (OPC) Private Limited, India."
       canonicalPath="/terms"
       intro="Please read these terms before using Solidev Books. They are written in plain English; the short version is: you own your data, you can cancel any time, prices exclude GST, and Indian law applies."

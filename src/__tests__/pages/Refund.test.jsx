@@ -30,6 +30,11 @@ describe('Refund', () => {
     expect(screen.getByText(/within 7–10 working days/)).toBeInTheDocument();
   });
 
+  it('promises the same reply time as the support page', () => {
+    renderPage();
+    expect(screen.getByText(/We reply within 1 working day/)).toBeInTheDocument();
+  });
+
   it('links to the support mailbox, pricing and support pages', () => {
     renderPage();
     expect(screen.getByRole('link', { name: SUPPORT_EMAIL })).toHaveAttribute('href', `mailto:${SUPPORT_EMAIL}`);

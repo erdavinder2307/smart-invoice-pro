@@ -43,7 +43,7 @@ const Refund = () => {
       paragraphs: [
         <>
           Email <Link href={`mailto:${SUPPORT_EMAIL}`} sx={{ fontWeight: 600 }}>{SUPPORT_EMAIL}</Link> from the email of your
-          Solidev Books account, with the date and amount of the payment. We reply within 2 working days, and an approved
+          Solidev Books account, with the date and amount of the payment. We reply within 1 working day, and an approved
           refund reaches you in the time shown above, depending on your bank. See also our{' '}
           <Link component={RouterLink} to="/pricing">pricing</Link> and{' '}
           <Link component={RouterLink} to="/support">support</Link> pages.
@@ -55,7 +55,7 @@ const Refund = () => {
   return (
     <LegalPage
       title="Refund and cancellation policy"
-      seoTitle="Refund and cancellation policy | Solidev Books"
+      seoTitle="Refund and cancellation policy"
       seoDescription={`Solidev Books refund and cancellation policy: ${TRIAL_DAYS}-day free trial with no card, cancel any time, refunds for duplicate or failed payments.`}
       canonicalPath="/refund"
       sections={sections}

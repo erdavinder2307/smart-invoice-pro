@@ -84,7 +84,7 @@ const Support = () => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <SeoHead
-        title="Support | Solidev Books"
+        title="Support"
         description="Get help with Solidev Books: contact support by email, common questions, and how to delete your account."
         canonicalPath="/support"
       />

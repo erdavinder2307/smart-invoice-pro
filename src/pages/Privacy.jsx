@@ -144,7 +144,7 @@ const Privacy = () => {
   return (
     <LegalPage
       title="Privacy Policy"
-      seoTitle="Privacy Policy | Solidev Books"
+      seoTitle="Privacy Policy"
       seoDescription="How Solidev Books collects, uses and protects personal data under India's Digital Personal Data Protection Act, 2023, and how to reach our Grievance Officer."
       canonicalPath="/privacy"
       intro="In short: your data is stored in India, we use it only to run Solidev Books, we never sell it, and you can ask us to see, correct or delete it."

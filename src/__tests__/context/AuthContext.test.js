@@ -27,8 +27,6 @@ function AuthConsumer() {
       <span data-testid="username">{auth.user?.username || 'none'}</span>
       <span data-testid="role">{auth.userRole || 'none'}</span>
       <span data-testid="isAdmin">{String(auth.isAdmin)}</span>
-      <span data-testid="isManager">{String(auth.isManager)}</span>
-      <span data-testid="canApprove">{String(auth.canApprove)}</span>
       <span data-testid="loading">{String(auth.loading)}</span>
       <button data-testid="login" onClick={() => auth.login({ username: 'test', password: 'pass' })}>Login</button>
       <button data-testid="logout" onClick={auth.logout}>Logout</button>
@@ -77,8 +75,6 @@ describe('AuthContext', () => {
     });
 
     expect(screen.getByTestId('isAdmin')).toHaveTextContent('true');
-    expect(screen.getByTestId('isManager')).toHaveTextContent('true');
-    expect(screen.getByTestId('canApprove')).toHaveTextContent('true');
   });
 
   it('computes role helpers correctly for Manager', async () => {
@@ -90,8 +86,6 @@ describe('AuthContext', () => {
     });
 
     expect(screen.getByTestId('isAdmin')).toHaveTextContent('false');
-    expect(screen.getByTestId('isManager')).toHaveTextContent('true');
-    expect(screen.getByTestId('canApprove')).toHaveTextContent('true');
   });
 
   it('computes role helpers correctly for Staff', async () => {
@@ -103,8 +97,6 @@ describe('AuthContext', () => {
     });
 
     expect(screen.getByTestId('isAdmin')).toHaveTextContent('false');
-    expect(screen.getByTestId('isManager')).toHaveTextContent('false');
-    expect(screen.getByTestId('canApprove')).toHaveTextContent('false');
   });
 
   it('logout clears user state', async () => {

@@ -5,6 +5,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Sidebar from "../Sidebar";
 import DemoBanner from "../DemoBanner";
 import DemoAttribution from "../DemoAttribution";
+import TrialBanner from "../Billing/TrialBanner";
 import { useAuth } from "../../context/AuthContext";
 import { isDemoHost, isDemoUser, openInteractiveWorkspace } from "../../utils/demoMode";
 import { TourProvider } from "../../context/TourContext";
@@ -33,12 +34,18 @@ const AppLayout = () => {
     return <Navigate to={isDemoHost() ? "/" : "/login"} replace />;
   }
 
+  // Customer-workspace users belong in the portal, not the financial dashboard
+  if (user.workspace === 'portal') {
+    return <Navigate to="/portal/dashboard" replace />;
+  }
+
   return (
     <TourProvider>
       <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "grey.50" }}>
         <Sidebar />
         <Box sx={{ flex: 1, width: 0, minWidth: 0, overflowX: "hidden", display: "flex", flexDirection: "column" }}>
           <DemoBanner />
+          <TrialBanner />
           <Box sx={{ flex: 1, overflowX: "hidden", display: "flex", flexDirection: "column" }}>
             <Outlet />
             <DemoAttribution />

@@ -13,6 +13,7 @@ import EventRepeatIcon from "@mui/icons-material/EventRepeat";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import AssignmentIcon from "@mui/icons-material/Assignment";
+import MoneyOffIcon from "@mui/icons-material/MoneyOff";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import SettingsIcon from "@mui/icons-material/Settings";
@@ -23,6 +24,7 @@ import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import TuneIcon from "@mui/icons-material/Tune";
+import CreditCardIcon from "@mui/icons-material/CreditCard";
 
 export const NAV_CONFIG = {
   dashboard: {
@@ -62,7 +64,8 @@ export const NAV_CONFIG = {
     children: [
       { id: "vendors", label: "Vendors", labelKey: "sidebarNav.vendors", icon: <LocalShippingIcon />, path: "/vendors", permission: { module: "vendors", action: "view" } },
       { id: "purchase-orders", label: "Purchase Orders", labelKey: "sidebarNav.purchaseOrders", icon: <ShoppingCartIcon />, path: "/purchase-orders", permission: { module: "purchase_orders", action: "view" } },
-      { id: "bills", label: "Bills", labelKey: "sidebarNav.bills", icon: <AssignmentIcon />, path: "/bills", permission: { module: "bills", action: "view" } },
+      { id: "bills",     label: "Bills",     labelKey: "sidebarNav.bills",     icon: <AssignmentIcon />, path: "/bills",     permission: { module: "bills",    action: "view" } },
+      { id: "expenses",  label: "Expenses",  labelKey: "sidebarNav.expenses",  icon: <MoneyOffIcon />,   path: "/expenses",  permission: { module: "expenses", action: "view" } },
     ],
   },
   banking: {
@@ -107,6 +110,7 @@ export const NAV_CONFIG = {
     // No top-level permission — visibility driven by children (see renderExpandableSection)
     expandable: true,
     children: [
+      { id: "billing",              label: "Billing",              labelKey: "settingsNav.billing",            icon: <CreditCardIcon sx={{ fontSize: 20 }} />,         path: "/settings/billing",             permission: { module: "billing",         action: "view" } },
       { id: "org-profile",          label: "Organization Profile", labelKey: "settingsNav.organization",      icon: <BusinessIcon sx={{ fontSize: 20 }} />,           path: "/settings/organization-profile", permission: { module: "settings",        action: "view" } },
       { id: "branding",             label: "Branding",             labelKey: "settingsNav.branding",           icon: <BrushIcon sx={{ fontSize: 20 }} />,              path: "/settings/branding",             permission: { module: "settings",        action: "view" } },
       { id: "invoice-preferences",  label: "Invoice Preferences",  labelKey: "settingsNav.invoicePreferences", icon: <DescriptionIcon sx={{ fontSize: 20 }} />,        path: "/settings/invoice-preferences",  permission: { module: "settings",        action: "view" } },

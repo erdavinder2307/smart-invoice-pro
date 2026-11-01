@@ -30,7 +30,7 @@ const CustomerDashboard = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  
+
   const [customerData, setCustomerData] = useState(null);
   const [invoices, setInvoices] = useState([]);
   const [payments, setPayments] = useState([]);
@@ -41,10 +41,9 @@ const CustomerDashboard = () => {
   const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
-    // Get customer data from localStorage
     const token = localStorage.getItem('customerToken');
     const customer = localStorage.getItem('customerData');
-    
+
     if (!token || !customer) {
       navigate('/customer/login');
       return;
@@ -52,126 +51,28 @@ const CustomerDashboard = () => {
 
     try {
       setCustomerData(JSON.parse(customer));
-      fetchDashboardData();
-    } catch (error) {
-      console.error('Error parsing customer data:', error);
+      fetchDashboardData(token);
+    } catch {
       navigate('/customer/login');
     }
   }, [navigate]);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (token) => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('customerToken');
-      
-      // Fetch invoices
-      try {
-        const response = await getCustomerInvoices(token);
-        setInvoices(response.data || []);
-      } catch (error) {
-        console.error('Error fetching invoices:', error);
-        // Use comprehensive mock data
-        setInvoices([
-          {
-            id: 'INV-001',
-            date: '2024-01-15',
-            dueDate: '2024-02-15',
-            status: 'Paid',
-            amount: 1250.00,
-            description: 'Web Development Services'
-          },
-          {
-            id: 'INV-002',
-            date: '2024-02-15',
-            dueDate: '2024-03-15',
-            status: 'Unpaid',
-            amount: 890.50,
-            description: 'UI/UX Design Package'
-          },
-          {
-            id: 'INV-003',
-            date: '2024-03-15',
-            dueDate: '2024-04-15',
-            status: 'Overdue',
-            amount: 1100.75,
-            description: 'Monthly Maintenance'
-          },
-          {
-            id: 'INV-004',
-            date: '2024-04-15',
-            dueDate: '2024-05-15',
-            status: 'Paid',
-            amount: 750.00,
-            description: 'Mobile App Development'
-          },
-          {
-            id: 'INV-005',
-            date: '2024-05-15',
-            dueDate: '2024-06-15',
-            status: 'Unpaid',
-            amount: 2100.25,
-            description: 'E-commerce Platform'
-          }
-        ]);
+      setError('');
+
+      const response = await getCustomerInvoices(token);
+      setInvoices(response.data || []);
+    } catch (err) {
+      console.error('Error fetching invoices:', err);
+      if (err.response?.status === 401) {
+        localStorage.removeItem('customerToken');
+        localStorage.removeItem('customerData');
+        navigate('/customer/login');
+        return;
       }
-
-      // Mock payment history
-      setPayments([
-        {
-          id: 'PAY-001',
-          invoiceId: 'INV-001',
-          amount: 1250.00,
-          date: '2024-02-10',
-          method: 'Credit Card',
-          status: 'Completed'
-        },
-        {
-          id: 'PAY-002',
-          invoiceId: 'INV-004',
-          amount: 750.00,
-          date: '2024-05-10',
-          method: 'PayPal',
-          status: 'Completed'
-        },
-        {
-          id: 'PAY-003',
-          invoiceId: 'INV-002',
-          amount: 445.25,
-          date: '2024-03-05',
-          method: 'Bank Transfer',
-          status: 'Partial'
-        }
-      ]);
-
-      // Mock notifications
-      setNotifications([
-        {
-          id: 1,
-          type: 'overdue',
-          message: 'Invoice INV-003 is overdue by 15 days',
-          date: '2024-08-20',
-          priority: 'high'
-        },
-        {
-          id: 2,
-          type: 'due',
-          message: 'Invoice INV-002 is due in 3 days',
-          date: '2024-08-18',
-          priority: 'medium'
-        },
-        {
-          id: 3,
-          type: 'payment',
-          message: 'Payment received for Invoice INV-004',
-          date: '2024-08-15',
-          priority: 'low'
-        }
-      ]);
-
-      setError('Using sample data - API endpoint not available');
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      setError('Error loading dashboard data');
+      setError('Unable to load your invoices. Please try again later.');
     } finally {
       setLoading(false);
     }
@@ -183,43 +84,43 @@ const CustomerDashboard = () => {
     navigate('/customer/login');
   };
 
-  // Calculate stats
   const calculateStats = () => {
     const unpaidInvoices = invoices.filter(inv => inv.status === 'Unpaid' || inv.status === 'Overdue');
-    const outstandingBalance = unpaidInvoices.reduce((sum, inv) => sum + inv.amount, 0);
+    const outstandingBalance = unpaidInvoices.reduce((sum, inv) => sum + (inv.amount || inv.total_amount || 0), 0);
     const totalInvoices = invoices.length;
-    const lastPayment = payments.length > 0 ? payments[payments.length - 1] : null;
+    const paidInvoices = invoices.filter(inv => inv.status === 'Paid');
+    const lastPayment = paidInvoices.length > 0 ? paidInvoices[paidInvoices.length - 1] : null;
     const nextDueInvoice = unpaidInvoices
-      .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))[0];
+      .sort((a, b) => new Date(a.dueDate || a.due_date) - new Date(b.dueDate || b.due_date))[0];
 
     return {
       outstandingBalance,
       totalInvoices,
       lastPayment,
-      nextDueDate: nextDueInvoice?.dueDate || null
+      nextDueDate: nextDueInvoice?.dueDate || nextDueInvoice?.due_date || null,
     };
   };
 
   const stats = calculateStats();
 
-  // Filter invoices based on search and status
   const filteredInvoices = invoices.filter(invoice => {
-    const matchesSearch = invoice.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         invoice.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const invoiceId = invoice.id || invoice.invoice_number || '';
+    const description = invoice.description || '';
+    const matchesSearch =
+      invoiceId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'All' || invoice.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   if (loading) {
     return (
-      <Box 
-        display="flex" 
-        justifyContent="center" 
-        alignItems="center" 
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
         minHeight="100vh"
-        sx={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-        }}
+        sx={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
       >
         <CircularProgress sx={{ color: 'white' }} size={60} />
       </Box>
@@ -227,35 +128,33 @@ const CustomerDashboard = () => {
   }
 
   return (
-    <Box 
-      sx={{ 
+    <Box
+      sx={{
         minHeight: '100vh',
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        pb: 4
+        pb: 4,
       }}
     >
       <Container maxWidth="xl" sx={{ pt: 3 }}>
         {error && (
-          <Alert 
-            severity="info" 
-            sx={{ 
+          <Alert
+            severity="error"
+            sx={{
               mb: 3,
               backgroundColor: 'rgba(255, 255, 255, 0.9)',
-              backdropFilter: 'blur(10px)'
+              backdropFilter: 'blur(10px)',
             }}
           >
             {error}
           </Alert>
         )}
 
-        {/* Welcome + Profile Card */}
-        <WelcomeProfileCard 
-          customerData={customerData} 
+        <WelcomeProfileCard
+          customerData={customerData}
           onLogout={handleLogout}
           isMobile={isMobile}
         />
 
-        {/* Stats Cards Row */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
           <Grid item xs={12} sm={6} md={3}>
             <StatsCard
@@ -278,8 +177,8 @@ const CustomerDashboard = () => {
           <Grid item xs={12} sm={6} md={3}>
             <StatsCard
               title="Last Payment"
-              value={stats.lastPayment ? `$${stats.lastPayment.amount.toFixed(2)}` : 'No payments'}
-              subtitle={stats.lastPayment?.date}
+              value={stats.lastPayment ? `$${(stats.lastPayment.amount || stats.lastPayment.total_amount || 0).toFixed(2)}` : 'No payments yet'}
+              subtitle={stats.lastPayment?.date || stats.lastPayment?.issue_date}
               icon={<Payment />}
               color="rgba(76, 175, 80, 0.1)"
               iconColor="#4caf50"
@@ -288,7 +187,7 @@ const CustomerDashboard = () => {
           <Grid item xs={12} sm={6} md={3}>
             <StatsCard
               title="Next Due Date"
-              value={stats.nextDueDate ? new Date(stats.nextDueDate).toLocaleDateString() : 'No due dates'}
+              value={stats.nextDueDate ? new Date(stats.nextDueDate).toLocaleDateString() : 'None outstanding'}
               icon={<CalendarToday />}
               color="rgba(255, 152, 0, 0.1)"
               iconColor="#ff9800"
@@ -297,9 +196,7 @@ const CustomerDashboard = () => {
         </Grid>
 
         <Grid container spacing={3}>
-          {/* Left Column */}
           <Grid item xs={12} lg={8}>
-            {/* Invoice Table */}
             <InvoiceTable
               invoices={filteredInvoices}
               searchQuery={searchQuery}
@@ -310,25 +207,18 @@ const CustomerDashboard = () => {
               isMobile={isMobile}
             />
 
-            {/* Payment Section */}
             <PaymentSection
               unpaidInvoices={invoices.filter(inv => inv.status === 'Unpaid' || inv.status === 'Overdue')}
               onPayment={(invoiceId, amount) => {
                 console.log('Payment initiated for:', invoiceId, amount);
-                // Integrate with payment gateway
               }}
             />
 
-            {/* Payment History */}
             <PaymentHistory payments={payments} />
           </Grid>
 
-          {/* Right Column */}
           <Grid item xs={12} lg={4}>
-            {/* Notifications Panel */}
             <NotificationsPanel notifications={notifications} />
-
-            {/* Spending Trends Chart */}
             <SpendingChart invoices={invoices} />
           </Grid>
         </Grid>

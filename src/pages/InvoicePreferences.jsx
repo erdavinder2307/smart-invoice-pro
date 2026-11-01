@@ -19,8 +19,8 @@ import {
 import RefreshIcon from '@mui/icons-material/Refresh';
 import UndoIcon from '@mui/icons-material/Undo';
 
-import { useAuth } from '../context/AuthContext';
 import { useInvoicePreferences, PREFS_DEFAULTS } from '../context/InvoicePreferencesContext';
+import { usePermission } from '../context/PermissionContext';
 import {
   AppSelect,
   C,
@@ -87,7 +87,8 @@ const EMPTY = {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function InvoicePreferences() {
-  const { isAdmin } = useAuth();
+  const { can, loaded: permLoaded } = usePermission();
+  const canView = can('settings', 'view');
   const { prefs: ctxPrefs, setPrefs: setCtxPrefs } = useInvoicePreferences();
   const navigate = useNavigate();
 
@@ -98,14 +99,14 @@ export default function InvoicePreferences() {
   const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
   const savedForm = useRef(null);
 
-  // Admin guard
+  // Permission guard
   useEffect(() => {
-    if (!isAdmin) navigate('/dashboard', { replace: true });
-  }, [isAdmin, navigate]);
+    if (permLoaded && !canView) navigate('/forbidden', { replace: true });
+  }, [permLoaded, canView, navigate]);
 
   // Populate form from context once loaded
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!canView) return;
     const loadedForm = {
       invoice_prefix:               ctxPrefs.invoice_prefix               ?? PREFS_DEFAULTS.invoice_prefix,
       invoice_suffix:               ctxPrefs.invoice_suffix               ?? PREFS_DEFAULTS.invoice_suffix,
@@ -120,7 +121,7 @@ export default function InvoicePreferences() {
     setForm(loadedForm);
     savedForm.current = loadedForm;
     setLoading(false);
-  }, [ctxPrefs, isAdmin]);
+  }, [ctxPrefs, canView]);
 
   const set = useCallback((field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));

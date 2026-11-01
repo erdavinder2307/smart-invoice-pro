@@ -31,7 +31,7 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import UndoIcon from "@mui/icons-material/Undo";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 
-import { useAuth } from "../context/AuthContext";
+import { usePermission } from "../context/PermissionContext";
 import { useBranding, BRANDING_DEFAULTS } from "../context/BrandingContext";
 import { resolveMediaUrl } from "../utils/mediaUrl";
 import {
@@ -517,7 +517,8 @@ const EMPTY_FORM = {
 
 // ── Page component ────────────────────────────────────────────────────────────
 export default function BrandingSettings() {
-  const { isAdmin } = useAuth();
+  const { can, loaded: permLoaded } = usePermission();
+  const canView = can('settings', 'view');
   const { branding: ctxBranding, setBranding: setCtxBranding } = useBranding();
   const navigate = useNavigate();
 
@@ -540,14 +541,14 @@ export default function BrandingSettings() {
   const [previewPdfUrl, setPreviewPdfUrl] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
-  // Admin guard
+  // Permission guard
   useEffect(() => {
-    if (!isAdmin) navigate("/dashboard", { replace: true });
-  }, [isAdmin, navigate]);
+    if (permLoaded && !canView) navigate("/forbidden", { replace: true });
+  }, [permLoaded, canView, navigate]);
 
   // Load branding on mount
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!canView) return;
     (async () => {
       try {
         const data = await getBranding();
@@ -571,7 +572,7 @@ export default function BrandingSettings() {
         setLoading(false);
       }
     })();
-  }, [isAdmin]);
+  }, [canView]);
 
   // Load PDF preview when drawer opens
   useEffect(() => {

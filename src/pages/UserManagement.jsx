@@ -32,6 +32,7 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 
 import { C, fieldSx } from "../components/common/formStyles";
 import { useAuth } from "../context/AuthContext";
+import { usePermission } from "../context/PermissionContext";
 import {
   getSettingsUsers,
   inviteUser,
@@ -72,7 +73,11 @@ function avatarColor(str) {
 }
 
 export default function UserManagement() {
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
+  const { can } = usePermission();
+  const canView   = can('user_management', 'view');
+  const canInvite = can('user_management', 'invite');
+  const canEdit   = can('user_management', 'edit');
   const [users, setUsers]           = useState([]);
   const [roles, setRoles]           = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -97,7 +102,7 @@ export default function UserManagement() {
     setToast({ open: true, message, severity });
 
   const fetchData = useCallback(async () => {
-    if (!isAdmin) {
+    if (!canView) {
       setLoading(false);
       setAccessDenied(true);
       setUsers([]);
@@ -124,7 +129,7 @@ export default function UserManagement() {
     } finally {
       setLoading(false);
     }
-  }, [isAdmin]);
+  }, [canView]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -223,12 +228,12 @@ export default function UserManagement() {
     return u.role || "—";
   };
 
-  if (!isAdmin && !loading) {
+  if (!canView && !loading) {
     return (
       <MainLayout>
         <Box sx={{ p: 3, bgcolor: C.pageBg, minHeight: "calc(100vh - 64px)" }}>
           <Alert severity="warning">
-            Admin access is required to manage users. Contact your organization administrator.
+            You do not have permission to view users. Contact your organization administrator.
           </Alert>
         </Box>
       </MainLayout>
@@ -248,7 +253,7 @@ export default function UserManagement() {
                 Manage team members and their access roles.
               </Typography>
             </Box>
-            {isAdmin && (
+            {canInvite && (
               <Button variant="contained" size="small" startIcon={<PersonAddIcon />}
                 onClick={() => { setInviteForm(EMPTY_INVITE); setInviteErr(""); setInviteOpen(true); }}
                 sx={{ textTransform: "none", fontSize: "0.8125rem" }}>
@@ -276,7 +281,7 @@ export default function UserManagement() {
                       <TableCell>Role</TableCell>
                       <TableCell>Status</TableCell>
                       <TableCell>Member Since</TableCell>
-                      {isAdmin && <TableCell align="right" sx={{ pr: 2 }}>Actions</TableCell>}
+                      {canEdit && <TableCell align="right" sx={{ pr: 2 }}>Actions</TableCell>}
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -326,7 +331,7 @@ export default function UserManagement() {
                           <TableCell sx={{ color: C.hint }}>
                             {u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"}
                           </TableCell>
-                          {isAdmin && (
+                          {canEdit && (
                             <TableCell align="right" sx={{ pr: 2 }}>
                               <Tooltip title="Edit role">
                                 <IconButton size="small" onClick={() => openEdit(u)}>
@@ -348,7 +353,7 @@ export default function UserManagement() {
                     })}
                     {users.length === 0 && !accessDenied && (
                       <TableRow>
-                        <TableCell colSpan={isAdmin ? 5 : 4} align="center" sx={{ py: 4, color: C.hint }}>
+                        <TableCell colSpan={canEdit ? 5 : 4} align="center" sx={{ py: 4, color: C.hint }}>
                           No users found.
                         </TableCell>
                       </TableRow>

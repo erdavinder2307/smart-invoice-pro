@@ -27,6 +27,7 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import axios from "axios";
 import { createApiUrl } from "../config/api";
 import { useAuth } from "../context/AuthContext";
+import { usePermission } from "../context/PermissionContext";
 import EmptyState from "../components/common/EmptyState";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -37,7 +38,9 @@ const fmtDate = (iso) => (iso ? new Date(iso).toLocaleString() : "—");
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function PendingApprovals() {
-  const { user, canApprove } = useAuth();
+  const { user } = useAuth();
+  const { can } = usePermission();
+  const canApprove = can('invoices', 'approve');
   const [invoices, setInvoices] = useState([]);
   const [pos, setPos] = useState([]);
   const [loading, setLoading] = useState(true);

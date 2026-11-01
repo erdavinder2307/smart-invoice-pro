@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
   Card,
@@ -90,7 +90,7 @@ const DEV_USERS = IS_DEV
 
 
 const LoginPage = () => {
-  const { login, register, sessionExpired, isAuthenticated, loading: authLoading } = useAuth();
+  const { login, register, sessionExpired, isAuthenticated, workspace, loading: authLoading } = useAuth();
   const [credentials, setCredentials] = useState({ username: "", password: "", confirmPassword: "" });
   const [fieldErrors, setFieldErrors] = useState({ username: "", password: "", confirmPassword: "" });
   const [error, setError] = useState("");
@@ -108,14 +108,23 @@ const LoginPage = () => {
     hasSpecialChar: false
   });
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeDevRole, setActiveDevRole] = useState(null);
 
-  // Redirect to dashboard only when AuthContext confirms an active session
+  // Redirect to correct workspace when AuthContext confirms an active session
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      navigate('/dashboard', { replace: true });
+      navigate(workspace === 'portal' ? '/portal/dashboard' : '/dashboard', { replace: true });
     }
-  }, [authLoading, isAuthenticated, navigate]);
+  }, [authLoading, isAuthenticated, workspace, navigate]);
+
+  // Auto-switch to signup mode when ?register=1 is in the URL
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('register') === '1') {
+      setIsSignup(true);
+    }
+  }, [location.search]);
 
   // ── Dev autofill handler ──────────────────────────────────────────────────
   const handleDevAutofill = useCallback((user) => {
@@ -227,7 +236,8 @@ const LoginPage = () => {
           username: credentials.username.trim(),
           password: credentials.password
         });
-        navigate("/dashboard");
+        // Workspace-aware redirect — workspace is read from AuthContext after setUser()
+        // The useEffect above handles the navigate once isAuthenticated flips to true.
       }
     } catch (err) {
       if (isSignup) {
@@ -545,7 +555,7 @@ const LoginPage = () => {
                               component="button"
                               type="button"
                               variant="body2"
-                              onClick={() => console.log('Forgot password clicked')}
+                              onClick={() => navigate('/forgot-password')}
                               sx={{ textDecoration: 'none' }}
                             >
                               Forgot Password?
@@ -654,36 +664,6 @@ const LoginPage = () => {
                         </Button>
                       </motion.div>
 
-                      {/* Customer Portal Link */}
-                      <motion.div variants={fadeInUp}>
-                        <Button
-                          component={motion.button}
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          fullWidth
-                          variant="outlined"
-                          size="large"
-                          onClick={() => navigate('/customer/login')}
-                          sx={{
-                            py: 1.5,
-                            mb: 2,
-                            borderRadius: 2,
-                            fontSize: '1rem',
-                            fontWeight: 600,
-                            textTransform: 'none',
-                            borderColor: 'secondary.main',
-                            color: 'secondary.main',
-                            '&:hover': {
-                              bgcolor: 'secondary.main',
-                              color: 'white',
-                              borderColor: 'secondary.main'
-                            }
-                          }}
-                        >
-                          Customer Portal Login
-                        </Button>
-                      </motion.div>
-
                       {/* Toggle Sign up / Sign in */}
                       <motion.div variants={fadeInUp}>
                         <Button
@@ -694,7 +674,6 @@ const LoginPage = () => {
                           variant="text"
                           size="large"
                           onClick={() => {
-                            setIsSignup(!isSignup);
                             setError("");
                             setSuccess("");
                             setCredentials({ username: "", password: "", confirmPassword: "" });
@@ -705,6 +684,11 @@ const LoginPage = () => {
                               hasNumber: false,
                               hasSpecialChar: false
                             });
+                            if (isSignup) {
+                              navigate('/login', { replace: true });
+                            } else {
+                              navigate('/login?register=1', { replace: true });
+                            }
                           }}
                           sx={{
                             py: 1.5,

@@ -10,17 +10,17 @@ const PermissionContext = createContext({
   refetch: () => {},
 });
 
-// All known modules — used for UI rendering
+// All known modules — must stay in sync with PERMISSION_MODULES in roles_permissions_api.py
 export const PERMISSION_MODULES = {
-  invoices:        ['view', 'create', 'edit', 'delete'],
-  quotes:          ['view', 'create', 'edit', 'delete'],
-  customers:       ['view', 'create', 'edit', 'delete'],
-  products:        ['view', 'create', 'edit', 'delete'],
-  vendors:         ['view', 'create', 'edit', 'delete'],
-  purchase_orders: ['view', 'create', 'edit', 'delete'],
-  bills:           ['view', 'create', 'edit', 'delete'],
-  expenses:        ['view', 'create', 'edit', 'delete'],
-  banking:         ['view', 'create', 'edit'],
+  invoices:        ['view', 'create', 'edit', 'delete', 'approve', 'export'],
+  quotes:          ['view', 'create', 'edit', 'delete', 'approve', 'export'],
+  customers:       ['view', 'create', 'edit', 'delete', 'export'],
+  products:        ['view', 'create', 'edit', 'delete', 'export', 'import'],
+  vendors:         ['view', 'create', 'edit', 'delete', 'export'],
+  purchase_orders: ['view', 'create', 'edit', 'delete', 'approve', 'export'],
+  bills:           ['view', 'create', 'edit', 'delete', 'export'],
+  expenses:        ['view', 'create', 'edit', 'delete', 'export'],
+  banking:         ['view', 'create', 'edit', 'delete'],
   reports:         ['view'],
   settings:        ['view', 'edit'],
   user_management: ['view', 'invite', 'edit', 'suspend'],
@@ -28,6 +28,8 @@ export const PERMISSION_MODULES = {
   audit_logs:      ['view'],
   automation:      ['view', 'edit'],
   integrations:    ['view', 'edit'],
+  // Billing is a privileged module — only Owner / Admin / Finance roles should receive billing.view
+  billing:         ['view', 'manage'],
 };
 
 export const MODULE_LABELS = {
@@ -47,6 +49,7 @@ export const MODULE_LABELS = {
   audit_logs:      'Audit Logs',
   automation:      'Automation',
   integrations:    'Integrations',
+  billing:         'Billing & Subscription',
 };
 
 export const PermissionProvider = ({ children }) => {

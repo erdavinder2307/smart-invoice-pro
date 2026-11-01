@@ -28,7 +28,7 @@ const HeroSection = () => {
       description="Manage invoices, payments, inventory, workflows, and financial operations from one connected platform."
       primaryAction={{
         label: 'Start Free',
-        onClick: () => navigate('/login'),
+        onClick: () => navigate('/login?register=1'),
       }}
       secondaryAction={{
         label: 'Take Guided Tour',

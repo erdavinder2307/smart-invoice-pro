@@ -29,8 +29,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
 
 import { C, fieldSx } from "../components/common/formStyles";
-import { useAuth } from "../context/AuthContext";
-import { PERMISSION_MODULES, MODULE_LABELS } from "../context/PermissionContext";
+import { usePermission, PERMISSION_MODULES, MODULE_LABELS } from "../context/PermissionContext";
 import {
   getRoles,
   createRole,
@@ -126,7 +125,8 @@ function PermissionMatrix({ permissions, onChange, readOnly }) {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function RoleManagement() {
-  const { isAdmin } = useAuth();
+  const { can } = usePermission();
+  const canEdit = can('roles', 'edit');
   const [roles, setRoles]     = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState("");
@@ -254,7 +254,7 @@ export default function RoleManagement() {
                 Define roles and control what each role can access.
               </Typography>
             </Box>
-            {isAdmin && (
+            {canEdit && (
               <Button
                 variant="contained" size="small"
                 startIcon={<AddIcon />}
@@ -279,7 +279,7 @@ export default function RoleManagement() {
                       <TableCell sx={{ pl: 2 }}>Role Name</TableCell>
                       <TableCell>Type</TableCell>
                       <TableCell>Modules with Access</TableCell>
-                      {isAdmin && <TableCell align="right" sx={{ pr: 2 }}>Actions</TableCell>}
+                      {canEdit && <TableCell align="right" sx={{ pr: 2 }}>Actions</TableCell>}
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -306,7 +306,7 @@ export default function RoleManagement() {
                           <TableCell sx={{ color: C.hint }}>
                             {permCount} / {Object.keys(PERMISSION_MODULES).length} modules
                           </TableCell>
-                          {isAdmin && (
+                          {canEdit && (
                             <TableCell align="right" sx={{ pr: 2 }}>
                               <Tooltip title="Edit permissions">
                                 <IconButton size="small" onClick={() => openEdit(role)}>
@@ -327,7 +327,7 @@ export default function RoleManagement() {
                     })}
                     {roles.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={isAdmin ? 4 : 3} align="center" sx={{ py: 4, color: C.hint }}>
+                        <TableCell colSpan={canEdit ? 4 : 3} align="center" sx={{ py: 4, color: C.hint }}>
                           No roles found.
                         </TableCell>
                       </TableRow>

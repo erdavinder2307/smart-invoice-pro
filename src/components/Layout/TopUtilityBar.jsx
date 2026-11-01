@@ -17,6 +17,7 @@ import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import LogoutIcon from "@mui/icons-material/Logout";
 import SwitchAccountIcon from "@mui/icons-material/SwitchAccount";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
+import BusinessIcon from "@mui/icons-material/Business";
 import NotificationDropdown from "../Notifications/NotificationDropdown";
 import { useNotifications } from "../../context/NotificationContext";
 import GlobalSearchInput from "../search/GlobalSearchInput";
@@ -131,6 +132,39 @@ const TopUtilityBar = ({ searchPlaceholder = "", onSearchChange, onMenuClick }) 
             <IconButton color="inherit" onClick={() => navigate("/settings")}>
               <SettingsOutlinedIcon fontSize="small" />
             </IconButton>
+          </Tooltip>
+        )}
+
+        {/* Org name pill — md+ only, non-intrusive */}
+        {orgName && (
+          <Tooltip title="Current Organisation" placement="bottom">
+            <Box
+              sx={{
+                display: { xs: "none", md: "flex" },
+                alignItems: "center",
+                gap: 0.5,
+                px: 1.25,
+                py: 0.4,
+                borderRadius: 99,
+                bgcolor: "grey.100",
+                border: "1px solid",
+                borderColor: "grey.200",
+                cursor: "default",
+                maxWidth: 200,
+                overflow: "hidden",
+              }}
+            >
+              <BusinessIcon sx={{ fontSize: 13, color: "text.secondary", flexShrink: 0 }} />
+              <Typography
+                variant="caption"
+                fontWeight={600}
+                color="text.secondary"
+                noWrap
+                sx={{ fontSize: "0.6875rem", lineHeight: 1 }}
+              >
+                {orgName}
+              </Typography>
+            </Box>
           </Tooltip>
         )}
 

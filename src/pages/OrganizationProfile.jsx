@@ -22,7 +22,7 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import DeleteIcon from "@mui/icons-material/Delete";
 import UndoIcon from "@mui/icons-material/Undo";
 
-import { useAuth } from "../context/AuthContext";
+import { usePermission } from "../context/PermissionContext";
 import {
   C,
   ZohoRow,
@@ -404,7 +404,8 @@ const EMPTY_FORM = {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function OrganizationProfile() {
-  const { isAdmin } = useAuth();
+  const { can, loaded: permLoaded } = usePermission();
+  const canView = can('settings', 'view');
   const navigate = useNavigate();
 
   const [form, setForm] = useState(EMPTY_FORM);
@@ -426,16 +427,16 @@ export default function OrganizationProfile() {
   const savedForm = useRef(null);
   const savedLogoPreview = useRef(null);
 
-  // Admin guard
+  // Permission guard
   useEffect(() => {
-    if (!isAdmin) {
-      navigate("/dashboard", { replace: true });
+    if (permLoaded && !canView) {
+      navigate("/forbidden", { replace: true });
     }
-  }, [isAdmin, navigate]);
+  }, [permLoaded, canView, navigate]);
 
   // Load profile on mount
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!canView) return;
     (async () => {
       try {
         const data = await getOrgProfile();
@@ -470,7 +471,7 @@ export default function OrganizationProfile() {
         setLoading(false);
       }
     })();
-  }, [isAdmin]);
+  }, [canView]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   const setField = (name, value) => {

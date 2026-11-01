@@ -14,6 +14,9 @@ import StockAdjustment from './components/StockAdjustment';
 import CustomerLogin from './components/CustomerLogin';
 import CustomerDashboard from './pages/CustomerDashboard';
 import CustomerInvoiceDetail from './pages/CustomerInvoiceDetail';
+import PortalLayout from './components/Layout/PortalLayout';
+import PortalDashboard from './pages/PortalDashboard';
+import PortalAcceptInvite from './pages/PortalAcceptInvite';
 import Home from './pages/Home';
 import About from './pages/About';
 import Features from './pages/Features';
@@ -87,6 +90,10 @@ import DemoRouteBlock from './components/DemoRouteBlock';
 import { RootPage, DemoAwareLogin, DemoAwareSignup } from './components/DemoAwareRoutes';
 
 import DemoLanding from './pages/DemoLanding';
+import Pricing from './pages/Pricing';
+import Billing from './pages/settings/Billing';
+import BillingUpgrade from './pages/settings/BillingUpgrade';
+import TrialExpired from './pages/TrialExpired';
 
 const AppRoutes = () => {
   return (
@@ -240,6 +247,13 @@ const AppRoutes = () => {
             <Route path="/reports/payments-made" element={<PaymentsMade />} />
           </Route>
 
+          {/* ── Billing — protected by billing.view permission ───── */}
+          <Route element={<PermissionRoute module="billing" action="view" />}>
+            <Route path="/settings/billing" element={<Billing />} />
+            <Route path="/settings/billing/upgrade" element={<BillingUpgrade />} />
+          </Route>
+          <Route path="/trial-expired" element={<TrialExpired />} />
+
           {/* ── Settings — admin / settings.view ─────────────────── */}
           <Route element={<PermissionRoute module="settings" action="view" />}>
             <Route path="/settings" element={<Navigate to="/settings/organization-profile" replace />} />
@@ -277,10 +291,20 @@ const AppRoutes = () => {
           <Route path="/search" element={<SearchResultsPage />} />
           <Route path="/approvals" element={<PendingApprovals />} />
         </Route>
-        <Route path="/customer/login" element={<CustomerLogin />} />
-        <Route path="/customer/dashboard" element={<CustomerDashboard />} />
-        <Route path="/customer/invoices/:id" element={<CustomerInvoiceDetail />} />
+        {/* CPB-010: backward-compat redirects — old /customer/* routes → unified paths */}
+        <Route path="/customer/login" element={<Navigate to="/login" replace />} />
+        <Route path="/customer/dashboard" element={<Navigate to="/portal/dashboard" replace />} />
+        {/* Keep legacy CustomerLogin/CustomerDashboard reachable only via direct render for now */}
 
+        {/* ── Customer Portal Workspace (/portal/*) ─────────────────────── */}
+        {/* CPB-009: PortalLayout guards route — customers only */}
+        <Route element={<PortalLayout />}>
+          <Route path="/portal/dashboard" element={<PortalDashboard />} />
+          <Route path="/portal/invoices/:id" element={<CustomerInvoiceDetail />} />
+        </Route>
+
+        {/* Public portal pages — no auth */}
+        <Route path="/portal/accept-invite" element={<PortalAcceptInvite />} />
         {/* Public Invoice Portal — no auth required */}
         <Route path="/portal/invoice/:token" element={<PortalInvoiceView />} />
 
@@ -290,7 +314,7 @@ const AppRoutes = () => {
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/cookies" element={<ComingSoon />} />
-        <Route path="/pricing" element={<ComingSoon />} />
+        <Route path="/pricing" element={<Pricing />} />
 
         {/* Authentication Pages */}
         <Route path="/forgot-password" element={<ForgotPassword />} />

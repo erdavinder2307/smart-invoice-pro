@@ -29,12 +29,17 @@ import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import LogoutIcon from "@mui/icons-material/Logout";
+import BusinessIcon from "@mui/icons-material/Business";
+import SwitchAccountIcon from "@mui/icons-material/SwitchAccount";
+import TimerOutlinedIcon from "@mui/icons-material/TimerOutlined";
 
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import { useMe } from "../context/MeContext";
 import { useSidebar } from "../context/SidebarContext";
 import { usePermission } from "../context/PermissionContext";
+import { useSubscription } from "../context/SubscriptionContext";
+import { useBranding } from "../context/BrandingContext";
 import { NAV_CONFIG } from "../config/navConfig";
 import { demoSettingsBlockedPrefixes, isDemoUser, isInteractiveWorkspace } from "../utils/demoMode";
 import Logo from "./common/Logo";
@@ -45,6 +50,41 @@ const DRAWER_EXPANDED = 256;
 const DRAWER_COLLAPSED = 72;
 const SIDEBAR_SCROLL_KEY = "sidebarScrollTop";
 
+// ── Role badge colours (mirrors TopUtilityBar) ───────────────────────────────
+const ROLE_COLORS = {
+  Admin:      { bg: "rgba(37,99,235,0.18)",  color: "#93c5fd" },
+  Owner:      { bg: "rgba(124,58,237,0.18)", color: "#c4b5fd" },
+  Manager:    { bg: "rgba(22,163,74,0.18)",  color: "#86efac" },
+  Accountant: { bg: "rgba(234,88,12,0.18)",  color: "#fdba74" },
+  Finance:    { bg: "rgba(234,88,12,0.18)",  color: "#fdba74" },
+  Sales:      { bg: "rgba(124,58,237,0.12)", color: "#a78bfa" },
+};
+
+const SidebarRoleChip = ({ role }) => {
+  const s = ROLE_COLORS[role] || { bg: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.55)" };
+  return (
+    <Box
+      sx={{
+        display: "inline-flex",
+        alignItems: "center",
+        px: 0.875,
+        py: 0.25,
+        borderRadius: 0.75,
+        bgcolor: s.bg,
+        color: s.color,
+        fontSize: "0.625rem",
+        fontWeight: 700,
+        letterSpacing: 0.4,
+        textTransform: "uppercase",
+        lineHeight: 1.4,
+        flexShrink: 0,
+      }}
+    >
+      {role || "User"}
+    </Box>
+  );
+};
+
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -53,7 +93,9 @@ const Sidebar = () => {
   const { logout, isAdmin, user } = useAuth();
   const { can, isAdmin: permIsAdmin, loaded: permissionsLoaded } = usePermission();
   const effectiveIsAdmin = isAdmin || permIsAdmin;
-  const { displayName: meDisplayName, initials: meInitials } = useMe();
+  const { displayName: meDisplayName, initials: meInitials, me } = useMe();
+  const { subscription, plan, trialDaysRemaining, isTrialActive } = useSubscription();
+  const { branding } = useBranding();
   const {
     isCollapsed,
     toggleSidebar,
@@ -63,6 +105,9 @@ const Sidebar = () => {
   } = useSidebar();
   const isDesktopCollapsed = !isMobile && isCollapsed;
   const navScrollRef = useRef(null);
+
+  // ── Org switcher popover state ─────────────────────────────────────────────
+  const [orgSwitcherAnchor, setOrgSwitcherAnchor] = useState(null);
 
   const getNavLabel = (config) =>
     config?.labelKey ? t(config.labelKey, config.label) : config?.label;
@@ -163,6 +208,15 @@ const Sidebar = () => {
     }
     return parts[0].charAt(0).toUpperCase();
   })();
+
+  // ── Org / subscription info ────────────────────────────────────────────────
+  const orgName = me?.organization_name || storedUser.organization_name || '';
+  const orgLogoUrl = branding?.logo_url || '';
+  const userRole = me?.role || storedUser.role || '';
+
+  // Subscription display
+  const planName = plan?.name || null;
+  const trialActive = isTrialActive ? isTrialActive() : false;
 
   // ── Logout handlers ───────────────────────────────────────────────────────
   const handleLogoutClick = () => setShowLogoutDialog(true);
@@ -493,40 +547,148 @@ const Sidebar = () => {
         </List>
       </Box>
 
+      {/* ── Bottom: Org Context Card + Logout ─────────────────────────────── */}
       <Divider sx={{ borderColor: "grey.800" }} />
-      <Box sx={{ p: isDesktopCollapsed && !forceExpanded ? 1 : 2 }}>
+      <Box sx={{ p: isDesktopCollapsed && !forceExpanded ? 1 : 1.5 }}>
+
+        {/* ─── Expanded: full org + user card ─── */}
         {(!isDesktopCollapsed || forceExpanded) && (
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1.5,
-              mb: 1.5,
-              p: 1.5,
-              borderRadius: 2,
-              bgcolor: "grey.800",
-            }}
-          >
-            <Avatar
+          <>
+            {/* Organisation card */}
+            <Box
+              onClick={(e) => setOrgSwitcherAnchor(e.currentTarget)}
               sx={{
-                width: 36,
-                height: 36,
-                bgcolor: "primary.main",
-                fontSize: "0.9rem",
-                fontWeight: 700,
-                flexShrink: 0,
+                display: "flex",
+                alignItems: "center",
+                gap: 1.25,
+                mb: 1,
+                p: 1.25,
+                borderRadius: 2,
+                bgcolor: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                cursor: "pointer",
+                transition: "all 0.18s ease",
+                "&:hover": {
+                  bgcolor: "rgba(255,255,255,0.09)",
+                  borderColor: "rgba(255,255,255,0.15)",
+                },
               }}
             >
-              {initials}
-            </Avatar>
-            <Box sx={{ minWidth: 0 }}>
-              <Typography variant="body2" fontWeight={600} color="common.white" noWrap>
-                {displayName}
-              </Typography>
+              {/* Org logo or initials */}
+              <Avatar
+                src={orgLogoUrl || undefined}
+                sx={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 1.5,
+                  bgcolor: "primary.dark",
+                  fontSize: "0.7rem",
+                  fontWeight: 800,
+                  flexShrink: 0,
+                  border: "1px solid rgba(255,255,255,0.12)",
+                }}
+              >
+                {!orgLogoUrl && <BusinessIcon sx={{ fontSize: 17, color: "rgba(255,255,255,0.8)" }} />}
+              </Avatar>
+
+              <Box sx={{ minWidth: 0, flex: 1 }}>
+                <Typography
+                  variant="caption"
+                  fontWeight={700}
+                  color="common.white"
+                  noWrap
+                  sx={{ display: "block", lineHeight: 1.3, fontSize: "0.75rem" }}
+                >
+                  {orgName || BRANDING.appName}
+                </Typography>
+
+                {/* Subscription status row */}
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 0.35 }}>
+                  {planName && (
+                    <Typography
+                      variant="caption"
+                      sx={{ fontSize: "0.625rem", color: "rgba(255,255,255,0.45)", lineHeight: 1 }}
+                    >
+                      {planName}
+                    </Typography>
+                  )}
+                  {trialActive && trialDaysRemaining !== null && (
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.25 }}>
+                      {planName && <Typography sx={{ fontSize: "0.5rem", color: "rgba(255,255,255,0.3)" }}>·</Typography>}
+                      <TimerOutlinedIcon sx={{ fontSize: 10, color: trialDaysRemaining <= 3 ? "#f87171" : "rgba(255,255,255,0.4)" }} />
+                      <Typography
+                        variant="caption"
+                        sx={{ fontSize: "0.625rem", color: trialDaysRemaining <= 3 ? "#f87171" : "rgba(255,255,255,0.45)", lineHeight: 1 }}
+                      >
+                        {trialDaysRemaining}d trial
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Box>
+
+              {/* Expand chevron hint */}
+              <ExpandMoreIcon sx={{ fontSize: 14, color: "rgba(255,255,255,0.3)", flexShrink: 0 }} />
             </Box>
-          </Box>
+
+            {/* User info row */}
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1.25,
+                mb: 1.25,
+                px: 0.5,
+              }}
+            >
+              <Avatar
+                sx={{
+                  width: 30,
+                  height: 30,
+                  bgcolor: "primary.main",
+                  fontSize: "0.8rem",
+                  fontWeight: 700,
+                  flexShrink: 0,
+                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                }}
+              >
+                {initials}
+              </Avatar>
+              <Box sx={{ minWidth: 0, flex: 1 }}>
+                <Typography variant="caption" fontWeight={600} color="common.white" noWrap sx={{ display: "block", fontSize: "0.8125rem", lineHeight: 1.3 }}>
+                  {displayName}
+                </Typography>
+                {userRole && (
+                  <Box sx={{ mt: 0.3 }}>
+                    <SidebarRoleChip role={userRole} />
+                  </Box>
+                )}
+              </Box>
+            </Box>
+          </>
         )}
 
+        {/* ─── Collapsed: just avatar ─── */}
+        {isDesktopCollapsed && !forceExpanded && (
+          <Tooltip title={displayName} placement="right" arrow>
+            <Box sx={{ display: "flex", justifyContent: "center", mb: 1 }}>
+              <Avatar
+                sx={{
+                  width: 32,
+                  height: 32,
+                  bgcolor: "primary.main",
+                  fontSize: "0.8rem",
+                  fontWeight: 700,
+                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                }}
+              >
+                {initials}
+              </Avatar>
+            </Box>
+          </Tooltip>
+        )}
+
+        {/* ─── Sign Out ─── */}
         {isDesktopCollapsed && !forceExpanded ? (
           <Tooltip title={t('sidebar.signOut')} placement="right" arrow>
             <IconButton
@@ -648,6 +810,69 @@ const Sidebar = () => {
             </List>
           </>
         )}
+      </Popover>
+
+      {/* ── Org Switcher Popover (Coming Soon) ────────────────────────────────── */}
+      <Popover
+        open={Boolean(orgSwitcherAnchor)}
+        anchorEl={orgSwitcherAnchor}
+        onClose={() => setOrgSwitcherAnchor(null)}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        transformOrigin={{ vertical: "bottom", horizontal: "left" }}
+        PaperProps={{
+          sx: {
+            width: 280,
+            bgcolor: "grey.900",
+            color: "common.white",
+            border: "1px solid",
+            borderColor: "grey.700",
+            boxShadow: 8,
+            borderRadius: 2,
+            overflow: "hidden",
+          },
+        }}
+      >
+        <Box sx={{ px: 2, py: 1.5, borderBottom: "1px solid", borderColor: "grey.800" }}>
+          <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.45)", fontSize: "0.6875rem", fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase" }}>
+            Organisation
+          </Typography>
+        </Box>
+
+        {/* Current org — active */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1.25,
+            px: 2,
+            py: 1.25,
+            bgcolor: "rgba(255,255,255,0.06)",
+          }}
+        >
+          <Avatar
+            src={orgLogoUrl || undefined}
+            sx={{ width: 28, height: 28, borderRadius: 1, bgcolor: "primary.dark", fontSize: "0.65rem", fontWeight: 800 }}
+          >
+            {!orgLogoUrl && <BusinessIcon sx={{ fontSize: 15 }} />}
+          </Avatar>
+          <Typography variant="body2" fontWeight={600} color="common.white" noWrap sx={{ flex: 1, fontSize: "0.8125rem" }}>
+            {orgName || BRANDING.appName}
+          </Typography>
+          <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#4ade80", flexShrink: 0 }} />
+        </Box>
+
+        <Divider sx={{ borderColor: "grey.800" }} />
+
+        {/* Multi-org switcher — coming soon */}
+        <Box sx={{ px: 2, py: 1.25, display: "flex", alignItems: "center", justifyContent: "space-between", opacity: 0.45 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <SwitchAccountIcon sx={{ fontSize: 16, color: "rgba(255,255,255,0.5)" }} />
+            <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.6)", fontSize: "0.75rem" }}>
+              Switch Organisation
+            </Typography>
+          </Box>
+          <Chip label="Soon" size="small" sx={{ height: 17, fontSize: "0.5625rem", bgcolor: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.45)", fontWeight: 600 }} />
+        </Box>
       </Popover>
 
       {/* ── Logout Confirmation Dialog ──────────────────────────────────────── */}

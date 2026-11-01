@@ -14,6 +14,7 @@ import { KeyboardShortcutsProvider } from './context/KeyboardShortcutsContext';
 import { DashboardFilterProvider } from './context/DashboardFilterContext';
 import { MeProvider } from './context/MeContext';
 import { OrgGstProvider } from './context/OrgGstContext';
+import { SubscriptionProvider } from './context/SubscriptionContext';
 import axios from 'axios';
 import authService from './services/authService';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -169,6 +170,7 @@ root.render(
                 <InvoicePreferencesProvider>
                   <OrgGstProvider>
                     <PermissionProvider>
+                      <SubscriptionProvider>
                       <NotificationProvider>
                         <KeyboardShortcutsProvider>
                           <DashboardFilterProvider>
@@ -176,6 +178,7 @@ root.render(
                           </DashboardFilterProvider>
                         </KeyboardShortcutsProvider>
                       </NotificationProvider>
+                      </SubscriptionProvider>
                     </PermissionProvider>
                   </OrgGstProvider>
                 </InvoicePreferencesProvider>

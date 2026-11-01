@@ -97,16 +97,17 @@ export const AuthProvider = ({ children }) => {
     /** Convenience role helpers — safe to call even if user is null */
     const userRole = user?.role ?? null;
     const isAdmin = userRole === 'Admin';
-    const isManager = userRole === 'Manager' || isAdmin;
-    const canApprove = ['Admin', 'Manager', 'Accountant'].includes(userRole);
+    // CPB-007: workspace drives post-login routing
+    const workspace = user?.workspace ?? 'financial';
+    const isCustomerWorkspace = workspace === 'portal';
 
     const value = {
         user,
         isAuthenticated: !!user,
         userRole,
         isAdmin,
-        isManager,
-        canApprove,
+        workspace,
+        isCustomerWorkspace,
         login,
         demoLogin,
         logout,

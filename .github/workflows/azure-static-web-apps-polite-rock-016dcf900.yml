@@ -65,6 +65,9 @@ jobs:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_POLITE_ROCK_016DCF900 }}
           repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
           action: "upload"
+          # PR previews share one named staging slot, so each PR deploy replaces the previous one
+          # instead of creating a new environment and hitting the SWA staging-environment limit.
+          deployment_environment: ${{ github.event_name == 'pull_request' && 'preview' || '' }}
           ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
           # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
           app_location: "/" # App source code path

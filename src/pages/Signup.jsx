@@ -628,7 +628,7 @@ const SignupPage = () => {
             <motion.div variants={fadeInUp}>
               <Box sx={{ mt: 4, textAlign: 'center' }}>
                 <Typography variant="body2" sx={{ opacity: 0.7, mb: 2 }}>
-                  ✓ Enterprise-oriented security foundation  ✓ No credit card required  ✓ 14-day free trial
+                  ✓ Enterprise-oriented security foundation  ✓ 30-day free trial · no card needed
                 </Typography>
               </Box>
             </motion.div>

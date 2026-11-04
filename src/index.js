@@ -20,6 +20,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HelmetProvider } from 'react-helmet-async';
 import './config/firebase'; // Initialize Firebase
 import { API_BASE_URL, IS_PRODUCTION } from './config/environment';
+import { PLAN_LIMIT_EVENT } from './components/PlanLimitBanner';
 
 // ── Production API guard ──────────────────────────────────────────────────────
 // Detect if a production deployment is accidentally using a local API URL.
@@ -151,6 +152,11 @@ axios.interceptors.response.use(
       } finally {
         _isRefreshing = false;
       }
+    }
+
+    // 402 = plan limit (trial ended, seat limit, feature not in plan): show the "Choose a plan" banner.
+    if (error.response?.status === 402) {
+      window.dispatchEvent(new CustomEvent(PLAN_LIMIT_EVENT, { detail: error.response.data }));
     }
 
     return Promise.reject(error);

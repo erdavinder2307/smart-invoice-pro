@@ -19,6 +19,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import BusinessIcon from "@mui/icons-material/Business";
 import HistoryIcon from "@mui/icons-material/History";
 import ExtensionIcon from "@mui/icons-material/Extension";
+import CreditCardIcon from "@mui/icons-material/CreditCard";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
@@ -111,6 +112,7 @@ export const NAV_CONFIG = {
       { id: "branding",             label: "Branding",             labelKey: "settingsNav.branding",           icon: <BrushIcon sx={{ fontSize: 20 }} />,              path: "/settings/branding",             permission: { module: "settings",        action: "view" } },
       { id: "invoice-preferences",  label: "Invoice Preferences",  labelKey: "settingsNav.invoicePreferences", icon: <DescriptionIcon sx={{ fontSize: 20 }} />,        path: "/settings/invoice-preferences",  permission: { module: "settings",        action: "view" } },
       { id: "taxes",                label: "Taxes",                labelKey: "settingsNav.taxes",              icon: <ReceiptLongIcon sx={{ fontSize: 20 }} />,        path: "/settings/taxes",                permission: { module: "settings",        action: "view" } },
+      { id: "billing",              label: "Billing",              labelKey: "settingsNav.billing",            icon: <CreditCardIcon sx={{ fontSize: 20 }} />,         path: "/settings/billing",              permission: { module: "settings",        action: "view" } },
       { id: "users",                label: "User Management",      labelKey: "settingsNav.userManagement",     icon: <PeopleIcon sx={{ fontSize: 20 }} />,             path: "/settings/users",                permission: { module: "user_management", action: "view" } },
       { id: "roles",                label: "Roles",                labelKey: "settingsNav.roles",              icon: <AdminPanelSettingsIcon sx={{ fontSize: 20 }} />, path: "/settings/roles",                permission: { module: "roles",           action: "view" } },
       { id: "automation",           label: "Automation",           labelKey: "settingsNav.automation",         icon: <NotificationsActiveIcon sx={{ fontSize: 20 }} />, path: "/settings/automation",          permission: { module: "automation",      action: "view" } },

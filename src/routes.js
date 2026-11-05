@@ -63,6 +63,7 @@ import InvoicePreferences from './pages/InvoicePreferences';
 import TaxSettings from './pages/TaxSettings';
 import AutomationSettings from './pages/AutomationSettings';
 import IntegrationSettings from './pages/IntegrationSettings';
+import BillingSettings from './pages/BillingSettings';
 import InventorySettings from './pages/InventorySettings';
 import NotificationsPage from './pages/NotificationsPage';
 import AuditLogPage from './pages/AuditLogPage';
@@ -249,6 +250,7 @@ const AppRoutes = () => {
             <Route path="/settings/invoice-preferences" element={<DemoRouteBlock><InvoicePreferences /></DemoRouteBlock>} />
             <Route path="/settings/taxes" element={<DemoRouteBlock><TaxSettings /></DemoRouteBlock>} />
             <Route path="/settings/inventory" element={<DemoRouteBlock><InventorySettings /></DemoRouteBlock>} />
+            <Route path="/settings/billing" element={<DemoRouteBlock><BillingSettings /></DemoRouteBlock>} />
           </Route>
           <Route element={<PermissionRoute module="user_management" action="view" />}>
             <Route path="/settings/users" element={<DemoRouteBlock><UserManagement /></DemoRouteBlock>} />

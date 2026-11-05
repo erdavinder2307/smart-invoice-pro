@@ -4,9 +4,6 @@
 export const GST_RATE = 0.18;
 export const TRIAL_DAYS = 30;
 
-// The "Upgrade" button stays hidden until online checkout ships.
-export const CHECKOUT_ENABLED = false;
-
 export const PLANS = [
   {
     code: 'starter',

@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import Pricing from '../../pages/Pricing';
+import { getBillingPlans } from '../../services/billingService';
 
 const mockNavigate = jest.fn();
 
@@ -13,6 +14,7 @@ jest.mock('react-router-dom', () => ({
 }));
 jest.mock('../../components/Layout/Header', () => () => <div />);
 jest.mock('../../components/Layout/Footer', () => () => <div />);
+jest.mock('../../services/billingService', () => ({ getBillingPlans: jest.fn() }));
 
 const renderPage = () =>
   render(
@@ -24,7 +26,10 @@ const renderPage = () =>
   );
 
 describe('Pricing', () => {
-  beforeEach(() => mockNavigate.mockClear());
+  beforeEach(() => {
+    mockNavigate.mockClear();
+    getBillingPlans.mockResolvedValue({ checkout_enabled: false });
+  });
 
   it('shows monthly prices with the GST-inclusive amount', () => {
     renderPage();
@@ -48,11 +53,27 @@ describe('Pricing', () => {
     expect(within(growth).getByText('Monthly billing only')).toBeInTheDocument();
   });
 
-  it('sends "Start free trial" to sign-up and hides Upgrade until checkout ships', async () => {
+  it('sends "Start free trial" to sign-up and hides Upgrade while checkout is off', async () => {
     renderPage();
     const starter = screen.getByTestId('plan-starter');
     await userEvent.click(within(starter).getByRole('button', { name: 'Start free trial' }));
     expect(mockNavigate).toHaveBeenCalledWith('/signup');
+    expect(getBillingPlans).toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Upgrade' })).not.toBeInTheDocument();
+  });
+
+  it('shows Upgrade when the API says checkout is on and sends it to the billing page', async () => {
+    getBillingPlans.mockResolvedValue({ checkout_enabled: true });
+    renderPage();
+    const starter = screen.getByTestId('plan-starter');
+    await userEvent.click(await within(starter).findByRole('button', { name: 'Upgrade' }));
+    expect(mockNavigate).toHaveBeenCalledWith('/settings/billing');
+  });
+
+  it('keeps Upgrade hidden when the plans request fails', async () => {
+    getBillingPlans.mockRejectedValue(new Error('offline'));
+    renderPage();
+    await screen.findByTestId('plan-starter');
     expect(screen.queryByRole('button', { name: 'Upgrade' })).not.toBeInTheDocument();
   });
 });

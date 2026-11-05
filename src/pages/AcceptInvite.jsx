@@ -40,7 +40,7 @@ const AcceptInvite = () => {
 
   if (username !== null) {
     return (
-      <AuthCardLayout seoTitle="Password set | Solidev Books" canonicalPath="/accept-invite" title="You're all set">
+      <AuthCardLayout seoTitle="Password set" canonicalPath="/accept-invite" title="You're all set">
         <Alert severity="success" sx={{ mb: 3 }}>
           Your password is set.{username ? ` Sign in with the username ${username}.` : ' You can sign in now.'}
         </Alert>
@@ -52,7 +52,7 @@ const AcceptInvite = () => {
   }
 
   return (
-    <AuthCardLayout seoTitle="Set your password | Solidev Books" canonicalPath="/accept-invite" title="Set your password">
+    <AuthCardLayout seoTitle="Set your password" canonicalPath="/accept-invite" title="Set your password">
       <Typography sx={{ mb: 2, color: 'text.secondary' }}>
         You were invited to Solidev Books. Choose a password to finish setting up your account.
       </Typography>

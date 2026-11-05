@@ -43,7 +43,7 @@ const VerifyEmail = () => {
   };
 
   return (
-    <AuthCardLayout seoTitle="Verify your email | Solidev Books" canonicalPath="/verify-email" title="Verify your email">
+    <AuthCardLayout seoTitle="Verify your email" canonicalPath="/verify-email" title="Verify your email">
       {status === 'verifying' && (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <CircularProgress size={24} />

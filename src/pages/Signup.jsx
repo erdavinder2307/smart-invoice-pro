@@ -122,6 +122,7 @@ const SignupPage = () => {
     try {
       await register({
         username: formData.username,
+        email: formData.email.trim(),
         password: formData.password
       });
       // Track signup event
@@ -225,7 +226,7 @@ const SignupPage = () => {
                   mx: 'auto'
                 }}
               >
-                Welcome to Solidev Books! Your account has been created successfully. You can now sign in with your credentials.
+                Welcome to Solidev Books! Your account has been created. We sent a link to {formData.email.trim()} — open it to verify your email before you create invoices. You can sign in now.
               </Typography>
 
               <Typography

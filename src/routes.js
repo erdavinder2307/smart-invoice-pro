@@ -74,6 +74,7 @@ import AdminRoutes from './admin/routes/AdminRoutes';
 import AppLayout from './components/Layout/AppLayout';
 import PermissionRoute from './components/PermissionRoute';
 import Forbidden from './pages/Forbidden';
+import NotFound from './pages/NotFound';
 import RouteSeoManager from './seo/RouteSeoManager';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
@@ -301,6 +302,9 @@ const AppRoutes = () => {
 
         {/* Super Admin Module — fully isolated */}
         <Route path="/admin/*" element={<AdminRoutes />} />
+
+        {/* Any other URL — "Page not found" instead of a blank page */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
   );

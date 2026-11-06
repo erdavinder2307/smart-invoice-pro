@@ -89,7 +89,7 @@ const TopUtilityBar = ({ searchPlaceholder = "", onSearchChange, onMenuClick }) 
     { icon: <TuneIcon fontSize="small" />,             label: "Preferences",   action: () => navigate("/settings/preferences") },
     { icon: <LockOutlinedIcon fontSize="small" />,     label: "Security",      action: () => navigate("/settings/security") },
     ...(isDemoHost() ? [{ icon: <PlayCircleOutline fontSize="small" />, label: "Start Guided Tour", action: () => startTour() }] : []),
-    { icon: <HelpOutlineIcon fontSize="small" />,      label: "Help Center",   action: () => window.open("https://solidevbooks.com/support", "_blank") },
+    { icon: <HelpOutlineIcon fontSize="small" />,      label: "Help Center",   action: () => window.open("https://www.solidevbooks.com/support", "_blank") },
   ];
 
   return (

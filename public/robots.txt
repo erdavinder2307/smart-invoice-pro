@@ -26,4 +26,4 @@ Disallow: /admin
 Disallow: /customer
 Disallow: /portal
 
-Sitemap: https://solidevbooks.com/sitemap.xml
+Sitemap: https://www.solidevbooks.com/sitemap.xml

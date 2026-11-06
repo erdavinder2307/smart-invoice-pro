@@ -1,4 +1,4 @@
-const rawSiteUrl = process.env.REACT_APP_SITE_URL || 'https://solidevbooks.com';
+const rawSiteUrl = process.env.REACT_APP_SITE_URL || 'https://www.solidevbooks.com';
 
 export const SITE_CONFIG = {
   siteName: 'Solidev Books',

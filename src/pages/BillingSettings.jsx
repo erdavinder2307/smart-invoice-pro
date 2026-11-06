@@ -12,6 +12,11 @@ import {
   DialogContentText,
   DialogTitle,
   Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
@@ -19,7 +24,12 @@ import {
 import MainLayout from '../components/Layout/MainLayout';
 import { C } from '../components/common/formStyles';
 import { PLANS, TRIAL_DAYS, formatInr, gstPercentLabel, priceWithGst } from '../config/plans';
-import { cancelSubscription, createSubscription, getSubscription } from '../services/billingService';
+import {
+  cancelSubscription,
+  createSubscription,
+  downloadTaxInvoicePdf,
+  getSubscription,
+} from '../services/billingService';
 import { openSubscriptionCheckout } from '../utils/razorpayCheckout';
 
 // After Checkout closes, the plan changes only when Razorpay's webhook arrives; wait this long for it.
@@ -42,6 +52,11 @@ const formatDate = (iso) => {
     ? null
     : date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 };
+
+const formatInvoiceAmount = (amount) =>
+  typeof amount === 'number'
+    ? `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : '—';
 
 const planName = (code) => {
   if (!code || code === 'trial') return 'Free trial';
@@ -81,6 +96,95 @@ const CurrentPlan = ({ subscription }) => {
         )}
       </Box>
       {detail && <Typography sx={{ fontSize: '0.875rem', color: C.label, mt: 1 }}>{detail}</Typography>}
+    </Paper>
+  );
+};
+
+const invoiceTableSx = {
+  '& thead': { display: { xs: 'none', sm: 'table-header-group' } },
+  '& tbody tr': {
+    display: { xs: 'grid', sm: 'table-row' },
+    gridTemplateColumns: '1fr auto',
+    columnGap: 2,
+    py: { xs: 1.5, sm: 0 },
+    borderBottom: { xs: `1px solid ${C.border}`, sm: 'none' }
+  },
+  '& tbody td': {
+    display: { xs: 'block', sm: 'table-cell' },
+    borderBottom: { xs: 'none' },
+    px: { xs: 0, sm: 2 },
+    py: { xs: 0.25, sm: 0.75 }
+  },
+  '& tbody td.invoice-main, & tbody td.invoice-action': { gridColumn: { xs: '1 / -1', sm: 'auto' } },
+  '& tbody td.invoice-action': { textAlign: { xs: 'left', sm: 'right' } },
+  '& tbody td.invoice-action .MuiButton-root': { ml: { xs: -1, sm: 0 } }
+};
+
+const TaxInvoices = ({ invoices, onError }) => {
+  const [downloading, setDownloading] = useState(null);
+
+  const handleDownload = async (invoice) => {
+    setDownloading(invoice.id);
+    try {
+      await downloadTaxInvoicePdf(invoice);
+    } catch {
+      onError('Could not download the invoice. Please try again.');
+    } finally {
+      setDownloading(null);
+    }
+  };
+
+  return (
+    <Paper elevation={0} sx={{ border: `1px solid ${C.border}`, borderRadius: '4px', p: 3, mb: 3 }}>
+      <Typography sx={{ fontSize: '1rem', fontWeight: 600, color: C.label, mb: 1 }}>Invoices</Typography>
+      {invoices.length === 0 ? (
+        <Typography sx={{ fontSize: '0.875rem', color: C.hint }}>
+          No invoices yet. A GST tax invoice appears here after each payment.
+        </Typography>
+      ) : (
+        <Box sx={{ overflowX: 'auto' }}>
+          {/* Below sm each row stacks (number, then date and amount, then the download button) so nothing hides in a sideways scroll. */}
+          <Table size="small" aria-label="Tax invoices" sx={invoiceTableSx}>
+            <TableHead>
+              <TableRow>
+                <TableCell>Invoice</TableCell>
+                <TableCell>Date</TableCell>
+                <TableCell align="right">Amount</TableCell>
+                <TableCell align="right" />
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {invoices.map((invoice) => (
+                <TableRow key={invoice.id}>
+                  <TableCell className="invoice-main">
+                    <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: C.label, whiteSpace: 'nowrap' }}>
+                      {invoice.number}
+                    </Typography>
+                    {invoice.description && (
+                      <Typography sx={{ fontSize: '0.75rem', color: C.hint }}>{invoice.description}</Typography>
+                    )}
+                  </TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatDate(invoice.issue_date) || '—'}</TableCell>
+                  <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                    {formatInvoiceAmount(invoice.total)}
+                  </TableCell>
+                  <TableCell align="right" className="invoice-action">
+                    <Button
+                      size="small"
+                      sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
+                      disabled={downloading === invoice.id}
+                      onClick={() => handleDownload(invoice)}
+                      aria-label={`Download invoice ${invoice.number} as PDF`}
+                    >
+                      {downloading === invoice.id ? 'Downloading…' : 'Download PDF'}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Box>
+      )}
     </Paper>
   );
 };
@@ -305,6 +409,11 @@ export default function BillingSettings() {
                 issued for every payment. To change plans, cancel first; your plan keeps working until the end of the
                 paid period.
               </Typography>
+
+              <TaxInvoices
+                invoices={subscription.invoices || []}
+                onError={(text) => setNotice({ severity: 'error', text })}
+              />
 
               {canCancel && (
                 <Button

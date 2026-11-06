@@ -76,6 +76,8 @@ import PermissionRoute from './components/PermissionRoute';
 import Forbidden from './pages/Forbidden';
 import RouteSeoManager from './seo/RouteSeoManager';
 import Privacy from './pages/Privacy';
+import Refund from './pages/Refund';
+import Support from './pages/Support';
 import Terms from './pages/Terms';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
@@ -289,9 +291,10 @@ const AppRoutes = () => {
 
         {/* Coming Soon Pages */}
         <Route path="/api-docs" element={<ComingSoon />} />
-        <Route path="/support" element={<ComingSoon />} />
+        <Route path="/support" element={<Support />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
+        <Route path="/refund" element={<Refund />} />
         <Route path="/cookies" element={<ComingSoon />} />
         <Route path="/pricing" element={<Pricing />} />
 

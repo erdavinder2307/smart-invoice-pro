@@ -5,6 +5,7 @@ import BillingSettings, { ACTIVATION_WAIT_MS } from '../../pages/BillingSettings
 import {
   cancelSubscription,
   createSubscription,
+  downloadTaxInvoicePdf,
   getSubscription,
 } from '../../services/billingService';
 import { openSubscriptionCheckout } from '../../utils/razorpayCheckout';
@@ -17,6 +18,7 @@ jest.mock('../../services/billingService', () => ({
   getSubscription: jest.fn(),
   createSubscription: jest.fn(),
   cancelSubscription: jest.fn(),
+  downloadTaxInvoicePdf: jest.fn(),
 }));
 jest.mock('../../utils/razorpayCheckout', () => ({
   openSubscriptionCheckout: jest.fn(),
@@ -133,5 +135,52 @@ describe('BillingSettings', () => {
 
     expect(cancelSubscription).toHaveBeenCalled();
     expect(await screen.findByText(/keeps working until 10 Dec 2026/)).toBeInTheDocument();
+  });
+
+  describe('tax invoices', () => {
+    const invoice = {
+      id: 'tinv_pay_1',
+      number: 'SB/2026-27/0001',
+      issue_date: '2026-10-11',
+      description: 'Starter plan, monthly',
+      total: 707.82,
+      currency: 'INR',
+    };
+    const downloadButton = () =>
+      screen.findByRole('button', { name: 'Download invoice SB/2026-27/0001 as PDF' });
+
+    it('says when there are no invoices yet', async () => {
+      getSubscription.mockResolvedValue(trial);
+      render(<BillingSettings />);
+      expect(await screen.findByText(/No invoices yet/)).toBeInTheDocument();
+    });
+
+    it('lists each invoice with its number, date and amount incl. GST', async () => {
+      getSubscription.mockResolvedValue({ ...activeStarter, invoices: [invoice] });
+      render(<BillingSettings />);
+      const table = await screen.findByRole('table', { name: 'Tax invoices' });
+      expect(within(table).getByText('SB/2026-27/0001')).toBeInTheDocument();
+      expect(within(table).getByText('11 Oct 2026')).toBeInTheDocument();
+      expect(within(table).getByText('₹707.82')).toBeInTheDocument();
+    });
+
+    it('downloads the PDF of the chosen invoice', async () => {
+      getSubscription.mockResolvedValue({ ...activeStarter, invoices: [invoice] });
+      downloadTaxInvoicePdf.mockResolvedValue();
+      render(<BillingSettings />);
+      const button = await downloadButton();
+      await userEvent.click(button);
+      expect(downloadTaxInvoicePdf).toHaveBeenCalledWith(invoice);
+      await waitFor(() => expect(button).toBeEnabled());
+    });
+
+    it('shows an error when the download fails', async () => {
+      getSubscription.mockResolvedValue({ ...activeStarter, invoices: [invoice] });
+      downloadTaxInvoicePdf.mockRejectedValue(new Error('network'));
+      render(<BillingSettings />);
+      await userEvent.click(await downloadButton());
+      expect(await screen.findByText('Could not download the invoice. Please try again.')).toBeInTheDocument();
+      expect(await downloadButton()).toBeEnabled();
+    });
   });
 });

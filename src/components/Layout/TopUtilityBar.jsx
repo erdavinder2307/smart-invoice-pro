@@ -4,6 +4,7 @@ import {
   Select, MenuItem, Popover, Divider, Button, List, ListItem,
   ListItemIcon, ListItemText, ListItemButton, Chip, CircularProgress,
   Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
+  useMediaQuery, useTheme,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import MenuIcon from "@mui/icons-material/Menu";
@@ -59,6 +60,10 @@ const TopUtilityBar = ({ searchPlaceholder = "", onSearchChange, onMenuClick }) 
   const canAccessSettings = permIsAdmin || can('settings', 'view') || can('user_management', 'view') || can('roles', 'view');
   const { openShortcutsModal } = useKeyboardShortcutsContext();
   const navigate = useNavigate();
+  const theme = useTheme();
+  // Phones (< 600 px): drop the language select (also in My Profile) and the keyboard-shortcut
+  // button so the account avatar stays inside the screen.
+  const isPhone = useMediaQuery(theme.breakpoints.down("sm"));
 
   const [notifAnchor, setNotifAnchor] = useState(null);
   const [userMenuAnchor, setUserMenuAnchor] = useState(null);
@@ -95,7 +100,7 @@ const TopUtilityBar = ({ searchPlaceholder = "", onSearchChange, onMenuClick }) 
   return (
     <Box sx={{ height: 56, borderBottom: "1px solid", borderColor: "divider", bgcolor: "background.paper", px: { xs: 1.5, md: 2.5 }, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2 }}>
       {/* Left */}
-      <Box sx={{ display: "flex", alignItems: "center", width: "100%", maxWidth: 560, gap: 1 }}>
+      <Box sx={{ display: "flex", alignItems: "center", width: "100%", maxWidth: 560, minWidth: 0, gap: 1 }}>
         <IconButton color="inherit" onClick={safeClick(onMenuClick)} sx={{ display: { xs: "flex", md: "none" } }} aria-label={t("topBar.openNavigation")}>
           <MenuIcon fontSize="small" />
         </IconButton>
@@ -104,12 +109,14 @@ const TopUtilityBar = ({ searchPlaceholder = "", onSearchChange, onMenuClick }) 
 
       {/* Right */}
       <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexShrink: 0 }}>
-        <FormControl size="small" sx={{ minWidth: 92 }}>
-          <Select value={activeLanguage} onChange={handleLanguageChange} sx={{ fontSize: "0.75rem", height: 30, "& .MuiSelect-select": { py: 0.5, pr: 3 } }} inputProps={{ "aria-label": t("common.language") }}>
-            <MenuItem value="en">{t("common.english")}</MenuItem>
-            <MenuItem value="hi">{t("common.hindi")}</MenuItem>
-          </Select>
-        </FormControl>
+        {!isPhone && (
+          <FormControl size="small" sx={{ minWidth: 92 }}>
+            <Select value={activeLanguage} onChange={handleLanguageChange} sx={{ fontSize: "0.75rem", height: 30, "& .MuiSelect-select": { py: 0.5, pr: 3 } }} inputProps={{ "aria-label": t("common.language") }}>
+              <MenuItem value="en">{t("common.english")}</MenuItem>
+              <MenuItem value="hi">{t("common.hindi")}</MenuItem>
+            </Select>
+          </FormControl>
+        )}
 
         <Tooltip title={t("common.notifications")}>
           <IconButton color="inherit" onClick={(e) => setNotifAnchor(e.currentTarget)}>
@@ -120,11 +127,13 @@ const TopUtilityBar = ({ searchPlaceholder = "", onSearchChange, onMenuClick }) 
         </Tooltip>
         <NotificationDropdown anchorEl={notifAnchor} onClose={() => setNotifAnchor(null)} />
 
-        <Tooltip title={t("topBar.keyboardShortcuts", { combo: isMac ? "⌘/" : "Ctrl+/" })}>
-          <IconButton color="inherit" onClick={safeClick(openShortcutsModal)} aria-label="keyboard shortcuts">
-            <KeyboardIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        {!isPhone && (
+          <Tooltip title={t("topBar.keyboardShortcuts", { combo: isMac ? "⌘/" : "Ctrl+/" })}>
+            <IconButton color="inherit" onClick={safeClick(openShortcutsModal)} aria-label="keyboard shortcuts">
+              <KeyboardIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
 
         {canAccessSettings && (
           <Tooltip title={t("common.settings")}>

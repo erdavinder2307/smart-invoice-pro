@@ -154,6 +154,10 @@ axios.interceptors.response.use(
       }
     }
 
+    if (error.response?.status === 403 && error.response.data?.code === 'EMAIL_NOT_VERIFIED') {
+      window.dispatchEvent(new CustomEvent('auth:email-not-verified'));
+    }
+
     // 402 = plan limit (trial ended, seat limit, feature not in plan): show the "Choose a plan" banner.
     if (error.response?.status === 402) {
       window.dispatchEvent(new CustomEvent(PLAN_LIMIT_EVENT, { detail: error.response.data }));

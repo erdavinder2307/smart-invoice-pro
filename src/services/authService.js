@@ -34,6 +34,21 @@ const register = async (credentials) => {
   return response.data;
 };
 
+const verifyEmail = async (token) => {
+  const response = await axios.post(`${API_URL}/auth/verify-email`, { token }, { _skipAuthRetry: true });
+  return response.data;
+};
+
+const resendVerification = async () => {
+  const response = await axios.post(`${API_URL}/auth/resend-verification`);
+  return response.data;
+};
+
+const acceptInvite = async (token, password) => {
+  const response = await axios.post(`${API_URL}/auth/accept-invite`, { token, password }, { _skipAuthRetry: true });
+  return response.data;
+};
+
 const clearLocalSession = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('refresh_token');
@@ -85,6 +100,9 @@ const authService = {
   login,
   demoLogin,
   register,
+  verifyEmail,
+  resendVerification,
+  acceptInvite,
   logout,
   clearLocalSession,
   refreshAccessToken,

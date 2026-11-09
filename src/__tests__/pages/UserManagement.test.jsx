@@ -5,12 +5,14 @@ import {
   getSettingsUsers,
   getRoles,
   inviteUser,
+  resendInvite,
 } from '../../services/rolesService';
 
 jest.mock('../../services/rolesService', () => ({
   getSettingsUsers: jest.fn(),
   getRoles: jest.fn(),
   inviteUser: jest.fn(),
+  resendInvite: jest.fn(),
   updateSettingsUser: jest.fn(),
   deactivateUser: jest.fn(),
 }));
@@ -81,10 +83,40 @@ describe('UserManagement', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Invite User' }));
     fireEvent.change(screen.getByLabelText(/Username/i), { target: { value: 'newuser' } });
-    fireEvent.change(screen.getByLabelText(/Password/i), { target: { value: 'password123' } });
     fireEvent.click(screen.getByRole('button', { name: 'Invite' }));
 
     expect(await screen.findByText('Email is required.')).toBeInTheDocument();
     expect(inviteUser).not.toHaveBeenCalled();
+  });
+
+  it('invites without a password and says a link was sent', async () => {
+    getSettingsUsers.mockResolvedValue([]);
+    inviteUser.mockResolvedValue({ id: 'u2', invite_pending: true, invite_email_sent: true });
+
+    renderWithProviders(<UserManagement />, { authValue: adminAuth });
+    fireEvent.click(await screen.findByRole('button', { name: 'Invite User' }));
+
+    expect(screen.queryByLabelText(/Password/i)).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'new@example.com' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Invite' }));
+
+    expect(await screen.findByText(/Invite sent to new@example.com/i)).toBeInTheDocument();
+    expect(inviteUser).toHaveBeenCalledWith(expect.not.objectContaining({ password: expect.anything() }));
+    expect(inviteUser.mock.calls[0][0]).toMatchObject({ email: 'new@example.com', username: 'new' });
+  });
+
+  it('shows pending invites and resends the link', async () => {
+    getSettingsUsers.mockResolvedValue([
+      { id: 'u3', name: 'Pending Person', email: 'p@example.com', username: 'p', role: 'Sales', is_active: true, invite_pending: true },
+    ]);
+    resendInvite.mockResolvedValue({ id: 'u3', invite_pending: true, invite_email_sent: true });
+
+    renderWithProviders(<UserManagement />, { authValue: adminAuth });
+
+    expect(await screen.findByText('Invite pending')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Resend invite' }));
+
+    await waitFor(() => expect(resendInvite).toHaveBeenCalledWith('u3'));
+    expect(await screen.findByText(/New invite sent to p@example.com/i)).toBeInTheDocument();
   });
 });

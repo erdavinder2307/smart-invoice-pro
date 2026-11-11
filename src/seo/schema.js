@@ -1,4 +1,7 @@
 import { SITE_CONFIG, toAbsoluteUrl } from './siteConfig';
+import { PLANS } from '../config/plans';
+
+const monthlyPrices = PLANS.map((plan) => plan.prices.monthly);
 
 export const getOrganizationSchema = () => ({
   '@context': 'https://schema.org',
@@ -34,9 +37,11 @@ export const getSoftwareApplicationSchema = () => ({
   operatingSystem: 'Web',
   description: 'Workflow-driven financial operating system for quote-to-cash, automation, and operational visibility.',
   offers: {
-    '@type': 'Offer',
-    price: '0',
-    priceCurrency: 'USD'
+    '@type': 'AggregateOffer',
+    priceCurrency: 'INR',
+    lowPrice: String(Math.min(...monthlyPrices)),
+    highPrice: String(Math.max(...monthlyPrices)),
+    offerCount: String(PLANS.length)
   },
   url: SITE_CONFIG.siteUrl
 });

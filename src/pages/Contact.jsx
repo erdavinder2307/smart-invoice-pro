@@ -589,7 +589,7 @@ const Contact = () => {
                           fullWidth
                           name="operationsType"
                           label="Company Size / Operations Type"
-                          placeholder="e.g. SME, Mid-market, Multi-entity"
+                          placeholder="e.g. SME, Mid-market, Agency"
                           value={formData.operationsType}
                           onChange={handleInputChange}
                           required

@@ -1,8 +1,6 @@
 import { SITE_CONFIG, toAbsoluteUrl } from './siteConfig';
 import { PLANS } from '../config/plans';
 
-const monthlyPrices = PLANS.map((plan) => plan.prices.monthly);
-
 export const getOrganizationSchema = () => ({
   '@context': 'https://schema.org',
   '@type': 'Organization',
@@ -29,22 +27,30 @@ export const getWebSiteSchema = () => ({
   description: SITE_CONFIG.brandTitle
 });
 
-export const getSoftwareApplicationSchema = () => ({
-  '@context': 'https://schema.org',
-  '@type': 'SoftwareApplication',
-  name: SITE_CONFIG.siteName,
-  applicationCategory: 'BusinessApplication',
-  operatingSystem: 'Web',
-  description: 'Workflow-driven financial operating system for quote-to-cash, automation, and operational visibility.',
-  offers: {
-    '@type': 'AggregateOffer',
-    priceCurrency: 'INR',
-    lowPrice: String(Math.min(...monthlyPrices)),
-    highPrice: String(Math.max(...monthlyPrices)),
-    offerCount: String(PLANS.length)
-  },
-  url: SITE_CONFIG.siteUrl
-});
+const getMonthlyPrices = () =>
+  PLANS.map((plan) => plan?.prices?.monthly).filter((price) => Number.isFinite(price));
+
+export const getSoftwareApplicationSchema = () => {
+  const monthlyPrices = getMonthlyPrices();
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: SITE_CONFIG.siteName,
+    applicationCategory: 'BusinessApplication',
+    operatingSystem: 'Web',
+    description: 'Workflow-driven financial operating system for quote-to-cash, automation, and operational visibility.',
+    ...(monthlyPrices.length > 0 && {
+      offers: {
+        '@type': 'AggregateOffer',
+        priceCurrency: 'INR',
+        lowPrice: String(Math.min(...monthlyPrices)),
+        highPrice: String(Math.max(...monthlyPrices)),
+        offerCount: monthlyPrices.length
+      }
+    }),
+    url: SITE_CONFIG.siteUrl
+  };
+};
 
 export const getWebPageSchema = ({
   path,

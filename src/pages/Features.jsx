@@ -320,7 +320,7 @@ const Features = () => {
         title="Features"
         description={pageDescription}
         canonicalPath="/features"
-        keywords="quote to cash workflow, reconciliation automation, finance dashboard software, enterprise invoicing features"
+        keywords="quote to cash workflow, reconciliation automation, finance dashboard software, invoicing features"
         jsonLd={featureSchemas}
       />
       <Header />
@@ -652,7 +652,7 @@ const Features = () => {
               <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={motionIn}>
                 <Chip icon={<GppGood sx={{ color: '#2563eb !important' }} />} label="Infrastructure and Security" variant="outlined" sx={eyebrowChipSx} />
                 <Typography sx={{ fontWeight: 800, fontSize: { xs: '1.7rem', md: '2.1rem' }, lineHeight: 1.18, mt: 2, mb: 1.8, color: '#0f172a', letterSpacing: '-0.02em' }}>
-                  Built on an Enterprise-Oriented Financial Infrastructure Foundation
+                  Built on a Secure Cloud Foundation
                 </Typography>
                 <Typography sx={{ color: '#475569', lineHeight: 1.65, fontSize: '1rem', mb: 3 }}>
                   Solidev Books provides the secure technical foundation required to run connected financial workflows with confidence.
@@ -663,7 +663,7 @@ const Features = () => {
                     {[
                       'Role-scoped access and policy boundaries',
                       'Audit logs for operational traceability',
-                      'API security and tenant-aware isolation',
+                      'Isolated account per business',
                       'Cloud resilience with synchronized state'
                     ].map((line) => (
                       <Stack key={line} direction="row" spacing={1.2} alignItems="center">

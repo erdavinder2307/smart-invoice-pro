@@ -30,9 +30,6 @@ import {
   Timeline,
   TrackChanges,
   AccountTree,
-  Api,
-  Lan,
-  Shield,
   AssignmentTurnedIn,
   NotificationsActive,
   FactCheck,
@@ -136,7 +133,7 @@ const metricChipSx = {
 const Features = () => {
   const navigate = useNavigate();
   const [expandedFaq, setExpandedFaq] = useState(false);
-  const pageDescription = 'Explore workflow-driven features for quote-to-cash automation, reconciliation, approvals, operational dashboards, and multi-entity finance execution.';
+  const pageDescription = 'Explore workflow-driven features for quote-to-cash automation, reconciliation, approvals, and operational dashboards.';
 
   const quoteToCashSteps = [
     {
@@ -234,21 +231,6 @@ const Features = () => {
       text: 'Consistent state across devices and teams with resilient backup and restore controls.'
     },
     {
-      icon: <Api sx={{ color: '#2563eb' }} />,
-      title: 'API first connectivity',
-      text: 'Integrate external systems through secure APIs and webhook style event interfaces.'
-    },
-    {
-      icon: <Lan sx={{ color: '#2563eb' }} />,
-      title: 'Multi entity architecture',
-      text: 'Run tenant isolated workflows while managing centralized platform governance.'
-    },
-    {
-      icon: <Shield sx={{ color: '#2563eb' }} />,
-      title: 'Enterprise security posture',
-      text: 'Identity controls, encrypted data paths, and hardened infrastructure practices.'
-    },
-    {
       icon: <Source sx={{ color: '#2563eb' }} />,
       title: 'Audit and observability',
       text: 'Track operational actions with searchable audit logs and lifecycle event visibility.'
@@ -301,8 +283,8 @@ const Features = () => {
       answer: 'Yes. You can define recurring cycles, event-driven reminders, and role-based approvals with lifecycle checkpoints across states such as approved, overdue, paid, or reconciled.'
     },
     {
-      question: 'Is the platform suitable for multi-entity or multi-team operations?',
-      answer: 'Yes. The architecture supports tenant-aware data boundaries, role-scoped access control, and centralized operational governance so multiple entities can operate in one secure platform.'
+      question: 'Is the platform suitable for teams?',
+      answer: 'Yes. Invite your team, give each person a role with only the permissions they need, and send invoices and purchase orders through approvals. Each business has its own separate, isolated account.'
     },
     {
       question: 'What level of visibility do finance and operations leaders get?',
@@ -338,7 +320,7 @@ const Features = () => {
         title="Features"
         description={pageDescription}
         canonicalPath="/features"
-        keywords="quote to cash workflow, reconciliation automation, finance dashboard software, enterprise invoicing features"
+        keywords="quote to cash workflow, reconciliation automation, finance dashboard software, invoicing features"
         jsonLd={featureSchemas}
       />
       <Header />
@@ -350,7 +332,7 @@ const Features = () => {
         description="Solidev Books connects quote-to-cash operations, automation logic, reconciliation, and reporting into one execution layer — control, speed, and full visibility from one platform."
         primaryAction={{ label: 'Start Operating in One System', onClick: () => navigate('/login') }}
         secondaryAction={{ label: 'Talk to Platform Team', onClick: () => navigate('/contact') }}
-        tags={['Quote to Cash', 'Auto-reconciliation', 'Multi-entity workflows']}
+        tags={['Quote to Cash', 'Auto-reconciliation', 'Role-based approvals']}
         rightContent={(
           <Box sx={{ position: 'relative', maxWidth: 520, mx: { xs: 'auto', md: 0 } }}>
             <Paper
@@ -670,7 +652,7 @@ const Features = () => {
               <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={motionIn}>
                 <Chip icon={<GppGood sx={{ color: '#2563eb !important' }} />} label="Infrastructure and Security" variant="outlined" sx={eyebrowChipSx} />
                 <Typography sx={{ fontWeight: 800, fontSize: { xs: '1.7rem', md: '2.1rem' }, lineHeight: 1.18, mt: 2, mb: 1.8, color: '#0f172a', letterSpacing: '-0.02em' }}>
-                  Built on an Enterprise-Oriented Financial Infrastructure Foundation
+                  Built on a Secure Cloud Foundation
                 </Typography>
                 <Typography sx={{ color: '#475569', lineHeight: 1.65, fontSize: '1rem', mb: 3 }}>
                   Solidev Books provides the secure technical foundation required to run connected financial workflows with confidence.
@@ -681,7 +663,7 @@ const Features = () => {
                     {[
                       'Role-scoped access and policy boundaries',
                       'Audit logs for operational traceability',
-                      'API security and tenant-aware isolation',
+                      'Isolated account per business',
                       'Cloud resilience with synchronized state'
                     ].map((line) => (
                       <Stack key={line} direction="row" spacing={1.2} alignItems="center">

@@ -182,7 +182,7 @@ export const generateInvoiceMockData = ({ scenario = "full", context = {} } = {}
     invoice_type: "Tax Invoice",
     subject: "Website redesign and monthly support",
     salesperson: "Karan Mehta",
-    notes: "Thanks for choosing Smart Invoice Pro. Please process payment within agreed terms.",
+    notes: "Thanks for choosing Solidev Books. Please process payment within agreed terms.",
     terms_conditions: "Late payment may attract interest as per agreement.",
     is_gst_applicable: true,
     invoice_discount: scenario === "edge" ? 100 : 0,

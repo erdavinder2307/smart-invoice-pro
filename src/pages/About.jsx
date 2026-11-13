@@ -24,7 +24,6 @@ import {
   Timeline,
   AccountTree,
   VerifiedUser,
-  Api,
   Hub
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
@@ -120,9 +119,9 @@ const compactCardSx = {
 const capabilityCards = [
   {
     icon: <Storage sx={{ fontSize: 22 }} />,
-    title: 'Multi-Tenant Cloud Platform',
-    description: 'Run finance operations for multiple teams and entities with isolated, secure workspaces.',
-    tag: 'Tenant-aware architecture',
+    title: 'Isolated Cloud Workspace',
+    description: 'Each business gets its own isolated, secure workspace for its whole team.',
+    tag: 'One workspace per business',
     status: 'stable'
   },
   {
@@ -145,13 +144,6 @@ const capabilityCards = [
     description: 'Track receivables, cash movement, and workflow status with shared operational context.',
     tag: 'Connected operations context',
     status: 'stable'
-  },
-  {
-    icon: <Api sx={{ fontSize: 22 }} />,
-    title: 'Integration-Ready APIs',
-    description: 'Connect accounting, CRM, and banking workflows without rebuilding your finance stack.',
-    tag: 'Event-ready endpoints',
-    status: 'expanding'
   },
   {
     icon: <Hub sx={{ fontSize: 22 }} />,
@@ -225,7 +217,7 @@ const About = () => {
 
       <PublicHeroSection
         badgeIcon={<Hub sx={{ color: '#bfdbfe !important' }} />}
-        badgeLabel="Enterprise Workflow Platform"
+        badgeLabel="Financial Workflow Platform"
         title="Building the Future of Financial Operations"
         description="Solidev Books helps businesses manage workflows, invoices, payments, inventory, and financial operations from one connected platform."
         primaryAction={{ label: 'Start Free', onClick: () => navigate('/login') }}
@@ -723,7 +715,7 @@ const About = () => {
 
       <SectionFrame borderTop>
         <SectionTitle
-          title="Enterprise-Ready Infrastructure"
+          title="Reliable Cloud Infrastructure"
           subtitle="Built to support high-velocity financial operations with dependable controls, visibility, and scale."
         />
         <FeatureGrid columns="three">

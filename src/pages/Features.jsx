@@ -685,7 +685,11 @@ const Features = () => {
                       component={motion.div}
                       whileHover={{ y: -4 }}
                       elevation={0}
-                      sx={featureCardSx}
+                      sx={{
+                        ...featureCardSx,
+                        // An odd last tile spans both columns so the grid has no empty slot.
+                        '&:nth-of-type(odd):last-of-type': { gridColumn: { sm: '1 / -1' } }
+                      }}
                     >
                       <Box sx={iconContainerSx}>{item.icon}</Box>
                       <Typography sx={cardTitleSx}>{item.title}</Typography>

@@ -92,7 +92,20 @@ const SectionTitle = ({
 const FeatureGrid = ({ children, columns = 'three' }) => {
   const templates = {
     two: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
-    three: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(3, minmax(0, 1fr))' }
+    three: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(3, minmax(0, 1fr))' },
+    // Three per row on a 6-track grid, so a short last row can be stretched to fill it.
+    balanced: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(6, minmax(0, 1fr))' }
+  };
+
+  const balancedItemsSx = {
+    '& > *': { gridColumn: { lg: 'span 2' } },
+    // 2 columns (sm–md): an odd last card spans the full row.
+    '& > :nth-of-type(odd):last-of-type': { gridColumn: { sm: '1 / -1', lg: 'span 2' } },
+    // 3 columns (lg+): a last row of one card spans 6 tracks, a last row of two cards spans 3 each.
+    '& > :nth-of-type(3n+1):last-of-type': { gridColumn: { lg: 'span 6' } },
+    '& > :nth-of-type(3n+1):nth-last-of-type(2), & > :nth-of-type(3n+2):last-of-type': {
+      gridColumn: { lg: 'span 3' }
+    }
   };
 
   return (
@@ -100,7 +113,8 @@ const FeatureGrid = ({ children, columns = 'three' }) => {
       sx={{
         display: 'grid',
         gridTemplateColumns: templates[columns] || templates.three,
-        gap: { xs: 1.8, md: 2.2 }
+        gap: { xs: 1.8, md: 2.2 },
+        ...(columns === 'balanced' ? balancedItemsSx : {})
       }}
     >
       {children}
@@ -718,7 +732,7 @@ const About = () => {
           title="Reliable Cloud Infrastructure"
           subtitle="Built to support high-velocity financial operations with dependable controls, visibility, and scale."
         />
-        <FeatureGrid columns="three">
+        <FeatureGrid columns="balanced">
           {capabilityCards.map((card, index) => (
             <motion.div
               key={card.title}

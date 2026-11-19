@@ -33,7 +33,6 @@ export const PLANS = [
       'One free seat for your CA or accountant',
       'Everything in Starter',
       'Approval workflows',
-      'API access',
     ],
   },
 ];

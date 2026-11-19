@@ -24,7 +24,6 @@ import {
   Timeline,
   AccountTree,
   VerifiedUser,
-  Api,
   Hub
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
@@ -93,7 +92,20 @@ const SectionTitle = ({
 const FeatureGrid = ({ children, columns = 'three' }) => {
   const templates = {
     two: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
-    three: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(3, minmax(0, 1fr))' }
+    three: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(3, minmax(0, 1fr))' },
+    // Three per row on a 6-track grid, so a short last row can be stretched to fill it.
+    balanced: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(6, minmax(0, 1fr))' }
+  };
+
+  const balancedItemsSx = {
+    '& > *': { gridColumn: { lg: 'span 2' } },
+    // 2 columns (sm–md): an odd last card spans the full row.
+    '& > :nth-of-type(odd):last-of-type': { gridColumn: { sm: '1 / -1', lg: 'span 2' } },
+    // 3 columns (lg+): a last row of one card spans 6 tracks, a last row of two cards spans 3 each.
+    '& > :nth-of-type(3n+1):last-of-type': { gridColumn: { lg: 'span 6' } },
+    '& > :nth-of-type(3n+1):nth-last-of-type(2), & > :nth-of-type(3n+2):last-of-type': {
+      gridColumn: { lg: 'span 3' }
+    }
   };
 
   return (
@@ -101,7 +113,8 @@ const FeatureGrid = ({ children, columns = 'three' }) => {
       sx={{
         display: 'grid',
         gridTemplateColumns: templates[columns] || templates.three,
-        gap: { xs: 1.8, md: 2.2 }
+        gap: { xs: 1.8, md: 2.2 },
+        ...(columns === 'balanced' ? balancedItemsSx : {})
       }}
     >
       {children}
@@ -120,9 +133,9 @@ const compactCardSx = {
 const capabilityCards = [
   {
     icon: <Storage sx={{ fontSize: 22 }} />,
-    title: 'Multi-Tenant Cloud Platform',
-    description: 'Run finance operations for multiple teams and entities with isolated, secure workspaces.',
-    tag: 'Tenant-aware architecture',
+    title: 'Isolated Cloud Workspace',
+    description: 'Each business gets its own isolated, secure workspace for its whole team.',
+    tag: 'One workspace per business',
     status: 'stable'
   },
   {
@@ -145,13 +158,6 @@ const capabilityCards = [
     description: 'Track receivables, cash movement, and workflow status with shared operational context.',
     tag: 'Connected operations context',
     status: 'stable'
-  },
-  {
-    icon: <Api sx={{ fontSize: 22 }} />,
-    title: 'Integration-Ready APIs',
-    description: 'Connect accounting, CRM, and banking workflows without rebuilding your finance stack.',
-    tag: 'Event-ready endpoints',
-    status: 'expanding'
   },
   {
     icon: <Hub sx={{ fontSize: 22 }} />,
@@ -225,7 +231,7 @@ const About = () => {
 
       <PublicHeroSection
         badgeIcon={<Hub sx={{ color: '#bfdbfe !important' }} />}
-        badgeLabel="Enterprise Workflow Platform"
+        badgeLabel="Financial Workflow Platform"
         title="Building the Future of Financial Operations"
         description="Solidev Books helps businesses manage workflows, invoices, payments, inventory, and financial operations from one connected platform."
         primaryAction={{ label: 'Start Free', onClick: () => navigate('/login') }}
@@ -723,10 +729,10 @@ const About = () => {
 
       <SectionFrame borderTop>
         <SectionTitle
-          title="Enterprise-Ready Infrastructure"
+          title="Reliable Cloud Infrastructure"
           subtitle="Built to support high-velocity financial operations with dependable controls, visibility, and scale."
         />
-        <FeatureGrid columns="three">
+        <FeatureGrid columns="balanced">
           {capabilityCards.map((card, index) => (
             <motion.div
               key={card.title}

@@ -1,9 +1,17 @@
 import React from 'react';
 import axios from 'axios';
+import { configure } from '@testing-library/react';
 import { renderWithProviders, screen, fireEvent, waitFor, act } from '../../test-utils';
 import AddEditInvoice from '../../components/AddEditInvoice';
 import { createInvoice } from '../../services/invoiceService';
 import { getTaxRates, calculateInvoiceTax } from '../../services/taxService';
+
+// These form suites render the full MUI form and are CPU-bound; under a loaded
+// full-suite/CI run they can exceed Jest's 5000 ms default. jest.setTimeout only
+// takes effect at module scope (calling it inside a test is a no-op in Jest 27).
+// The same load also makes the 1000 ms default findBy*/waitFor timeout too tight.
+jest.setTimeout(20000);
+configure({ asyncUtilTimeout: 10000 });
 
 const mockNavigate = jest.fn();
 
@@ -149,7 +157,6 @@ describe('AddEditInvoice', () => {
   });
 
   it('submits invoice and navigates to invoices list', async () => {
-    jest.setTimeout(15000);
     renderWithProviders(<AddEditInvoice />);
 
     await screen.findByText('New Invoice');
@@ -209,7 +216,6 @@ describe('AddEditInvoice', () => {
   });
 
   it('disables save action while submit is in progress', async () => {
-    jest.setTimeout(15000);
     renderWithProviders(<AddEditInvoice />);
 
     await screen.findByText('New Invoice');

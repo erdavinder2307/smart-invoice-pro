@@ -18,6 +18,7 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { createApiUrl } from '../config/api';
+import { useAuth } from './AuthContext';
 
 const OrgGstContext = createContext(null);
 
@@ -46,6 +47,7 @@ function deriveFlags(gst_mode) {
 }
 
 export function OrgGstProvider({ children }) {
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const [state, setState] = useState(DEFAULT_STATE);
 
   const loadGstConfig = useCallback(async () => {
@@ -79,9 +81,16 @@ export function OrgGstProvider({ children }) {
     }
   }, []);
 
+  // gst-config needs a signed-in user: only fetch then, and reset to the safe
+  // defaults on sign-out.
   useEffect(() => {
-    loadGstConfig();
-  }, [loadGstConfig]);
+    if (authLoading) return;
+    if (isAuthenticated) {
+      loadGstConfig();
+    } else {
+      setState({ ...DEFAULT_STATE, loading: false });
+    }
+  }, [isAuthenticated, authLoading, loadGstConfig]);
 
   const value = useMemo(
     () => ({ ...state, reload: loadGstConfig }),

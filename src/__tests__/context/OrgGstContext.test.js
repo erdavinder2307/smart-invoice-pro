@@ -7,6 +7,11 @@ import { OrgGstProvider, useOrgGst } from '../../context/OrgGstContext';
 jest.mock('../../config/api', () => ({
   createApiUrl: (path) => `http://test.local${path}`,
 }));
+// The provider only loads gst-config for a signed-in user (see
+// SettingsProvidersAuthGate.test.js for the signed-out case).
+jest.mock('../../context/AuthContext', () => ({
+  useAuth: () => ({ isAuthenticated: true, loading: false }),
+}));
 
 function GstConsumer() {
   const {

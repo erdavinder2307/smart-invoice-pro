@@ -1,8 +1,15 @@
 import React from 'react';
 import axios from 'axios';
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { configure, fireEvent, screen, waitFor } from '@testing-library/react';
 import { renderWithProviders } from '../../test-utils';
 import AddEditQuote from '../../components/AddEditQuote';
+
+// These form suites render the full MUI form and are CPU-bound; under a loaded
+// full-suite/CI run they can exceed Jest's 5000 ms default. jest.setTimeout only
+// takes effect at module scope (calling it inside a test is a no-op in Jest 27).
+// The same load also makes the 1000 ms default findBy*/waitFor timeout too tight.
+jest.setTimeout(20000);
+configure({ asyncUtilTimeout: 10000 });
 
 jest.mock('axios');
 

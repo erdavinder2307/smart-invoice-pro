@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { getInvoicePreferences } from '../services/invoicePreferencesService';
+import { useAuth } from './AuthContext';
 
 const InvoicePreferencesContext = createContext(null);
 
@@ -16,6 +17,7 @@ export const PREFS_DEFAULTS = {
 };
 
 export function InvoicePreferencesProvider({ children }) {
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const [prefs, setPrefs]   = useState(PREFS_DEFAULTS);
   const [loaded, setLoaded] = useState(false);
 
@@ -30,9 +32,17 @@ export function InvoicePreferencesProvider({ children }) {
     }
   }, []);
 
+  // The endpoint needs a signed-in user: only fetch then, and go back to the
+  // defaults on sign-out so the next user never sees the previous org's prefs.
   useEffect(() => {
-    refreshPrefs();
-  }, [refreshPrefs]);
+    if (authLoading) return;
+    if (isAuthenticated) {
+      refreshPrefs();
+    } else {
+      setPrefs(PREFS_DEFAULTS);
+      setLoaded(true);
+    }
+  }, [isAuthenticated, authLoading, refreshPrefs]);
 
   return (
     <InvoicePreferencesContext.Provider value={{ prefs, setPrefs, refreshPrefs, loaded }}>

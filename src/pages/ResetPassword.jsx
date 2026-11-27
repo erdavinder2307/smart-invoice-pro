@@ -125,7 +125,7 @@ const ResetPassword = () => {
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         <SeoHead
-          title="Password Reset Successful | Solidev Books"
+          title="Password Reset Successful"
           description="Your password has been successfully reset. You can now sign in with your new password."
           canonicalPath="/reset-password/:token"
           robots="noindex,follow"
@@ -212,7 +212,7 @@ const ResetPassword = () => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <SeoHead
-        title="Reset Your Password | Solidev Books"
+        title="Reset Your Password"
         description="Create a new password for your Solidev Books account."
         canonicalPath="/reset-password/:token"
         robots="noindex,follow"

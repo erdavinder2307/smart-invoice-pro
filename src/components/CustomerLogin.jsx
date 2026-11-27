@@ -116,7 +116,7 @@ const CustomerLogin = () => {
       padding: 2
     }}>
       <SeoHead
-        title="Customer Portal | View Your Invoices | Solidev Books"
+        title="Customer Portal | View Your Invoices"
         description="Access your invoices, view payment status, and download financial records from Solidev Books customer portal."
         canonicalPath="/customer/login"
         robots="noindex,follow"

@@ -262,7 +262,7 @@ const LoginPage = () => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <SeoHead
-        title={isSignup ? "Sign Up for Invoice Management | Solidev Books" : "Sign In to Invoice Management | Solidev Books"}
+        title={isSignup ? "Sign Up for Invoice Management" : "Sign In to Invoice Management"}
         description={isSignup ? "Create a free Solidev Books account to start managing your invoices, payments, and financial operations." : "Sign in to your Solidev Books account to access your invoicing and financial management dashboard."}
         canonicalPath="/login"
         robots="noindex,follow"

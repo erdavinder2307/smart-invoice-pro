@@ -313,7 +313,7 @@ const Contact = () => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: '#fcfdfe' }}>
       <SeoHead
-        title="Contact Solidev Books"
+        title="Contact"
         description={pageDescription}
         canonicalPath="/contact"
         keywords="contact finance automation team, workflow consultation, invoicing software onboarding"

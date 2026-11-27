@@ -329,7 +329,7 @@ const Terms = () => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <SeoHead
-        title="Terms of Service | Solidev Books"
+        title="Terms of Service"
         description="Read the Terms of Service for Solidev Books. Understand the rules, acceptable use, and legal terms for using our invoicing and financial management platform."
         canonicalPath="/terms"
       />

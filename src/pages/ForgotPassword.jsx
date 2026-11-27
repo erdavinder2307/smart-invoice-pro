@@ -95,7 +95,7 @@ const ForgotPassword = () => {
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         <SeoHead
-          title="Reset Email Sent | Solidev Books"
+          title="Reset Email Sent"
           description="Password reset instructions have been sent to your email."
           canonicalPath="/forgot-password"
           robots="noindex,follow"
@@ -192,7 +192,7 @@ const ForgotPassword = () => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <SeoHead
-        title="Forgot Password | Reset Your Account | Solidev Books"
+        title="Forgot Password | Reset Your Account"
         description="Reset your Solidev Books password. Enter your email address to receive password reset instructions."
         canonicalPath="/forgot-password"
         robots="noindex,follow"

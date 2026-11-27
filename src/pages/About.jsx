@@ -215,7 +215,7 @@ const About = () => {
   return (
     <Box sx={{ minHeight: '100vh', overflowX: 'hidden' }}>
       <SeoHead
-        title="About Solidev Books"
+        title="About"
         description={pageDescription}
         canonicalPath="/about"
         keywords="about solidev books, financial workflow platform, business finance automation"

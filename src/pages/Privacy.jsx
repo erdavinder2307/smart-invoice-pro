@@ -443,7 +443,7 @@ const Privacy = () => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <SeoHead
-        title="Privacy Policy | Solidev Books"
+        title="Privacy Policy"
         description="Learn how Solidev Books collects, uses, and protects your data. Read our comprehensive privacy policy covering GDPR, CCPA, and data security."
         canonicalPath="/privacy"
       />

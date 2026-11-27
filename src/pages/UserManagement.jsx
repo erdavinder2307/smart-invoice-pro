@@ -29,12 +29,14 @@ import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import EditIcon from "@mui/icons-material/Edit";
 import BlockIcon from "@mui/icons-material/Block";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import ForwardToInboxIcon from "@mui/icons-material/ForwardToInbox";
 
 import { C, fieldSx } from "../components/common/formStyles";
 import { useAuth } from "../context/AuthContext";
 import {
   getSettingsUsers,
   inviteUser,
+  resendInvite,
   updateSettingsUser,
   deactivateUser,
   getRoles,
@@ -48,7 +50,7 @@ const ROLE_COLORS = {
   Purchaser: "secondary",
 };
 
-const EMPTY_INVITE = { name: "", email: "", username: "", password: "", role_id: "" };
+const EMPTY_INVITE = { name: "", email: "", username: "", role_id: "" };
 const EMPTY_EDIT   = { role_id: "", role: "" };
 
 const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
@@ -84,6 +86,7 @@ export default function UserManagement() {
   const [inviteForm, setInviteForm] = useState(EMPTY_INVITE);
   const [inviting, setInviting]     = useState(false);
   const [inviteErr, setInviteErr]   = useState("");
+  const [resendingId, setResendingId] = useState(null);
 
   const [editOpen, setEditOpen]     = useState(false);
   const [editTarget, setEditTarget] = useState(null);
@@ -141,7 +144,6 @@ export default function UserManagement() {
   const handleInviteSubmit = async () => {
     const email = inviteForm.email.trim();
     const username = inviteForm.username.trim();
-    const password = inviteForm.password.trim();
 
     if (!email) {
       setInviteErr("Email is required.");
@@ -155,22 +157,38 @@ export default function UserManagement() {
       setInviteErr("Username is required.");
       return;
     }
-    if (!password || password.length < 8) {
-      setInviteErr("Password must be at least 8 characters.");
-      return;
-    }
 
     setInviting(true);
     setInviteErr("");
     try {
-      await inviteUser({ ...inviteForm, email, username, password });
+      const created = await inviteUser({ ...inviteForm, email, username });
       setInviteOpen(false);
-      showToast("User invited successfully.");
+      if (created?.invite_email_sent === false) {
+        showToast("User added, but the invite email could not be sent. Use Resend invite.", "warning");
+      } else {
+        showToast(`Invite sent to ${email}. They choose their own password from the link.`);
+      }
       fetchData();
     } catch (err) {
       setInviteErr(err.response?.data?.error || "Failed to invite user.");
     } finally {
       setInviting(false);
+    }
+  };
+
+  const handleResendInvite = async (u) => {
+    setResendingId(u.id);
+    try {
+      const res = await resendInvite(u.id);
+      if (res?.invite_email_sent === false) {
+        showToast("The invite email could not be sent. Please try again later.", "warning");
+      } else {
+        showToast(`New invite sent to ${getUserDisplayEmail(u)}. The old link no longer works.`);
+      }
+    } catch (err) {
+      showToast(err.response?.data?.error || "Failed to resend the invite.", "error");
+    } finally {
+      setResendingId(null);
     }
   };
 
@@ -283,6 +301,7 @@ export default function UserManagement() {
                     {users.map((u) => {
                       const isSelf   = u.id === user?.id;
                       const isActive = u.is_active !== false;
+                      const invitePending = isActive && u.invite_pending === true;
                       const roleLabel = getRoleLabel(u);
                       const displayName = getUserDisplayName(u);
                       const displayEmail = getUserDisplayEmail(u);
@@ -316,10 +335,10 @@ export default function UserManagement() {
                           </TableCell>
                           <TableCell>
                             <Chip
-                              label={isActive ? "Active" : "Inactive"}
-                              color={isActive ? "success" : "default"}
+                              label={invitePending ? "Invite pending" : isActive ? "Active" : "Inactive"}
+                              color={invitePending ? "warning" : isActive ? "success" : "default"}
                               size="small"
-                              variant={isActive ? "filled" : "outlined"}
+                              variant={isActive && !invitePending ? "filled" : "outlined"}
                               sx={{ fontSize: "0.75rem", height: 22 }}
                             />
                           </TableCell>
@@ -333,6 +352,16 @@ export default function UserManagement() {
                                   <EditIcon sx={{ fontSize: 16 }} />
                                 </IconButton>
                               </Tooltip>
+                              {invitePending && (
+                                <Tooltip title="Resend invite">
+                                  <span>
+                                    <IconButton size="small" aria-label="Resend invite" disabled={resendingId === u.id}
+                                      onClick={() => handleResendInvite(u)}>
+                                      <ForwardToInboxIcon sx={{ fontSize: 16 }} />
+                                    </IconButton>
+                                  </span>
+                                </Tooltip>
+                              )}
                               {!isSelf && (
                                 <Tooltip title={isActive ? "Deactivate" : "Activate"}>
                                   <IconButton size="small" color={isActive ? "default" : "success"}
@@ -371,10 +400,9 @@ export default function UserManagement() {
             onChange={(e) => handleInviteEmailChange(e.target.value)} sx={fieldSx} />
           <TextField label="Username *" size="small" fullWidth required value={inviteForm.username}
             onChange={(e) => setInviteForm((f) => ({ ...f, username: e.target.value }))} sx={fieldSx} />
-          <TextField label="Password *" size="small" fullWidth type="password" required
-            helperText="Minimum 8 characters"
-            value={inviteForm.password}
-            onChange={(e) => setInviteForm((f) => ({ ...f, password: e.target.value }))} sx={fieldSx} />
+          <Typography sx={{ fontSize: "0.75rem", color: C.hint }}>
+            We email them a one-time link to choose their own password (valid for 7 days).
+          </Typography>
           <TextField label="Role" size="small" fullWidth select value={inviteForm.role_id}
             onChange={(e) => setInviteForm((f) => ({ ...f, role_id: e.target.value }))} sx={fieldSx}>
             {roles.map((r) => (

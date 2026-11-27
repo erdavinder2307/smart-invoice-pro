@@ -21,6 +21,9 @@ export const getSettingsUsers = () =>
 export const inviteUser = (data) =>
   axios.post(createApiUrl('/api/settings/users'), data).then((r) => r.data);
 
+export const resendInvite = (id) =>
+  axios.post(createApiUrl(`/api/settings/users/${id}/resend-invite`)).then((r) => r.data);
+
 export const updateSettingsUser = (id, data) =>
   axios.put(createApiUrl(`/api/settings/users/${id}`), data).then((r) => r.data);
 

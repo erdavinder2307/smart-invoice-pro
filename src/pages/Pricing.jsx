@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import {
   Box,
   Button,
   Container,
   Grid,
+  Link,
   List,
   ListItem,
   ListItemIcon,
@@ -160,6 +161,7 @@ const Pricing = () => {
 
           <Typography sx={{ color: '#64748B', textAlign: 'center', mt: 4, fontSize: '0.95rem' }}>
             All prices in ₹, excl. {gstPercentLabel} GST. A GST tax invoice is issued for every payment.
+            Cancel any time; see our <Link component={RouterLink} to="/refund">refund and cancellation policy</Link>.
           </Typography>
         </Container>
       </Box>

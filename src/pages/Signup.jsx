@@ -161,7 +161,7 @@ const SignupPage = () => {
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         <SeoHead
-          title="Account Created | Solidev Books"
+          title="Account Created"
           description="Your account has been created successfully. Welcome to Solidev Books!"
           canonicalPath="/signup"
           robots="noindex,follow"
@@ -268,7 +268,7 @@ const SignupPage = () => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <SeoHead
-        title="Create Account | Sign Up for Invoice Management | Solidev Books"
+        title="Create Account | Sign Up for Invoice Management"
         description="Create a free Solidev Books account to start managing your invoices, payments, and financial operations. Secure workflow-driven financial management."
         canonicalPath="/signup"
         robots="noindex,follow"

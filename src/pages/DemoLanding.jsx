@@ -159,6 +159,12 @@ const DemoLanding = () => {
           ))}
         </div>
 
+        {loadingRole && (
+          <p role="status" style={{ textAlign: 'center', marginTop: 24, opacity: 0.9 }}>
+            Preparing your sample company… (about 20 seconds)
+          </p>
+        )}
+
         <footer style={{ textAlign: 'center', marginTop: 48, opacity: 0.65, fontSize: 14 }}>
           <p>Workspace data resets periodically. Production app:{' '}
             <a href="https://www.solidevbooks.com/login" style={{ color: '#93c5fd' }}>
